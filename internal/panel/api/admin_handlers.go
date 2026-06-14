@@ -132,6 +132,20 @@ func (h *Handlers) CreateRole(c echo.Context) error {
 	return c.JSON(http.StatusCreated, echo.Map{"role": role})
 }
 
+// ListAudit returns the recent admin action log (admin:manage).
+func (h *Handlers) ListAudit(c echo.Context) error {
+	if h.Audit == nil {
+		return c.JSON(http.StatusOK, echo.Map{"entries": []any{}})
+	}
+	limit := atoiDefault(c.QueryParam("limit"), 100)
+	offset := atoiDefault(c.QueryParam("offset"), 0)
+	entries, err := h.Audit.List(c.Request().Context(), limit, offset)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "audit list failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"entries": entries})
+}
+
 // ListRoles returns all roles.
 func (h *Handlers) ListRoles(c echo.Context) error {
 	roles, err := h.Admins.ListRoles(c.Request().Context())

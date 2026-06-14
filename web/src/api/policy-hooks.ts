@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
-import type { Balancer, LogEntry, Outbound, Overview, RoutingRule, UserSub } from "./types";
+import type { AuditEntry, Balancer, LogEntry, Outbound, Overview, RoutingRule, UserSub } from "./types";
+
+export function useAudit() {
+  return useQuery({
+    queryKey: ["audit"],
+    queryFn: () => api<{ entries: AuditEntry[] }>("/api/audit", { query: { limit: 200 } }),
+    refetchInterval: 10000,
+  });
+}
 
 // --- overview / logs / system ---
 

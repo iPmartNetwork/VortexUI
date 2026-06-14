@@ -9,6 +9,7 @@ import {
   Scale,
   ShieldCheck,
   ScrollText,
+  History,
   Settings as SettingsIcon,
   LogOut,
   Moon,
@@ -35,6 +36,7 @@ const nav: { to: string; key: TKey; icon: React.ElementType }[] = [
   { to: "/routing", key: "nav.routing", icon: RouteIcon },
   { to: "/balancers", key: "nav.balancers", icon: Scale },
   { to: "/admins", key: "nav.admins", icon: ShieldCheck },
+  { to: "/audit", key: "nav.audit", icon: History },
   { to: "/logs", key: "nav.logs", icon: ScrollText },
   { to: "/settings", key: "nav.settings", icon: SettingsIcon },
 ];

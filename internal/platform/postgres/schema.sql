@@ -98,6 +98,16 @@ CREATE TABLE traffic_points (
     down    BIGINT NOT NULL
 );
 
+CREATE TABLE audit_log (
+    id       UUID PRIMARY KEY,
+    time     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    admin_id UUID,
+    method   TEXT NOT NULL,
+    path     TEXT NOT NULL,
+    status   INTEGER NOT NULL,
+    ip       TEXT NOT NULL DEFAULT ''
+);
+
 
 CREATE TABLE outbounds (
     id        UUID PRIMARY KEY,

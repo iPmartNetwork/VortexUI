@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"github.com/vortexui/vortexui/internal/auth"
@@ -88,6 +89,46 @@ func RateLimit(rl RateLimiter, limit int, window time.Duration, keyFn func(echo.
 				return echo.NewHTTPError(http.StatusTooManyRequests, "too many requests")
 			}
 			return next(c)
+		}
+	}
+}
+
+// AuditRecorder persists and reads admin action audit entries.
+// *postgres.AuditRepo satisfies it.
+type AuditRecorder interface {
+	Insert(ctx context.Context, e domain.AuditEntry) error
+	List(ctx context.Context, limit, offset int) ([]domain.AuditEntry, error)
+}
+
+// Audit records every authenticated mutating request (POST/PUT/DELETE) for
+// accountability. It runs after the handler so it captures the final status
+// (including permission denials), and writes asynchronously so logging never
+// adds latency to the response.
+func Audit(rec AuditRecorder) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			err := next(c)
+			if rec == nil {
+				return err
+			}
+			switch c.Request().Method {
+			case http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch:
+			default:
+				return err
+			}
+			entry := domain.AuditEntry{
+				ID:     uuid.New(),
+				Method: c.Request().Method,
+				Path:   c.Request().URL.Path,
+				Status: c.Response().Status,
+				IP:     c.RealIP(),
+			}
+			if claims := claimsFrom(c); claims != nil {
+				id := claims.AdminID
+				entry.AdminID = &id
+			}
+			go func() { _ = rec.Insert(context.Background(), entry) }()
+			return err
 		}
 	}
 }

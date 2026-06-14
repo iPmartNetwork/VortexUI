@@ -33,6 +33,7 @@ type Handlers struct {
 	Devices   DeviceLimiter // optional; nil disables device-count enforcement
 	Online    DeviceCounter // optional; nil disables the online-devices endpoint
 	Logs      LogSource     // optional; nil disables the logs endpoint
+	Audit     AuditRecorder // optional; nil disables the audit log
 	Repo      port.UserRepository
 	Traffic   port.TrafficRepository
 }

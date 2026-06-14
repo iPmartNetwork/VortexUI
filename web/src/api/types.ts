@@ -109,6 +109,17 @@ export interface Overview {
   };
 }
 
+export interface AuditEntry {
+  id: string;
+  time: string;
+  admin_id?: string;
+  username: string;
+  method: string;
+  path: string;
+  status: number;
+  ip: string;
+}
+
 export interface LogEntry {
   time: string;
   level: number;

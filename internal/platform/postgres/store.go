@@ -61,3 +61,6 @@ func (s *Store) Traffic() *TrafficRepo { return &TrafficRepo{q: s.q} }
 
 // Admins returns the admin repository.
 func (s *Store) Admins() *AdminRepo { return &AdminRepo{q: s.q} }
+
+// Audit returns the audit-log repository.
+func (s *Store) Audit() *AuditRepo { return &AuditRepo{q: s.q} }

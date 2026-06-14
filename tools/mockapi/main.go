@@ -220,6 +220,17 @@ func main() {
 		j(w, map[string]any{"entries": entries})
 	})
 
+	mux.HandleFunc("/api/audit", func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		entries := []map[string]any{
+			{"id": "1", "time": now.Add(-30 * time.Second).Format(time.RFC3339), "username": "root", "method": "POST", "path": "/api/users", "status": 201, "ip": "203.0.113.7"},
+			{"id": "2", "time": now.Add(-5 * time.Minute).Format(time.RFC3339), "username": "root", "method": "PUT", "path": "/api/users/8f2a", "status": 200, "ip": "203.0.113.7"},
+			{"id": "3", "time": now.Add(-12 * time.Minute).Format(time.RFC3339), "username": "reseller", "method": "DELETE", "path": "/api/users/4c1d", "status": 204, "ip": "198.51.100.4"},
+			{"id": "4", "time": now.Add(-40 * time.Minute).Format(time.RFC3339), "username": "reseller", "method": "POST", "path": "/api/nodes", "status": 403, "ip": "198.51.100.4"},
+		}
+		j(w, map[string]any{"entries": entries})
+	})
+
 	// --- admins ---
 	mux.HandleFunc("/api/admins", func(w http.ResponseWriter, r *http.Request) {
 		j(w, map[string]any{"admins": []map[string]any{

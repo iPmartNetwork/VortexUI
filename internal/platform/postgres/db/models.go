@@ -23,6 +23,16 @@ type Admin struct {
 	CreatedAt    pgtype.Timestamptz
 }
 
+type AuditLog struct {
+	ID      uuid.UUID
+	Time    pgtype.Timestamptz
+	AdminID pgtype.UUID
+	Method  string
+	Path    string
+	Status  int32
+	Ip      string
+}
+
 type Balancer struct {
 	ID            uuid.UUID
 	NodeID        uuid.UUID

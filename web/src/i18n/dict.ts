@@ -11,6 +11,7 @@ const en = {
   "nav.balancers": "Balancers",
   "nav.admins": "Admins",
   "nav.logs": "Logs",
+  "nav.audit": "Audit",
   "nav.settings": "Settings",
   "nav.signout": "Sign out",
 
@@ -85,6 +86,11 @@ const en = {
   "charts.systemHistory": "System History",
   "charts.xrayMetrics": "Xray Metrics",
   "charts.singboxMetrics": "Sing-Box Metrics",
+
+  "audit.subtitle": "Admin action log",
+  "audit.time": "Time",
+  "audit.admin": "Admin",
+  "audit.action": "Action",
 } as const;
 
 const fa: Record<string, string> = {
@@ -171,6 +177,11 @@ const fa: Record<string, string> = {
   "charts.systemHistory": "تاریخچه سیستم",
   "charts.xrayMetrics": "آمار Xray",
   "charts.singboxMetrics": "آمار Sing-Box",
+  "nav.audit": "حسابرسی",
+  "audit.subtitle": "گزارش اقدامات ادمین",
+  "audit.time": "زمان",
+  "audit.admin": "ادمین",
+  "audit.action": "اقدام",
 };
 
 const tr: Record<string, string> = {
@@ -257,6 +268,11 @@ const tr: Record<string, string> = {
   "charts.systemHistory": "Sistem Geçmişi",
   "charts.xrayMetrics": "Xray Metrikleri",
   "charts.singboxMetrics": "Sing-Box Metrikleri",
+  "nav.audit": "Denetim",
+  "audit.subtitle": "Yönetici işlem kaydı",
+  "audit.time": "Zaman",
+  "audit.admin": "Yönetici",
+  "audit.action": "İşlem",
 };
 
 const ar: Record<string, string> = {
@@ -343,6 +359,11 @@ const ar: Record<string, string> = {
   "charts.systemHistory": "سجل النظام",
   "charts.xrayMetrics": "مقاييس Xray",
   "charts.singboxMetrics": "مقاييس Sing-Box",
+  "nav.audit": "التدقيق",
+  "audit.subtitle": "سجل إجراءات المشرف",
+  "audit.time": "الوقت",
+  "audit.admin": "المشرف",
+  "audit.action": "الإجراء",
 };
 
 const ru: Record<string, string> = {
@@ -429,6 +450,11 @@ const ru: Record<string, string> = {
   "charts.systemHistory": "История системы",
   "charts.xrayMetrics": "Метрики Xray",
   "charts.singboxMetrics": "Метрики Sing-Box",
+  "nav.audit": "Аудит",
+  "audit.subtitle": "Журнал действий администратора",
+  "audit.time": "Время",
+  "audit.admin": "Администратор",
+  "audit.action": "Действие",
 };
 
 const zh: Record<string, string> = {
@@ -515,6 +541,11 @@ const zh: Record<string, string> = {
   "charts.systemHistory": "系统历史",
   "charts.xrayMetrics": "Xray 指标",
   "charts.singboxMetrics": "Sing-Box 指标",
+  "nav.audit": "审计",
+  "audit.subtitle": "管理员操作日志",
+  "audit.time": "时间",
+  "audit.admin": "管理员",
+  "audit.action": "操作",
 };
 
 const ja: Record<string, string> = {
@@ -601,6 +632,11 @@ const ja: Record<string, string> = {
   "charts.systemHistory": "システム履歴",
   "charts.xrayMetrics": "Xray メトリクス",
   "charts.singboxMetrics": "Sing-Box メトリクス",
+  "nav.audit": "監査",
+  "audit.subtitle": "管理者操作ログ",
+  "audit.time": "時刻",
+  "audit.admin": "管理者",
+  "audit.action": "操作",
 };
 
 const es: Record<string, string> = {
@@ -687,6 +723,11 @@ const es: Record<string, string> = {
   "charts.systemHistory": "Historial del sistema",
   "charts.xrayMetrics": "Métricas de Xray",
   "charts.singboxMetrics": "Métricas de Sing-Box",
+  "nav.audit": "Auditoría",
+  "audit.subtitle": "Registro de acciones de administrador",
+  "audit.time": "Hora",
+  "audit.admin": "Administrador",
+  "audit.action": "Acción",
 };
 
 export const dict = { en, fa, tr, ar, ru, zh, ja, es } as const;
