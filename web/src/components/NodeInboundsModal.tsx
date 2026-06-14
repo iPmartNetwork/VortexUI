@@ -5,6 +5,7 @@ import type { Node } from "@/api/types";
 import { Badge, Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 import { CopyField } from "./CopyField";
+import { JsonCodeEditor } from "./JsonCodeEditor";
 import { useToast } from "./toast";
 
 const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks"];
@@ -13,6 +14,18 @@ const SECURITIES = ["none", "tls", "reality"];
 
 const blank = { editId: "", tag: "", protocol: "vless", port: "", network: "tcp", security: "tls", sni: "" };
 
+const DEFAULT_INBOUND_TEMPLATE = {
+  tag: "inbound-443",
+  protocol: "vless",
+  port: 443,
+  settings: { clients: [], decryption: "none" },
+  streamSettings: {
+    network: "tcp",
+    tcpSettings: { header: { type: "none" } },
+    security: "none",
+  },
+};
+
 export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClose: () => void }) {
   const list = useNodeInbounds(node?.id ?? null);
   const create = useCreateInbound();
@@ -20,6 +33,9 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   const del = useDeleteInbound();
   const toast = useToast();
   const [f, setF] = useState({ ...blank });
+  const [tab, setTab] = useState<"basics" | "json">("basics");
+  const [jsonText, setJsonText] = useState("");
+  const [jsonErr, setJsonErr] = useState("");
 
   if (!node) return null;
   const editing = f.editId !== "";
@@ -57,6 +73,38 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     }
   }
 
+  function gotoJson() {
+    setTab("json");
+    if (!jsonText) setJsonText(JSON.stringify(DEFAULT_INBOUND_TEMPLATE, null, 2));
+  }
+
+  async function submitJSON() {
+    setJsonErr("");
+    if (!node) return;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      setJsonErr("Invalid JSON");
+      return;
+    }
+    const tag = String(parsed.tag ?? "");
+    const protocol = String(parsed.protocol ?? "");
+    const port = Number(parsed.port ?? 0);
+    if (!tag || !protocol || !port) {
+      setJsonErr("JSON must include tag, protocol and port");
+      return;
+    }
+    try {
+      await create.mutateAsync({ node_id: node.id, tag, protocol, port, raw: parsed, enabled: true });
+      toast.success(`Added ${tag}`);
+      setJsonText("");
+      setTab("basics");
+    } catch {
+      setJsonErr("Save failed (tag/port taken?)");
+    }
+  }
+
   return (
     <Modal open={!!node} onClose={onClose} title={`Inbounds · ${node.name}`} className="max-w-lg">
       <div className="space-y-2">
@@ -80,7 +128,30 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         {list.data?.inbounds?.length === 0 && <p className="py-2 text-sm text-muted-foreground">No inbounds on this node yet.</p>}
       </div>
 
-      <form onSubmit={submit} className="mt-4 space-y-3 border-t pt-4">
+      <div className="mt-4 flex gap-5 border-t border-border/60 pt-3 text-sm">
+        {(["basics", "json"] as const).map((tk) => (
+          <button
+            key={tk}
+            type="button"
+            onClick={() => (tk === "json" ? gotoJson() : setTab("basics"))}
+            className={`-mb-px border-b-2 pb-2 font-medium transition ${tab === tk ? "border-primary text-primary" : "border-transparent text-fg-muted hover:text-fg"}`}
+          >
+            {tk === "basics" ? "Basics" : "JSON"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "json" ? (
+        <div className="mt-3 space-y-3">
+          <p className="text-xs text-fg-muted">Paste a full Xray/sing-box inbound object. tag, protocol and port are read from it; the whole object is stored as a raw override.</p>
+          <JsonCodeEditor value={jsonText} onChange={setJsonText} rows={14} />
+          {jsonErr && <p className="text-sm text-danger">{jsonErr}</p>}
+          <div className="flex justify-end">
+            <Button type="button" onClick={submitJSON} disabled={create.isPending}>Add inbound</Button>
+          </div>
+        </div>
+      ) : (
+      <form onSubmit={submit} className="mt-3 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">{editing ? `Edit ${f.tag}` : "Add inbound"}</p>
           {editing && (
@@ -112,6 +183,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
           </Button>
         </div>
       </form>
+      )}
     </Modal>
   );
 }
