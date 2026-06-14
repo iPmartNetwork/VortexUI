@@ -28,6 +28,7 @@ const (
 	NodeService_StopCore_FullMethodName      = "/vortex.v1.NodeService/StopCore"
 	NodeService_OnlineStats_FullMethodName   = "/vortex.v1.NodeService/OnlineStats"
 	NodeService_NodeLogs_FullMethodName      = "/vortex.v1.NodeService/NodeLogs"
+	NodeService_OnlineIPs_FullMethodName     = "/vortex.v1.NodeService/OnlineIPs"
 )
 
 // NodeServiceClient is the client API for NodeService service.
@@ -60,6 +61,10 @@ type NodeServiceClient interface {
 	OnlineStats(ctx context.Context, in *OnlineStatsRequest, opts ...grpc.CallOption) (*OnlineStatsResponse, error)
 	// NodeLogs returns the most recent core log lines captured by the agent.
 	NodeLogs(ctx context.Context, in *NodeLogsRequest, opts ...grpc.CallOption) (*NodeLogsResponse, error)
+	// OnlineIPs returns the distinct source IPs currently online for one user
+	// (keyed by user stats email == UUID), with each IP's last-seen unix time.
+	// Used to detect account sharing. Empty when the engine cannot report it.
+	OnlineIPs(ctx context.Context, in *OnlineIPsRequest, opts ...grpc.CallOption) (*OnlineIPsResponse, error)
 }
 
 type nodeServiceClient struct {
@@ -169,6 +174,16 @@ func (c *nodeServiceClient) NodeLogs(ctx context.Context, in *NodeLogsRequest, o
 	return out, nil
 }
 
+func (c *nodeServiceClient) OnlineIPs(ctx context.Context, in *OnlineIPsRequest, opts ...grpc.CallOption) (*OnlineIPsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OnlineIPsResponse)
+	err := c.cc.Invoke(ctx, NodeService_OnlineIPs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NodeServiceServer is the server API for NodeService service.
 // All implementations must embed UnimplementedNodeServiceServer
 // for forward compatibility.
@@ -199,6 +214,10 @@ type NodeServiceServer interface {
 	OnlineStats(context.Context, *OnlineStatsRequest) (*OnlineStatsResponse, error)
 	// NodeLogs returns the most recent core log lines captured by the agent.
 	NodeLogs(context.Context, *NodeLogsRequest) (*NodeLogsResponse, error)
+	// OnlineIPs returns the distinct source IPs currently online for one user
+	// (keyed by user stats email == UUID), with each IP's last-seen unix time.
+	// Used to detect account sharing. Empty when the engine cannot report it.
+	OnlineIPs(context.Context, *OnlineIPsRequest) (*OnlineIPsResponse, error)
 	mustEmbedUnimplementedNodeServiceServer()
 }
 
@@ -235,6 +254,9 @@ func (UnimplementedNodeServiceServer) OnlineStats(context.Context, *OnlineStatsR
 }
 func (UnimplementedNodeServiceServer) NodeLogs(context.Context, *NodeLogsRequest) (*NodeLogsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method NodeLogs not implemented")
+}
+func (UnimplementedNodeServiceServer) OnlineIPs(context.Context, *OnlineIPsRequest) (*OnlineIPsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method OnlineIPs not implemented")
 }
 func (UnimplementedNodeServiceServer) mustEmbedUnimplementedNodeServiceServer() {}
 func (UnimplementedNodeServiceServer) testEmbeddedByValue()                     {}
@@ -412,6 +434,24 @@ func _NodeService_NodeLogs_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NodeService_OnlineIPs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OnlineIPsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServiceServer).OnlineIPs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeService_OnlineIPs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServiceServer).OnlineIPs(ctx, req.(*OnlineIPsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NodeService_ServiceDesc is the grpc.ServiceDesc for NodeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -450,6 +490,10 @@ var NodeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NodeLogs",
 			Handler:    _NodeService_NodeLogs_Handler,
+		},
+		{
+			MethodName: "OnlineIPs",
+			Handler:    _NodeService_OnlineIPs_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

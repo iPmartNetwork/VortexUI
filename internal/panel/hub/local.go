@@ -77,6 +77,11 @@ func (c *LocalConn) OnlineStats(ctx context.Context) (map[string]int, error) {
 	return c.driver.OnlineStats(ctx)
 }
 
+// OnlineIPs reports the local core's distinct online source IPs for one user.
+func (c *LocalConn) OnlineIPs(ctx context.Context, userID string) (map[string]int64, error) {
+	return c.driver.OnlineIPList(ctx, userID)
+}
+
 // Logs returns recent log lines from the local core.
 func (c *LocalConn) Logs(ctx context.Context, limit int) ([]string, error) {
 	return c.driver.Logs(ctx, limit)

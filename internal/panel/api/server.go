@@ -55,6 +55,7 @@ func NewRouter(d Deps) *echo.Echo {
 	users.GET("/:id/usage", d.Handlers.GetUserUsage, RequirePermission(d.Auth, domain.PermUserRead))
 	users.GET("/:id/sub", d.Handlers.GetUserSubscription, RequirePermission(d.Auth, domain.PermUserRead))
 	users.GET("/:id/online", d.Handlers.GetUserOnline, RequirePermission(d.Auth, domain.PermUserRead))
+	users.GET("/:id/online-ips", d.Handlers.GetUserOnlineIPs, RequirePermission(d.Auth, domain.PermUserRead))
 	users.POST("", d.Handlers.CreateUser, RequirePermission(d.Auth, domain.PermUserWrite))
 	users.PUT("/:id", d.Handlers.UpdateUser, RequirePermission(d.Auth, domain.PermUserWrite))
 	users.POST("/:id/reset", d.Handlers.ResetUserUsage, RequirePermission(d.Auth, domain.PermUserWrite))

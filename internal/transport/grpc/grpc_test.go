@@ -73,6 +73,9 @@ func (f *fakeDriver) OnlineStats(context.Context) (map[string]int, error) {
 	defer f.mu.Unlock()
 	return f.online, nil
 }
+func (f *fakeDriver) OnlineIPList(context.Context, string) (map[string]int64, error) {
+	return nil, nil
+}
 func (f *fakeDriver) Logs(context.Context, int) ([]string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

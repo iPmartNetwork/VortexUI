@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, RotateCcw, KeyRound, Wifi } from "lucide-react";
+import { ArrowLeft, RotateCcw, KeyRound, Wifi, ShieldAlert, Globe } from "lucide-react";
 import { api } from "@/api/client";
 import { useUserUsage } from "@/api/hooks";
-import { useResetUser, useRevokeSub, useUserSub, useUserOnline } from "@/api/policy-hooks";
+import { useResetUser, useRevokeSub, useUserSub, useUserOnline, useUserOnlineIPs } from "@/api/policy-hooks";
 import type { User } from "@/api/types";
 import { Badge, Button, Card } from "@/components/ui";
 import { UsageChart } from "@/components/UsageChart";
@@ -27,6 +27,7 @@ export function UserDetail() {
   const usage = useUserUsage(id ?? null);
   const sub = useUserSub(id ?? null);
   const online = useUserOnline(id ?? null);
+  const onlineIPs = useUserOnlineIPs(id ?? null);
   const reset = useResetUser();
   const revoke = useRevokeSub();
 
@@ -101,6 +102,38 @@ export function UserDetail() {
         {usage.isLoading && <div className="h-40 animate-pulse rounded-lg bg-surface-2/50" />}
         {usage.data && <UsageChart points={usage.data.points} />}
       </Card>
+
+      {/* Online IPs — account-sharing detection */}
+      {onlineIPs.data?.tracking && (
+        <Card>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Online IPs</h3>
+            {(() => {
+              const count = onlineIPs.data.count;
+              const limit = user.device_limit || 0;
+              const over = limit > 0 && count > limit;
+              return (
+                <span className={`flex items-center gap-1 text-xs font-medium ${over ? "text-danger" : "text-fg-muted"}`}>
+                  {over ? <ShieldAlert size={13} /> : <Globe size={13} />}
+                  {count}{limit > 0 ? ` / ${limit}` : ""}
+                </span>
+              );
+            })()}
+          </div>
+          {onlineIPs.data.count === 0 ? (
+            <p className="py-4 text-center text-sm text-fg-muted">No active connections</p>
+          ) : (
+            <div className="space-y-1.5">
+              {onlineIPs.data.ips.map((e) => (
+                <div key={e.ip} className="flex items-center justify-between rounded-lg bg-surface-2/40 px-3 py-2 text-sm">
+                  <span className="font-mono text-fg" dir="ltr">{e.ip}</span>
+                  <span className="text-xs text-fg-subtle">{new Date(e.last_seen).toLocaleTimeString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Subscription */}
       {d && (

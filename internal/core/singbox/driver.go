@@ -226,6 +226,11 @@ func (d *Driver) OnlineStats(context.Context) (map[string]int, error) {
 	return map[string]int{}, nil
 }
 
+// OnlineIPList is likewise unsupported by sing-box; reports an empty set.
+func (d *Driver) OnlineIPList(context.Context, string) (map[string]int64, error) {
+	return map[string]int64{}, nil
+}
+
 // Logs returns the most recent core log lines captured by the supervisor.
 func (d *Driver) Logs(_ context.Context, limit int) ([]string, error) {
 	return d.run.Logs(limit), nil

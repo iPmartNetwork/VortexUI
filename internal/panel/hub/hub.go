@@ -29,6 +29,7 @@ type NodeConn interface {
 	Health(ctx context.Context) (domain.NodeHealth, error)
 	ConsumeTraffic(ctx context.Context, ingest func(domain.TrafficDelta)) error
 	OnlineStats(ctx context.Context) (map[string]int, error)
+	OnlineIPs(ctx context.Context, userID string) (map[string]int64, error)
 	Logs(ctx context.Context, limit int) ([]string, error)
 	RestartCore(ctx context.Context) error
 	StopCore(ctx context.Context) error
@@ -219,6 +220,20 @@ func (h *Hub) OnlineStats(ctx context.Context, nodeID uuid.UUID) (map[string]int
 		return nil, err
 	}
 	return conn.OnlineStats(ctx)
+}
+
+// OnlineIPs returns the distinct source IPs currently online for one user on a
+// node, mapped to each IP's last-seen unix time.
+func (h *Hub) OnlineIPs(ctx context.Context, nodeID uuid.UUID, userID string) (map[string]int64, error) {
+	mn, err := h.managed(nodeID)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := mn.connection()
+	if err != nil {
+		return nil, err
+	}
+	return conn.OnlineIPs(ctx, userID)
 }
 
 // Logs returns up to limit recent core log lines from one node.

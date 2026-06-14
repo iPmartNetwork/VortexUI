@@ -101,6 +101,16 @@ func (c *NodeClient) OnlineStats(ctx context.Context) (map[string]int, error) {
 	return out, nil
 }
 
+// OnlineIPs fetches the distinct source IPs currently online for one user,
+// mapped to each IP's last-seen unix time.
+func (c *NodeClient) OnlineIPs(ctx context.Context, userID string) (map[string]int64, error) {
+	r, err := c.rpc.OnlineIPs(ctx, &genv1.OnlineIPsRequest{UserId: userID})
+	if err != nil {
+		return nil, err
+	}
+	return r.GetIps(), nil
+}
+
 // Logs fetches up to limit recent core log lines from the node.
 func (c *NodeClient) Logs(ctx context.Context, limit int) ([]string, error) {
 	r, err := c.rpc.NodeLogs(ctx, &genv1.NodeLogsRequest{Limit: uint32(limit)})

@@ -45,6 +45,11 @@ type CoreDriver interface {
 	// report this return an empty map rather than an error.
 	OnlineStats(ctx context.Context) (map[string]int, error)
 
+	// OnlineIPList returns the distinct source IPs currently online for one user
+	// (by stats email == UUID), mapped to each IP's last-seen unix time. Used to
+	// detect account sharing. Engines that cannot report this return an empty map.
+	OnlineIPList(ctx context.Context, email string) (map[string]int64, error)
+
 	// Logs returns up to limit of the most recent core log lines (oldest first);
 	// limit <= 0 returns all retained lines.
 	Logs(ctx context.Context, limit int) ([]string, error)

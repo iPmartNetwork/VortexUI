@@ -167,6 +167,15 @@ func (s *NodeServer) OnlineStats(ctx context.Context, _ *genv1.OnlineStatsReques
 	return &genv1.OnlineStatsResponse{Online: online}, nil
 }
 
+// OnlineIPs reports the distinct source IPs currently online for one user.
+func (s *NodeServer) OnlineIPs(ctx context.Context, req *genv1.OnlineIPsRequest) (*genv1.OnlineIPsResponse, error) {
+	ips, err := s.driver.OnlineIPList(ctx, req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	return &genv1.OnlineIPsResponse{Ips: ips}, nil
+}
+
 // NodeLogs returns the agent's most recent captured core log lines.
 func (s *NodeServer) NodeLogs(ctx context.Context, req *genv1.NodeLogsRequest) (*genv1.NodeLogsResponse, error) {
 	lines, err := s.driver.Logs(ctx, int(req.GetLimit()))

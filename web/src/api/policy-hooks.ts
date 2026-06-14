@@ -208,3 +208,15 @@ export function useUserOnline(id: string | null) {
     refetchInterval: 10000,
   });
 }
+
+// useUserOnlineIPs lists the distinct source IPs a user is currently connected
+// from (account-sharing detection), refreshed periodically.
+export function useUserOnlineIPs(id: string | null) {
+  return useQuery({
+    queryKey: ["user-online-ips", id],
+    enabled: !!id,
+    queryFn: () =>
+      api<{ ips: { ip: string; last_seen: string }[]; count: number; tracking: boolean }>(`/api/users/${id}/online-ips`),
+    refetchInterval: 10000,
+  });
+}

@@ -296,6 +296,13 @@ func (f *fakeOnlineQuerier) OnlineStats(_ context.Context, nodeID uuid.UUID) (ma
 	return f.byNode[nodeID], nil
 }
 
+func (f *fakeOnlineQuerier) OnlineIPs(_ context.Context, nodeID uuid.UUID, _ string) (map[string]int64, error) {
+	if f.errs[nodeID] {
+		return nil, errors.New("node unreachable")
+	}
+	return nil, nil
+}
+
 func TestUserLiveConnectionsSumsAcrossNodesAndSkipsErrors(t *testing.T) {
 	uid := uuid.New()
 	nodeA, nodeB, nodeDown := uuid.New(), uuid.New(), uuid.New()

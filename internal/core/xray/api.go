@@ -30,6 +30,11 @@ type xrayAPI interface {
 	// StatsService.GetAllOnlineUsers.
 	OnlineUsers(ctx context.Context) (map[string]int, error)
 
+	// OnlineIPs returns the distinct source IPs currently online for one user
+	// (by stats email == UUID), mapped to each IP's last-seen unix time, via
+	// StatsService.GetStatsOnlineIpList.
+	OnlineIPs(ctx context.Context, email string) (map[string]int64, error)
+
 	Close() error
 }
 

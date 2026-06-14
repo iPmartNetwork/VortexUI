@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	hcmd "github.com/xtls/xray-core/app/proxyman/command"
@@ -128,6 +130,20 @@ func (g *grpcAPI) OnlineUsers(ctx context.Context) (map[string]int, error) {
 		out[email]++
 	}
 	return out, nil
+}
+
+// OnlineIPs lists the distinct source IPs currently online for one user via
+// Xray's GetStatsOnlineIpList, mapping each IP to its last-seen unix time. A
+// missing counter (user idle/unknown) is reported as an empty map, not an error.
+func (g *grpcAPI) OnlineIPs(ctx context.Context, email string) (map[string]int64, error) {
+	resp, err := g.stats.GetStatsOnlineIpList(ctx, &scmd.GetStatsRequest{Name: email})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return map[string]int64{}, nil
+		}
+		return nil, err
+	}
+	return resp.GetIps(), nil
 }
 
 // buildAccount maps a domain user + inbound into the matching Xray account proto.

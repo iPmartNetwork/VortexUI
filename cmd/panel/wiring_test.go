@@ -110,4 +110,7 @@ func (fakeLocalDriverWiring) Version(context.Context) (string, error) { return "
 func (fakeLocalDriverWiring) OnlineStats(context.Context) (map[string]int, error) {
 	return nil, nil
 }
+func (fakeLocalDriverWiring) OnlineIPList(context.Context, string) (map[string]int64, error) {
+	return nil, nil
+}
 func (fakeLocalDriverWiring) Logs(context.Context, int) ([]string, error) { return nil, nil }
