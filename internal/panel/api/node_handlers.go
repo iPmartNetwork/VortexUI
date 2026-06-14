@@ -123,6 +123,54 @@ func (h *Handlers) GetNodeLogs(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"lines": lines})
 }
 
+// GetNodeStatus returns a node's real-time system snapshot: version, IP,
+// uptime-like data, connections — everything the UI "Manage" panel needs.
+func (h *Handlers) GetNodeStatus(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	n, err := h.Nodes.Get(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "node not found")
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"id":            n.ID,
+		"name":          n.Name,
+		"address":       n.Address,
+		"core":          n.Core,
+		"core_version":  n.CoreVer,
+		"agent_version": n.AgentVer,
+		"status":        n.Status,
+		"last_seen":     n.LastSeen,
+		"health":        n.Health,
+	})
+}
+
+// RestartNodeCore restarts a node's proxy engine.
+func (h *Handlers) RestartNodeCore(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if err := h.Nodes.RestartCore(c.Request().Context(), id); err != nil {
+		return echo.NewHTTPError(http.StatusBadGateway, "restart failed: "+err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"ok": true, "message": "core restarted"})
+}
+
+// StopNodeCore stops a node's proxy engine.
+func (h *Handlers) StopNodeCore(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if err := h.Nodes.StopCore(c.Request().Context(), id); err != nil {
+		return echo.NewHTTPError(http.StatusBadGateway, "stop failed: "+err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"ok": true, "message": "core stopped"})
+}
+
 // --- inbounds ---
 
 type createInboundRequest struct {

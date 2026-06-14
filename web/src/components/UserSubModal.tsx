@@ -1,6 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
-import { RotateCcw, KeyRound } from "lucide-react";
-import { useResetUser, useRevokeSub, useUserSub } from "@/api/policy-hooks";
+import { RotateCcw, KeyRound, Wifi } from "lucide-react";
+import { useResetUser, useRevokeSub, useUserSub, useUserOnline } from "@/api/policy-hooks";
 import type { User } from "@/api/types";
 import { Button } from "./ui";
 import { Modal } from "./Modal";
@@ -10,12 +10,14 @@ import { useToast } from "./toast";
 
 export function UserSubModal({ user, onClose }: { user: User | null; onClose: () => void }) {
   const sub = useUserSub(user?.id ?? null);
+  const online = useUserOnline(user?.id ?? null);
   const reset = useResetUser();
   const revoke = useRevokeSub();
   const confirm = useConfirm();
   const toast = useToast();
   if (!user) return null;
   const d = sub.data;
+  const on = online.data;
 
   async function doReset() {
     if (!user) return;
@@ -42,6 +44,24 @@ export function UserSubModal({ user, onClose }: { user: User | null; onClose: ()
           <div className="flex justify-center rounded-xl bg-white p-4">
             <QRCodeSVG value={d.subscription_url} size={150} />
           </div>
+
+          {on && (on.live_tracking || on.device_tracking) && (
+            <div className="flex items-center gap-4 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-2.5 text-sm">
+              {on.live_tracking && (
+                <span className="flex items-center gap-1.5">
+                  <Wifi size={14} className={on.live_connections > 0 ? "text-success" : "text-fg-subtle"} />
+                  <span className="font-medium">{on.live_connections}</span>
+                  <span className="text-fg-muted">live</span>
+                </span>
+              )}
+              {on.device_tracking && (
+                <span className="flex items-center gap-1.5">
+                  <span className="font-medium">{on.active_devices}</span>
+                  <span className="text-fg-muted">devices</span>
+                </span>
+              )}
+            </div>
+          )}
 
           <div>
             <p className="mb-1.5 text-xs font-medium text-fg-muted">Subscription link</p>

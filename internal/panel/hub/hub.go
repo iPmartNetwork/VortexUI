@@ -30,6 +30,8 @@ type NodeConn interface {
 	ConsumeTraffic(ctx context.Context, ingest func(domain.TrafficDelta)) error
 	OnlineStats(ctx context.Context) (map[string]int, error)
 	Logs(ctx context.Context, limit int) ([]string, error)
+	RestartCore(ctx context.Context) error
+	StopCore(ctx context.Context) error
 	Close() error
 }
 
@@ -230,6 +232,32 @@ func (h *Hub) Logs(ctx context.Context, nodeID uuid.UUID, limit int) ([]string, 
 		return nil, err
 	}
 	return conn.Logs(ctx, limit)
+}
+
+// RestartCore restarts a node's proxy engine.
+func (h *Hub) RestartCore(ctx context.Context, nodeID uuid.UUID) error {
+	mn, err := h.managed(nodeID)
+	if err != nil {
+		return err
+	}
+	conn, err := mn.connection()
+	if err != nil {
+		return err
+	}
+	return conn.RestartCore(ctx)
+}
+
+// StopCore stops a node's proxy engine.
+func (h *Hub) StopCore(ctx context.Context, nodeID uuid.UUID) error {
+	mn, err := h.managed(nodeID)
+	if err != nil {
+		return err
+	}
+	conn, err := mn.connection()
+	if err != nil {
+		return err
+	}
+	return conn.StopCore(ctx)
 }
 
 // HealthyNodes returns a snapshot of currently-healthy managed nodes, used for

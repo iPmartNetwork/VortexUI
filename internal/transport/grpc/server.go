@@ -139,9 +139,24 @@ func (s *NodeServer) Health(ctx context.Context, _ *genv1.HealthRequest) (*genv1
 	}, nil
 }
 
+// RestartCore restarts the local proxy engine (hot-reload the config).
+func (s *NodeServer) RestartCore(ctx context.Context, _ *genv1.RestartCoreRequest) (*genv1.Ack, error) {
+	if err := s.driver.Reload(ctx, nil); err != nil {
+		return ack(false, err.Error()), nil
+	}
+	return ack(true, "core restarted"), nil
+}
+
+// StopCore gracefully stops the local proxy engine.
+func (s *NodeServer) StopCore(ctx context.Context, _ *genv1.StopCoreRequest) (*genv1.Ack, error) {
+	if err := s.driver.Stop(ctx); err != nil {
+		return ack(false, err.Error()), nil
+	}
+	return ack(true, "core stopped"), nil
+}
+
 // OnlineStats reports live per-user connection counts from the driver.
-func (s *NodeServer) OnlineStats(ctx context.Context, _ *genv1.OnlineStatsRequest) (*genv1.OnlineStatsResponse, error) {
-	stats, err := s.driver.OnlineStats(ctx)
+func (s *NodeServer) OnlineStats(ctx context.Context, _ *genv1.OnlineStatsRequest) (*genv1.OnlineStatsResponse, error) {	stats, err := s.driver.OnlineStats(ctx)
 	if err != nil {
 		return nil, err
 	}

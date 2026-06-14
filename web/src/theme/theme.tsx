@@ -18,8 +18,11 @@ function systemPrefersDark(): boolean {
 
 function apply(resolved: "dark" | "light") {
   const root = document.documentElement;
+  // Add transition class for smooth theme change, remove after transition ends
+  root.classList.add("transitioning");
   root.classList.toggle("dark", resolved === "dark");
   root.classList.toggle("light", resolved === "light");
+  setTimeout(() => root.classList.remove("transitioning"), 400);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

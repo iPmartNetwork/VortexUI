@@ -32,6 +32,8 @@ func (f *fakeConn) RemoveUser(context.Context, string, uuid.UUID) error         
 func (f *fakeConn) Close() error                                                       { return nil }
 func (f *fakeConn) OnlineStats(context.Context) (map[string]int, error)                { return nil, nil }
 func (f *fakeConn) Logs(context.Context, int) ([]string, error)                        { return nil, nil }
+func (f *fakeConn) RestartCore(context.Context) error                                  { return nil }
+func (f *fakeConn) StopCore(context.Context) error                                     { return nil }
 
 func (f *fakeConn) Health(context.Context) (domain.NodeHealth, error) {
 	f.mu.Lock()

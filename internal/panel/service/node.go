@@ -23,12 +23,19 @@ type NodeLogQuerier interface {
 	Logs(ctx context.Context, nodeID uuid.UUID, limit int) ([]string, error)
 }
 
+// NodeCoreController restarts/stops a node's core. *hub.Hub satisfies it.
+type NodeCoreController interface {
+	RestartCore(ctx context.Context, nodeID uuid.UUID) error
+	StopCore(ctx context.Context, nodeID uuid.UUID) error
+}
+
 // NodeService manages the node fleet's persistent records and keeps the hub's
 // live management in step with them.
 type NodeService struct {
 	repo      port.NodeRepository
 	registrar NodeRegistrar
 	logs      NodeLogQuerier
+	core      NodeCoreController
 	now       func() time.Time
 }
 
@@ -44,6 +51,13 @@ func (s *NodeService) SetLogQuerier(q NodeLogQuerier) {
 	}
 }
 
+// SetCoreController wires the restart/stop commands (the hub).
+func (s *NodeService) SetCoreController(c NodeCoreController) {
+	if c != nil {
+		s.core = c
+	}
+}
+
 // Logs fetches up to limit recent core log lines from a node. Errors when no log
 // source is wired or the node is unreachable.
 func (s *NodeService) Logs(ctx context.Context, id uuid.UUID, limit int) ([]string, error) {
@@ -51,6 +65,22 @@ func (s *NodeService) Logs(ctx context.Context, id uuid.UUID, limit int) ([]stri
 		return nil, errors.New("node logs source not configured")
 	}
 	return s.logs.Logs(ctx, id, limit)
+}
+
+// RestartCore restarts a node's proxy engine.
+func (s *NodeService) RestartCore(ctx context.Context, id uuid.UUID) error {
+	if s.core == nil {
+		return errors.New("core controller not configured")
+	}
+	return s.core.RestartCore(ctx, id)
+}
+
+// StopCore stops a node's proxy engine.
+func (s *NodeService) StopCore(ctx context.Context, id uuid.UUID) error {
+	if s.core == nil {
+		return errors.New("core controller not configured")
+	}
+	return s.core.StopCore(ctx, id)
 }
 
 // CreateNodeInput describes a new node.

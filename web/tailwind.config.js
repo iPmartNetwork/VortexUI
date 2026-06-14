@@ -26,7 +26,7 @@ export default {
         danger: c("danger"),
         ring: c("ring"),
 
-        /* Back-compat aliases for pages not yet migrated to the new tokens. */
+        /* Legacy compat aliases */
         background: c("bg"),
         foreground: c("fg"),
         card: c("surface"),
@@ -36,25 +36,43 @@ export default {
         destructive: c("danger"),
       },
       fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+      },
+      borderRadius: {
+        "2xl": "1rem",
+        "3xl": "1.25rem",
+      },
+      boxShadow: {
+        glow: "0 0 20px -4px hsl(var(--glow-primary) / 0.35)",
+        "glow-sm": "0 0 10px -2px hsl(var(--glow-primary) / 0.25)",
       },
       keyframes: {
         "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
         "scale-in": {
-          from: { opacity: "0", transform: "scale(0.97)" },
-          to: { opacity: "1", transform: "scale(1)" },
+          from: { opacity: "0", transform: "scale(0.96) translateY(4px)" },
+          to: { opacity: "1", transform: "scale(1) translateY(0)" },
         },
         "slide-up": {
-          from: { opacity: "0", transform: "translateY(8px)" },
+          from: { opacity: "0", transform: "translateY(10px)" },
           to: { opacity: "1", transform: "translateY(0)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
         },
       },
       animation: {
-        "fade-in": "fade-in 0.2s ease-out",
-        "scale-in": "scale-in 0.16s ease-out",
-        "slide-up": "slide-up 0.25s ease-out",
+        "fade-in": "fade-in 0.25s ease-out both",
+        "scale-in": "scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "slide-up": "slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
+        shimmer: "shimmer 2s linear infinite",
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function ({ addVariant }: any) {
+      addVariant("rtl", '[dir="rtl"] &');
+    },
+  ],
 };

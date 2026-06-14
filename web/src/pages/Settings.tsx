@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Moon, Sun, Monitor, Languages, KeyRound, ShieldCheck } from "lucide-react";
+import { Moon, Sun, Monitor, KeyRound, ShieldCheck, Download, Upload } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { useConfirmTOTP, useDisableTOTP, useSetupTOTP } from "@/api/admin-hooks";
+import { useExportBackup, useRestoreBackup } from "@/api/policy-hooks";
 import { Button, Card, Input, PageHeader } from "@/components/ui";
+import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
@@ -73,9 +75,15 @@ export function Settings() {
             </div>
             <div>
               <p className="mb-2 text-xs text-fg-muted">Language</p>
-              <div className="flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
-                <SegBtn active={lang === "en"} onClick={() => setLang("en")}><Languages size={15} />English</SegBtn>
-                <SegBtn active={lang === "fa"} onClick={() => setLang("fa")}><Languages size={15} />فارسی</SegBtn>
+              <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+                <SegBtn active={lang === "en"} onClick={() => setLang("en")}>English</SegBtn>
+                <SegBtn active={lang === "fa"} onClick={() => setLang("fa")}>فارسی</SegBtn>
+                <SegBtn active={lang === "tr"} onClick={() => setLang("tr")}>Türkçe</SegBtn>
+                <SegBtn active={lang === "ar"} onClick={() => setLang("ar")}>العربية</SegBtn>
+                <SegBtn active={lang === "ru"} onClick={() => setLang("ru")}>Русский</SegBtn>
+                <SegBtn active={lang === "zh"} onClick={() => setLang("zh")}>中文</SegBtn>
+                <SegBtn active={lang === "ja"} onClick={() => setLang("ja")}>日本語</SegBtn>
+                <SegBtn active={lang === "es"} onClick={() => setLang("es")}>Español</SegBtn>
               </div>
             </div>
           </div>
@@ -130,7 +138,55 @@ export function Settings() {
             )}
           </div>
         </Card>
+
+        <Card>
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold"><Download size={15} /> Backup / Restore</h2>
+          <p className="text-sm text-fg-muted">Export or replace the entire proxy configuration (nodes, inbounds, outbounds, routing, users + bindings).</p>
+          <BackupSection />
+        </Card>
       </div>
+    </div>
+  );
+}
+
+function BackupSection() {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const exportBackup = useExportBackup();
+  const restoreBackup = useRestoreBackup();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleRestore() {
+    const file = fileRef.current?.files?.[0];
+    if (!file) return;
+    const ok = await confirm({
+      title: "Restore backup?",
+      message: "This REPLACES the entire configuration. The current config will be lost. Are you sure?",
+      confirmLabel: "Restore",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      const res = await restoreBackup.mutateAsync(file);
+      const r = res.restored;
+      toast.success(`Restored: ${r.nodes ?? 0} nodes, ${r.users ?? 0} users, ${r.inbounds ?? 0} inbounds`);
+    } catch (e: any) {
+      toast.error(e.message || "Restore failed");
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3">
+      <Button onClick={() => exportBackup.mutate()} disabled={exportBackup.isPending}>
+        <Download size={15} /> Export
+      </Button>
+      <label className="cursor-pointer">
+        <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleRestore} />
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium transition hover:bg-white/[0.08]">
+          <Upload size={15} /> Import & restore
+        </span>
+      </label>
     </div>
   );
 }

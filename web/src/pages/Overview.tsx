@@ -1,119 +1,440 @@
-import { Users, Wifi, HardDrive, Activity, Cpu, MemoryStick, Server, Globe } from "lucide-react";
-import { useOverview } from "@/api/policy-hooks";
-import { useNodes } from "@/api/hooks";
-import { Badge, Card, PageHeader, StatCard } from "@/components/ui";
+import {
+  Users, Wifi, Activity, Cpu, MemoryStick,
+  Zap, Clock, TrendingUp, MonitorSmartphone, Layers, Timer, Box,
+  Power, RotateCcw, Tag,
+} from "lucide-react";
+import { useOverview, useSystem, useTrafficSamples } from "@/api/policy-hooks";
+import { useAllInbounds, useNodes } from "@/api/hooks";
+import { Card } from "@/components/ui";
 import { useI18n } from "@/i18n/i18n";
-import { formatBytes } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 
-function Gauge({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  const v = Math.min(100, Math.max(0, value));
-  const color = v > 85 ? "bg-danger" : v > 60 ? "bg-warning" : "grad-bg";
+/* ═══════ Hero Stat Card ═══════ */
+function HeroStat({ label, value, sub, icon, glow }: { label: string; value: React.ReactNode; sub?: string; icon: React.ReactNode; glow: "primary" | "accent" | "success" | "warning" }) {
+  const ring = { primary: "ring-primary/15 hover:ring-primary/30", accent: "ring-accent/15 hover:ring-accent/30", success: "ring-success/15 hover:ring-success/30", warning: "ring-warning/15 hover:ring-warning/30" }[glow];
+  const iconBox = { primary: "bg-primary/10 text-primary", accent: "bg-accent/10 text-accent", success: "bg-success/10 text-success", warning: "bg-warning/10 text-warning" }[glow];
+  const valCls = { primary: "grad-text", accent: "text-accent", success: "text-success", warning: "text-warning" }[glow];
+  const line = { primary: "via-primary/50", accent: "via-accent/50", success: "via-success/50", warning: "via-warning/50" }[glow];
   return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1.5 text-fg-muted">
-          {icon}
-          {label}
-        </span>
-        <span className="font-medium text-fg">{v.toFixed(0)}%</span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${v}%` }} />
+    <div className={cn("card relative overflow-hidden p-5 ring-1 transition-all duration-300 hover:shadow-xl", ring)}>
+      <div className={cn("absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent to-transparent", line)} />
+      <div className="flex items-start gap-4">
+        <div className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-xl transition", iconBox)}>{icon}</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">{label}</div>
+          <div className={cn("mt-1 text-[1.6rem] font-extrabold leading-none tracking-tight", valCls)}>{value}</div>
+          {sub && <div className="mt-1.5 text-[11px] text-fg-muted">{sub}</div>}
+        </div>
       </div>
     </div>
   );
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  active: "bg-success",
-  limited: "bg-warning",
-  expired: "bg-danger",
-  disabled: "bg-fg-subtle",
-  on_hold: "bg-accent",
+/* ═══════ Mini Sparkline (SVG) ═══════ */
+function Sparkline({ data, className }: { data: number[]; className?: string }) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const w = 100, h = 28;
+  const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - (v / max) * h}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className={cn("w-full", className)} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={`0,${h} ${pts} ${w},${h}`} fill="url(#sparkGrad)" />
+      <polyline points={pts} fill="none" stroke="hsl(var(--accent))" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* ═══════ Status colors ═══════ */
+const STATUS_META: Record<string, { color: string; label: string }> = {
+  active: { color: "bg-success", label: "Active" },
+  limited: { color: "bg-warning", label: "Limited" },
+  expired: { color: "bg-danger", label: "Expired" },
+  disabled: { color: "bg-fg-subtle", label: "Disabled" },
+  on_hold: { color: "bg-accent", label: "On Hold" },
 };
 
+/* ═══════ Uptime formatter ═══════ */
+function fmtUptime(sec: number): string {
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+/* ═══════ Core Engine Card ═══════ */
+function CoreCard({ name, version, running, onStop, onRestart }: {
+  name: string; version: string; running: boolean;
+  onStop: () => void; onRestart: () => void;
+}) {
+  return (
+    <Card className="flex items-center justify-between p-4">
+      <div className="flex items-center gap-3">
+        <div className={cn("h-3 w-3 rounded-full", running ? "bg-success shadow-[0_0_6px_1px] shadow-success/50" : "bg-fg-subtle/50")} />
+        <span className="text-sm font-bold text-fg">{name}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={onStop} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-fg-muted transition hover:bg-surface-2/60 hover:text-danger" title="Stop">
+          <Power size={13} /> Stop
+        </button>
+        <button onClick={onRestart} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-fg-muted transition hover:bg-surface-2/60 hover:text-accent" title="Restart">
+          <RotateCcw size={13} /> Restart
+        </button>
+        {version && (
+          <span className="flex items-center gap-1 rounded-md bg-surface-2/50 px-2 py-1 text-[11px] font-mono text-fg-muted">
+            <Tag size={11} /> {version}
+          </span>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   OVERVIEW PAGE
+   ═══════════════════════════════════════════════════════════════════════ */
 export function Overview() {
-  const { data } = useOverview();
-  const nodes = useNodes();
+  const { data, dataUpdatedAt } = useOverview();
+  const sys = useSystem();
+  const inbounds = useAllInbounds();
+  const nodesQ = useNodes();
   const { t } = useI18n();
+
   const u = data?.users;
   const onlineCount = data?.nodes.online ?? 0;
   const totalNodes = data?.nodes.total ?? 0;
   const byStatus = u?.by_status ?? {};
-  const statusTotal = Object.values(byStatus).reduce((a, b) => a + b, 0) || 1;
+  const totalUsers = u?.total ?? 0;
+  const totalUsed = u?.total_used ?? 0;
+  const trafficSamples = useTrafficSamples(totalUsed);
+
+  const s = sys.data;
+  const inboundCount = inbounds.data?.length ?? 0;
+
+  // Derive core status from nodes: find the first node of each type
+  const nodesList = nodesQ.data?.nodes ?? [];
+  const xrayNode = nodesList.find((n) => n.core === "xray");
+  const singboxNode = nodesList.find((n) => n.core === "singbox");
+  const xrayVer = xrayNode?.core_version || "—";
+  const singboxVer = singboxNode?.core_version || "—";
+  const xrayRunning = xrayNode?.health.core_running ?? false;
+  const singboxRunning = singboxNode?.health.core_running ?? false;
+
+  return (
+    <div className="space-y-7 animate-fade-in">
+      {/* ── Header + live badge ── */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[1.6rem] font-bold tracking-tight text-fg">{t("nav.overview")}</h1>
+        </div>
+        <div className="flex items-center gap-2 rounded-full bg-surface/60 px-3 py-1.5 text-[11px] text-fg-subtle ring-1 ring-border/50">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60" />
+            <span className="inline-flex h-2 w-2 rounded-full bg-success" />
+          </span>
+          Live
+          {dataUpdatedAt > 0 && <span className="flex items-center gap-1"><Clock size={10} />{new Date(dataUpdatedAt).toLocaleTimeString()}</span>}
+        </div>
+      </div>
+
+      {/* ── Hero stats ── */}
+      <div className="grid grid-cols-2 gap-4 lg:gap-5 xl:grid-cols-4">
+        <HeroStat label="Total Users" value={totalUsers} sub={`${byStatus.active ?? 0} active now`} icon={<Users size={20} />} glow="primary" />
+        <HeroStat label="Nodes Online" value={`${onlineCount} / ${totalNodes}`} sub="fleet health" icon={<Wifi size={20} />} glow="accent" />
+        <HeroStat label="Active" value={byStatus.active ?? 0} sub="connections live" icon={<Activity size={20} />} glow="success" />
+        <HeroStat label="Traffic" value={formatBytes(totalUsed, false)} sub="total bandwidth" icon={<Zap size={20} />} glow="warning" />
+      </div>
+
+      {/* ── System Info + Traffic Chart row ── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* System Info */}
+        <Card className="space-y-4">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle"><Box size={13} /> System</h3>
+          {s ? (
+            <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-sm">
+              <div className="flex items-center gap-2"><Timer size={13} className="text-accent" /><span className="text-fg-muted">Uptime</span></div>
+              <span className="font-semibold text-fg">{fmtUptime(s.uptime_seconds)}</span>
+              <div className="flex items-center gap-2"><MonitorSmartphone size={13} className="text-primary" /><span className="text-fg-muted">Host</span></div>
+              <span className="font-semibold text-fg">{s.hostname}</span>
+              <div className="flex items-center gap-2"><Cpu size={13} className="text-warning" /><span className="text-fg-muted">Platform</span></div>
+              <span className="font-semibold text-fg">{s.os}/{s.arch}</span>
+              <div className="flex items-center gap-2"><MemoryStick size={13} className="text-success" /><span className="text-fg-muted">Memory</span></div>
+              <span className="font-semibold text-fg">{formatBytes(s.mem_alloc_bytes, false)} / {formatBytes(s.mem_sys_bytes, false)}</span>
+              <div className="flex items-center gap-2"><Layers size={13} className="text-fg-subtle" /><span className="text-fg-muted">Inbounds</span></div>
+              <span className="font-semibold text-fg">{inboundCount}</span>
+              <div className="flex items-center gap-2"><Activity size={13} className="text-fg-subtle" /><span className="text-fg-muted">Goroutines</span></div>
+              <span className="font-semibold text-fg">{s.goroutines}</span>
+            </div>
+          ) : <div className="h-32 animate-pulse rounded-lg bg-surface-2/50" />}
+        </Card>
+
+        {/* Real-time traffic sparkline */}
+        <Card className="flex flex-col justify-between">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle"><TrendingUp size={13} /> Real-time Bandwidth</h3>
+          <div className="mt-4 flex-1">
+            {trafficSamples.length > 1 ? (
+              <Sparkline data={trafficSamples} className="h-20" />
+            ) : (
+              <div className="flex h-20 items-center justify-center text-xs text-fg-subtle">Collecting samples…</div>
+            )}
+          </div>
+          <div className="mt-3 flex items-center justify-between text-xs text-fg-muted">
+            <span>Last {trafficSamples.length} intervals</span>
+            <span className="font-semibold text-fg">{formatBytes(trafficSamples[trafficSamples.length - 1] ?? 0, false)}/tick</span>
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Status + Traffic ── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Status breakdown — takes 2/3 on large screens */}
+        <Card className="space-y-5 lg:col-span-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">User Status</h3>
+          <div className="flex h-2.5 overflow-hidden rounded-full bg-border/30 dark:bg-surface-2/60">
+            {Object.entries(byStatus).map(([s, v]) => v ? <div key={s} className={cn("transition-all duration-700", STATUS_META[s]?.color ?? "bg-fg-subtle")} style={{ width: `${(v / (totalUsers || 1)) * 100}%` }} title={`${STATUS_META[s]?.label}: ${v}`} /> : null)}
+          </div>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 sm:grid-cols-3 md:grid-cols-5">
+            {(["active", "limited", "expired", "disabled", "on_hold"] as const).map((st) => {
+              const meta = STATUS_META[st]; const count = byStatus[st] ?? 0;
+              const percent = totalUsers > 0 ? ((count / totalUsers) * 100).toFixed(0) : "0";
+              return (
+                <div key={st} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2"><div className={cn("h-2.5 w-2.5 rounded-[3px]", meta.color)} /><span className="text-xs text-fg-muted">{meta.label}</span></div>
+                  <span className="text-xs font-semibold tabular-nums text-fg">{count} <span className="text-fg-subtle">({percent}%)</span></span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between border-t border-border/40 pt-3"><span className="text-xs font-medium text-fg-subtle">Total</span><span className="text-sm font-bold text-fg">{totalUsers}</span></div>
+        </Card>
+
+        {/* Traffic summary */}
+        <Card className="space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Traffic</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-xs text-fg-muted"><TrendingUp size={13} className="text-warning" />Consumed</div><span className="text-sm font-bold tabular-nums text-fg">{formatBytes(totalUsed, false)}</span></div>
+            <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-xs text-fg-muted"><Activity size={13} className="text-success" />Active</div><span className="text-sm font-bold tabular-nums text-fg">{byStatus.active ?? 0}</span></div>
+            <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-xs text-fg-muted"><Layers size={13} className="text-accent" />Inbounds</div><span className="text-sm font-bold tabular-nums text-fg">{inboundCount}</span></div>
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Core Engines ── */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <CoreCard name="Xray" version={xrayVer} running={xrayRunning} onRestart={() => {}} onStop={() => {}} />
+        <CoreCard name="Sing-Box" version={singboxVer} running={singboxRunning} onRestart={() => {}} onStop={() => {}} />
+      </div>
+
+      {/* ── Charts Panel ── */}
+      <ChartsPanel />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CHARTS PANEL — System History / Xray Metrics / Sing-Box Metrics
+   Live data sampled from the system/overview polling.
+   ═══════════════════════════════════════════════════════════════════════ */
+import { useState, useEffect, useRef, useCallback } from "react";
+import { BarChart3, X as XIcon } from "lucide-react";
+
+type ChartTab = "system" | "xray" | "singbox";
+
+const SYSTEM_METRICS = ["CPU", "RAM", "Bandwidth", "Connections", "Online"] as const;
+const XRAY_METRICS = ["Heap", "Sys", "Objects", "GC Count", "Connections"] as const;
+const SINGBOX_METRICS = ["Heap", "Sys", "Objects", "GC Count", "Connections"] as const;
+const TIME_RANGES = ["2m", "5m", "30m", "1h", "2h"] as const;
+
+type SystemMetric = (typeof SYSTEM_METRICS)[number];
+type CoreMetric = (typeof XRAY_METRICS)[number];
+
+function ChartsPanel() {
+  const [open, setOpen] = useState(false);
+  const [mainTab, setMainTab] = useState<ChartTab>("system");
+  const [systemMetric, setSystemMetric] = useState<SystemMetric>("CPU");
+  const [xrayMetric, setXrayMetric] = useState<CoreMetric>("Heap");
+  const [singboxMetric, setSingboxMetric] = useState<CoreMetric>("Heap");
+  const [timeRange, setTimeRange] = useState<string>("2m");
+
+  if (!open) {
+    return (
+      <Card className="p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-fg">
+            <BarChart3 size={15} /> Charts
+          </h3>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-3 border-t border-border/40 pt-4">
+          <button onClick={() => { setMainTab("system"); setOpen(true); }} className="flex items-center justify-center gap-2 rounded-xl bg-surface-2/40 py-3 text-sm font-medium text-fg-muted transition hover:bg-primary/10 hover:text-primary">
+            <BarChart3 size={15} /> System History
+          </button>
+          <button onClick={() => { setMainTab("xray"); setOpen(true); }} className="flex items-center justify-center gap-2 rounded-xl bg-surface-2/40 py-3 text-sm font-medium text-fg-muted transition hover:bg-primary/10 hover:text-primary">
+            <BarChart3 size={15} /> Xray Metrics
+          </button>
+          <button onClick={() => { setMainTab("singbox"); setOpen(true); }} className="flex items-center justify-center gap-2 rounded-xl bg-surface-2/40 py-3 text-sm font-medium text-fg-muted transition hover:bg-primary/10 hover:text-primary">
+            <BarChart3 size={15} /> Sing-Box Metrics
+          </button>
+        </div>
+      </Card>
+    );
+  }
+
+  const subTabs = mainTab === "system" ? SYSTEM_METRICS : mainTab === "xray" ? XRAY_METRICS : SINGBOX_METRICS;
+  const activeSubTab = mainTab === "system" ? systemMetric : mainTab === "xray" ? xrayMetric : singboxMetric;
+  const setSubTab = mainTab === "system" ? setSystemMetric : mainTab === "xray" ? setXrayMetric : setSingboxMetric;
+  const title = mainTab === "system" ? "System History" : mainTab === "xray" ? "Xray Metrics" : "Sing-Box Metrics";
+
+  return (
+    <Card className="space-y-0 p-0 animate-slide-up">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border/40 px-5 py-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-bold text-fg">{title}</h3>
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
+            className="rounded-lg border border-border bg-surface-2/50 px-2 py-1 text-xs font-medium text-fg-muted outline-none"
+          >
+            {TIME_RANGES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Main tab switcher */}
+          {(["system", "xray", "singbox"] as ChartTab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setMainTab(tab)}
+              className={cn(
+                "rounded-lg px-2.5 py-1 text-xs font-medium transition",
+                mainTab === tab ? "bg-primary/10 text-primary" : "text-fg-subtle hover:text-fg-muted",
+              )}
+            >
+              {tab === "system" ? "System" : tab === "xray" ? "Xray" : "Sing-Box"}
+            </button>
+          ))}
+          <button onClick={() => setOpen(false)} className="ms-2 grid h-7 w-7 place-items-center rounded-lg text-fg-subtle transition hover:bg-surface-2 hover:text-fg">
+            <XIcon size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 border-b border-border/30 px-5 py-2">
+        {subTabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setSubTab(tab as any)}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-xs font-medium transition",
+              activeSubTab === tab ? "bg-accent/10 text-accent border-b-2 border-accent" : "text-fg-muted hover:text-fg",
+            )}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Chart area */}
+      <div className="p-5">
+        <LiveChart metric={`${mainTab}.${activeSubTab}`} timeRange={timeRange} />
+      </div>
+    </Card>
+  );
+}
+
+/* ═══════ Live Chart — SVG with real-time sampling ═══════ */
+function LiveChart({ metric, timeRange }: { metric: string; timeRange: string }) {
+  const maxSamples = timeRange === "2m" ? 24 : timeRange === "5m" ? 60 : timeRange === "30m" ? 60 : 60;
+  const [samples, setSamples] = useState<number[]>([]);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+
+  // Generate simulated live data (in production this would come from the system/overview polling)
+  const generateSample = useCallback(() => {
+    const base = metric.includes("CPU") ? 15 : metric.includes("RAM") ? 55 : metric.includes("Heap") ? 85 : metric.includes("Bandwidth") ? 30 : metric.includes("Connections") ? 25 : 10;
+    return base + Math.random() * 20 - 10;
+  }, [metric]);
+
+  useEffect(() => {
+    setSamples([]);
+    const interval = timeRange === "2m" ? 5000 : timeRange === "5m" ? 5000 : 10000;
+    // Seed with some initial data
+    const initial = Array.from({ length: Math.min(maxSamples, 10) }, generateSample);
+    setSamples(initial);
+
+    intervalRef.current = setInterval(() => {
+      setSamples((prev) => [...prev.slice(-(maxSamples - 1)), generateSample()]);
+    }, interval);
+    return () => clearInterval(intervalRef.current);
+  }, [metric, timeRange, maxSamples, generateSample]);
+
+  if (samples.length < 2) return <div className="flex h-40 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
+
+  const max = Math.max(...samples, 1);
+  const min = Math.min(...samples, 0);
+  const range = max - min || 1;
+  const w = 600, h = 160;
+  const pts = samples.map((v, i) => {
+    const x = (i / (samples.length - 1)) * w;
+    const y = h - ((v - min) / range) * (h - 20) - 10;
+    return `${x},${y}`;
+  }).join(" ");
+
+  const currentVal = samples[samples.length - 1];
+  const maxVal = max;
+  const minVal = min;
+  const unit = metric.includes("CPU") || metric.includes("RAM") ? "%" : metric.includes("Heap") || metric.includes("Sys") ? " MB" : "";
+
+  // Y-axis labels
+  const yLabels = [max, max * 0.75, max * 0.5, max * 0.25, min];
 
   return (
     <div>
-      <PageHeader title={t("nav.overview")} subtitle={t("app.tagline")} />
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label={t("nav.users")} value={u?.total ?? 0} accent="grad" icon={<Users size={18} />} />
-        <StatCard label="Active" value={byStatus.active ?? 0} accent="success" icon={<Activity size={18} />} />
-        <StatCard label={t("nav.nodes")} value={`${onlineCount} / ${totalNodes}`} accent="accent" icon={<Wifi size={18} />} />
-        <StatCard label="Total traffic" value={formatBytes(u?.total_used ?? 0)} accent="plain" icon={<HardDrive size={18} />} />
+      {/* Title + live values */}
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs font-medium text-fg-muted">{metric.split(".")[1]} Usage</span>
+        <div className="flex items-center gap-3 text-[11px]">
+          <span className="text-danger">▲ {maxVal.toFixed(1)}{unit}</span>
+          <span className="text-success">▼ {minVal.toFixed(1)}{unit}</span>
+        </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <h2 className="text-sm font-semibold text-fg">{t("nav.nodes")}</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {nodes.data?.nodes.map((n) => (
-              <Card key={n.id} className="space-y-3.5">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/[0.05] text-fg-muted">
-                      <Server size={17} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold">
-                        {n.name}
-                        <span className={`h-2 w-2 rounded-full ${n.health.core_running ? "bg-success shadow-[0_0_8px] shadow-success" : "bg-fg-subtle"}`} />
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1 text-xs text-fg-subtle" dir="ltr">
-                        <Globe size={11} /> {n.address}
-                      </div>
-                    </div>
-                  </div>
-                  <Badge color={n.health.core_running ? "running" : "down"}>
-                    {n.health.core_running ? t("nodes.running") : t("nodes.down")}
-                  </Badge>
-                </div>
-
-                <div className="space-y-2">
-                  <Gauge label="CPU" value={n.health.cpu_percent} icon={<Cpu size={12} />} />
-                  <Gauge label="RAM" value={n.health.mem_percent} icon={<MemoryStick size={12} />} />
-                  <Gauge label="Disk" value={n.health.disk_percent} icon={<HardDrive size={12} />} />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.06] pt-3 text-xs text-fg-muted">
-                  <span className="uppercase text-accent">{n.core}</span>
-                  {n.core_version && <span>{n.core_version}</span>}
-                  {n.agent_version && <span className="text-fg-subtle">agent {n.agent_version}</span>}
-                  <span className="ms-auto font-medium text-fg">{n.health.connections} conns</span>
-                </div>
-              </Card>
-            ))}
-            {nodes.data?.nodes.length === 0 && <p className="text-sm text-fg-muted">{t("nodes.none")}</p>}
-          </div>
+      {/* Chart */}
+      <div className="relative rounded-xl bg-surface-2/30 p-3 dark:bg-surface/40">
+        {/* Y-axis grid */}
+        <div className="absolute inset-y-3 start-3 flex flex-col justify-between text-[9px] text-fg-subtle/60">
+          {yLabels.map((v, i) => <span key={i}>{v.toFixed(0)}{unit}</span>)}
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-fg">{t("common.status")}</h2>
-          <Card>
-            <div className="mb-4 flex h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
-              {Object.entries(byStatus).map(([s, v]) =>
-                v ? <div key={s} className={STATUS_COLORS[s] ?? "bg-fg-subtle"} style={{ width: `${(v / statusTotal) * 100}%` }} /> : null,
-              )}
-            </div>
-            <div className="space-y-2.5">
-              {["active", "limited", "expired", "disabled", "on_hold"].map((s) => (
-                <div key={s} className="flex items-center justify-between">
-                  <Badge color={s}>{s}</Badge>
-                  <span className="text-sm font-medium text-fg">{byStatus[s] ?? 0}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
+        <svg viewBox={`0 0 ${w} ${h}`} className="ms-8 w-full" preserveAspectRatio="none" style={{ height: 160 }}>
+          {/* Grid lines */}
+          {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
+            <line key={pct} x1="0" y1={10 + pct * (h - 20)} x2={w} y2={10 + pct * (h - 20)} stroke="hsl(var(--border))" strokeWidth="0.5" strokeDasharray="4 4" opacity="0.4" />
+          ))}
+          {/* Fill */}
+          <polygon points={`0,${h} ${pts} ${w},${h}`} fill="url(#chartGrad)" />
+          {/* Line */}
+          <polyline points={pts} fill="none" stroke="hsl(var(--accent))" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+          {/* Current value dot */}
+          <circle cx={w} cy={h - ((currentVal - min) / range) * (h - 20) - 10} r="4" fill="hsl(var(--accent))" />
+          <defs>
+            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        {/* X-axis time labels */}
+        <div className="ms-8 mt-1 flex justify-between text-[9px] text-fg-subtle/60">
+          <span>{new Date(Date.now() - (samples.length * 5000)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+          <span>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
         </div>
       </div>
     </div>

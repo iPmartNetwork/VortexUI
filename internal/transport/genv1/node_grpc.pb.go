@@ -24,6 +24,8 @@ const (
 	NodeService_RemoveUser_FullMethodName    = "/vortex.v1.NodeService/RemoveUser"
 	NodeService_StreamTraffic_FullMethodName = "/vortex.v1.NodeService/StreamTraffic"
 	NodeService_Health_FullMethodName        = "/vortex.v1.NodeService/Health"
+	NodeService_RestartCore_FullMethodName   = "/vortex.v1.NodeService/RestartCore"
+	NodeService_StopCore_FullMethodName      = "/vortex.v1.NodeService/StopCore"
 	NodeService_OnlineStats_FullMethodName   = "/vortex.v1.NodeService/OnlineStats"
 	NodeService_NodeLogs_FullMethodName      = "/vortex.v1.NodeService/NodeLogs"
 )
@@ -49,6 +51,10 @@ type NodeServiceClient interface {
 	StreamTraffic(ctx context.Context, in *StreamTrafficRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TrafficDelta], error)
 	// Health returns a live resource/liveness snapshot for failover decisions.
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
+	// RestartCore restarts the proxy engine process (applies latest config).
+	RestartCore(ctx context.Context, in *RestartCoreRequest, opts ...grpc.CallOption) (*Ack, error)
+	// StopCore gracefully shuts the proxy engine down.
+	StopCore(ctx context.Context, in *StopCoreRequest, opts ...grpc.CallOption) (*Ack, error)
 	// OnlineStats returns the current live-connection count per user (keyed by the
 	// user's stats email == UUID). Polled on demand by the panel.
 	OnlineStats(ctx context.Context, in *OnlineStatsRequest, opts ...grpc.CallOption) (*OnlineStatsResponse, error)
@@ -123,6 +129,26 @@ func (c *nodeServiceClient) Health(ctx context.Context, in *HealthRequest, opts 
 	return out, nil
 }
 
+func (c *nodeServiceClient) RestartCore(ctx context.Context, in *RestartCoreRequest, opts ...grpc.CallOption) (*Ack, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Ack)
+	err := c.cc.Invoke(ctx, NodeService_RestartCore_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *nodeServiceClient) StopCore(ctx context.Context, in *StopCoreRequest, opts ...grpc.CallOption) (*Ack, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Ack)
+	err := c.cc.Invoke(ctx, NodeService_StopCore_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *nodeServiceClient) OnlineStats(ctx context.Context, in *OnlineStatsRequest, opts ...grpc.CallOption) (*OnlineStatsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(OnlineStatsResponse)
@@ -164,6 +190,10 @@ type NodeServiceServer interface {
 	StreamTraffic(*StreamTrafficRequest, grpc.ServerStreamingServer[TrafficDelta]) error
 	// Health returns a live resource/liveness snapshot for failover decisions.
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
+	// RestartCore restarts the proxy engine process (applies latest config).
+	RestartCore(context.Context, *RestartCoreRequest) (*Ack, error)
+	// StopCore gracefully shuts the proxy engine down.
+	StopCore(context.Context, *StopCoreRequest) (*Ack, error)
 	// OnlineStats returns the current live-connection count per user (keyed by the
 	// user's stats email == UUID). Polled on demand by the panel.
 	OnlineStats(context.Context, *OnlineStatsRequest) (*OnlineStatsResponse, error)
@@ -193,6 +223,12 @@ func (UnimplementedNodeServiceServer) StreamTraffic(*StreamTrafficRequest, grpc.
 }
 func (UnimplementedNodeServiceServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Health not implemented")
+}
+func (UnimplementedNodeServiceServer) RestartCore(context.Context, *RestartCoreRequest) (*Ack, error) {
+	return nil, status.Error(codes.Unimplemented, "method RestartCore not implemented")
+}
+func (UnimplementedNodeServiceServer) StopCore(context.Context, *StopCoreRequest) (*Ack, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopCore not implemented")
 }
 func (UnimplementedNodeServiceServer) OnlineStats(context.Context, *OnlineStatsRequest) (*OnlineStatsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method OnlineStats not implemented")
@@ -304,6 +340,42 @@ func _NodeService_Health_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NodeService_RestartCore_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestartCoreRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServiceServer).RestartCore(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeService_RestartCore_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServiceServer).RestartCore(ctx, req.(*RestartCoreRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NodeService_StopCore_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopCoreRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServiceServer).StopCore(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeService_StopCore_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServiceServer).StopCore(ctx, req.(*StopCoreRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _NodeService_OnlineStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(OnlineStatsRequest)
 	if err := dec(in); err != nil {
@@ -362,6 +434,14 @@ var NodeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Health",
 			Handler:    _NodeService_Health_Handler,
+		},
+		{
+			MethodName: "RestartCore",
+			Handler:    _NodeService_RestartCore_Handler,
+		},
+		{
+			MethodName: "StopCore",
+			Handler:    _NodeService_StopCore_Handler,
 		},
 		{
 			MethodName: "OnlineStats",

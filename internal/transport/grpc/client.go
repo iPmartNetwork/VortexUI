@@ -110,6 +110,16 @@ func (c *NodeClient) Logs(ctx context.Context, limit int) ([]string, error) {
 	return r.GetLines(), nil
 }
 
+// RestartCore restarts the node's proxy engine.
+func (c *NodeClient) RestartCore(ctx context.Context) error {
+	return ackErr(c.rpc.RestartCore(ctx, &genv1.RestartCoreRequest{}))
+}
+
+// StopCore stops the node's proxy engine.
+func (c *NodeClient) StopCore(ctx context.Context) error {
+	return ackErr(c.rpc.StopCore(ctx, &genv1.StopCoreRequest{}))
+}
+
 // ConsumeTraffic opens the long-lived traffic stream and hands every delta to
 // ingest until ctx is cancelled or the stream ends. The caller (hub) is expected
 // to call this in its own goroutine and reconnect on error with backoff.
