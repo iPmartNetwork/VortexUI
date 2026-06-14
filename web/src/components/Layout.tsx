@@ -53,9 +53,9 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-60 flex-col border-e bg-bg-elevated/60 backdrop-blur">
+      <aside className="flex w-60 flex-col border-e border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
         <div className="flex items-center gap-2.5 px-5 py-5">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-primary/30">
+          <div className="grad-bg grid h-9 w-9 place-items-center rounded-xl text-white shadow-lg shadow-primary/30">
             <Network size={18} strokeWidth={2.5} />
           </div>
           <div>
@@ -83,7 +83,7 @@ export function Layout() {
                 {({ isActive }) => (
                   <>
                     {isActive && (
-                      <span className="absolute inset-y-1.5 start-0 w-1 rounded-full bg-primary" />
+                      <span className="grad-bg absolute inset-y-1.5 start-0 w-1 rounded-full" />
                     )}
                     <Icon size={18} strokeWidth={2} />
                     {t(n.key)}

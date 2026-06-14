@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useDeleteUser, useUsers } from "@/api/hooks";
 import type { User } from "@/api/types";
-import { Badge, Button, Card, Input } from "@/components/ui";
+import { Badge, Button, Card, Input, PageHeader } from "@/components/ui";
+import { useI18n } from "@/i18n/i18n";
 import { CreateUserModal } from "@/components/CreateUserModal";
 import { EditUserModal } from "@/components/EditUserModal";
 import { UserUsageModal } from "@/components/UserUsageModal";
@@ -29,6 +30,7 @@ export function Users() {
   const del = useDeleteUser();
   const confirm = useConfirm();
   const toast = useToast();
+  const { t } = useI18n();
 
   async function remove(u: User) {
     const ok = await confirm({
@@ -51,33 +53,27 @@ export function Users() {
       <CreateUserModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <EditUserModal user={editing} onClose={() => setEditing(null)} />
       <UserUsageModal user={viewing} onClose={() => setViewing(null)} />
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-          <p className="text-sm text-muted-foreground">{data?.total ?? 0} total</p>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            className="max-w-xs"
-            placeholder="Search…"
-            value={search}
-            onChange={(e) => onSearch(e.target.value)}
-          />
-          <Button onClick={() => setModalOpen(true)}>New user</Button>
-        </div>
-      </div>
+      <PageHeader title={t("users.title")} subtitle={`${data?.total ?? 0} ${t("common.total")}`}>
+        <Input
+          className="w-52"
+          placeholder={t("common.search")}
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+        />
+        <Button onClick={() => setModalOpen(true)}>{t("users.new")}</Button>
+      </PageHeader>
 
       <Card className="p-0">
-        {isLoading && <div className="p-6 text-sm text-muted-foreground">Loading…</div>}
-        {error && <div className="p-6 text-sm text-destructive">Failed to load users</div>}
+        {isLoading && <div className="p-6 text-sm text-fg-muted">{t("common.loading")}</div>}
+        {error && <div className="p-6 text-sm text-danger">Failed to load users</div>}
         {data && (
           <table className="w-full text-sm">
-            <thead className="border-b text-left text-muted-foreground">
+            <thead className="border-b text-start text-fg-muted">
               <tr>
-                <th className="px-5 py-3 font-medium">Username</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">Usage</th>
-                <th className="px-5 py-3 font-medium">Expires</th>
+                <th className="px-5 py-3 text-start font-medium">{t("users.username")}</th>
+                <th className="px-5 py-3 text-start font-medium">{t("common.status")}</th>
+                <th className="px-5 py-3 text-start font-medium">{t("users.usage")}</th>
+                <th className="px-5 py-3 text-start font-medium">{t("users.expires")}</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>

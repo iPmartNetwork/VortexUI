@@ -48,10 +48,10 @@ export function Login() {
 
       <div className="card w-full max-w-sm animate-scale-in p-7">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-primary/30">
+          <div className="grad-bg mb-3 grid h-12 w-12 place-items-center rounded-2xl text-white shadow-lg shadow-primary/40">
             <Network size={24} strokeWidth={2.5} />
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">{t("login.title")}</h1>
+          <h1 className="text-xl font-semibold tracking-tight grad-text">{t("login.title")}</h1>
           <p className="mt-1 text-sm text-fg-muted">{t("login.subtitle")}</p>
         </div>
 

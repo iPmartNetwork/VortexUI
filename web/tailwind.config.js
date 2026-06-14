@@ -20,6 +20,7 @@ export default {
         "primary-hover": c("primary-hover"),
         "primary-fg": c("primary-fg"),
         accent: c("accent"),
+        "accent-2": c("accent-2"),
         success: c("success"),
         warning: c("warning"),
         danger: c("danger"),
