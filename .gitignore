@@ -1,0 +1,42 @@
+# Binaries
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test & coverage
+*.test
+*.out
+coverage.*
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+!deploy/**/*.example
+
+# Data & runtime
+*.db
+*.sqlite
+*.sqlite3
+/data/
+/logs/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Frontend
+/web/node_modules/
+/web/dist/
+
+# Go workspace
+go.work
+go.work.sum

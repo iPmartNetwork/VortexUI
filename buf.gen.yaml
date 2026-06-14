@@ -1,0 +1,11 @@
+version: v2
+# Generated Go is written source-relative under the module root; the `module`
+# option strips the go_package module prefix so files land in
+# internal/transport/genv1/.
+plugins:
+  - local: protoc-gen-go
+    out: .
+    opt: module=github.com/vortexui/vortexui
+  - local: protoc-gen-go-grpc
+    out: .
+    opt: module=github.com/vortexui/vortexui

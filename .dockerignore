@@ -1,0 +1,13 @@
+.git/
+bin/
+web/node_modules/
+web/dist/
+*.md
+deploy/certs/
+data/
+logs/
+*.test
+coverage.*
+.env
+.env.*
+!.env.example

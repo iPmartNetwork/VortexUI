@@ -1,0 +1,18 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "internal/platform/postgres/schema.sql"
+    queries: "internal/platform/postgres/queries"
+    gen:
+      go:
+        package: "db"
+        out: "internal/platform/postgres/db"
+        sql_package: "pgx/v5"
+        emit_interface: false
+        emit_json_tags: false
+        emit_empty_slices: true
+        overrides:
+          # Map Postgres UUID straight to google/uuid so the domain<->db seam
+          # doesn't shuffle through pgtype for the most common column type.
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
