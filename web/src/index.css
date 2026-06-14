@@ -2,35 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
-  --card: 0 0% 100%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --border: 214 32% 91%;
-  --primary: 244 75% 57%;
-  --primary-foreground: 0 0% 100%;
-  --destructive: 0 72% 51%;
+@layer base {
+  :root,
+  .dark {
+    /* Dark — deep slate-blue with a violet→cyan "vortex" accent */
+    --bg: 224 60% 5%;
+    --bg-elevated: 223 47% 8%;
+    --surface: 222 44% 10.5%;
+    --surface-2: 220 40% 14%;
+    --border: 220 32% 18%;
+    --border-strong: 219 28% 27%;
+    --fg: 210 40% 98%;
+    --fg-muted: 217 20% 62%;
+    --fg-subtle: 217 16% 46%;
+    --primary: 256 92% 68%;
+    --primary-hover: 256 95% 73%;
+    --primary-fg: 250 60% 8%;
+    --accent: 188 95% 56%;
+    --success: 152 62% 50%;
+    --warning: 38 95% 58%;
+    --danger: 358 78% 62%;
+    --ring: 256 92% 68%;
+  }
+
+  .light {
+    --bg: 220 33% 97%;
+    --bg-elevated: 0 0% 100%;
+    --surface: 0 0% 100%;
+    --surface-2: 220 28% 95%;
+    --border: 220 20% 89%;
+    --border-strong: 220 17% 80%;
+    --fg: 224 47% 11%;
+    --fg-muted: 218 16% 42%;
+    --fg-subtle: 218 12% 55%;
+    --primary: 256 78% 58%;
+    --primary-hover: 256 80% 53%;
+    --primary-fg: 0 0% 100%;
+    --accent: 190 92% 38%;
+    --success: 152 55% 38%;
+    --warning: 32 90% 44%;
+    --danger: 358 72% 52%;
+    --ring: 256 78% 58%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+  html[dir="rtl"] {
+    font-family: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-bg text-fg antialiased;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image: radial-gradient(
+      120% 120% at 100% 0%,
+      hsl(var(--primary) / 0.06) 0%,
+      transparent 45%
+    );
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.3);
+  }
+
+  /* Slim, theme-aware scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border-strong));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--fg-subtle));
+    background-clip: content-box;
+  }
 }
 
-.dark {
-  --background: 222 47% 7%;
-  --foreground: 210 40% 98%;
-  --card: 222 40% 11%;
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
-  --border: 217 33% 20%;
-  --primary: 244 75% 66%;
-  --primary-foreground: 222 47% 11%;
-  --destructive: 0 63% 51%;
-}
-
-* {
-  border-color: hsl(var(--border));
-}
-
-body {
-  @apply bg-background text-foreground antialiased;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+@layer components {
+  .card {
+    @apply rounded-xl border bg-surface;
+    box-shadow: 0 1px 2px hsl(224 60% 3% / 0.3);
+  }
+  .field {
+    @apply w-full rounded-lg border bg-bg-elevated px-3.5 py-2.5 text-sm text-fg outline-none transition;
+    @apply placeholder:text-fg-subtle focus:border-primary/60 focus:ring-4 focus:ring-primary/15;
+  }
 }

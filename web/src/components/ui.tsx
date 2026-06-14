@@ -1,21 +1,28 @@
-// Minimal shadcn-style UI primitives (hand-rolled to avoid the generator/runtime).
 import { cn } from "@/lib/utils";
 
 export function Button({
   className,
   variant = "primary",
+  size = "md",
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "destructive" }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "ghost" | "outline" | "destructive";
+  size?: "sm" | "md";
+}) {
   const variants = {
-    primary: "bg-primary text-primary-foreground hover:opacity-90",
-    ghost: "bg-transparent hover:bg-muted",
-    destructive: "bg-destructive text-white hover:opacity-90",
+    primary:
+      "bg-primary text-primary-fg hover:bg-primary-hover shadow-sm shadow-primary/20",
+    outline: "border border-border-strong bg-transparent hover:bg-surface-2 text-fg",
+    ghost: "bg-transparent hover:bg-surface-2 text-fg-muted hover:text-fg",
+    destructive: "bg-danger/90 text-white hover:bg-danger",
   };
+  const sizes = { sm: "h-8 px-3 text-xs", md: "h-9 px-4 text-sm" };
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition disabled:opacity-50",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-4 focus-visible:ring-primary/20 outline-none",
         variants[variant],
+        sizes[size],
         className,
       )}
       {...props}
@@ -24,45 +31,58 @@ export function Button({
 }
 
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      className={cn(
-        "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-xl border bg-card p-5 shadow-sm", className)} {...props} />;
+  return <input className={cn("field", className)} {...props} />;
 }
 
 export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={cn("field cursor-pointer pe-8", className)} {...props} />;
+}
+
+export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("card p-5", className)} {...props} />;
+}
+
+const badgeColors: Record<string, string> = {
+  active: "bg-success/15 text-success ring-success/20",
+  running: "bg-success/15 text-success ring-success/20",
+  limited: "bg-warning/15 text-warning ring-warning/20",
+  expired: "bg-danger/15 text-danger ring-danger/20",
+  disabled: "bg-fg-subtle/15 text-fg-muted ring-fg-subtle/20",
+  down: "bg-danger/15 text-danger ring-danger/20",
+  on_hold: "bg-accent/15 text-accent ring-accent/20",
+  muted: "bg-surface-2 text-fg-muted ring-border",
+};
+
+export function Badge({ children, color = "muted" }: { children: React.ReactNode; color?: string }) {
   return (
-    <select
+    <span
       className={cn(
-        "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40",
-        className,
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset",
+        badgeColors[color] ?? badgeColors.muted,
       )}
-      {...props}
-    />
+    >
+      {children}
+    </span>
   );
 }
 
-export function Badge({ children, color = "muted" }: { children: React.ReactNode; color?: string }) {
-  const colors: Record<string, string> = {
-    active: "bg-green-500/15 text-green-400",
-    limited: "bg-amber-500/15 text-amber-400",
-    expired: "bg-red-500/15 text-red-400",
-    disabled: "bg-zinc-500/15 text-zinc-400",
-    on_hold: "bg-blue-500/15 text-blue-400",
-    muted: "bg-muted text-muted-foreground",
-  };
+// PageHeader standardizes the title + subtitle + actions row on every page.
+export function PageHeader({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children?: React.ReactNode;
+}) {
   return (
-    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", colors[color] ?? colors.muted)}>
-      {children}
-    </span>
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-sm text-fg-muted">{subtitle}</p>}
+      </div>
+      {children && <div className="flex items-center gap-2">{children}</div>}
+    </div>
   );
 }
