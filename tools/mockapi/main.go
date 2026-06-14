@@ -180,6 +180,18 @@ func main() {
 			})
 			return
 		}
+		// Route: /api/users/bulk (POST) — bulk create
+		if strings.HasSuffix(path, "/bulk") && r.Method == http.MethodPost {
+			var body struct {
+				Count int `json:"count"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body.Count <= 0 {
+				body.Count = 10
+			}
+			j(w, map[string]any{"created": []any{}, "created_count": body.Count, "failures": []any{}})
+			return
+		}
 		// Route: /api/users/{id}/reset or /api/users/{id}/revoke-sub (POST)
 		if r.Method == http.MethodPost {
 			j(w, map[string]any{"user": users[0]})

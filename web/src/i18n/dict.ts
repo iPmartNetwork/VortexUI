@@ -53,6 +53,7 @@ const en = {
 
   "users.title": "Users",
   "users.new": "New user",
+  "users.bulk": "Add bulk",
   "users.username": "Username",
   "users.usage": "Usage",
   "users.expires": "Expires",
@@ -144,6 +145,7 @@ const fa: Record<string, string> = {
 
   "users.title": "کاربران",
   "users.new": "کاربر جدید",
+  "users.bulk": "افزودن گروهی",
   "users.username": "نام کاربری",
   "users.usage": "مصرف",
   "users.expires": "انقضا",
@@ -235,6 +237,7 @@ const tr: Record<string, string> = {
 
   "users.title": "Kullanıcılar",
   "users.new": "Yeni kullanıcı",
+  "users.bulk": "Toplu ekle",
   "users.username": "Kullanıcı adı",
   "users.usage": "Kullanım",
   "users.expires": "Bitiş",
@@ -326,6 +329,7 @@ const ar: Record<string, string> = {
 
   "users.title": "المستخدمون",
   "users.new": "مستخدم جديد",
+  "users.bulk": "إضافة جماعية",
   "users.username": "اسم المستخدم",
   "users.usage": "الاستهلاك",
   "users.expires": "انتهاء",
@@ -417,6 +421,7 @@ const ru: Record<string, string> = {
 
   "users.title": "Пользователи",
   "users.new": "Новый пользователь",
+  "users.bulk": "Массовое добавление",
   "users.username": "Имя пользователя",
   "users.usage": "Использование",
   "users.expires": "Истекает",
@@ -508,6 +513,7 @@ const zh: Record<string, string> = {
 
   "users.title": "用户",
   "users.new": "新建用户",
+  "users.bulk": "批量添加",
   "users.username": "用户名",
   "users.usage": "用量",
   "users.expires": "到期",
@@ -599,6 +605,7 @@ const ja: Record<string, string> = {
 
   "users.title": "ユーザー",
   "users.new": "新規ユーザー",
+  "users.bulk": "一括追加",
   "users.username": "ユーザー名",
   "users.usage": "使用量",
   "users.expires": "有効期限",
@@ -690,6 +697,7 @@ const es: Record<string, string> = {
 
   "users.title": "Usuarios",
   "users.new": "Nuevo usuario",
+  "users.bulk": "Añadir en masa",
   "users.username": "Nombre de usuario",
   "users.usage": "Uso",
   "users.expires": "Expira",
