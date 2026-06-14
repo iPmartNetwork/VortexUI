@@ -48,6 +48,9 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
 
   if (res.status === 401) {
     clearToken();
+    // Notify the auth layer so it can drop session state and redirect to login,
+    // even for a 401 that happens mid-session (token expiry).
+    window.dispatchEvent(new Event("vortex:unauthorized"));
     throw new ApiError(401, "unauthorized");
   }
   if (!res.ok) {
