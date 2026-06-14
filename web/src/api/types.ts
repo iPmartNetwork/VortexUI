@@ -47,6 +47,80 @@ export interface Node {
   created_at: string;
 }
 
+export interface Outbound {
+  id: string;
+  node_id: string;
+  tag: string;
+  protocol: string;
+  address: string;
+  port: number;
+  uuid: string;
+  password: string;
+  username: string;
+  method: string;
+  flow: string;
+  network: string;
+  security: string;
+  sni: string;
+  enabled: boolean;
+}
+
+export interface RoutingRule {
+  id: string;
+  node_id: string;
+  priority: number;
+  name: string;
+  inbound_tags: string[];
+  domains: string[];
+  ip: string[];
+  port: string;
+  network: string;
+  outbound_tag: string;
+  balancer_tag: string;
+  enabled: boolean;
+}
+
+export interface Balancer {
+  id: string;
+  node_id: string;
+  tag: string;
+  selectors: string[];
+  strategy: string;
+  observe: boolean;
+  probe_url: string;
+  probe_interval: string;
+  enabled: boolean;
+}
+
+export interface Overview {
+  users: { total: number; by_status: Record<string, number>; total_used: number };
+  nodes: {
+    total: number;
+    online: number;
+    items: {
+      id: string;
+      name: string;
+      core: string;
+      online: boolean;
+      health: NodeHealth;
+    }[];
+  };
+}
+
+export interface LogEntry {
+  time: string;
+  level: number;
+  message: string;
+  attrs?: Record<string, unknown>;
+}
+
+export interface UserSub {
+  token: string;
+  subscription_url: string;
+  formats: { auto: string; clash: string; singbox: string; base64: string };
+  links: string[];
+}
+
 export interface ListUsersResponse {
   users: User[];
   total: number;

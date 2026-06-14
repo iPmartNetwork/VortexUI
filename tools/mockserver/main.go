@@ -95,6 +95,15 @@ func seed() {
 	inbounds[id()] = &inbound{ID: id(), NodeID: n1.ID, Tag: "trojan-tcp", Protocol: "trojan", Port: 8443, Network: "tcp", Security: "tls", Enabled: true}
 }
 
+func firstNodeID() string {
+	mu.Lock()
+	defer mu.Unlock()
+	for id := range nodes {
+		return id
+	}
+	return ""
+}
+
 func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
@@ -314,6 +323,82 @@ func main() {
 	mux.HandleFunc("POST /api/account/2fa/disable", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, 200, map[string]any{"enabled": false})
 	})
+
+	// --- overview / logs / reality ---
+	mux.HandleFunc("GET /api/overview", func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		nl := []map[string]any{}
+		for _, n := range nodes {
+			nl = append(nl, map[string]any{"id": n.ID, "name": n.Name, "core": n.Core, "online": n.Health.CoreRunning, "health": n.Health})
+		}
+		mu.Unlock()
+		writeJSON(w, 200, map[string]any{
+			"users": map[string]any{"total": 128, "total_used": int64(214) << 30, "by_status": map[string]int{"active": 96, "limited": 18, "expired": 9, "disabled": 5}},
+			"nodes": map[string]any{"total": len(nl), "online": len(nl), "items": nl},
+		})
+	})
+	mux.HandleFunc("GET /api/logs", func(w http.ResponseWriter, _ *http.Request) {
+		now := time.Now()
+		es := []map[string]any{
+			{"time": now.Add(-90 * time.Second).Format(time.RFC3339), "level": 0, "message": "node resync on connect", "attrs": map[string]any{"node": "de-1"}},
+			{"time": now.Add(-40 * time.Second).Format(time.RFC3339), "level": 4, "message": "traffic stream ended, reconnecting", "attrs": map[string]any{"node": "nl-2"}},
+			{"time": now.Add(-10 * time.Second).Format(time.RFC3339), "level": 0, "message": "enforced user limit", "attrs": map[string]any{"user": "bob", "status": "limited"}},
+		}
+		writeJSON(w, 200, map[string]any{"entries": es})
+	})
+	mux.HandleFunc("GET /api/reality/keypair", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, 200, map[string]any{"private_key": "yJ" + id(), "public_key": "Xk" + id(), "short_id": id()[:8]})
+	})
+
+	// --- user extras ---
+	mux.HandleFunc("GET /api/users/{id}/sub", func(w http.ResponseWriter, _ *http.Request) {
+		base := "https://panel.example.com/sub/Xk7Qa9demo"
+		writeJSON(w, 200, map[string]any{
+			"token": "Xk7Qa9demo", "subscription_url": base,
+			"formats": map[string]any{"auto": base, "clash": base + "?format=clash", "singbox": base + "?format=singbox", "base64": base + "?format=base64"},
+			"links": []string{"vless://11111111-1111-1111-1111-111111111111@5.5.5.5:443?type=ws&security=tls&sni=ex.com#alice", "trojan://pw@5.5.5.5:8443?security=tls#alice"},
+		})
+	})
+	mux.HandleFunc("POST /api/users/{id}/reset", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, 200, map[string]any{"ok": true}) })
+	mux.HandleFunc("POST /api/users/{id}/revoke-sub", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, 200, map[string]any{"ok": true}) })
+
+	// --- per-node policy: outbounds / routing / balancers ---
+	policy := func(name string, seed []map[string]any) {
+		store := map[string]map[string]any{}
+		for _, s := range seed {
+			store[s["id"].(string)] = s
+		}
+		mux.HandleFunc("GET /api/"+name, func(w http.ResponseWriter, r *http.Request) {
+			nid := r.URL.Query().Get("node_id")
+			list := []map[string]any{}
+			mu.Lock()
+			for _, v := range store {
+				if v["node_id"] == nid || nid == "" {
+					list = append(list, v)
+				}
+			}
+			mu.Unlock()
+			writeJSON(w, 200, map[string]any{name: list})
+		})
+		mux.HandleFunc("POST /api/"+name, func(w http.ResponseWriter, r *http.Request) {
+			var v map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&v)
+			v["id"] = id()
+			mu.Lock()
+			store[v["id"].(string)] = v
+			mu.Unlock()
+			writeJSON(w, 201, map[string]any{name[:len(name)-1]: v})
+		})
+		mux.HandleFunc("DELETE /api/"+name+"/{id}", func(w http.ResponseWriter, r *http.Request) {
+			mu.Lock()
+			delete(store, r.PathValue("id"))
+			mu.Unlock()
+			w.WriteHeader(204)
+		})
+	}
+	policy("outbounds", []map[string]any{{"id": id(), "node_id": firstNodeID(), "tag": "direct-out", "protocol": "freedom", "enabled": true}})
+	policy("routing", []map[string]any{{"id": id(), "node_id": firstNodeID(), "name": "block-ads", "priority": 1, "outbound_tag": "block", "enabled": true}})
+	policy("balancers", []map[string]any{{"id": id(), "node_id": firstNodeID(), "tag": "auto", "strategy": "leastPing", "selectors": []string{"proxy-"}, "enabled": true}})
 
 	log.Println("mock panel API listening on :8080 (DEV ONLY, in-memory)")
 	log.Fatal(http.ListenAndServe(":8080", mux))
