@@ -225,6 +225,26 @@ func (h *Handlers) GetUserUsage(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"points": points})
 }
 
+// GetTrafficSeries returns fleet-wide bucketed traffic for the dashboard chart.
+// Defaults to the last hour in 1-minute buckets; override with ?from=&to= (unix
+// seconds) and ?bucket=.
+func (h *Handlers) GetTrafficSeries(c echo.Context) error {
+	now := time.Now()
+	q := port.SeriesQuery{
+		FromUnix: int64(atoiDefault(c.QueryParam("from"), int(now.Add(-time.Hour).Unix()))),
+		ToUnix:   int64(atoiDefault(c.QueryParam("to"), int(now.Unix()))),
+		Bucket:   c.QueryParam("bucket"),
+	}
+	if q.Bucket == "" {
+		q.Bucket = "1m"
+	}
+	points, err := h.Traffic.TotalSeries(c.Request().Context(), q)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "traffic query failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"points": points})
+}
+
 // DeleteUser de-provisions and removes a user.
 func (h *Handlers) DeleteUser(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))

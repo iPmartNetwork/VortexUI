@@ -16,6 +16,16 @@ export function useOverview() {
   return useQuery({ queryKey: ["overview"], queryFn: () => api<Overview>("/api/overview"), refetchInterval: 5000 });
 }
 
+// useTrafficSeries fetches fleet-wide bucketed throughput for the dashboard
+// chart. Defaults to the last hour in 1-minute buckets (server-side).
+export function useTrafficSeries() {
+  return useQuery({
+    queryKey: ["traffic-series"],
+    queryFn: () => api<{ points: { time: string; up: number; down: number }[] }>("/api/traffic/series"),
+    refetchInterval: 15000,
+  });
+}
+
 export function useSystem() {
   return useQuery({
     queryKey: ["system"],

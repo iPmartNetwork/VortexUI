@@ -231,6 +231,19 @@ func main() {
 		j(w, map[string]any{"entries": entries})
 	})
 
+	mux.HandleFunc("/api/traffic/series", func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		points := make([]map[string]any, 60)
+		for i := range points {
+			points[i] = map[string]any{
+				"time": now.Add(time.Duration(-(59 - i)) * time.Minute).Format(time.RFC3339),
+				"up":   int64(20+rand.Intn(80)) * 1024 * 1024,
+				"down": int64(80+rand.Intn(400)) * 1024 * 1024,
+			}
+		}
+		j(w, map[string]any{"points": points})
+	})
+
 	mux.HandleFunc("/api/audit", func(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 		entries := []map[string]any{

@@ -12,6 +12,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const totalSeries = `-- name: TotalSeries :many
+SELECT
+    date_bin($1::interval, time, TIMESTAMPTZ '2000-01-01')::timestamptz AS bucket,
+    sum(up)::bigint   AS up,
+    sum(down)::bigint AS down
+FROM traffic_points
+WHERE time >= $2
+  AND time <  $3
+GROUP BY bucket
+ORDER BY bucket
+`
+
+type TotalSeriesParams struct {
+	Bucket pgtype.Interval
+	FromTs pgtype.Timestamptz
+	ToTs   pgtype.Timestamptz
+}
+
+type TotalSeriesRow struct {
+	Bucket pgtype.Timestamptz
+	Up     int64
+	Down   int64
+}
+
+// TotalSeries buckets fleet-wide traffic (all users, all nodes) over a time
+// range. Powers the live dashboard throughput chart.
+func (q *Queries) TotalSeries(ctx context.Context, arg TotalSeriesParams) ([]TotalSeriesRow, error) {
+	rows, err := q.db.Query(ctx, totalSeries, arg.Bucket, arg.FromTs, arg.ToTs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []TotalSeriesRow{}
+	for rows.Next() {
+		var i TotalSeriesRow
+		if err := rows.Scan(&i.Bucket, &i.Up, &i.Down); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const usageSeries = `-- name: UsageSeries :many
 SELECT
     date_bin($1::interval, time, TIMESTAMPTZ '2000-01-01')::timestamptz AS bucket,

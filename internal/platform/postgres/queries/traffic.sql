@@ -18,3 +18,16 @@ WHERE user_id = sqlc.arg(user_id)
   AND time <  sqlc.arg(to_ts)
 GROUP BY bucket
 ORDER BY bucket;
+
+-- TotalSeries buckets fleet-wide traffic (all users, all nodes) over a time
+-- range. Powers the live dashboard throughput chart.
+-- name: TotalSeries :many
+SELECT
+    date_bin(sqlc.arg(bucket)::interval, time, TIMESTAMPTZ '2000-01-01')::timestamptz AS bucket,
+    sum(up)::bigint   AS up,
+    sum(down)::bigint AS down
+FROM traffic_points
+WHERE time >= sqlc.arg(from_ts)
+  AND time <  sqlc.arg(to_ts)
+GROUP BY bucket
+ORDER BY bucket;

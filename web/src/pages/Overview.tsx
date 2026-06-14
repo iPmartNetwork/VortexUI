@@ -3,9 +3,10 @@ import {
   Zap, Clock, TrendingUp, MonitorSmartphone, Layers, Timer, Box,
   Power, RotateCcw, Tag,
 } from "lucide-react";
-import { useOverview, useSystem, useTrafficSamples } from "@/api/policy-hooks";
+import { useOverview, useSystem, useTrafficSamples, useTrafficSeries } from "@/api/policy-hooks";
 import { useAllInbounds, useNodes } from "@/api/hooks";
 import { Card } from "@/components/ui";
+import { TrafficSeriesChart } from "@/components/TrafficSeriesChart";
 import { useI18n } from "@/i18n/i18n";
 import { cn, formatBytes } from "@/lib/utils";
 
@@ -114,6 +115,7 @@ export function Overview() {
   const totalUsers = u?.total ?? 0;
   const totalUsed = u?.total_used ?? 0;
   const trafficSamples = useTrafficSamples(totalUsed);
+  const trafficSeries = useTrafficSeries();
 
   const s = sys.data;
   const inboundCount = inbounds.data?.length ?? 0;
@@ -191,6 +193,19 @@ export function Overview() {
           </div>
         </Card>
       </div>
+
+      {/* ── Fleet-wide traffic time-series ── */}
+      <Card className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle"><TrendingUp size={13} /> Traffic — last hour</h3>
+          <span className="text-[11px] text-fg-subtle">1-minute buckets</span>
+        </div>
+        {trafficSeries.isLoading ? (
+          <div className="h-44 animate-pulse rounded-lg bg-surface-2/50" />
+        ) : (
+          <TrafficSeriesChart points={trafficSeries.data?.points ?? []} />
+        )}
+      </Card>
 
       {/* ── Status + Traffic ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -101,6 +101,8 @@ type AdminRepository interface {
 type TrafficRepository interface {
 	WriteBatch(ctx context.Context, points []domain.TrafficPoint) error
 	UsageSeries(ctx context.Context, userID uuid.UUID, q SeriesQuery) ([]domain.TrafficPoint, error)
+	// TotalSeries buckets fleet-wide traffic (all users) over a time range.
+	TotalSeries(ctx context.Context, q SeriesQuery) ([]domain.TrafficPoint, error)
 }
 
 // SeriesQuery bounds a time-series read.
