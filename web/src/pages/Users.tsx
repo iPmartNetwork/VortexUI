@@ -3,9 +3,11 @@ import { useDeleteUser, useUsers } from "@/api/hooks";
 import type { User } from "@/api/types";
 import { Badge, Button, Card, Input, PageHeader } from "@/components/ui";
 import { useI18n } from "@/i18n/i18n";
+import { QrCode, BarChart3, Pencil, Trash2 } from "lucide-react";
 import { CreateUserModal } from "@/components/CreateUserModal";
 import { EditUserModal } from "@/components/EditUserModal";
 import { UserUsageModal } from "@/components/UserUsageModal";
+import { UserSubModal } from "@/components/UserSubModal";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { formatBytes } from "@/lib/utils";
@@ -18,6 +20,7 @@ export function Users() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [viewing, setViewing] = useState<User | null>(null);
+  const [subbing, setSubbing] = useState<User | null>(null);
   const { data, isLoading, error } = useUsers({ search, limit: PAGE_SIZE, offset: page * PAGE_SIZE });
 
   const total = data?.total ?? 0;
@@ -53,6 +56,7 @@ export function Users() {
       <CreateUserModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <EditUserModal user={editing} onClose={() => setEditing(null)} />
       <UserUsageModal user={viewing} onClose={() => setViewing(null)} />
+      <UserSubModal user={subbing} onClose={() => setSubbing(null)} />
       <PageHeader title={t("users.title")} subtitle={`${data?.total ?? 0} ${t("common.total")}`}>
         <Input
           className="w-52"
@@ -90,16 +94,21 @@ export function Users() {
                   <td className="px-5 py-3 text-muted-foreground">
                     {u.expire_at ? new Date(u.expire_at).toLocaleDateString() : "Never"}
                   </td>
-                  <td className="px-5 py-3 text-right">
-                    <Button variant="ghost" onClick={() => setViewing(u)}>
-                      Usage
-                    </Button>
-                    <Button variant="ghost" onClick={() => setEditing(u)}>
-                      Edit
-                    </Button>
-                    <Button variant="ghost" className="text-destructive" onClick={() => remove(u)}>
-                      Delete
-                    </Button>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center justify-end gap-0.5">
+                      <Button variant="ghost" size="sm" onClick={() => setSubbing(u)} title="Subscription / QR">
+                        <QrCode size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setViewing(u)} title={t("users.usage")}>
+                        <BarChart3 size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditing(u)} title={t("common.edit")}>
+                        <Pencil size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(u)} title={t("common.delete")}>
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -1,87 +1,136 @@
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { Moon, Sun, Monitor, Languages, KeyRound, ShieldCheck } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/api/client";
 import { useConfirmTOTP, useDisableTOTP, useSetupTOTP } from "@/api/admin-hooks";
-import { Button, Card, Input } from "@/components/ui";
+import { Button, Card, Input, PageHeader } from "@/components/ui";
+import { useToast } from "@/components/toast";
+import { useTheme } from "@/theme/theme";
+import { useI18n } from "@/i18n/i18n";
+import { cn } from "@/lib/utils";
+
+function SegBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+        active ? "grad-bg text-white shadow shadow-primary/25" : "text-fg-muted hover:bg-white/[0.06]",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function Settings() {
-  const setup = useSetupTOTP();
-  const confirm = useConfirmTOTP();
-  const disable = useDisableTOTP();
+  const { t } = useI18n();
+  const { theme, setTheme } = useTheme();
+  const { lang, setLang } = useI18n();
+  const toast = useToast();
 
+  const setup = useSetupTOTP();
+  const confirmTotp = useConfirmTOTP();
+  const disableTotp = useDisableTOTP();
   const [url, setUrl] = useState("");
   const [code, setCode] = useState("");
   const [enabled, setEnabled] = useState(false);
-  const [msg, setMsg] = useState("");
 
-  async function begin() {
-    setMsg("");
-    const res = await setup.mutateAsync();
-    setUrl(res.url);
-  }
+  const changePw = useMutation({
+    mutationFn: (b: { current: string; new: string }) => api("/api/account/password", { method: "POST", body: b }),
+  });
+  const [cur, setCur] = useState("");
+  const [nw, setNw] = useState("");
 
-  async function activate(e: React.FormEvent) {
+  async function submitPw(e: React.FormEvent) {
     e.preventDefault();
-    setMsg("");
     try {
-      await confirm.mutateAsync(code);
-      setEnabled(true);
-      setUrl("");
-      setCode("");
+      await changePw.mutateAsync({ current: cur, new: nw });
+      toast.success("Password changed");
+      setCur("");
+      setNw("");
     } catch {
-      setMsg("Invalid code — try the current one from your app.");
-    }
-  }
-
-  async function turnOff(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg("");
-    try {
-      await disable.mutateAsync(code);
-      setEnabled(false);
-      setCode("");
-    } catch {
-      setMsg("Invalid code.");
+      toast.error("Wrong current password");
     }
   }
 
   return (
-    <div className="max-w-lg space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+    <div className="max-w-2xl">
+      <PageHeader title={t("nav.settings")} />
 
-      <Card className="space-y-4">
-        <div>
-          <h2 className="font-semibold">Two-factor authentication</h2>
-          <p className="text-sm text-muted-foreground">
-            Protect your account with a time-based one-time code.
-          </p>
-        </div>
+      <div className="space-y-5">
+        <Card>
+          <h2 className="mb-4 text-sm font-semibold">Appearance</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs text-fg-muted">{t("theme.label")}</p>
+              <div className="flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+                <SegBtn active={theme === "light"} onClick={() => setTheme("light")}><Sun size={15} />{t("theme.light")}</SegBtn>
+                <SegBtn active={theme === "dark"} onClick={() => setTheme("dark")}><Moon size={15} />{t("theme.dark")}</SegBtn>
+                <SegBtn active={theme === "system"} onClick={() => setTheme("system")}><Monitor size={15} />{t("theme.system")}</SegBtn>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs text-fg-muted">Language</p>
+              <div className="flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+                <SegBtn active={lang === "en"} onClick={() => setLang("en")}><Languages size={15} />English</SegBtn>
+                <SegBtn active={lang === "fa"} onClick={() => setLang("fa")}><Languages size={15} />فارسی</SegBtn>
+              </div>
+            </div>
+          </div>
+        </Card>
 
-        {enabled ? (
-          <form onSubmit={turnOff} className="space-y-3">
-            <p className="text-sm text-green-400">2FA is enabled on your account.</p>
-            <div className="flex gap-2">
-              <Input placeholder="Current 6-digit code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" />
-              <Button type="submit" variant="destructive" disabled={disable.isPending}>Disable</Button>
+        <Card>
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold"><KeyRound size={15} /> Change password</h2>
+          <form onSubmit={submitPw} className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Input type="password" placeholder="Current password" value={cur} onChange={(e) => setCur(e.target.value)} required />
+            <Input type="password" placeholder="New password" value={nw} onChange={(e) => setNw(e.target.value)} required />
+            <div className="sm:col-span-2">
+              <Button type="submit" disabled={changePw.isPending}>{t("common.save")}</Button>
             </div>
           </form>
-        ) : url ? (
-          <form onSubmit={activate} className="space-y-3">
-            <p className="text-sm text-muted-foreground">Scan with your authenticator, then enter the code to confirm.</p>
-            <div className="flex justify-center rounded-lg bg-white p-4">
-              <QRCodeSVG value={url} size={160} />
-            </div>
-            <div className="flex gap-2">
-              <Input placeholder="6-digit code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoFocus />
-              <Button type="submit" disabled={confirm.isPending}>Confirm</Button>
-            </div>
-          </form>
-        ) : (
-          <Button onClick={begin} disabled={setup.isPending}>
-            {setup.isPending ? "Preparing…" : "Enable 2FA"}
-          </Button>
-        )}
-        {msg && <p className="text-sm text-destructive">{msg}</p>}
-      </Card>
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold"><ShieldCheck size={15} /> Two-factor authentication</h2>
+          <p className="text-sm text-fg-muted">Protect your account with a time-based code.</p>
+          <div className="mt-3">
+            {enabled ? (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try { await disableTotp.mutateAsync(code); setEnabled(false); setCode(""); toast.success("2FA disabled"); }
+                  catch { toast.error("Invalid code"); }
+                }}
+                className="flex gap-2"
+              >
+                <Input placeholder="Current code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" />
+                <Button type="submit" variant="destructive">Disable</Button>
+              </form>
+            ) : url ? (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try { await confirmTotp.mutateAsync(code); setEnabled(true); setUrl(""); setCode(""); toast.success("2FA enabled"); }
+                  catch { toast.error("Invalid code"); }
+                }}
+                className="space-y-3"
+              >
+                <div className="flex justify-center rounded-xl bg-white p-4"><QRCodeSVG value={url} size={150} /></div>
+                <div className="flex gap-2">
+                  <Input placeholder="6-digit code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoFocus />
+                  <Button type="submit">{t("common.confirm")}</Button>
+                </div>
+              </form>
+            ) : (
+              <Button onClick={async () => setUrl((await setup.mutateAsync()).url)} disabled={setup.isPending}>
+                Enable 2FA
+              </Button>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

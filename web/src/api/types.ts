@@ -44,6 +44,8 @@ export interface Node {
   usage_ratio: number;
   last_seen: string | null;
   health: NodeHealth;
+  core_version?: string;
+  agent_version?: string;
   created_at: string;
 }
 

@@ -141,6 +141,29 @@ func (h *Handlers) ListRoles(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"roles": roles})
 }
 
+// ChangePassword updates the calling admin's own password.
+func (h *Handlers) ChangePassword(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	var req struct {
+		Current string `json:"current"`
+		New     string `json:"new"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	err := h.Admins.ChangePassword(c.Request().Context(), claims.AdminID, req.Current, req.New)
+	if errors.Is(err, service.ErrWrongPassword) {
+		return echo.NewHTTPError(http.StatusBadRequest, "current password is incorrect")
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
+	}
+	return c.JSON(http.StatusOK, echo.Map{"ok": true})
+}
+
 // --- 2FA self-enrollment (acts on the caller's own account, from the token) ---
 
 type totpCodeRequest struct {
