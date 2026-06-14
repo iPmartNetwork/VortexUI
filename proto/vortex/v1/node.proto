@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package vortex.v1;
+
+option go_package = "github.com/vortexui/vortexui/internal/transport/genv1;genv1";
+
+import "google/protobuf/timestamp.proto";
+
+// NodeService is served by the node agent. The panel is the gRPC client and
+// dials each node over mTLS. Mutating RPCs are unary; traffic accounting uses a
+// long-lived server stream so the node *pushes* deltas instead of being polled.
+service NodeService {
+  // Sync replaces the node's entire desired state (inbounds + user bindings).
+  // Used on (re)connect and after bulk changes; idempotent.
+  rpc Sync(SyncRequest) returns (Ack);
+
+  // AddUser provisions one user on one inbound at runtime (no core restart).
+  rpc AddUser(AddUserRequest) returns (Ack);
+
+  // RemoveUser deprovisions one user from one inbound at runtime.
+  rpc RemoveUser(RemoveUserRequest) returns (Ack);
+
+  // StreamTraffic is opened once by the panel and stays open; the node emits a
+  // TrafficDelta whenever it has accounted usage. Deltas are incremental, so the
+  // panel sums them idempotently and restarts never double count.
+  rpc StreamTraffic(StreamTrafficRequest) returns (stream TrafficDelta);
+
+  // Health returns a live resource/liveness snapshot for failover decisions.
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+// ----- shared value types -----
+
+enum CoreType {
+  CORE_TYPE_UNSPECIFIED = 0;
+  CORE_TYPE_XRAY = 1;
+  CORE_TYPE_SINGBOX = 2;
+}
+
+// UserSpec is the minimal, engine-neutral identity the core needs to admit a
+// user on an inbound. Secrets are reused across protocols by the panel.
+message UserSpec {
+  string user_id = 1;          // canonical UUID
+  string email = 2;            // core "email"/tag, used as the stats key
+  string vmess_uuid = 3;
+  string vless_uuid = 4;
+  string trojan_password = 5;
+  string ss_password = 6;
+  string ss_method = 7;
+  string flow = 8;             // e.g. xtls-rprx-vision
+}
+
+// InboundSpec is the rendered inbound the node should be listening on. Raw holds
+// engine-native JSON overrides for fields not modeled by the abstraction.
+message InboundSpec {
+  string tag = 1;
+  string protocol = 2;
+  string listen = 3;
+  uint32 port = 4;
+  string network = 5;
+  string security = 6;
+  bytes raw = 7;               // optional native JSON fragment
+}
+
+// ----- request/response messages -----
+
+message SyncRequest {
+  CoreType core = 1;
+  string log_level = 2;
+  repeated InboundSpec inbounds = 3;
+  // users_by_inbound maps inbound tag -> users bound to it.
+  map<string, UserList> users_by_inbound = 4;
+}
+
+message UserList {
+  repeated UserSpec users = 1;
+}
+
+message AddUserRequest {
+  string inbound_tag = 1;
+  UserSpec user = 2;
+}
+
+message RemoveUserRequest {
+  string inbound_tag = 1;
+  string user_id = 2;
+}
+
+message StreamTrafficRequest {
+  // min_report_interval_ms lets the panel cap how chatty the stream is; the node
+  // coalesces deltas over at least this window. 0 = node default.
+  uint32 min_report_interval_ms = 1;
+}
+
+// TrafficDelta is bytes consumed *since the previous delta for this user*.
+message TrafficDelta {
+  string user_id = 1;
+  uint64 up = 2;
+  uint64 down = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  double cpu_percent = 1;
+  double mem_percent = 2;
+  double disk_percent = 3;
+  bool core_running = 4;
+  uint32 connections = 5;
+  string core_version = 6;
+  string agent_version = 7;
+}
+
+// Ack is the standard mutating-RPC reply.
+message Ack {
+  bool ok = 1;
+  string message = 2;          // human-readable detail on failure
+}

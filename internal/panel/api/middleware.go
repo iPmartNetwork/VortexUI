@@ -1,0 +1,106 @@
+// Package api is the panel's HTTP surface: a thin Echo layer that authenticates
+// requests, enforces RBAC, and delegates all logic to the service layer.
+package api
+
+import (
+	"context"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/labstack/echo/v4"
+
+	"github.com/vortexui/vortexui/internal/auth"
+	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/panel/service"
+)
+
+// claimsKey is the echo context key under which verified claims are stored.
+const claimsKey = "vortex.claims"
+
+// Authenticator verifies bearer tokens. *auth.Issuer satisfies it.
+type Authenticator interface {
+	Verify(token string) (*auth.Claims, error)
+}
+
+// RequireAuth verifies the Authorization: Bearer token and stashes the claims
+// for downstream handlers. Missing/invalid tokens get 401.
+func RequireAuth(a Authenticator) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			raw := bearerToken(c.Request().Header.Get("Authorization"))
+			if raw == "" {
+				return echo.NewHTTPError(http.StatusUnauthorized, "missing bearer token")
+			}
+			claims, err := a.Verify(raw)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
+			}
+			c.Set(claimsKey, claims)
+			return next(c)
+		}
+	}
+}
+
+// RequirePermission gates a route behind an RBAC permission, evaluated against
+// the authenticated admin's role (sudo bypasses). Must run after RequireAuth.
+func RequirePermission(authz *service.AuthService, p domain.Permission) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			claims := claimsFrom(c)
+			if claims == nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+			}
+			ok, err := authz.Authorize(c.Request().Context(), claims, p)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "authorization failed")
+			}
+			if !ok {
+				return echo.NewHTTPError(http.StatusForbidden, "insufficient permission")
+			}
+			return next(c)
+		}
+	}
+}
+
+// RateLimiter throttles requests by key. *redis.RateLimiter satisfies it; nil
+// disables limiting (e.g. when Redis is not configured).
+type RateLimiter interface {
+	Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, time.Duration, error)
+}
+
+// RateLimit caps requests sharing a key (e.g. client IP) to limit per window. It
+// fails open: if the limiter errors (Redis blip), the request proceeds rather
+// than locking everyone out. A nil limiter is a no-op.
+func RateLimit(rl RateLimiter, limit int, window time.Duration, keyFn func(echo.Context) string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if rl == nil {
+				return next(c)
+			}
+			ok, retry, err := rl.Allow(c.Request().Context(), keyFn(c), limit, window)
+			if err != nil {
+				return next(c) // fail open
+			}
+			if !ok {
+				c.Response().Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())))
+				return echo.NewHTTPError(http.StatusTooManyRequests, "too many requests")
+			}
+			return next(c)
+		}
+	}
+}
+
+func bearerToken(header string) string {
+	const prefix = "Bearer "
+	if len(header) > len(prefix) && strings.EqualFold(header[:len(prefix)], prefix) {
+		return strings.TrimSpace(header[len(prefix):])
+	}
+	return ""
+}
+
+func claimsFrom(c echo.Context) *auth.Claims {
+	v, _ := c.Get(claimsKey).(*auth.Claims)
+	return v
+}

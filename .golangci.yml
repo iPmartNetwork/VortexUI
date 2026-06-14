@@ -1,0 +1,21 @@
+version: "2"
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - bodyclose
+    - gosec
+  exclusions:
+    rules:
+      # Tests favor readability over exhaustive error checks on fakes.
+      - path: _test\.go
+        linters: [errcheck, gosec]
+      # Generated code is not ours to lint.
+      - path: internal/transport/genv1/
+        linters: [staticcheck, govet]
+      - path: internal/platform/postgres/db/
+        linters: [staticcheck, unused]

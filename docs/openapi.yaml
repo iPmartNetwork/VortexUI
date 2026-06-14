@@ -1,0 +1,461 @@
+openapi: 3.0.3
+info:
+  title: VortexUI Panel API
+  version: "0.1.0"
+  description: >
+    Control-plane REST API for VortexUI. All endpoints under `/api` (except
+    `/api/login` and `/api/health`) require a Bearer JWT obtained from
+    `/api/login`. Mutating routes additionally require an RBAC permission
+    (sudo admins bypass all permission checks). The public `/sub/{token}`
+    endpoint is authenticated solely by the opaque subscription token.
+
+servers:
+  - url: http://localhost:8080
+    description: Local panel
+
+tags:
+  - name: Auth
+  - name: Account
+  - name: Users
+  - name: Nodes
+  - name: Inbounds
+  - name: Admins
+  - name: Roles
+  - name: Subscription
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        message: {type: string}
+    Credentials:
+      type: object
+      properties:
+        vmess_uuid: {type: string, format: uuid}
+        vless_uuid: {type: string, format: uuid}
+        trojan_password: {type: string}
+        ss_password: {type: string}
+        ss_method: {type: string, example: aes-128-gcm}
+    User:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        username: {type: string}
+        status: {type: string, enum: [active, limited, expired, disabled, on_hold]}
+        note: {type: string}
+        data_limit: {type: integer, format: int64, description: bytes; 0 = unlimited}
+        used_traffic: {type: integer, format: int64}
+        expire_at: {type: string, format: date-time, nullable: true}
+        reset_strategy: {type: string, enum: [no_reset, daily, weekly, monthly]}
+        device_limit: {type: integer, description: 0 = unlimited}
+        allowed_hwids: {type: array, items: {type: string}}
+        proxies: {$ref: '#/components/schemas/Credentials'}
+        sub_token: {type: string}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    NodeHealth:
+      type: object
+      properties:
+        cpu_percent: {type: number}
+        mem_percent: {type: number}
+        disk_percent: {type: number}
+        core_running: {type: boolean}
+        connections: {type: integer}
+    Node:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        address: {type: string, example: "1.2.3.4:50051"}
+        core: {type: string, enum: [xray, singbox]}
+        status: {type: string, enum: [connected, disconnected, error, disabled]}
+        usage_ratio: {type: number}
+        last_seen: {type: string, format: date-time, nullable: true}
+        health: {$ref: '#/components/schemas/NodeHealth'}
+        core_version: {type: string}
+        agent_version: {type: string}
+        created_at: {type: string, format: date-time}
+    Inbound:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        node_id: {type: string, format: uuid}
+        tag: {type: string}
+        protocol: {type: string, enum: [vmess, vless, trojan, shadowsocks, hysteria2, tuic, wireguard]}
+        listen: {type: string}
+        port: {type: integer}
+        network: {type: string, enum: [tcp, ws, grpc, httpupgrade, xhttp]}
+        security: {type: string, enum: [none, tls, reality]}
+        sni: {type: array, items: {type: string}}
+        path: {type: string}
+        host: {type: array, items: {type: string}}
+        flow: {type: string}
+        raw: {type: object, additionalProperties: true}
+        enabled: {type: boolean}
+    Admin:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        username: {type: string}
+        sudo: {type: boolean}
+        role_id: {type: string, format: uuid, nullable: true}
+        totp_enabled: {type: boolean}
+        user_quota: {type: integer}
+        traffic_quota: {type: integer, format: int64}
+        last_login: {type: string, format: date-time, nullable: true}
+        created_at: {type: string, format: date-time}
+    Role:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        permissions:
+          type: array
+          items:
+            type: string
+            enum: [user:read, user:write, node:read, node:write, inbound:read, inbound:write, admin:manage, system:read]
+
+  responses:
+    Unauthorized: {description: missing/invalid token, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    Forbidden: {description: insufficient permission, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    NotFound: {description: not found, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/health:
+    get:
+      tags: [Auth]
+      security: []
+      summary: Liveness probe
+      responses:
+        "200": {description: ok}
+
+  /api/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Authenticate an admin and obtain a JWT
+      description: Rate limited per client IP (10/min). 2FA code required when the admin has TOTP enabled.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string}
+                totp_code: {type: string}
+      responses:
+        "200":
+          description: token issued
+          content: {application/json: {schema: {type: object, properties: {token: {type: string}}}}}
+        "401": {$ref: '#/components/responses/Unauthorized'}
+        "429": {description: too many attempts; see Retry-After}
+
+  /api/account/2fa/setup:
+    post:
+      tags: [Account]
+      summary: Begin TOTP enrollment for the calling admin
+      responses:
+        "200":
+          description: enrollment secret + otpauth URL (render as QR)
+          content: {application/json: {schema: {type: object, properties: {secret: {type: string}, url: {type: string}}}}}
+        "409": {description: 2FA already enabled}
+  /api/account/2fa/confirm:
+    post:
+      tags: [Account]
+      summary: Activate 2FA by confirming a code
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object, required: [code], properties: {code: {type: string}}}}}
+      responses:
+        "200": {description: enabled}
+        "400": {description: invalid or no pending code}
+  /api/account/2fa/disable:
+    post:
+      tags: [Account]
+      summary: Disable 2FA (requires a valid current code)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object, required: [code], properties: {code: {type: string}}}}}
+      responses:
+        "200": {description: disabled}
+        "400": {description: invalid code or 2FA not enabled}
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List users (perm user:read)
+      parameters:
+        - {name: search, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, default: 50}}
+        - {name: offset, in: query, schema: {type: integer, default: 0}}
+      responses:
+        "200":
+          description: page of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users: {type: array, items: {$ref: '#/components/schemas/User'}}
+                  total: {type: integer}
+        "403": {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [Users]
+      summary: Create a user (perm user:write)
+      description: Credentials and sub_token are generated server-side. A non-fatal `warning` is returned if live provisioning was incomplete.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username]
+              properties:
+                username: {type: string}
+                note: {type: string}
+                data_limit: {type: integer, format: int64}
+                expire_at: {type: string, format: date-time, nullable: true}
+                device_limit: {type: integer}
+                reset_strategy: {type: string, enum: [no_reset, daily, weekly, monthly]}
+                inbound_ids: {type: array, items: {type: string, format: uuid}}
+                on_hold: {type: boolean}
+      responses:
+        "201":
+          description: created
+          content: {application/json: {schema: {type: object, properties: {user: {$ref: '#/components/schemas/User'}, warning: {type: string}}}}}
+        "403": {$ref: '#/components/responses/Forbidden'}
+  /api/users/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [Users]
+      summary: Get a user (perm user:read)
+      responses:
+        "200": {description: user, content: {application/json: {schema: {$ref: '#/components/schemas/User'}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Users]
+      summary: Update a user's mutable metadata (perm user:write)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: {type: string}
+                status: {type: string, enum: [active, disabled]}
+                data_limit: {type: integer, format: int64}
+                expire_at: {type: string, format: date-time, nullable: true}
+                device_limit: {type: integer}
+                reset_strategy: {type: string}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {user: {$ref: '#/components/schemas/User'}, warning: {type: string}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Users]
+      summary: Delete a user (perm user:write)
+      responses:
+        "204": {description: deleted}
+        "404": {$ref: '#/components/responses/NotFound'}
+
+  /api/nodes:
+    get:
+      tags: [Nodes]
+      summary: List nodes (perm node:read)
+      responses:
+        "200": {description: nodes, content: {application/json: {schema: {type: object, properties: {nodes: {type: array, items: {$ref: '#/components/schemas/Node'}}}}}}}
+    post:
+      tags: [Nodes]
+      summary: Create + register a node (perm node:write)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, address]
+              properties:
+                name: {type: string}
+                address: {type: string}
+                core: {type: string, enum: [xray, singbox]}
+                usage_ratio: {type: number}
+      responses:
+        "201": {description: created, content: {application/json: {schema: {type: object, properties: {node: {$ref: '#/components/schemas/Node'}, warning: {type: string}}}}}}
+  /api/nodes/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [Nodes]
+      summary: Get a node (perm node:read)
+      responses:
+        "200": {description: node, content: {application/json: {schema: {$ref: '#/components/schemas/Node'}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Nodes]
+      summary: Update a node, re-establishing its connection (perm node:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object, properties: {name: {type: string}, address: {type: string}, usage_ratio: {type: number}}}}}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {node: {$ref: '#/components/schemas/Node'}, warning: {type: string}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Nodes]
+      summary: Deregister + delete a node (perm node:write)
+      responses:
+        "204": {description: deleted}
+
+  /api/inbounds:
+    get:
+      tags: [Inbounds]
+      summary: List a node's inbounds (perm inbound:read)
+      parameters: [{name: node_id, in: query, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        "200": {description: inbounds, content: {application/json: {schema: {type: object, properties: {inbounds: {type: array, items: {$ref: '#/components/schemas/Inbound'}}}}}}}
+    post:
+      tags: [Inbounds]
+      summary: Create an inbound + resync its node (perm inbound:write)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [node_id, tag, port, protocol]
+              properties:
+                node_id: {type: string, format: uuid}
+                tag: {type: string}
+                protocol: {type: string}
+                listen: {type: string}
+                port: {type: integer}
+                network: {type: string}
+                security: {type: string}
+                sni: {type: array, items: {type: string}}
+                path: {type: string}
+                host: {type: array, items: {type: string}}
+                flow: {type: string}
+                raw: {type: object, additionalProperties: true}
+                enabled: {type: boolean}
+      responses:
+        "201": {description: created, content: {application/json: {schema: {type: object, properties: {inbound: {$ref: '#/components/schemas/Inbound'}, warning: {type: string}}}}}}
+  /api/inbounds/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    put:
+      tags: [Inbounds]
+      summary: Update an inbound + resync (perm inbound:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/Inbound'}}}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {inbound: {$ref: '#/components/schemas/Inbound'}, warning: {type: string}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Inbounds]
+      summary: Delete an inbound + resync (perm inbound:write)
+      responses:
+        "204": {description: deleted}
+
+  /api/admins:
+    get:
+      tags: [Admins]
+      summary: List admins (perm admin:manage)
+      responses:
+        "200": {description: admins, content: {application/json: {schema: {type: object, properties: {admins: {type: array, items: {$ref: '#/components/schemas/Admin'}}}}}}}
+    post:
+      tags: [Admins]
+      summary: Create an admin (perm admin:manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string}
+                sudo: {type: boolean}
+                enable_totp: {type: boolean}
+      responses:
+        "201": {description: created; totp_url present when enable_totp, content: {application/json: {schema: {type: object, properties: {admin: {$ref: '#/components/schemas/Admin'}, totp_url: {type: string}}}}}}
+        "409": {description: username taken}
+  /api/admins/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    put:
+      tags: [Admins]
+      summary: Update an admin (perm admin:manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password: {type: string, description: re-hashed only if non-empty}
+                sudo: {type: boolean}
+                user_quota: {type: integer}
+                traffic_quota: {type: integer, format: int64}
+                role_id: {type: string, format: uuid, nullable: true}
+                disable_totp: {type: boolean}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {admin: {$ref: '#/components/schemas/Admin'}}}}}}
+        "409": {description: cannot demote the last sudo admin}
+    delete:
+      tags: [Admins]
+      summary: Delete an admin (perm admin:manage)
+      description: Refuses self-deletion (400) and removing the last sudo admin (409).
+      responses:
+        "204": {description: deleted}
+        "400": {description: cannot delete yourself}
+        "409": {description: cannot delete the last sudo admin}
+
+  /api/roles:
+    get:
+      tags: [Roles]
+      summary: List roles (perm admin:manage)
+      responses:
+        "200": {description: roles, content: {application/json: {schema: {type: object, properties: {roles: {type: array, items: {$ref: '#/components/schemas/Role'}}}}}}}
+    post:
+      tags: [Roles]
+      summary: Create a role (perm admin:manage)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object, required: [name], properties: {name: {type: string}, permissions: {type: array, items: {type: string}}}}}}
+      responses:
+        "201": {description: created, content: {application/json: {schema: {type: object, properties: {role: {$ref: '#/components/schemas/Role'}}}}}}
+
+  /sub/{token}:
+    get:
+      tags: [Subscription]
+      security: []
+      summary: Fetch a user's subscription (public, token-authenticated)
+      description: >
+        Response format adapts to the client's User-Agent (Clash YAML, sing-box
+        JSON, or base64 share links) and can be forced with `?format=`. Unhealthy
+        nodes are pruned. Sets `Subscription-Userinfo`, `Profile-Title`, and
+        `Profile-Update-Interval` headers. Enforces HWID allowlist / device limit.
+      parameters:
+        - {name: token, in: path, required: true, schema: {type: string}}
+        - {name: format, in: query, schema: {type: string, enum: [clash, singbox, base64]}}
+        - {name: X-Device-Id, in: header, schema: {type: string}, description: device identifier for device-limit enforcement}
+      responses:
+        "200":
+          description: subscription body
+          content:
+            text/plain: {schema: {type: string}}
+            text/yaml: {schema: {type: string}}
+            application/json: {schema: {type: string}}
+        "403": {description: device not authorized / device limit reached}
+        "404": {description: unknown token}
