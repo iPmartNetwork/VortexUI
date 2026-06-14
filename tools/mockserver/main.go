@@ -51,10 +51,12 @@ type node struct {
 	Name       string    `json:"name"`
 	Address    string    `json:"address"`
 	Core       string    `json:"core"`
-	Status     string    `json:"status"`
-	UsageRatio float64   `json:"usage_ratio"`
-	Health     health    `json:"health"`
-	CreatedAt  time.Time `json:"created_at"`
+	Status      string    `json:"status"`
+	UsageRatio  float64   `json:"usage_ratio"`
+	Health      health    `json:"health"`
+	CoreVersion string    `json:"core_version"`
+	AgentVer    string    `json:"agent_version"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type inbound struct {
@@ -87,8 +89,8 @@ func seed() {
 	users[id()] = &user{ID: id(), Username: "alice", Status: "active", DataLimit: 50 << 30, UsedTraffic: 33 << 30, ExpireAt: &exp, ResetStrategy: "monthly", SubToken: "Xk7Qa9demo", CreatedAt: time.Now()}
 	users[id()] = &user{ID: id(), Username: "bob", Status: "limited", DataLimit: 50 << 30, UsedTraffic: 50 << 30, ResetStrategy: "no_reset", SubToken: "Bb22demo", CreatedAt: time.Now()}
 	users[id()] = &user{ID: id(), Username: "carol", Status: "active", DataLimit: 0, UsedTraffic: 1 << 30, ResetStrategy: "no_reset", SubToken: "Cc33demo", CreatedAt: time.Now()}
-	n1 := &node{ID: id(), Name: "de-1", Address: "5.5.5.5:50051", Core: "xray", Status: "connected", UsageRatio: 1, Health: health{CPU: 12, Mem: 41, CoreRunning: true, Connections: 87}, CreatedAt: time.Now()}
-	n2 := &node{ID: id(), Name: "nl-2", Address: "6.6.6.6:50051", Core: "singbox", Status: "connected", UsageRatio: 2, Health: health{CPU: 5, Mem: 33, CoreRunning: true, Connections: 41}, CreatedAt: time.Now()}
+	n1 := &node{ID: id(), Name: "de-1", Address: "5.5.5.5:50051", Core: "xray", Status: "connected", UsageRatio: 1, Health: health{CPU: 12, Mem: 41, Disk: 28, CoreRunning: true, Connections: 87}, CoreVersion: "Xray 1.8.24", AgentVer: "0.1.0", CreatedAt: time.Now()}
+	n2 := &node{ID: id(), Name: "nl-2", Address: "6.6.6.6:50051", Core: "singbox", Status: "connected", UsageRatio: 2, Health: health{CPU: 73, Mem: 58, Disk: 44, CoreRunning: true, Connections: 41}, CoreVersion: "sing-box 1.9.3", AgentVer: "0.1.0", CreatedAt: time.Now()}
 	nodes[n1.ID] = n1
 	nodes[n2.ID] = n2
 	inbounds[id()] = &inbound{ID: id(), NodeID: n1.ID, Tag: "vless-ws", Protocol: "vless", Port: 443, Network: "ws", Security: "tls", Enabled: true}
@@ -308,6 +310,9 @@ func main() {
 		writeJSON(w, 201, map[string]any{"role": in})
 	})
 
+	mux.HandleFunc("POST /api/account/password", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, 200, map[string]any{"ok": true})
+	})
 	mux.HandleFunc("POST /api/account/2fa/setup", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, 200, map[string]any{"secret": "JBSWY3DPEHPK3PXP", "url": "otpauth://totp/VortexUI:root?secret=JBSWY3DPEHPK3PXP&issuer=VortexUI"})
 	})

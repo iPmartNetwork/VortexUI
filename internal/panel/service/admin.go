@@ -20,6 +20,10 @@ var ErrAdminExists = errors.New("admin already exists")
 // final full-privilege admin.
 var ErrLastSudo = errors.New("cannot remove the last sudo admin")
 
+// ErrWrongPassword is returned when a self password change supplies the wrong
+// current password.
+var ErrWrongPassword = errors.New("current password is incorrect")
+
 // TOTP self-enrollment errors.
 var (
 	ErrTOTPAlreadyEnabled = errors.New("2fa already enabled")
@@ -194,6 +198,27 @@ func (s *AdminService) CreateRole(ctx context.Context, name string, perms []doma
 // ListRoles returns all roles.
 func (s *AdminService) ListRoles(ctx context.Context) ([]*domain.Role, error) {
 	return s.admins.ListRoles(ctx)
+}
+
+// ChangePassword lets an admin change their own password after proving the
+// current one — so a hijacked session cannot silently lock the owner out.
+func (s *AdminService) ChangePassword(ctx context.Context, adminID uuid.UUID, current, next string) error {
+	if len(next) < 6 {
+		return errors.New("new password must be at least 6 characters")
+	}
+	admin, err := s.admins.GetByID(ctx, adminID)
+	if err != nil {
+		return err
+	}
+	if !auth.CheckPassword(admin.PasswordHash, current) {
+		return ErrWrongPassword
+	}
+	hash, err := auth.HashPassword(next)
+	if err != nil {
+		return err
+	}
+	admin.PasswordHash = hash
+	return s.admins.Update(ctx, admin)
 }
 
 // --- TOTP self-enrollment (an admin enabling 2FA on their own account) ---
