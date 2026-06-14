@@ -166,6 +166,7 @@ export interface CreateInboundInput {
   sni?: string[];
   path?: string;
   flow?: string;
+  raw?: Record<string, unknown>;
   enabled: boolean;
 }
 
