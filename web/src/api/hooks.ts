@@ -46,6 +46,24 @@ export function useBulkCreateUsers() {
   });
 }
 
+export interface ImportUsersInput {
+  source: "3xui" | "marzban";
+  data: unknown;
+  inbound_ids?: string[];
+}
+
+export function useImportUsers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ImportUsersInput) =>
+      api<{ parsed: number; created: User[]; created_count: number; failures: { username: string; error: string }[] }>(
+        "/api/users/import",
+        { method: "POST", body: input },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
 export interface UpdateUserInput {
   note?: string;
   status?: string;

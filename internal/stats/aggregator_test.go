@@ -68,6 +68,9 @@ func (f *fakeTraffic) WriteBatch(_ context.Context, p []domain.TrafficPoint) err
 func (f *fakeTraffic) UsageSeries(context.Context, uuid.UUID, port.SeriesQuery) ([]domain.TrafficPoint, error) {
 	return nil, nil
 }
+func (f *fakeTraffic) TotalSeries(context.Context, port.SeriesQuery) ([]domain.TrafficPoint, error) {
+	return nil, nil
+}
 
 func TestAggregatorFoldsDeltasPerUser(t *testing.T) {
 	users := &fakeUsers{}
