@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, clearToken, getToken, setToken } from "@/api/client";
 
 interface AuthState {
@@ -24,6 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     clearToken();
     setTok(null);
+  }, []);
+
+  // A 401 from any request (e.g. expired token) drops the session immediately,
+  // so the router redirects to login without a manual page reload.
+  useEffect(() => {
+    const onUnauthorized = () => setTok(null);
+    window.addEventListener("vortex:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("vortex:unauthorized", onUnauthorized);
   }, []);
 
   const value = useMemo<AuthState>(
