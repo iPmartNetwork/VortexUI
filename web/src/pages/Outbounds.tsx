@@ -27,6 +27,58 @@ export function Outbounds() {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
   const proxy = !["freedom", "blackhole", "dns"].includes(f.protocol);
 
+  const [tab, setTab] = useState<"basics" | "json">("basics");
+  const [jsonText, setJsonText] = useState("");
+  const [jsonErr, setJsonErr] = useState("");
+
+  const JSON_PLACEHOLDER = `{
+  "tag": "proxy-out",
+  "protocol": "vless",
+  "settings": {
+    "vnext": [{ "address": "1.2.3.4", "port": 443, "users": [{ "id": "uuid", "encryption": "none" }] }]
+  },
+  "streamSettings": { "network": "ws", "security": "tls" }
+}`;
+
+  async function submitJSON() {
+    setJsonErr("");
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      setJsonErr(t("outbounds.invalidJson"));
+      return;
+    }
+    const tag = String(parsed.tag ?? "");
+    const protocol = String(parsed.protocol ?? "");
+    if (!tag || !protocol) {
+      setJsonErr(t("outbounds.jsonNeedsTagProtocol"));
+      return;
+    }
+    try {
+      if (editing) {
+        await update.mutateAsync({ id: editing.id, body: { tag, protocol, raw: parsed, enabled: true } });
+        toast.success(`${editing.tag} updated`);
+        setEditing(null);
+      } else {
+        await create.mutateAsync({ node_id: node, tag, protocol, raw: parsed, enabled: true });
+        toast.success(`${tag} ✓`);
+      }
+      closeModal();
+    } catch {
+      setJsonErr(t("outbounds.saveFailed"));
+    }
+  }
+
+  function closeModal() {
+    setOpen(false);
+    setEditing(null);
+    setTab("basics");
+    setJsonText("");
+    setJsonErr("");
+    setF({ tag: "", protocol: "freedom", address: "", port: "", uuid: "", password: "", method: "aes-128-gcm", security: "none", sni: "" });
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (editing) {
@@ -48,12 +100,14 @@ export function Outbounds() {
       });
       toast.success(`${f.tag} ✓`);
     }
-    setOpen(false);
-    setF({ tag: "", protocol: "freedom", address: "", port: "", uuid: "", password: "", method: "aes-128-gcm", security: "none", sni: "" });
+    closeModal();
   }
 
   function edit(o: Outbound) {
     setF({ tag: o.tag, protocol: o.protocol, address: o.address, port: String(o.port || ""), uuid: o.uuid, password: o.password, method: o.method || "aes-128-gcm", security: o.security || "none", sni: o.sni });
+    setJsonText(o.raw ? JSON.stringify(o.raw, null, 2) : "");
+    setJsonErr("");
+    setTab("basics");
     setEditing(o);
     setOpen(true);
   }
@@ -93,36 +147,69 @@ export function Outbounds() {
         </div>
       </Card>
 
-      <Modal open={open} onClose={() => { setOpen(false); setEditing(null); }} title={editing ? `Edit ${editing.tag}` : t("nav.outbounds")}>
-        <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="Tag" value={f.tag} onChange={set("tag")} required />
-            <Select value={f.protocol} onChange={set("protocol")}>
-              {PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
-            </Select>
+      <Modal open={open} onClose={closeModal} title={editing ? `Edit ${editing.tag}` : t("nav.outbounds")}>
+        {/* Tabs */}
+        <div className="mb-4 flex gap-5 border-b border-border/60 text-sm">
+          {(["basics", "json"] as const).map((tk) => (
+            <button
+              key={tk}
+              type="button"
+              onClick={() => setTab(tk)}
+              className={`-mb-px border-b-2 pb-2 font-medium transition ${tab === tk ? "border-primary text-primary" : "border-transparent text-fg-muted hover:text-fg"}`}
+            >
+              {tk === "basics" ? t("outbounds.basics") : "JSON"}
+            </button>
+          ))}
+        </div>
+
+        {tab === "basics" ? (
+          <form onSubmit={submit} className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="Tag" value={f.tag} onChange={set("tag")} required />
+              <Select value={f.protocol} onChange={set("protocol")}>
+                {PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </Select>
+            </div>
+            {proxy && (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Address" value={f.address} onChange={set("address")} />
+                  <Input placeholder="Port" value={f.port} onChange={set("port")} inputMode="numeric" />
+                </div>
+                {(f.protocol === "vless" || f.protocol === "vmess") && <Input placeholder="UUID" value={f.uuid} onChange={set("uuid")} />}
+                {["trojan", "shadowsocks", "socks", "http"].includes(f.protocol) && <Input placeholder="Password" value={f.password} onChange={set("password")} />}
+                {f.protocol === "shadowsocks" && <Input placeholder="Method" value={f.method} onChange={set("method")} />}
+                <div className="grid grid-cols-2 gap-2">
+                  <Select value={f.security} onChange={set("security")}>
+                    <option value="none">none</option><option value="tls">tls</option><option value="reality">reality</option>
+                  </Select>
+                  <Input placeholder="SNI" value={f.sni} onChange={set("sni")} />
+                </div>
+              </>
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="ghost" onClick={closeModal}>{t("common.cancel")}</Button>
+              <Button type="submit" disabled={create.isPending || update.isPending}>{editing ? t("common.save") : t("common.create")}</Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-fg-muted">{t("outbounds.jsonHint")}</p>
+            <textarea
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+              placeholder={JSON_PLACEHOLDER}
+              spellCheck={false}
+              className="h-64 w-full resize-y rounded-lg border border-border/60 bg-surface-2/40 p-3 font-mono text-xs text-fg outline-none focus:border-primary/50"
+              dir="ltr"
+            />
+            {jsonErr && <p className="text-sm text-danger">{jsonErr}</p>}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="ghost" onClick={closeModal}>{t("common.cancel")}</Button>
+              <Button type="button" onClick={submitJSON} disabled={create.isPending || update.isPending}>{editing ? t("common.save") : t("common.create")}</Button>
+            </div>
           </div>
-          {proxy && (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="Address" value={f.address} onChange={set("address")} />
-                <Input placeholder="Port" value={f.port} onChange={set("port")} inputMode="numeric" />
-              </div>
-              {(f.protocol === "vless" || f.protocol === "vmess") && <Input placeholder="UUID" value={f.uuid} onChange={set("uuid")} />}
-              {["trojan", "shadowsocks", "socks", "http"].includes(f.protocol) && <Input placeholder="Password" value={f.password} onChange={set("password")} />}
-              {f.protocol === "shadowsocks" && <Input placeholder="Method" value={f.method} onChange={set("method")} />}
-              <div className="grid grid-cols-2 gap-2">
-                <Select value={f.security} onChange={set("security")}>
-                  <option value="none">none</option><option value="tls">tls</option><option value="reality">reality</option>
-                </Select>
-                <Input placeholder="SNI" value={f.sni} onChange={set("sni")} />
-              </div>
-            </>
-          )}
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditing(null); }}>{t("common.cancel")}</Button>
-            <Button type="submit" disabled={create.isPending || update.isPending}>{editing ? t("common.save") : t("common.create")}</Button>
-          </div>
-        </form>
+        )}
       </Modal>
     </div>
   );

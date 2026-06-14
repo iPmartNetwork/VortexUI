@@ -64,6 +64,7 @@ export interface Outbound {
   network: string;
   security: string;
   sni: string;
+  raw?: Record<string, unknown>;
   enabled: boolean;
 }
 
