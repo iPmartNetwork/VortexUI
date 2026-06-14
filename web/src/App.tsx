@@ -10,6 +10,7 @@ import { Outbounds } from "@/pages/Outbounds";
 import { Routing } from "@/pages/Routing";
 import { Balancers } from "@/pages/Balancers";
 import { Admins } from "@/pages/Admins";
+import { Audit } from "@/pages/Audit";
 import { Logs } from "@/pages/Logs";
 import { Settings } from "@/pages/Settings";
 
@@ -37,6 +38,7 @@ export function App() {
         <Route path="/routing" element={<Routing />} />
         <Route path="/balancers" element={<Balancers />} />
         <Route path="/admins" element={<Admins />} />
+        <Route path="/audit" element={<Audit />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/settings" element={<Settings />} />
       </Route>

@@ -214,12 +214,13 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Nodes: nodeSvc, Inbounds: inboundSvc, Admins: adminSvc, Devices: devices,
 			Outbounds: outboundSvc, Routing: routingSvc, Balancers: balancerSvc,
 			Overview: overviewSvc, Backup: backupSvc,
-			Online: online, Logs: logBuf,
+			Online: online, Logs: logBuf, Audit: store.Audit(),
 			Repo: users, Traffic: traffic,
 		},
 		Issuer:  issuer,
 		Auth:    authSvc,
 		Limiter: limiter,
+		Audit:   store.Audit(),
 	})
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: router, ReadHeaderTimeout: 10 * time.Second}

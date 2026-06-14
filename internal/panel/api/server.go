@@ -16,7 +16,8 @@ type Deps struct {
 	Handlers *Handlers
 	Issuer   *auth.Issuer
 	Auth     *service.AuthService
-	Limiter  RateLimiter // nil disables login rate limiting
+	Limiter  RateLimiter   // nil disables login rate limiting
+	Audit    AuditRecorder // nil disables audit logging
 }
 
 // NewRouter builds the Echo instance with all routes and middleware mounted.
@@ -38,8 +39,8 @@ func NewRouter(d Deps) *echo.Echo {
 	// Public subscription endpoint, authenticated only by the opaque token.
 	e.GET("/sub/:token", d.Handlers.Subscribe)
 
-	// Authenticated subtree.
-	authed := api.Group("", RequireAuth(d.Issuer))
+	// Authenticated subtree. The audit middleware records every mutating request.
+	authed := api.Group("", RequireAuth(d.Issuer), Audit(d.Audit))
 
 	// Dashboard overview: user aggregates + node fleet health.
 	authed.GET("/overview", d.Handlers.GetOverview, RequirePermission(d.Auth, domain.PermSystemRead))
@@ -114,6 +115,9 @@ func NewRouter(d Deps) *echo.Echo {
 	roles := authed.Group("/roles", RequirePermission(d.Auth, domain.PermAdminManage))
 	roles.GET("", d.Handlers.ListRoles)
 	roles.POST("", d.Handlers.CreateRole)
+
+	// Audit log of mutating admin actions.
+	authed.GET("/audit", d.Handlers.ListAudit, RequirePermission(d.Auth, domain.PermAdminManage))
 
 	// Self-service account actions: any authenticated admin manages their own 2FA.
 	account := authed.Group("/account")
