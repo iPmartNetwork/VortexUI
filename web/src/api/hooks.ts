@@ -20,6 +20,32 @@ export function useCreateUser() {
   });
 }
 
+export interface BulkCreateInput {
+  prefix: string;
+  count: number;
+  start?: number;
+  pad?: number;
+  note?: string;
+  data_limit?: number;
+  expire_at?: string | null;
+  device_limit?: number;
+  reset_strategy?: string;
+  inbound_ids?: string[];
+  on_hold?: boolean;
+}
+
+export function useBulkCreateUsers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BulkCreateInput) =>
+      api<{ created: User[]; created_count: number; failures: { username: string; error: string }[] }>(
+        "/api/users/bulk",
+        { method: "POST", body: input },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
 export interface UpdateUserInput {
   note?: string;
   status?: string;

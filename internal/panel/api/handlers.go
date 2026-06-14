@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -129,6 +130,76 @@ func (h *Handlers) CreateUser(c echo.Context) error {
 		resp["warning"] = err.Error()
 	}
 	return c.JSON(http.StatusCreated, resp)
+}
+
+type bulkCreateUserRequest struct {
+	Prefix        string     `json:"prefix"`     // username prefix, e.g. "vpn-"
+	Count         int        `json:"count"`      // how many users to create
+	Start         int        `json:"start"`      // starting sequence number (default 1)
+	Pad           int        `json:"pad"`        // zero-pad width for the number, 0 = none
+	Note          string     `json:"note"`       // shared note (the "plan/template")
+	DataLimit     int64      `json:"data_limit"`
+	ExpireAt      *time.Time `json:"expire_at"`
+	DeviceLimit   int        `json:"device_limit"`
+	ResetStrategy string     `json:"reset_strategy"`
+	InboundIDs    []string   `json:"inbound_ids"`
+	OnHold        bool       `json:"on_hold"`
+}
+
+// BulkCreateUsers provisions many users at once from a shared plan/template,
+// 3x-ui style: a username prefix plus a sequential, optionally zero-padded
+// counter. Each user is created independently; per-user failures are collected
+// and reported without aborting the batch.
+func (h *Handlers) BulkCreateUsers(c echo.Context) error {
+	var req bulkCreateUserRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if req.Count < 1 || req.Count > 500 {
+		return echo.NewHTTPError(http.StatusBadRequest, "count must be between 1 and 500")
+	}
+	if req.Prefix == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "prefix is required")
+	}
+	inboundIDs, err := parseUUIDs(req.InboundIDs)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
+	}
+	start := req.Start
+	if start == 0 {
+		start = 1
+	}
+	created := make([]*domain.User, 0, req.Count)
+	failures := make([]echo.Map, 0)
+	for i := 0; i < req.Count; i++ {
+		num := start + i
+		var username string
+		if req.Pad > 0 {
+			username = fmt.Sprintf("%s%0*d", req.Prefix, req.Pad, num)
+		} else {
+			username = fmt.Sprintf("%s%d", req.Prefix, num)
+		}
+		u, cerr := h.Users.Create(c.Request().Context(), service.CreateUserInput{
+			Username:      username,
+			Note:          req.Note,
+			DataLimit:     req.DataLimit,
+			ExpireAt:      req.ExpireAt,
+			DeviceLimit:   req.DeviceLimit,
+			ResetStrategy: domain.ResetStrategy(req.ResetStrategy),
+			InboundIDs:    inboundIDs,
+			OnHold:        req.OnHold,
+		})
+		if u == nil {
+			failures = append(failures, echo.Map{"username": username, "error": errString(cerr)})
+			continue
+		}
+		created = append(created, u)
+	}
+	return c.JSON(http.StatusCreated, echo.Map{
+		"created":       created,
+		"created_count": len(created),
+		"failures":      failures,
+	})
 }
 
 type updateUserRequest struct {
