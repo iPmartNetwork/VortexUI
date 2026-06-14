@@ -26,8 +26,9 @@ export function Login() {
     try {
       await login(username, password, totp);
       navigate("/overview");
-    } catch {
-      setError(t("login.invalid"));
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      setError(status === 429 ? t("login.tooMany") : t("login.invalid"));
     } finally {
       setBusy(false);
     }
