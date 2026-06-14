@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -200,6 +201,187 @@ func (h *Handlers) BulkCreateUsers(c echo.Context) error {
 		"created_count": len(created),
 		"failures":      failures,
 	})
+}
+
+type importUsersRequest struct {
+	Source     string          `json:"source"`      // "3xui" | "marzban"
+	Data       json.RawMessage `json:"data"`        // raw export payload
+	InboundIDs []string        `json:"inbound_ids"` // optional inbounds to bind imported users to
+}
+
+// importedUser is the normalized identity extracted from a foreign panel export.
+type importedUser struct {
+	Username      string
+	DataLimit     int64
+	ExpireAt      *time.Time
+	DeviceLimit   int
+	ResetStrategy string
+}
+
+// ImportUsers migrates users from another panel (3x-ui or Marzban). The foreign
+// export is parsed into a normalized form and each user is created locally,
+// optionally bound to the given inbounds. Imported credentials are regenerated
+// (we cannot reuse foreign secrets safely), so clients receive fresh links.
+// Per-user failures (e.g. duplicate usernames) are collected, not fatal.
+func (h *Handlers) ImportUsers(c echo.Context) error {
+	var req importUsersRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	var (
+		parsed []importedUser
+		err    error
+	)
+	switch req.Source {
+	case "3xui", "3x-ui", "xui":
+		parsed, err = parse3xui(req.Data)
+	case "marzban":
+		parsed, err = parseMarzban(req.Data)
+	default:
+		return echo.NewHTTPError(http.StatusBadRequest, "unknown source (expected 3xui or marzban)")
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "could not parse export: "+err.Error())
+	}
+	inboundIDs, perr := parseUUIDs(req.InboundIDs)
+	if perr != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
+	}
+
+	created := make([]*domain.User, 0, len(parsed))
+	failures := make([]echo.Map, 0)
+	for _, p := range parsed {
+		if p.Username == "" {
+			continue
+		}
+		u, cerr := h.Users.Create(c.Request().Context(), service.CreateUserInput{
+			Username:      p.Username,
+			Note:          "imported from " + req.Source,
+			DataLimit:     p.DataLimit,
+			ExpireAt:      p.ExpireAt,
+			DeviceLimit:   p.DeviceLimit,
+			ResetStrategy: domain.ResetStrategy(p.ResetStrategy),
+			InboundIDs:    inboundIDs,
+		})
+		if u == nil {
+			failures = append(failures, echo.Map{"username": p.Username, "error": errString(cerr)})
+			continue
+		}
+		created = append(created, u)
+	}
+	return c.JSON(http.StatusCreated, echo.Map{
+		"parsed":        len(parsed),
+		"created":       created,
+		"created_count": len(created),
+		"failures":      failures,
+	})
+}
+
+// parse3xui reads a 3x-ui inbound export. 3x-ui stores clients inside each
+// inbound's settings JSON; we accept either the full inbounds list or a bare
+// clients array. Fields: email, totalGB (bytes), expiryTime (ms epoch, 0 =
+// never), limitIp (device cap), enable.
+func parse3xui(data json.RawMessage) ([]importedUser, error) {
+	type client struct {
+		Email    string `json:"email"`
+		TotalGB  int64  `json:"totalGB"`
+		ExpiryMs int64  `json:"expiryTime"`
+		LimitIP  int    `json:"limitIp"`
+		Enable   *bool  `json:"enable"`
+	}
+	type inbound struct {
+		Settings json.RawMessage `json:"settings"`
+	}
+	collect := func(cs []client) []importedUser {
+		out := make([]importedUser, 0, len(cs))
+		for _, cl := range cs {
+			iu := importedUser{Username: cl.Email, DataLimit: cl.TotalGB, DeviceLimit: cl.LimitIP}
+			if cl.ExpiryMs > 0 {
+				t := time.UnixMilli(cl.ExpiryMs)
+				iu.ExpireAt = &t
+			}
+			out = append(out, iu)
+		}
+		return out
+	}
+	// 3x-ui settings may be a JSON-encoded string or an object.
+	parseSettings := func(raw json.RawMessage) []client {
+		var asObj struct {
+			Clients []client `json:"clients"`
+		}
+		if json.Unmarshal(raw, &asObj) == nil && len(asObj.Clients) > 0 {
+			return asObj.Clients
+		}
+		var asStr string
+		if json.Unmarshal(raw, &asStr) == nil {
+			_ = json.Unmarshal([]byte(asStr), &asObj)
+		}
+		return asObj.Clients
+	}
+
+	// Try: bare clients array.
+	var bare []client
+	if json.Unmarshal(data, &bare) == nil && len(bare) > 0 {
+		return collect(bare), nil
+	}
+	// Try: single settings object with clients.
+	if cs := parseSettings(data); len(cs) > 0 {
+		return collect(cs), nil
+	}
+	// Try: inbounds list, each with settings.
+	var inbounds []inbound
+	if err := json.Unmarshal(data, &inbounds); err != nil {
+		// Try wrapper { "obj": [ ... ] } (3x-ui /panel/api export shape).
+		var wrap struct {
+			Obj []inbound `json:"obj"`
+		}
+		if json.Unmarshal(data, &wrap) == nil {
+			inbounds = wrap.Obj
+		} else {
+			return nil, err
+		}
+	}
+	var all []importedUser
+	for _, ib := range inbounds {
+		all = append(all, collect(parseSettings(ib.Settings))...)
+	}
+	return all, nil
+}
+
+// parseMarzban reads a Marzban users export. Accepts either the /api/users
+// response ({ "users": [...] }) or a bare users array. Fields: username,
+// data_limit (bytes, 0 = unlimited), expire (unix seconds, null/0 = never),
+// data_limit_reset_strategy.
+func parseMarzban(data json.RawMessage) ([]importedUser, error) {
+	type muser struct {
+		Username      string `json:"username"`
+		DataLimit     int64  `json:"data_limit"`
+		Expire        *int64 `json:"expire"`
+		ResetStrategy string `json:"data_limit_reset_strategy"`
+	}
+	var users []muser
+	if err := json.Unmarshal(data, &users); err != nil || len(users) == 0 {
+		var wrap struct {
+			Users []muser `json:"users"`
+		}
+		if werr := json.Unmarshal(data, &wrap); werr != nil {
+			if err != nil {
+				return nil, err
+			}
+			return nil, werr
+		}
+		users = wrap.Users
+	}
+	out := make([]importedUser, 0, len(users))
+	for _, m := range users {
+		iu := importedUser{Username: m.Username, DataLimit: m.DataLimit, ResetStrategy: m.ResetStrategy}
+		if m.Expire != nil && *m.Expire > 0 {
+			t := time.Unix(*m.Expire, 0)
+			iu.ExpireAt = &t
+		}
+		out = append(out, iu)
+	}
+	return out, nil
 }
 
 type updateUserRequest struct {

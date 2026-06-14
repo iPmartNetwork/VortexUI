@@ -6,9 +6,10 @@ import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui"
 import { Pagination } from "@/components/Pagination";
 import { SortHeader, cycleSort, type SortDir } from "@/components/SortHeader";
 import { useI18n } from "@/i18n/i18n";
-import { QrCode, BarChart3, Pencil, Trash2, Layers } from "lucide-react";
+import { QrCode, BarChart3, Pencil, Trash2, Layers, Download } from "lucide-react";
 import { CreateUserModal } from "@/components/CreateUserModal";
 import { BulkCreateModal } from "@/components/BulkCreateModal";
+import { ImportUsersModal } from "@/components/ImportUsersModal";
 import { EditUserModal } from "@/components/EditUserModal";
 import { UserUsageModal } from "@/components/UserUsageModal";
 import { UserSubModal } from "@/components/UserSubModal";
@@ -23,6 +24,7 @@ export function Users() {
   const [pageSize, setPageSize] = useState(20);
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [viewing, setViewing] = useState<User | null>(null);
   const [subbing, setSubbing] = useState<User | null>(null);
@@ -92,6 +94,7 @@ export function Users() {
     <div className="space-y-6">
       <CreateUserModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <BulkCreateModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
+      <ImportUsersModal open={importOpen} onClose={() => setImportOpen(false)} />
       <EditUserModal user={editing} onClose={() => setEditing(null)} />
       <UserUsageModal user={viewing} onClose={() => setViewing(null)} />
       <UserSubModal user={subbing} onClose={() => setSubbing(null)} />
@@ -110,6 +113,7 @@ export function Users() {
           value={search}
           onChange={(e) => onSearch(e.target.value)}
         />
+        <Button variant="outline" onClick={() => setImportOpen(true)}><Download size={15} /> {t("users.import")}</Button>
         <Button variant="outline" onClick={() => setBulkOpen(true)}><Layers size={15} /> {t("users.bulk")}</Button>
         <Button onClick={() => setModalOpen(true)}>{t("users.new")}</Button>
       </PageHeader>

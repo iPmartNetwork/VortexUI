@@ -192,6 +192,13 @@ func main() {
 			j(w, map[string]any{"created": []any{}, "created_count": body.Count, "failures": []any{}})
 			return
 		}
+		// Route: /api/users/import (POST) — migrate from another panel
+		if strings.HasSuffix(path, "/import") && r.Method == http.MethodPost {
+			j(w, map[string]any{"parsed": 24, "created": []any{}, "created_count": 23, "failures": []any{
+				map[string]any{"username": "dup-user", "error": "username already exists"},
+			}})
+			return
+		}
 		// Route: /api/users/{id}/reset or /api/users/{id}/revoke-sub (POST)
 		if r.Method == http.MethodPost {
 			j(w, map[string]any{"user": users[0]})
