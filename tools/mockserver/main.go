@@ -190,6 +190,30 @@ func main() {
 		mu.Unlock()
 		writeJSON(w, 201, map[string]any{"node": n})
 	})
+	mux.HandleFunc("PUT /api/nodes/{id}", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		n := nodes[r.PathValue("id")]
+		if n == nil {
+			writeJSON(w, 404, map[string]string{"message": "not found"})
+			return
+		}
+		var in struct {
+			Name, Address string
+			UsageRatio    float64 `json:"usage_ratio"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		if in.Name != "" {
+			n.Name = in.Name
+		}
+		if in.Address != "" {
+			n.Address = in.Address
+		}
+		if in.UsageRatio > 0 {
+			n.UsageRatio = in.UsageRatio
+		}
+		writeJSON(w, 200, map[string]any{"node": n})
+	})
 	mux.HandleFunc("DELETE /api/nodes/{id}", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		delete(nodes, r.PathValue("id"))
@@ -217,6 +241,30 @@ func main() {
 		inbounds[ib.ID] = &ib
 		mu.Unlock()
 		writeJSON(w, 201, map[string]any{"inbound": ib})
+	})
+	mux.HandleFunc("PUT /api/inbounds/{id}", func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		ib := inbounds[r.PathValue("id")]
+		if ib == nil {
+			writeJSON(w, 404, map[string]string{"message": "not found"})
+			return
+		}
+		var in struct {
+			Port            int
+			Network, Security string
+		}
+		_ = json.NewDecoder(r.Body).Decode(&in)
+		if in.Port > 0 {
+			ib.Port = in.Port
+		}
+		if in.Network != "" {
+			ib.Network = in.Network
+		}
+		if in.Security != "" {
+			ib.Security = in.Security
+		}
+		writeJSON(w, 200, map[string]any{"inbound": ib})
 	})
 	mux.HandleFunc("DELETE /api/inbounds/{id}", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()

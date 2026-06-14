@@ -3,6 +3,7 @@ import { useDeleteNode, useNodes } from "@/api/hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button, Card } from "@/components/ui";
 import { CreateNodeModal } from "@/components/CreateNodeModal";
+import { EditNodeModal } from "@/components/EditNodeModal";
 import { NodeInboundsModal } from "@/components/NodeInboundsModal";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
@@ -13,6 +14,7 @@ export function Nodes() {
   const confirm = useConfirm();
   const toast = useToast();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<Node | null>(null);
   const [managing, setManaging] = useState<Node | null>(null);
 
   async function remove(n: Node) {
@@ -34,6 +36,7 @@ export function Nodes() {
   return (
     <div className="space-y-6">
       <CreateNodeModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <EditNodeModal node={editing} onClose={() => setEditing(null)} />
       <NodeInboundsModal node={managing} onClose={() => setManaging(null)} />
 
       <div className="flex items-center justify-between">
@@ -62,6 +65,9 @@ export function Nodes() {
             <div className="flex gap-2 border-t pt-3">
               <Button variant="ghost" className="flex-1" onClick={() => setManaging(n)}>
                 Inbounds
+              </Button>
+              <Button variant="ghost" onClick={() => setEditing(n)}>
+                Edit
               </Button>
               <Button variant="ghost" className="text-destructive" onClick={() => remove(n)}>
                 Delete
