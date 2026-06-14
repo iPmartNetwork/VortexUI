@@ -153,6 +153,17 @@ func main() {
 			})
 			return
 		}
+		// Route: /api/users/{id}/online-ips
+		if strings.HasSuffix(path, "/online-ips") {
+			now := time.Now()
+			ips := []map[string]any{
+				{"ip": "203.0.113.42", "last_seen": now.Add(-15 * time.Second).Format(time.RFC3339)},
+				{"ip": "198.51.100.9", "last_seen": now.Add(-90 * time.Second).Format(time.RFC3339)},
+				{"ip": "192.0.2.155", "last_seen": now.Add(-3 * time.Minute).Format(time.RFC3339)},
+			}
+			j(w, map[string]any{"ips": ips, "count": len(ips), "tracking": true})
+			return
+		}
 		// Route: /api/users/{id}/sub
 		if len(path) > 16 && strings.HasSuffix(path, "/sub") {
 			j(w, map[string]any{

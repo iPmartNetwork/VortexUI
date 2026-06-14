@@ -52,6 +52,10 @@ func (f *fakeAPI) OnlineUsers(context.Context) (map[string]int, error) {
 	return f.online, nil
 }
 
+func (f *fakeAPI) OnlineIPs(context.Context, string) (map[string]int64, error) {
+	return nil, nil
+}
+
 // newDriverWithAPI builds a Driver wired to a fake API without starting any
 // process, by injecting the dialer and pre-connecting.
 func newDriverWithAPI(t *testing.T, api xrayAPI) *Driver {

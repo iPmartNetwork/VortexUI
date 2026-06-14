@@ -218,6 +218,15 @@ func (d *Driver) OnlineStats(ctx context.Context) (map[string]int, error) {
 	return api.OnlineUsers(ctx)
 }
 
+// OnlineIPList reports the distinct source IPs currently online for one user.
+func (d *Driver) OnlineIPList(ctx context.Context, email string) (map[string]int64, error) {
+	api, err := d.currentAPI()
+	if err != nil {
+		return nil, err
+	}
+	return api.OnlineIPs(ctx, email)
+}
+
 // Logs returns the most recent core log lines captured by the supervisor.
 func (d *Driver) Logs(_ context.Context, limit int) ([]string, error) {
 	return d.proc.Logs(limit), nil

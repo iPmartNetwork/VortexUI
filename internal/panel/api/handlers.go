@@ -349,6 +349,24 @@ func (h *Handlers) GetUserOnline(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// GetUserOnlineIPs lists the distinct source IPs a user is currently connected
+// from (across all its nodes), with each IP's last-seen time. A high count is a
+// strong signal of account sharing.
+func (h *Handlers) GetUserOnlineIPs(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	ips, tracked, err := h.Users.OnlineIPList(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "online ip lookup failed")
+	}
+	if ips == nil {
+		ips = []service.OnlineIP{}
+	}
+	return c.JSON(http.StatusOK, echo.Map{"ips": ips, "count": len(ips), "tracking": tracked})
+}
+
 // --- helpers ---
 
 func parseUUIDs(ss []string) ([]uuid.UUID, error) {

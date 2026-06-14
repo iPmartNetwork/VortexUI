@@ -40,6 +40,11 @@ service NodeService {
 
   // NodeLogs returns the most recent core log lines captured by the agent.
   rpc NodeLogs(NodeLogsRequest) returns (NodeLogsResponse);
+
+  // OnlineIPs returns the distinct source IPs currently online for one user
+  // (keyed by user stats email == UUID), with each IP's last-seen unix time.
+  // Used to detect account sharing. Empty when the engine cannot report it.
+  rpc OnlineIPs(OnlineIPsRequest) returns (OnlineIPsResponse);
 }
 
 // ----- shared value types -----
@@ -194,6 +199,16 @@ message StopCoreRequest {}
 // connection count. Absent users have zero connections.
 message OnlineStatsResponse {
   map<string, uint32> online = 1;
+}
+
+message OnlineIPsRequest {
+  string user_id = 1; // user stats email == UUID
+}
+
+// OnlineIPsResponse maps each currently-online source IP to its last-seen unix
+// time (seconds) for the requested user.
+message OnlineIPsResponse {
+  map<string, int64> ips = 1;
 }
 
 message NodeLogsRequest {

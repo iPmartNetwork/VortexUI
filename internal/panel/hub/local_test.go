@@ -59,6 +59,9 @@ func (f *fakeLocalDriver) Version(context.Context) (string, error) { return "fak
 func (f *fakeLocalDriver) OnlineStats(context.Context) (map[string]int, error) {
 	return f.online, nil
 }
+func (f *fakeLocalDriver) OnlineIPList(context.Context, string) (map[string]int64, error) {
+	return nil, nil
+}
 func (f *fakeLocalDriver) Logs(context.Context, int) ([]string, error) { return f.logs, nil }
 
 func TestLocalConnDelegatesToDriver(t *testing.T) {

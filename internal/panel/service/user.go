@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +29,7 @@ type NodeOps interface {
 // user's stats email == UUID). *hub.Hub satisfies it.
 type OnlineQuerier interface {
 	OnlineStats(ctx context.Context, nodeID uuid.UUID) (map[string]int, error)
+	OnlineIPs(ctx context.Context, nodeID uuid.UUID, userID string) (map[string]int64, error)
 }
 
 // UserService creates and manages service users, keeping the database and the
@@ -88,6 +90,50 @@ func (s *UserService) LiveConnections(ctx context.Context, id uuid.UUID) (int, b
 		total += m[email]
 	}
 	return total, true, nil
+}
+
+// OnlineIP is one source IP currently online for a user, with its last-seen time.
+type OnlineIP struct {
+	IP       string    `json:"ip"`
+	LastSeen time.Time `json:"last_seen"`
+}
+
+// OnlineIPList returns the distinct source IPs a user is currently connected
+// from across every node it is bound to (deduplicated, keeping the most recent
+// last-seen per IP). The bool is false when no online source is wired. A high
+// count is a strong signal of account sharing. Unreachable nodes are skipped.
+func (s *UserService) OnlineIPList(ctx context.Context, id uuid.UUID) ([]OnlineIP, bool, error) {
+	if s.online == nil {
+		return nil, false, nil
+	}
+	inbounds, err := s.users.InboundsFor(ctx, id)
+	if err != nil {
+		return nil, false, err
+	}
+	email := id.String()
+	latest := map[string]int64{}
+	seen := map[uuid.UUID]bool{}
+	for _, in := range inbounds {
+		if seen[in.NodeID] {
+			continue
+		}
+		seen[in.NodeID] = true
+		m, err := s.online.OnlineIPs(ctx, in.NodeID, email)
+		if err != nil {
+			continue
+		}
+		for ip, ts := range m {
+			if ts > latest[ip] {
+				latest[ip] = ts
+			}
+		}
+	}
+	out := make([]OnlineIP, 0, len(latest))
+	for ip, ts := range latest {
+		out = append(out, OnlineIP{IP: ip, LastSeen: time.Unix(ts, 0)})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].LastSeen.After(out[j].LastSeen) })
+	return out, true, nil
 }
 
 // CreateUserInput describes a new user. Credentials and the subscription token

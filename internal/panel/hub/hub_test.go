@@ -31,6 +31,7 @@ func (f *fakeConn) AddUser(context.Context, string, *domain.User) error         
 func (f *fakeConn) RemoveUser(context.Context, string, uuid.UUID) error                { return nil }
 func (f *fakeConn) Close() error                                                       { return nil }
 func (f *fakeConn) OnlineStats(context.Context) (map[string]int, error)                { return nil, nil }
+func (f *fakeConn) OnlineIPs(context.Context, string) (map[string]int64, error)        { return nil, nil }
 func (f *fakeConn) Logs(context.Context, int) ([]string, error)                        { return nil, nil }
 func (f *fakeConn) RestartCore(context.Context) error                                  { return nil }
 func (f *fakeConn) StopCore(context.Context) error                                     { return nil }

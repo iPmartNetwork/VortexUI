@@ -1374,6 +1374,96 @@ func (x *OnlineStatsResponse) GetOnline() map[string]uint32 {
 	return nil
 }
 
+type OnlineIPsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"` // user stats email == UUID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OnlineIPsRequest) Reset() {
+	*x = OnlineIPsRequest{}
+	mi := &file_vortex_v1_node_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OnlineIPsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OnlineIPsRequest) ProtoMessage() {}
+
+func (x *OnlineIPsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OnlineIPsRequest.ProtoReflect.Descriptor instead.
+func (*OnlineIPsRequest) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *OnlineIPsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+// OnlineIPsResponse maps each currently-online source IP to its last-seen unix
+// time (seconds) for the requested user.
+type OnlineIPsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ips           map[string]int64       `protobuf:"bytes,1,rep,name=ips,proto3" json:"ips,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OnlineIPsResponse) Reset() {
+	*x = OnlineIPsResponse{}
+	mi := &file_vortex_v1_node_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OnlineIPsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OnlineIPsResponse) ProtoMessage() {}
+
+func (x *OnlineIPsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OnlineIPsResponse.ProtoReflect.Descriptor instead.
+func (*OnlineIPsResponse) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *OnlineIPsResponse) GetIps() map[string]int64 {
+	if x != nil {
+		return x.Ips
+	}
+	return nil
+}
+
 type NodeLogsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"` // 0 = all retained lines
@@ -1383,7 +1473,7 @@ type NodeLogsRequest struct {
 
 func (x *NodeLogsRequest) Reset() {
 	*x = NodeLogsRequest{}
-	mi := &file_vortex_v1_node_proto_msgTypes[18]
+	mi := &file_vortex_v1_node_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1395,7 +1485,7 @@ func (x *NodeLogsRequest) String() string {
 func (*NodeLogsRequest) ProtoMessage() {}
 
 func (x *NodeLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[18]
+	mi := &file_vortex_v1_node_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1408,7 +1498,7 @@ func (x *NodeLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeLogsRequest.ProtoReflect.Descriptor instead.
 func (*NodeLogsRequest) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{18}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *NodeLogsRequest) GetLimit() uint32 {
@@ -1427,7 +1517,7 @@ type NodeLogsResponse struct {
 
 func (x *NodeLogsResponse) Reset() {
 	*x = NodeLogsResponse{}
-	mi := &file_vortex_v1_node_proto_msgTypes[19]
+	mi := &file_vortex_v1_node_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1439,7 +1529,7 @@ func (x *NodeLogsResponse) String() string {
 func (*NodeLogsResponse) ProtoMessage() {}
 
 func (x *NodeLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[19]
+	mi := &file_vortex_v1_node_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1452,7 +1542,7 @@ func (x *NodeLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeLogsResponse.ProtoReflect.Descriptor instead.
 func (*NodeLogsResponse) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{19}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *NodeLogsResponse) GetLines() []string {
@@ -1580,7 +1670,14 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\x06online\x18\x01 \x03(\v2*.vortex.v1.OnlineStatsResponse.OnlineEntryR\x06online\x1a9\n" +
 	"\vOnlineEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\rR\x05value:\x028\x01\"'\n" +
+	"\x05value\x18\x02 \x01(\rR\x05value:\x028\x01\"+\n" +
+	"\x10OnlineIPsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x84\x01\n" +
+	"\x11OnlineIPsResponse\x127\n" +
+	"\x03ips\x18\x01 \x03(\v2%.vortex.v1.OnlineIPsResponse.IpsEntryR\x03ips\x1a6\n" +
+	"\bIpsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"'\n" +
 	"\x0fNodeLogsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\"(\n" +
 	"\x10NodeLogsResponse\x12\x14\n" +
@@ -1588,7 +1685,7 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\bCoreType\x12\x19\n" +
 	"\x15CORE_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eCORE_TYPE_XRAY\x10\x01\x12\x15\n" +
-	"\x11CORE_TYPE_SINGBOX\x10\x022\xc4\x04\n" +
+	"\x11CORE_TYPE_SINGBOX\x10\x022\x8c\x05\n" +
 	"\vNodeService\x12.\n" +
 	"\x04Sync\x12\x16.vortex.v1.SyncRequest\x1a\x0e.vortex.v1.Ack\x124\n" +
 	"\aAddUser\x12\x19.vortex.v1.AddUserRequest\x1a\x0e.vortex.v1.Ack\x12:\n" +
@@ -1599,7 +1696,8 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\vRestartCore\x12\x1d.vortex.v1.RestartCoreRequest\x1a\x0e.vortex.v1.Ack\x126\n" +
 	"\bStopCore\x12\x1a.vortex.v1.StopCoreRequest\x1a\x0e.vortex.v1.Ack\x12L\n" +
 	"\vOnlineStats\x12\x1d.vortex.v1.OnlineStatsRequest\x1a\x1e.vortex.v1.OnlineStatsResponse\x12C\n" +
-	"\bNodeLogs\x12\x1a.vortex.v1.NodeLogsRequest\x1a\x1b.vortex.v1.NodeLogsResponseB=Z;github.com/vortexui/vortexui/internal/transport/genv1;genv1b\x06proto3"
+	"\bNodeLogs\x12\x1a.vortex.v1.NodeLogsRequest\x1a\x1b.vortex.v1.NodeLogsResponse\x12F\n" +
+	"\tOnlineIPs\x12\x1b.vortex.v1.OnlineIPsRequest\x1a\x1c.vortex.v1.OnlineIPsResponseB=Z;github.com/vortexui/vortexui/internal/transport/genv1;genv1b\x06proto3"
 
 var (
 	file_vortex_v1_node_proto_rawDescOnce sync.Once
@@ -1614,7 +1712,7 @@ func file_vortex_v1_node_proto_rawDescGZIP() []byte {
 }
 
 var file_vortex_v1_node_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_vortex_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_vortex_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_vortex_v1_node_proto_goTypes = []any{
 	(CoreType)(0),                 // 0: vortex.v1.CoreType
 	(*UserSpec)(nil),              // 1: vortex.v1.UserSpec
@@ -1635,47 +1733,53 @@ var file_vortex_v1_node_proto_goTypes = []any{
 	(*RestartCoreRequest)(nil),    // 16: vortex.v1.RestartCoreRequest
 	(*StopCoreRequest)(nil),       // 17: vortex.v1.StopCoreRequest
 	(*OnlineStatsResponse)(nil),   // 18: vortex.v1.OnlineStatsResponse
-	(*NodeLogsRequest)(nil),       // 19: vortex.v1.NodeLogsRequest
-	(*NodeLogsResponse)(nil),      // 20: vortex.v1.NodeLogsResponse
-	nil,                           // 21: vortex.v1.SyncRequest.UsersByInboundEntry
-	nil,                           // 22: vortex.v1.OnlineStatsResponse.OnlineEntry
-	(*timestamppb.Timestamp)(nil), // 23: google.protobuf.Timestamp
+	(*OnlineIPsRequest)(nil),      // 19: vortex.v1.OnlineIPsRequest
+	(*OnlineIPsResponse)(nil),     // 20: vortex.v1.OnlineIPsResponse
+	(*NodeLogsRequest)(nil),       // 21: vortex.v1.NodeLogsRequest
+	(*NodeLogsResponse)(nil),      // 22: vortex.v1.NodeLogsResponse
+	nil,                           // 23: vortex.v1.SyncRequest.UsersByInboundEntry
+	nil,                           // 24: vortex.v1.OnlineStatsResponse.OnlineEntry
+	nil,                           // 25: vortex.v1.OnlineIPsResponse.IpsEntry
+	(*timestamppb.Timestamp)(nil), // 26: google.protobuf.Timestamp
 }
 var file_vortex_v1_node_proto_depIdxs = []int32{
 	0,  // 0: vortex.v1.SyncRequest.core:type_name -> vortex.v1.CoreType
 	2,  // 1: vortex.v1.SyncRequest.inbounds:type_name -> vortex.v1.InboundSpec
-	21, // 2: vortex.v1.SyncRequest.users_by_inbound:type_name -> vortex.v1.SyncRequest.UsersByInboundEntry
+	23, // 2: vortex.v1.SyncRequest.users_by_inbound:type_name -> vortex.v1.SyncRequest.UsersByInboundEntry
 	3,  // 3: vortex.v1.SyncRequest.outbounds:type_name -> vortex.v1.OutboundSpec
 	4,  // 4: vortex.v1.SyncRequest.routing:type_name -> vortex.v1.RoutingRuleSpec
 	5,  // 5: vortex.v1.SyncRequest.balancers:type_name -> vortex.v1.BalancerSpec
 	1,  // 6: vortex.v1.UserList.users:type_name -> vortex.v1.UserSpec
 	1,  // 7: vortex.v1.AddUserRequest.user:type_name -> vortex.v1.UserSpec
-	23, // 8: vortex.v1.TrafficDelta.timestamp:type_name -> google.protobuf.Timestamp
-	22, // 9: vortex.v1.OnlineStatsResponse.online:type_name -> vortex.v1.OnlineStatsResponse.OnlineEntry
-	7,  // 10: vortex.v1.SyncRequest.UsersByInboundEntry.value:type_name -> vortex.v1.UserList
-	6,  // 11: vortex.v1.NodeService.Sync:input_type -> vortex.v1.SyncRequest
-	8,  // 12: vortex.v1.NodeService.AddUser:input_type -> vortex.v1.AddUserRequest
-	9,  // 13: vortex.v1.NodeService.RemoveUser:input_type -> vortex.v1.RemoveUserRequest
-	10, // 14: vortex.v1.NodeService.StreamTraffic:input_type -> vortex.v1.StreamTrafficRequest
-	12, // 15: vortex.v1.NodeService.Health:input_type -> vortex.v1.HealthRequest
-	16, // 16: vortex.v1.NodeService.RestartCore:input_type -> vortex.v1.RestartCoreRequest
-	17, // 17: vortex.v1.NodeService.StopCore:input_type -> vortex.v1.StopCoreRequest
-	15, // 18: vortex.v1.NodeService.OnlineStats:input_type -> vortex.v1.OnlineStatsRequest
-	19, // 19: vortex.v1.NodeService.NodeLogs:input_type -> vortex.v1.NodeLogsRequest
-	14, // 20: vortex.v1.NodeService.Sync:output_type -> vortex.v1.Ack
-	14, // 21: vortex.v1.NodeService.AddUser:output_type -> vortex.v1.Ack
-	14, // 22: vortex.v1.NodeService.RemoveUser:output_type -> vortex.v1.Ack
-	11, // 23: vortex.v1.NodeService.StreamTraffic:output_type -> vortex.v1.TrafficDelta
-	13, // 24: vortex.v1.NodeService.Health:output_type -> vortex.v1.HealthResponse
-	14, // 25: vortex.v1.NodeService.RestartCore:output_type -> vortex.v1.Ack
-	14, // 26: vortex.v1.NodeService.StopCore:output_type -> vortex.v1.Ack
-	18, // 27: vortex.v1.NodeService.OnlineStats:output_type -> vortex.v1.OnlineStatsResponse
-	20, // 28: vortex.v1.NodeService.NodeLogs:output_type -> vortex.v1.NodeLogsResponse
-	20, // [20:29] is the sub-list for method output_type
-	11, // [11:20] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	26, // 8: vortex.v1.TrafficDelta.timestamp:type_name -> google.protobuf.Timestamp
+	24, // 9: vortex.v1.OnlineStatsResponse.online:type_name -> vortex.v1.OnlineStatsResponse.OnlineEntry
+	25, // 10: vortex.v1.OnlineIPsResponse.ips:type_name -> vortex.v1.OnlineIPsResponse.IpsEntry
+	7,  // 11: vortex.v1.SyncRequest.UsersByInboundEntry.value:type_name -> vortex.v1.UserList
+	6,  // 12: vortex.v1.NodeService.Sync:input_type -> vortex.v1.SyncRequest
+	8,  // 13: vortex.v1.NodeService.AddUser:input_type -> vortex.v1.AddUserRequest
+	9,  // 14: vortex.v1.NodeService.RemoveUser:input_type -> vortex.v1.RemoveUserRequest
+	10, // 15: vortex.v1.NodeService.StreamTraffic:input_type -> vortex.v1.StreamTrafficRequest
+	12, // 16: vortex.v1.NodeService.Health:input_type -> vortex.v1.HealthRequest
+	16, // 17: vortex.v1.NodeService.RestartCore:input_type -> vortex.v1.RestartCoreRequest
+	17, // 18: vortex.v1.NodeService.StopCore:input_type -> vortex.v1.StopCoreRequest
+	15, // 19: vortex.v1.NodeService.OnlineStats:input_type -> vortex.v1.OnlineStatsRequest
+	21, // 20: vortex.v1.NodeService.NodeLogs:input_type -> vortex.v1.NodeLogsRequest
+	19, // 21: vortex.v1.NodeService.OnlineIPs:input_type -> vortex.v1.OnlineIPsRequest
+	14, // 22: vortex.v1.NodeService.Sync:output_type -> vortex.v1.Ack
+	14, // 23: vortex.v1.NodeService.AddUser:output_type -> vortex.v1.Ack
+	14, // 24: vortex.v1.NodeService.RemoveUser:output_type -> vortex.v1.Ack
+	11, // 25: vortex.v1.NodeService.StreamTraffic:output_type -> vortex.v1.TrafficDelta
+	13, // 26: vortex.v1.NodeService.Health:output_type -> vortex.v1.HealthResponse
+	14, // 27: vortex.v1.NodeService.RestartCore:output_type -> vortex.v1.Ack
+	14, // 28: vortex.v1.NodeService.StopCore:output_type -> vortex.v1.Ack
+	18, // 29: vortex.v1.NodeService.OnlineStats:output_type -> vortex.v1.OnlineStatsResponse
+	22, // 30: vortex.v1.NodeService.NodeLogs:output_type -> vortex.v1.NodeLogsResponse
+	20, // 31: vortex.v1.NodeService.OnlineIPs:output_type -> vortex.v1.OnlineIPsResponse
+	22, // [22:32] is the sub-list for method output_type
+	12, // [12:22] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_vortex_v1_node_proto_init() }
@@ -1689,7 +1793,7 @@ func file_vortex_v1_node_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_vortex_v1_node_proto_rawDesc), len(file_vortex_v1_node_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   22,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
