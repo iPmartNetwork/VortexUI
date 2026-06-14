@@ -8,6 +8,8 @@ import { NodePicker } from "@/components/NodePicker";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
+import { JsonCodeEditor } from "@/components/JsonCodeEditor";
+import { DEFAULT_OUTBOUND_TEMPLATE, parseShareLink } from "@/lib/outbound-uri";
 
 const PROTOCOLS = ["freedom", "blackhole", "dns", "vless", "vmess", "trojan", "shadowsocks", "socks", "http"];
 
@@ -30,15 +32,31 @@ export function Outbounds() {
   const [tab, setTab] = useState<"basics" | "json">("basics");
   const [jsonText, setJsonText] = useState("");
   const [jsonErr, setJsonErr] = useState("");
+  const [importUri, setImportUri] = useState("");
 
-  const JSON_PLACEHOLDER = `{
-  "tag": "proxy-out",
-  "protocol": "vless",
-  "settings": {
-    "vnext": [{ "address": "1.2.3.4", "port": 443, "users": [{ "id": "uuid", "encryption": "none" }] }]
-  },
-  "streamSettings": { "network": "ws", "security": "tls" }
-}`;
+  const defaultTemplate = () => JSON.stringify(DEFAULT_OUTBOUND_TEMPLATE, null, 2);
+
+  function gotoJson() {
+    setTab("json");
+    if (!jsonText) setJsonText(defaultTemplate());
+  }
+
+  // importLink converts a pasted share link into outbound JSON in the editor.
+  function importLink() {
+    setJsonErr("");
+    if (!importUri.trim()) return;
+    try {
+      const obj = parseShareLink(importUri);
+      setJsonText(JSON.stringify(obj, null, 2));
+      setImportUri("");
+    } catch {
+      setJsonErr(t("outbounds.importFailed"));
+    }
+  }
+
+  function shortId() {
+    return Math.random().toString(16).slice(2, 6);
+  }
 
   async function submitJSON() {
     setJsonErr("");
@@ -49,12 +67,14 @@ export function Outbounds() {
       setJsonErr(t("outbounds.invalidJson"));
       return;
     }
-    const tag = String(parsed.tag ?? "");
     const protocol = String(parsed.protocol ?? "");
-    if (!tag || !protocol) {
-      setJsonErr(t("outbounds.jsonNeedsTagProtocol"));
+    if (!protocol) {
+      setJsonErr(t("outbounds.jsonNeedsProtocol"));
       return;
     }
+    // 3x-ui templates omit the tag; generate one when absent.
+    const tag = String(parsed.tag ?? "") || `out-${protocol}-${shortId()}`;
+    parsed.tag = tag;
     try {
       if (editing) {
         await update.mutateAsync({ id: editing.id, body: { tag, protocol, raw: parsed, enabled: true } });
@@ -76,6 +96,7 @@ export function Outbounds() {
     setTab("basics");
     setJsonText("");
     setJsonErr("");
+    setImportUri("");
     setF({ tag: "", protocol: "freedom", address: "", port: "", uuid: "", password: "", method: "aes-128-gcm", security: "none", sni: "" });
   }
 
@@ -154,7 +175,7 @@ export function Outbounds() {
             <button
               key={tk}
               type="button"
-              onClick={() => setTab(tk)}
+              onClick={() => (tk === "json" ? gotoJson() : setTab("basics"))}
               className={`-mb-px border-b-2 pb-2 font-medium transition ${tab === tk ? "border-primary text-primary" : "border-transparent text-fg-muted hover:text-fg"}`}
             >
               {tk === "basics" ? t("outbounds.basics") : "JSON"}
@@ -194,15 +215,21 @@ export function Outbounds() {
           </form>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-fg-muted">{t("outbounds.jsonHint")}</p>
-            <textarea
-              value={jsonText}
-              onChange={(e) => setJsonText(e.target.value)}
-              placeholder={JSON_PLACEHOLDER}
-              spellCheck={false}
-              className="h-64 w-full resize-y rounded-lg border border-border/60 bg-surface-2/40 p-3 font-mono text-xs text-fg outline-none focus:border-primary/50"
-              dir="ltr"
-            />
+            {/* Share-link import bar */}
+            <div className="flex gap-2">
+              <Input
+                value={importUri}
+                onChange={(e) => setImportUri(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); importLink(); } }}
+                placeholder="vmess:// vless:// trojan:// ss:// hysteria2:// wireguard://"
+                className="flex-1 font-mono text-xs"
+                dir="ltr"
+              />
+              <Button type="button" onClick={importLink}>{t("outbounds.import")}</Button>
+            </div>
+
+            <JsonCodeEditor value={jsonText} onChange={setJsonText} rows={16} />
+
             {jsonErr && <p className="text-sm text-danger">{jsonErr}</p>}
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="ghost" onClick={closeModal}>{t("common.cancel")}</Button>
