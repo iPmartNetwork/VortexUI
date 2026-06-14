@@ -178,6 +178,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	nodeSvc := service.NewNodeService(nodes, h)
 	nodeSvc.SetLogQuerier(h)
+	nodeSvc.SetCoreController(h)
 	inboundSvc := service.NewInboundService(store.Inbounds(), syncSvc)
 	outboundSvc := service.NewOutboundService(store.Outbounds(), syncSvc)
 	routingSvc := service.NewRoutingService(store.Routing(), syncSvc)

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { balancerHooks } from "@/api/policy-hooks";
 import type { Balancer } from "@/api/types";
 import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui";
@@ -16,8 +16,10 @@ export function Balancers() {
   const { t } = useI18n();
   const [node, setNode] = useState("");
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Balancer | null>(null);
   const list = balancerHooks.useList(node || null);
   const create = balancerHooks.useCreate();
+  const update = balancerHooks.useUpdate();
   const del = balancerHooks.useDelete();
   const confirm = useConfirm();
   const toast = useToast();
@@ -28,13 +30,26 @@ export function Balancers() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    await create.mutateAsync({
+    const body = {
       node_id: node, tag: f.tag, selectors: csv(f.selectors), strategy: f.strategy,
       observe, probe_url: f.probe_url, probe_interval: f.probe_interval, enabled: true,
-    });
-    toast.success(`${f.tag} ✓`);
+    };
+    if (editing) {
+      await update.mutateAsync({ id: editing.id, body });
+      toast.success(`${editing.tag} updated`);
+      setEditing(null);
+    } else {
+      await create.mutateAsync(body);
+      toast.success(`${f.tag} ✓`);
+    }
     setOpen(false);
     setF({ tag: "", selectors: "", strategy: "leastPing", probe_url: "", probe_interval: "10s" });
+  }
+
+  function edit(b: Balancer) {
+    setF({ tag: b.tag, selectors: b.selectors.join(", "), strategy: b.strategy, probe_url: b.probe_url, probe_interval: b.probe_interval || "10s" });
+    setEditing(b);
+    setOpen(true);
   }
 
   async function remove(b: Balancer) {
@@ -60,14 +75,17 @@ export function Balancers() {
                 <Badge color="on_hold">{b.strategy}</Badge>
                 <span className="text-xs text-fg-muted">{b.selectors.join(", ")}</span>
               </div>
-              <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(b)}><Trash2 size={15} /></Button>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={() => edit(b)}><Pencil size={15} /></Button>
+                <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(b)}><Trash2 size={15} /></Button>
+              </div>
             </div>
           ))}
           {list.data?.balancers?.length === 0 && <p className="px-5 py-8 text-center text-sm text-fg-muted">{t("common.none")}</p>}
         </div>
       </Card>
 
-      <Modal open={open} onClose={() => setOpen(false)} title={t("nav.balancers")}>
+      <Modal open={open} onClose={() => { setOpen(false); setEditing(null); }} title={editing ? `Edit ${editing.tag}` : t("nav.balancers")}>
         <form onSubmit={submit} className="space-y-3">
           <Input placeholder="Tag" value={f.tag} onChange={set("tag")} required />
           <Input placeholder="Selectors — outbound tag prefixes (comma)" value={f.selectors} onChange={set("selectors")} required />
@@ -81,8 +99,8 @@ export function Balancers() {
             </div>
           )}
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
-            <Button type="submit" disabled={create.isPending}>{t("common.create")}</Button>
+            <Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditing(null); }}>{t("common.cancel")}</Button>
+            <Button type="submit" disabled={create.isPending || update.isPending}>{editing ? t("common.save") : t("common.create")}</Button>
           </div>
         </form>
       </Modal>

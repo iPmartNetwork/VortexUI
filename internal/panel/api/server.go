@@ -45,6 +45,8 @@ func NewRouter(d Deps) *echo.Echo {
 	authed.GET("/overview", d.Handlers.GetOverview, RequirePermission(d.Auth, domain.PermSystemRead))
 	// Recent panel logs (in-memory ring buffer).
 	authed.GET("/logs", d.Handlers.GetLogs, RequirePermission(d.Auth, domain.PermSystemRead))
+	// Live system info (process/memory).
+	authed.GET("/system", d.Handlers.GetSystem, RequirePermission(d.Auth, domain.PermSystemRead))
 
 	users := authed.Group("/users")
 	users.GET("", d.Handlers.ListUsers, RequirePermission(d.Auth, domain.PermUserRead))
@@ -62,6 +64,9 @@ func NewRouter(d Deps) *echo.Echo {
 	nodes.GET("", d.Handlers.ListNodes, RequirePermission(d.Auth, domain.PermNodeRead))
 	nodes.GET("/:id", d.Handlers.GetNode, RequirePermission(d.Auth, domain.PermNodeRead))
 	nodes.GET("/:id/logs", d.Handlers.GetNodeLogs, RequirePermission(d.Auth, domain.PermNodeRead))
+	nodes.GET("/:id/status", d.Handlers.GetNodeStatus, RequirePermission(d.Auth, domain.PermNodeRead))
+	nodes.POST("/:id/restart", d.Handlers.RestartNodeCore, RequirePermission(d.Auth, domain.PermNodeWrite))
+	nodes.POST("/:id/stop", d.Handlers.StopNodeCore, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.POST("", d.Handlers.CreateNode, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.PUT("/:id", d.Handlers.UpdateNode, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.DELETE("/:id", d.Handlers.DeleteNode, RequirePermission(d.Auth, domain.PermNodeWrite))

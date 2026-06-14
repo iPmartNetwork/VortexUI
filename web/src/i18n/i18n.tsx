@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { dict, type Lang, type TKey } from "./dict";
+import { dict, RTL_LANGS, type Lang, type TKey } from "./dict";
 
 interface I18nState {
   lang: Lang;
@@ -13,7 +13,7 @@ const KEY = "vortex.lang";
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => (localStorage.getItem(KEY) as Lang) || "en");
-  const dir = lang === "fa" ? "rtl" : "ltr";
+  const dir = RTL_LANGS.includes(lang) ? "rtl" : "ltr";
 
   useEffect(() => {
     document.documentElement.lang = lang;

@@ -81,3 +81,13 @@ func (c *LocalConn) OnlineStats(ctx context.Context) (map[string]int, error) {
 func (c *LocalConn) Logs(ctx context.Context, limit int) ([]string, error) {
 	return c.driver.Logs(ctx, limit)
 }
+
+// RestartCore reloads the local core.
+func (c *LocalConn) RestartCore(ctx context.Context) error {
+	return c.driver.Reload(ctx, nil)
+}
+
+// StopCore stops the local core.
+func (c *LocalConn) StopCore(ctx context.Context) error {
+	return c.driver.Stop(ctx)
+}

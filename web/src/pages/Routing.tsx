@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { routingHooks } from "@/api/policy-hooks";
 import type { RoutingRule } from "@/api/types";
 import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui";
@@ -15,8 +15,10 @@ export function Routing() {
   const { t } = useI18n();
   const [node, setNode] = useState("");
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<RoutingRule | null>(null);
   const list = routingHooks.useList(node || null);
   const create = routingHooks.useCreate();
+  const update = routingHooks.useUpdate();
   const del = routingHooks.useDelete();
   const confirm = useConfirm();
   const toast = useToast();
@@ -27,16 +29,30 @@ export function Routing() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const [kind, tag] = f.target.split(":");
-    await create.mutateAsync({
+    const body = {
       node_id: node, name: f.name, priority: Number(f.priority) || 1,
       inbound_tags: csv(f.inbound_tags), domains: csv(f.domains), ip: csv(f.ip),
       port: f.port, network: f.network,
       outbound_tag: kind === "out" ? tag : "", balancer_tag: kind === "bal" ? tag : "",
       enabled: true,
-    });
-    toast.success("✓");
+    };
+    if (editing) {
+      await update.mutateAsync({ id: editing.id, body });
+      toast.success("Updated");
+      setEditing(null);
+    } else {
+      await create.mutateAsync(body);
+      toast.success("✓");
+    }
     setOpen(false);
     setF({ name: "", priority: "1", inbound_tags: "", domains: "", ip: "", port: "", network: "", target: "" });
+  }
+
+  function edit(r: RoutingRule) {
+    const target = r.balancer_tag ? `bal:${r.balancer_tag}` : `out:${r.outbound_tag}`;
+    setF({ name: r.name, priority: String(r.priority), inbound_tags: r.inbound_tags.join(", "), domains: r.domains.join(", "), ip: r.ip.join(", "), port: r.port, network: r.network, target });
+    setEditing(r);
+    setOpen(true);
   }
 
   async function remove(r: RoutingRule) {
@@ -65,14 +81,17 @@ export function Routing() {
                 <span className="text-fg-subtle">→</span>
                 <Badge color={r.balancer_tag ? "on_hold" : "muted"}>{r.outbound_tag || r.balancer_tag || "—"}</Badge>
               </div>
-              <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(r)}><Trash2 size={15} /></Button>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" onClick={() => edit(r)}><Pencil size={15} /></Button>
+                <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(r)}><Trash2 size={15} /></Button>
+              </div>
             </div>
           ))}
           {sorted.length === 0 && <p className="px-5 py-8 text-center text-sm text-fg-muted">{t("common.none")}</p>}
         </div>
       </Card>
 
-      <Modal open={open} onClose={() => setOpen(false)} title={t("nav.routing")} className="max-w-lg">
+      <Modal open={open} onClose={() => { setOpen(false); setEditing(null); }} title={editing ? `Edit ${editing.name || "rule"}` : t("nav.routing")} className="max-w-lg">
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
             <Input className="col-span-2" placeholder="Name" value={f.name} onChange={set("name")} />
@@ -91,8 +110,8 @@ export function Routing() {
           </div>
           <Input placeholder="Target — out:<tag> or bal:<tag>" value={f.target} onChange={set("target")} required />
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
-            <Button type="submit" disabled={create.isPending}>{t("common.create")}</Button>
+            <Button type="button" variant="ghost" onClick={() => { setOpen(false); setEditing(null); }}>{t("common.cancel")}</Button>
+            <Button type="submit" disabled={create.isPending || update.isPending}>{editing ? t("common.save") : t("common.create")}</Button>
           </div>
         </form>
       </Modal>

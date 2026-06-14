@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
-// A minimal accessible modal: backdrop + centered panel. Closes on backdrop click.
 export function Modal({
   open,
   onClose,
@@ -17,14 +17,26 @@ export function Modal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className={cn("w-full max-w-md rounded-xl border bg-card p-6 shadow-xl", className)}
+        className={cn(
+          "card w-full max-w-md animate-scale-in p-6 relative",
+          className,
+        )}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-semibold">{title}</h2>
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight text-fg">{title}</h2>
+          <button
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-lg text-fg-subtle transition hover:bg-surface-2 hover:text-fg"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
         {children}
       </div>
     </div>

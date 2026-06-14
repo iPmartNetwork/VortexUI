@@ -28,6 +28,12 @@ service NodeService {
   // Health returns a live resource/liveness snapshot for failover decisions.
   rpc Health(HealthRequest) returns (HealthResponse);
 
+  // RestartCore restarts the proxy engine process (applies latest config).
+  rpc RestartCore(RestartCoreRequest) returns (Ack);
+
+  // StopCore gracefully shuts the proxy engine down.
+  rpc StopCore(StopCoreRequest) returns (Ack);
+
   // OnlineStats returns the current live-connection count per user (keyed by the
   // user's stats email == UUID). Polled on demand by the panel.
   rpc OnlineStats(OnlineStatsRequest) returns (OnlineStatsResponse);
@@ -180,6 +186,9 @@ message Ack {
 }
 
 message OnlineStatsRequest {}
+
+message RestartCoreRequest {}
+message StopCoreRequest {}
 
 // OnlineStatsResponse maps a user's stats email (UUID) to its current live
 // connection count. Absent users have zero connections.
