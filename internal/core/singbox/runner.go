@@ -37,3 +37,6 @@ func (r *fileRunner) Apply(ctx context.Context, raw []byte) error {
 
 func (r *fileRunner) Stop()         { r.sup.Stop() }
 func (r *fileRunner) Running() bool { return r.sup.Running() }
+
+// Logs returns recent core log lines captured by the supervisor.
+func (r *fileRunner) Logs(limit int) []string { return r.sup.Logs(limit) }

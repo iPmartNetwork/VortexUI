@@ -46,6 +46,10 @@ func singboxOutbound(p Proxy) map[string]any {
 		if p.SNI != "" {
 			tls["server_name"] = p.SNI
 		}
+		if p.Security == "reality" {
+			tls["reality"] = map[string]any{"enabled": true, "public_key": p.PublicKey, "short_id": p.ShortID}
+			tls["utls"] = map[string]any{"enabled": true, "fingerprint": orDefault(p.Fingerprint, "chrome")}
+		}
 		o["tls"] = tls
 	}
 	if tr := singboxTransport(p); tr != nil {

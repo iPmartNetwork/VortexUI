@@ -71,6 +71,15 @@ func (s *NodeServer) Sync(ctx context.Context, req *genv1.SyncRequest) (*genv1.A
 		}
 		cfg.UsersByInbound[tag] = users
 	}
+	for _, o := range req.GetOutbounds() {
+		cfg.Outbounds = append(cfg.Outbounds, outboundFromSpec(o))
+	}
+	for _, r := range req.GetRouting() {
+		cfg.Routing = append(cfg.Routing, routingFromSpec(r))
+	}
+	for _, b := range req.GetBalancers() {
+		cfg.Balancers = append(cfg.Balancers, balancerFromSpec(b))
+	}
 	if err := s.driver.Start(ctx, cfg); err != nil {
 		return ack(false, fmt.Sprintf("sync: %v", err)), nil
 	}
@@ -120,12 +129,34 @@ func (s *NodeServer) Health(ctx context.Context, _ *genv1.HealthRequest) (*genv1
 	}
 	ver, _ := s.driver.Version(ctx)
 	return &genv1.HealthResponse{
-		CpuPercent:  h.CPUPercent,
-		MemPercent:  h.MemPercent,
-		DiskPercent: h.DiskPercent,
-		CoreRunning: h.CoreRunning,
-		Connections: uint32(h.Connections),
-		CoreVersion: ver,
+		CpuPercent:   h.CPUPercent,
+		MemPercent:   h.MemPercent,
+		DiskPercent:  h.DiskPercent,
+		CoreRunning:  h.CoreRunning,
+		Connections:  uint32(h.Connections),
+		CoreVersion:  ver,
 		AgentVersion: s.agentVer,
 	}, nil
+}
+
+// OnlineStats reports live per-user connection counts from the driver.
+func (s *NodeServer) OnlineStats(ctx context.Context, _ *genv1.OnlineStatsRequest) (*genv1.OnlineStatsResponse, error) {
+	stats, err := s.driver.OnlineStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+	online := make(map[string]uint32, len(stats))
+	for email, n := range stats {
+		online[email] = uint32(n)
+	}
+	return &genv1.OnlineStatsResponse{Online: online}, nil
+}
+
+// NodeLogs returns the agent's most recent captured core log lines.
+func (s *NodeServer) NodeLogs(ctx context.Context, req *genv1.NodeLogsRequest) (*genv1.NodeLogsResponse, error) {
+	lines, err := s.driver.Logs(ctx, int(req.GetLimit()))
+	if err != nil {
+		return nil, err
+	}
+	return &genv1.NodeLogsResponse{Lines: lines}, nil
 }

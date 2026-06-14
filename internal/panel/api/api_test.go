@@ -30,14 +30,16 @@ func (f *fakeAdminRepo) GetByUsername(_ context.Context, u string) (*domain.Admi
 	}
 	return nil, domain.ErrNotFound
 }
-func (f *fakeAdminRepo) GetByID(context.Context, uuid.UUID) (*domain.Admin, error) { return f.admin, nil }
-func (f *fakeAdminRepo) Update(context.Context, *domain.Admin) error               { return nil }
-func (f *fakeAdminRepo) GetRole(context.Context, uuid.UUID) (*domain.Role, error)  { return nil, nil }
+func (f *fakeAdminRepo) GetByID(context.Context, uuid.UUID) (*domain.Admin, error) {
+	return f.admin, nil
+}
+func (f *fakeAdminRepo) Update(context.Context, *domain.Admin) error              { return nil }
+func (f *fakeAdminRepo) GetRole(context.Context, uuid.UUID) (*domain.Role, error) { return nil, nil }
 func (f *fakeAdminRepo) List(context.Context) ([]*domain.Admin, error) {
 	return []*domain.Admin{f.admin}, nil
 }
-func (f *fakeAdminRepo) Delete(context.Context, uuid.UUID) error      { return nil }
-func (f *fakeAdminRepo) CountSudo(context.Context) (int, error)       { return 2, nil }
+func (f *fakeAdminRepo) Delete(context.Context, uuid.UUID) error        { return nil }
+func (f *fakeAdminRepo) CountSudo(context.Context) (int, error)         { return 2, nil }
 func (f *fakeAdminRepo) CreateRole(context.Context, *domain.Role) error { return nil }
 func (f *fakeAdminRepo) ListRoles(context.Context) ([]*domain.Role, error) {
 	return []*domain.Role{}, nil
@@ -68,9 +70,9 @@ func (f *fakeUserRepo) Delete(context.Context, uuid.UUID) error    { return nil 
 func (f *fakeUserRepo) List(context.Context, port.UserFilter) ([]*domain.User, int, error) {
 	return f.listed, len(f.listed), nil
 }
-func (f *fakeUserRepo) AddUsedTraffic(context.Context, uuid.UUID, int64) error          { return nil }
+func (f *fakeUserRepo) AddUsedTraffic(context.Context, uuid.UUID, int64) error         { return nil }
 func (f *fakeUserRepo) AddUsedTrafficBatch(context.Context, map[uuid.UUID]int64) error { return nil }
-func (f *fakeUserRepo) SetInbounds(context.Context, uuid.UUID, []uuid.UUID) error   { return nil }
+func (f *fakeUserRepo) SetInbounds(context.Context, uuid.UUID, []uuid.UUID) error      { return nil }
 func (f *fakeUserRepo) InboundsFor(context.Context, uuid.UUID) ([]domain.Inbound, error) {
 	return f.inbounds, nil
 }
@@ -84,9 +86,9 @@ func (f *fakeNodeRepo) GetByID(context.Context, uuid.UUID) (*domain.Node, error)
 	}
 	return f.node, nil
 }
-func (f *fakeNodeRepo) Update(context.Context, *domain.Node) error      { return nil }
-func (f *fakeNodeRepo) Delete(context.Context, uuid.UUID) error         { return nil }
-func (f *fakeNodeRepo) List(context.Context) ([]*domain.Node, error)    { return nil, nil }
+func (f *fakeNodeRepo) Update(context.Context, *domain.Node) error   { return nil }
+func (f *fakeNodeRepo) Delete(context.Context, uuid.UUID) error      { return nil }
+func (f *fakeNodeRepo) List(context.Context) ([]*domain.Node, error) { return nil, nil }
 func (f *fakeNodeRepo) UpdateHealth(context.Context, uuid.UUID, domain.NodeHealth) error {
 	return nil
 }
@@ -100,8 +102,8 @@ func (f *fakeTrafficRepo) UsageSeries(context.Context, uuid.UUID, port.SeriesQue
 
 type nopNodeOps struct{}
 
-func (nopNodeOps) AddUser(context.Context, uuid.UUID, string, *domain.User) error    { return nil }
-func (nopNodeOps) RemoveUser(context.Context, uuid.UUID, string, uuid.UUID) error    { return nil }
+func (nopNodeOps) AddUser(context.Context, uuid.UUID, string, *domain.User) error { return nil }
+func (nopNodeOps) RemoveUser(context.Context, uuid.UUID, string, uuid.UUID) error { return nil }
 
 func newTestServer(t *testing.T) (http.Handler, *auth.Issuer, *domain.Admin) {
 	t.Helper()

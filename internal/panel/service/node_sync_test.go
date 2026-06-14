@@ -36,8 +36,8 @@ func (f *fakeSyncer) Sync(_ context.Context, nodeID uuid.UUID, cfg *core.Generat
 }
 
 type fakeNodeRepo struct {
-	created  *domain.Node
-	deleted  bool
+	created *domain.Node
+	deleted bool
 }
 
 func (f *fakeNodeRepo) Create(_ context.Context, n *domain.Node) error { f.created = n; return nil }
@@ -56,8 +56,11 @@ type fakeRegistrar struct {
 	deregistered uuid.UUID
 }
 
-func (f *fakeRegistrar) Register(_ context.Context, n *domain.Node) error { f.registered = n; return nil }
-func (f *fakeRegistrar) Deregister(id uuid.UUID)                          { f.deregistered = id }
+func (f *fakeRegistrar) Register(_ context.Context, n *domain.Node) error {
+	f.registered = n
+	return nil
+}
+func (f *fakeRegistrar) Deregister(id uuid.UUID) { f.deregistered = id }
 
 // --- tests ---
 
@@ -70,7 +73,7 @@ func TestSyncResyncAssemblesEnabledInboundsAndUsers(t *testing.T) {
 	usersBy := &fakeUsersByNoder{m: map[string][]*domain.User{"on": {{ID: uuid.New()}}}}
 	syncer := &fakeSyncer{}
 
-	svc := NewSyncService(lister, usersBy, syncer)
+	svc := NewSyncService(lister, usersBy, syncer, nil, nil, nil)
 	if err := svc.Resync(context.Background(), nodeID); err != nil {
 		t.Fatalf("resync: %v", err)
 	}

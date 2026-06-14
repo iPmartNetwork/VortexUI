@@ -14,6 +14,21 @@ type InboundLister interface {
 	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Inbound, error)
 }
 
+// OutboundLister yields a node's outbounds (port.OutboundRepository satisfies it).
+type OutboundLister interface {
+	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Outbound, error)
+}
+
+// RoutingLister yields a node's routing rules (port.RoutingRepository satisfies it).
+type RoutingLister interface {
+	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.RoutingRule, error)
+}
+
+// BalancerLister yields a node's balancers (port.BalancerRepository satisfies it).
+type BalancerLister interface {
+	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Balancer, error)
+}
+
 // UsersByNoder yields the per-inbound user map for a node (postgres.UserRepo
 // satisfies it).
 type UsersByNoder interface {
@@ -26,22 +41,37 @@ type Syncer interface {
 }
 
 // SyncService rebuilds a node's complete desired configuration from the database
-// and pushes it to the live core. It is invoked whenever a node's inbounds
-// change; per-user edits use the lighter AddUser/RemoveUser path instead.
+// and pushes it to the live core. It is invoked whenever a node's inbounds,
+// outbounds, routing rules, or balancers change; per-user edits use the lighter
+// AddUser/RemoveUser path instead.
 type SyncService struct {
-	inbounds InboundLister
-	users    UsersByNoder
-	syncer   Syncer
+	inbounds  InboundLister
+	users     UsersByNoder
+	outbounds OutboundLister
+	routing   RoutingLister
+	balancers BalancerLister
+	syncer    Syncer
 }
 
-// NewSyncService wires the service.
-func NewSyncService(inbounds InboundLister, users UsersByNoder, syncer Syncer) *SyncService {
-	return &SyncService{inbounds: inbounds, users: users, syncer: syncer}
+// NewSyncService wires the service. The outbound/routing/balancer listers are
+// optional (nil disables that section), which keeps tests that only exercise
+// inbounds simple and lets the panel run before those features are configured.
+func NewSyncService(inbounds InboundLister, users UsersByNoder, syncer Syncer, outbounds OutboundLister, routing RoutingLister, balancers BalancerLister) *SyncService {
+	return &SyncService{
+		inbounds:  inbounds,
+		users:     users,
+		outbounds: outbounds,
+		routing:   routing,
+		balancers: balancers,
+		syncer:    syncer,
+	}
 }
 
-// Resync assembles the node's enabled inbounds plus their bound users into a
-// core.GeneratedConfig and pushes it. Disabled inbounds are excluded so they
-// stop listening after the sync.
+// Resync assembles the node's enabled inbounds plus their bound users, and its
+// outbounds, routing rules, and balancers, into a core.GeneratedConfig and
+// pushes it. Disabled inbounds are excluded so they stop listening after the
+// sync; disabled outbounds/routing/balancers are passed through and skipped by
+// the builder, keeping the enabled/disabled decision in one place per concern.
 func (s *SyncService) Resync(ctx context.Context, nodeID uuid.UUID) error {
 	inbounds, err := s.inbounds.ListByNode(ctx, nodeID)
 	if err != nil {
@@ -61,5 +91,34 @@ func (s *SyncService) Resync(ctx context.Context, nodeID uuid.UUID) error {
 			cfg.Inbounds = append(cfg.Inbounds, *in)
 		}
 	}
+
+	if s.outbounds != nil {
+		outs, err := s.outbounds.ListByNode(ctx, nodeID)
+		if err != nil {
+			return err
+		}
+		for _, o := range outs {
+			cfg.Outbounds = append(cfg.Outbounds, *o)
+		}
+	}
+	if s.routing != nil {
+		rules, err := s.routing.ListByNode(ctx, nodeID)
+		if err != nil {
+			return err
+		}
+		for _, r := range rules {
+			cfg.Routing = append(cfg.Routing, *r)
+		}
+	}
+	if s.balancers != nil {
+		bals, err := s.balancers.ListByNode(ctx, nodeID)
+		if err != nil {
+			return err
+		}
+		for _, b := range bals {
+			cfg.Balancers = append(cfg.Balancers, *b)
+		}
+	}
+
 	return s.syncer.Sync(ctx, nodeID, cfg)
 }

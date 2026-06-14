@@ -56,3 +56,25 @@ func (d *DeviceTracker) Allow(ctx context.Context, userID, deviceID string, limi
 	}
 	return res == 1, nil
 }
+
+// onlineScript evicts members older than the window, then returns the remaining
+// active-device count — done in one round-trip so the count reflects the same
+// eviction the limiter applies.
+var onlineScript = redis.NewScript(`
+local key = KEYS[1]
+local cutoff = tonumber(ARGV[1])
+redis.call('ZREMRANGEBYSCORE', key, '-inf', cutoff)
+return redis.call('ZCARD', key)
+`)
+
+// Online reports how many distinct devices a user has been seen on within the
+// window (i.e. recently active devices). It reflects subscription-fetch activity
+// the tracker observes, not raw live proxy connections.
+func (d *DeviceTracker) Online(ctx context.Context, userID string, window time.Duration) (int, error) {
+	cutoff := time.Now().Unix() - int64(window.Seconds())
+	n, err := onlineScript.Run(ctx, d.rdb, []string{"devices:" + userID}, cutoff).Int()
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
+}

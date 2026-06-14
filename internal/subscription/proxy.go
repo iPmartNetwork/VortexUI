@@ -27,4 +27,11 @@ type Proxy struct {
 	UUID     string // vmess / vless
 	Password string // trojan / shadowsocks
 	SSMethod string // shadowsocks cipher
+
+	// REALITY parameters, populated only when Security == "reality". The client
+	// needs the public key (paired with the inbound's private key) and a short
+	// ID to complete the REALITY handshake.
+	PublicKey   string
+	ShortID     string
+	Fingerprint string // uTLS fingerprint, e.g. "chrome"
 }

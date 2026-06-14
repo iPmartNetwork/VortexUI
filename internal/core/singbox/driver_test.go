@@ -29,8 +29,9 @@ func (f *fakeRunner) Apply(_ context.Context, raw []byte) error {
 	f.running = true
 	return nil
 }
-func (f *fakeRunner) Stop()         { f.mu.Lock(); f.running = false; f.mu.Unlock() }
-func (f *fakeRunner) Running() bool { f.mu.Lock(); defer f.mu.Unlock(); return f.running }
+func (f *fakeRunner) Stop()             { f.mu.Lock(); f.running = false; f.mu.Unlock() }
+func (f *fakeRunner) Running() bool     { f.mu.Lock(); defer f.mu.Unlock(); return f.running }
+func (f *fakeRunner) Logs(int) []string { return nil }
 
 func (f *fakeRunner) lastUserCount(t *testing.T) int {
 	t.Helper()

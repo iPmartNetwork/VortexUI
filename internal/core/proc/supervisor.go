@@ -26,6 +26,8 @@ type Supervisor struct {
 	cmd     *exec.Cmd
 	running bool
 	stopped bool // set by Stop; suppresses auto-restart
+
+	logs *lineRing // recent core stdout/stderr lines
 }
 
 // New builds a supervisor that runs `binPath args...`.
@@ -33,8 +35,12 @@ func New(binPath string, args []string, log *slog.Logger) *Supervisor {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Supervisor{binPath: binPath, args: args, log: log}
+	return &Supervisor{binPath: binPath, args: args, log: log, logs: newLineRing(1000)}
 }
+
+// Logs returns up to limit of the most recent captured core log lines (oldest
+// first); limit <= 0 returns all retained lines.
+func (s *Supervisor) Logs(limit int) []string { return s.logs.tail(limit) }
 
 // Start launches the process if not already running. Idempotent.
 func (s *Supervisor) Start(ctx context.Context) error {
@@ -76,6 +82,10 @@ func (s *Supervisor) spawnLocked(ctx context.Context) error {
 		return errors.New("proc: empty binary path")
 	}
 	cmd := exec.Command(s.binPath, s.args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
@@ -85,6 +95,7 @@ func (s *Supervisor) spawnLocked(ctx context.Context) error {
 	}
 	s.cmd = cmd
 	s.running = true
+	go s.pumpLogs(stdout)
 	go s.pumpLogs(stderr)
 	go s.waitAndMaybeRestart(ctx, cmd)
 	return nil
@@ -129,7 +140,52 @@ func (s *Supervisor) waitAndMaybeRestart(ctx context.Context, cmd *exec.Cmd) {
 
 func (s *Supervisor) pumpLogs(r io.Reader) {
 	sc := bufio.NewScanner(r)
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for sc.Scan() {
-		s.log.Debug("core", "line", sc.Text())
+		line := sc.Text()
+		s.logs.add(line)
+		s.log.Debug("core", "line", line)
 	}
+}
+
+// lineRing is a fixed-capacity ring buffer of recent log lines, safe for
+// concurrent writes (pump goroutines) and reads (the Logs RPC).
+type lineRing struct {
+	mu   sync.Mutex
+	buf  []string
+	next int
+	full bool
+}
+
+func newLineRing(capacity int) *lineRing {
+	if capacity <= 0 {
+		capacity = 1000
+	}
+	return &lineRing{buf: make([]string, capacity)}
+}
+
+func (r *lineRing) add(line string) {
+	r.mu.Lock()
+	r.buf[r.next] = line
+	r.next = (r.next + 1) % len(r.buf)
+	if r.next == 0 {
+		r.full = true
+	}
+	r.mu.Unlock()
+}
+
+func (r *lineRing) tail(limit int) []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var ordered []string
+	if r.full {
+		ordered = append(ordered, r.buf[r.next:]...)
+		ordered = append(ordered, r.buf[:r.next]...)
+	} else {
+		ordered = append(ordered, r.buf[:r.next]...)
+	}
+	if limit > 0 && len(ordered) > limit {
+		ordered = ordered[len(ordered)-limit:]
+	}
+	return ordered
 }

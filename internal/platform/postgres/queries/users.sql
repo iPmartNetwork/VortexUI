@@ -101,3 +101,10 @@ FROM inbounds i
 JOIN user_inbounds ui ON ui.inbound_id = i.id
 JOIN users u ON u.id = ui.user_id
 WHERE i.node_id = $1 AND i.enabled = TRUE;
+
+-- UserStats aggregates user counts and total used traffic per status, powering
+-- the dashboard overview in a single round-trip.
+-- name: UserStats :many
+SELECT status, COUNT(*)::bigint AS count, COALESCE(SUM(used_traffic), 0)::bigint AS used_traffic
+FROM users
+GROUP BY status;

@@ -61,6 +61,33 @@ type InboundRepository interface {
 	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Inbound, error)
 }
 
+// OutboundRepository persists per-node egress handlers.
+type OutboundRepository interface {
+	Create(ctx context.Context, o *domain.Outbound) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Outbound, error)
+	Update(ctx context.Context, o *domain.Outbound) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Outbound, error)
+}
+
+// RoutingRepository persists per-node routing rules.
+type RoutingRepository interface {
+	Create(ctx context.Context, rule *domain.RoutingRule) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.RoutingRule, error)
+	Update(ctx context.Context, rule *domain.RoutingRule) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.RoutingRule, error)
+}
+
+// BalancerRepository persists per-node balancers.
+type BalancerRepository interface {
+	Create(ctx context.Context, b *domain.Balancer) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Balancer, error)
+	Update(ctx context.Context, b *domain.Balancer) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Balancer, error)
+}
+
 // AdminRepository persists panel operators and roles.
 type AdminRepository interface {
 	Create(ctx context.Context, a *domain.Admin) error

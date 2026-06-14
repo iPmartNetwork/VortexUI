@@ -20,11 +20,13 @@ import (
 // fakeDriver records calls and emits a scripted set of traffic deltas, letting
 // us exercise the full gRPC contract without a real proxy engine.
 type fakeDriver struct {
-	mu        sync.Mutex
-	added     []string // "tag/userid"
-	removed   []string
-	started   bool
-	deltas    []domain.TrafficDelta
+	mu      sync.Mutex
+	added   []string // "tag/userid"
+	removed []string
+	started bool
+	deltas  []domain.TrafficDelta
+	online  map[string]int
+	logs    []string
 }
 
 func (f *fakeDriver) Type() domain.CoreType { return domain.CoreXray }
@@ -34,8 +36,8 @@ func (f *fakeDriver) Start(context.Context, *core.GeneratedConfig) error {
 	f.mu.Unlock()
 	return nil
 }
-func (f *fakeDriver) Stop(context.Context) error                              { return nil }
-func (f *fakeDriver) Reload(context.Context, *core.GeneratedConfig) error     { return nil }
+func (f *fakeDriver) Stop(context.Context) error                          { return nil }
+func (f *fakeDriver) Reload(context.Context, *core.GeneratedConfig) error { return nil }
 func (f *fakeDriver) AddUser(_ context.Context, tag string, u *domain.User) error {
 	f.mu.Lock()
 	f.added = append(f.added, tag+"/"+u.ID.String())
@@ -66,6 +68,16 @@ func (f *fakeDriver) Health(context.Context) (domain.NodeHealth, error) {
 	return domain.NodeHealth{CoreRunning: true, Connections: 7, CPUPercent: 12.5}, nil
 }
 func (f *fakeDriver) Version(context.Context) (string, error) { return "xray-1.8.0", nil }
+func (f *fakeDriver) OnlineStats(context.Context) (map[string]int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.online, nil
+}
+func (f *fakeDriver) Logs(context.Context, int) ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.logs, nil
+}
 
 // newTestLink spins the NodeServer on an in-memory listener and returns a
 // NodeClient wired to it over an insecure (test-only) transport.
@@ -125,6 +137,32 @@ func TestNodeContract_UnaryRPCs(t *testing.T) {
 	}
 	if len(drv.removed) != 1 {
 		t.Errorf("RemoveUser not recorded: %v", drv.removed)
+	}
+}
+
+func TestNodeContract_OnlineStatsAndLogs(t *testing.T) {
+	uid := uuid.New()
+	drv := &fakeDriver{
+		online: map[string]int{uid.String(): 3},
+		logs:   []string{"line-1", "line-2"},
+	}
+	c := newTestLink(t, drv, uuid.New())
+	ctx := context.Background()
+
+	online, err := c.OnlineStats(ctx)
+	if err != nil {
+		t.Fatalf("OnlineStats: %v", err)
+	}
+	if online[uid.String()] != 3 {
+		t.Errorf("online = %v, want %s:3", online, uid)
+	}
+
+	lines, err := c.Logs(ctx, 100)
+	if err != nil {
+		t.Fatalf("Logs: %v", err)
+	}
+	if len(lines) != 2 || lines[0] != "line-1" || lines[1] != "line-2" {
+		t.Errorf("logs = %v, want [line-1 line-2]", lines)
 	}
 }
 

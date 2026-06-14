@@ -51,6 +51,15 @@ func (c *NodeClient) Sync(ctx context.Context, cfg *core.GeneratedConfig, coreTy
 		}
 		req.UsersByInbound[tag] = list
 	}
+	for _, o := range cfg.Outbounds {
+		req.Outbounds = append(req.Outbounds, outboundToSpec(o))
+	}
+	for _, r := range cfg.Routing {
+		req.Routing = append(req.Routing, routingToSpec(r))
+	}
+	for _, b := range cfg.Balancers {
+		req.Balancers = append(req.Balancers, balancerToSpec(b))
+	}
 	return ackErr(c.rpc.Sync(ctx, req))
 }
 
@@ -77,6 +86,28 @@ func (c *NodeClient) Health(ctx context.Context) (domain.NodeHealth, error) {
 		CoreRunning: r.GetCoreRunning(),
 		Connections: int(r.GetConnections()),
 	}, nil
+}
+
+// OnlineStats fetches the node's current per-user live connection counts.
+func (c *NodeClient) OnlineStats(ctx context.Context) (map[string]int, error) {
+	r, err := c.rpc.OnlineStats(ctx, &genv1.OnlineStatsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]int, len(r.GetOnline()))
+	for email, n := range r.GetOnline() {
+		out[email] = int(n)
+	}
+	return out, nil
+}
+
+// Logs fetches up to limit recent core log lines from the node.
+func (c *NodeClient) Logs(ctx context.Context, limit int) ([]string, error) {
+	r, err := c.rpc.NodeLogs(ctx, &genv1.NodeLogsRequest{Limit: uint32(limit)})
+	if err != nil {
+		return nil, err
+	}
+	return r.GetLines(), nil
 }
 
 // ConsumeTraffic opens the long-lived traffic stream and hands every delta to

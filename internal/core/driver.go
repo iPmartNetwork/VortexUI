@@ -40,6 +40,15 @@ type CoreDriver interface {
 	// them into deltas so the panel can sum them idempotently.
 	StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta, error)
 
+	// OnlineStats returns the number of live connections (online IPs) per user,
+	// keyed by the user's stats email (the user UUID string). Engines that cannot
+	// report this return an empty map rather than an error.
+	OnlineStats(ctx context.Context) (map[string]int, error)
+
+	// Logs returns up to limit of the most recent core log lines (oldest first);
+	// limit <= 0 returns all retained lines.
+	Logs(ctx context.Context, limit int) ([]string, error)
+
 	// Health returns a live resource/liveness snapshot of the engine.
 	Health(ctx context.Context) (domain.NodeHealth, error)
 
@@ -54,6 +63,12 @@ type GeneratedConfig struct {
 	Inbounds []domain.Inbound
 	// Users keyed by inbound tag -> the users bound to that inbound.
 	UsersByInbound map[string][]*domain.User
+	// Outbounds, Routing, and Balancers describe egress and traffic steering. All
+	// optional: when empty the builder emits a safe direct-egress default so a
+	// node with no explicit policy still works.
+	Outbounds []domain.Outbound
+	Routing   []domain.RoutingRule
+	Balancers []domain.Balancer
 	// LogLevel and other engine-wide knobs.
 	LogLevel string
 }

@@ -30,6 +30,8 @@ func (f *fakeConn) Sync(context.Context, *core.GeneratedConfig, domain.CoreType)
 func (f *fakeConn) AddUser(context.Context, string, *domain.User) error                { return nil }
 func (f *fakeConn) RemoveUser(context.Context, string, uuid.UUID) error                { return nil }
 func (f *fakeConn) Close() error                                                       { return nil }
+func (f *fakeConn) OnlineStats(context.Context) (map[string]int, error)                { return nil, nil }
+func (f *fakeConn) Logs(context.Context, int) ([]string, error)                        { return nil, nil }
 
 func (f *fakeConn) Health(context.Context) (domain.NodeHealth, error) {
 	f.mu.Lock()
@@ -61,13 +63,16 @@ func (f *fakeConn) ConsumeTraffic(ctx context.Context, ingest func(domain.Traffi
 }
 
 // nopNodeRepo satisfies port.NodeRepository; only UpdateHealth is exercised.
-type nopNodeRepo struct{ mu sync.Mutex; healthCalls int }
+type nopNodeRepo struct {
+	mu          sync.Mutex
+	healthCalls int
+}
 
-func (r *nopNodeRepo) Create(context.Context, *domain.Node) error          { return nil }
+func (r *nopNodeRepo) Create(context.Context, *domain.Node) error               { return nil }
 func (r *nopNodeRepo) GetByID(context.Context, uuid.UUID) (*domain.Node, error) { return nil, nil }
-func (r *nopNodeRepo) Update(context.Context, *domain.Node) error          { return nil }
-func (r *nopNodeRepo) Delete(context.Context, uuid.UUID) error             { return nil }
-func (r *nopNodeRepo) List(context.Context) ([]*domain.Node, error)        { return nil, nil }
+func (r *nopNodeRepo) Update(context.Context, *domain.Node) error               { return nil }
+func (r *nopNodeRepo) Delete(context.Context, uuid.UUID) error                  { return nil }
+func (r *nopNodeRepo) List(context.Context) ([]*domain.Node, error)             { return nil, nil }
 func (r *nopNodeRepo) UpdateHealth(context.Context, uuid.UUID, domain.NodeHealth) error {
 	r.mu.Lock()
 	r.healthCalls++

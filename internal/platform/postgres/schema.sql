@@ -97,3 +97,57 @@ CREATE TABLE traffic_points (
     up      BIGINT NOT NULL,
     down    BIGINT NOT NULL
 );
+
+
+CREATE TABLE outbounds (
+    id        UUID PRIMARY KEY,
+    node_id   UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    tag       TEXT NOT NULL,
+    protocol  TEXT NOT NULL,
+    address   TEXT NOT NULL DEFAULT '',
+    port      INTEGER NOT NULL DEFAULT 0,
+    uuid      TEXT NOT NULL DEFAULT '',
+    password  TEXT NOT NULL DEFAULT '',
+    username  TEXT NOT NULL DEFAULT '',
+    method    TEXT NOT NULL DEFAULT '',
+    flow      TEXT NOT NULL DEFAULT '',
+    network   TEXT NOT NULL DEFAULT '',
+    security  TEXT NOT NULL DEFAULT '',
+    sni       TEXT NOT NULL DEFAULT '',
+    path      TEXT NOT NULL DEFAULT '',
+    host      TEXT NOT NULL DEFAULT '',
+    raw       JSONB NOT NULL DEFAULT '{}',
+    enabled   BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (node_id, tag)
+);
+
+CREATE TABLE routing_rules (
+    id           UUID PRIMARY KEY,
+    node_id      UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    priority     INTEGER NOT NULL DEFAULT 0,
+    name         TEXT NOT NULL DEFAULT '',
+    inbound_tags JSONB NOT NULL DEFAULT '[]',
+    domains      JSONB NOT NULL DEFAULT '[]',
+    ip           JSONB NOT NULL DEFAULT '[]',
+    port         TEXT NOT NULL DEFAULT '',
+    protocols    JSONB NOT NULL DEFAULT '[]',
+    network      TEXT NOT NULL DEFAULT '',
+    outbound_tag TEXT NOT NULL DEFAULT '',
+    balancer_tag TEXT NOT NULL DEFAULT '',
+    enabled      BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE INDEX idx_routing_rules_node ON routing_rules (node_id, priority);
+
+CREATE TABLE balancers (
+    id             UUID PRIMARY KEY,
+    node_id        UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    tag            TEXT NOT NULL,
+    selectors      JSONB NOT NULL DEFAULT '[]',
+    strategy       TEXT NOT NULL DEFAULT 'random',
+    observe        BOOLEAN NOT NULL DEFAULT FALSE,
+    probe_url      TEXT NOT NULL DEFAULT '',
+    probe_interval TEXT NOT NULL DEFAULT '',
+    enabled        BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (node_id, tag)
+);

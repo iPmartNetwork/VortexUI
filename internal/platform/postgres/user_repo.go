@@ -254,3 +254,19 @@ func mapErr(err error) error {
 	}
 	return err
 }
+
+// Stats returns aggregate user counts (per status) and total used traffic for
+// the dashboard overview.
+func (r *UserRepo) Stats(ctx context.Context) (domain.UserStats, error) {
+	rows, err := r.q.UserStats(ctx)
+	if err != nil {
+		return domain.UserStats{}, err
+	}
+	out := domain.UserStats{ByStatus: make(map[domain.UserStatus]int, len(rows))}
+	for _, row := range rows {
+		out.ByStatus[domain.UserStatus(row.Status)] = int(row.Count)
+		out.Total += int(row.Count)
+		out.TotalUsed += row.UsedTraffic
+	}
+	return out, nil
+}

@@ -7,13 +7,14 @@ import "encoding/json"
 // stable and lets the compiler catch field renames.
 
 type xrayConfig struct {
-	Log       logConf     `json:"log"`
-	API       apiConf     `json:"api"`
-	Stats     struct{}    `json:"stats"`
-	Policy    policyConf  `json:"policy"`
-	Inbounds  []inbound   `json:"inbounds"`
-	Outbounds []outbound  `json:"outbounds"`
-	Routing   routingConf `json:"routing"`
+	Log         logConf          `json:"log"`
+	API         apiConf          `json:"api"`
+	Stats       struct{}         `json:"stats"`
+	Policy      policyConf       `json:"policy"`
+	Inbounds    []inbound        `json:"inbounds"`
+	Outbounds   []outbound       `json:"outbounds"`
+	Routing     routingConf      `json:"routing"`
+	Observatory *observatoryConf `json:"observatory,omitempty"`
 }
 
 type logConf struct {
@@ -50,16 +51,42 @@ type inbound struct {
 }
 
 type outbound struct {
-	Protocol string `json:"protocol"`
-	Tag      string `json:"tag"`
+	Protocol       string          `json:"protocol"`
+	Tag            string          `json:"tag"`
+	Settings       json.RawMessage `json:"settings,omitempty"`
+	StreamSettings json.RawMessage `json:"streamSettings,omitempty"`
 }
 
 type routingConf struct {
-	Rules []routingRule `json:"rules"`
+	DomainStrategy string         `json:"domainStrategy,omitempty"`
+	Balancers      []balancerConf `json:"balancers,omitempty"`
+	Rules          []routingRule  `json:"rules"`
+}
+
+type balancerConf struct {
+	Tag      string           `json:"tag"`
+	Selector []string         `json:"selector"`
+	Strategy balancerStrategy `json:"strategy,omitempty"`
+}
+
+type balancerStrategy struct {
+	Type string `json:"type"`
+}
+
+type observatoryConf struct {
+	SubjectSelector []string `json:"subjectSelector"`
+	ProbeURL        string   `json:"probeUrl,omitempty"`
+	ProbeInterval   string   `json:"probeInterval,omitempty"`
 }
 
 type routingRule struct {
 	Type        string   `json:"type"`
 	InboundTag  []string `json:"inboundTag,omitempty"`
-	OutboundTag string   `json:"outboundTag"`
+	Domain      []string `json:"domain,omitempty"`
+	IP          []string `json:"ip,omitempty"`
+	Port        string   `json:"port,omitempty"`
+	Network     string   `json:"network,omitempty"`
+	Protocol    []string `json:"protocol,omitempty"`
+	OutboundTag string   `json:"outboundTag,omitempty"`
+	BalancerTag string   `json:"balancerTag,omitempty"`
 }

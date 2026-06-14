@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/events"
 )
 
 // EnforceRepo is the data access the enforcement loop needs. *postgres.UserRepo
@@ -27,6 +28,7 @@ type Enforcer struct {
 	interval time.Duration
 	now      func() time.Time
 	log      *slog.Logger
+	pub      events.Publisher
 }
 
 // NewEnforcer wires the loop. interval of 0 defaults to one minute.
@@ -37,7 +39,15 @@ func NewEnforcer(repo EnforceRepo, nodes NodeOps, interval time.Duration, log *s
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Enforcer{repo: repo, nodes: nodes, interval: interval, now: time.Now, log: log}
+	return &Enforcer{repo: repo, nodes: nodes, interval: interval, now: time.Now, log: log, pub: events.Nop{}}
+}
+
+// SetPublisher wires an event publisher (so enforcement emits user.limited /
+// user.expired). A nil publisher leaves the no-op default in place.
+func (e *Enforcer) SetPublisher(p events.Publisher) {
+	if p != nil {
+		e.pub = p
+	}
 }
 
 // Run ticks until ctx is cancelled, running one enforcement pass per interval.
@@ -73,8 +83,23 @@ func (e *Enforcer) Tick(ctx context.Context) error {
 		}
 		e.deprovision(ctx, u)
 		e.log.Info("enforced user limit", "user", u.Username, "status", u.Status)
+		e.publishStatus(u)
 	}
 	return nil
+}
+
+// publishStatus emits the event matching a freshly-enforced terminal status.
+func (e *Enforcer) publishStatus(u *domain.User) {
+	ev := events.Event{UserID: u.ID.String(), Username: u.Username}
+	switch u.Status {
+	case domain.UserStatusLimited:
+		ev.Type = events.UserLimited
+	case domain.UserStatusExpired:
+		ev.Type = events.UserExpired
+	default:
+		return
+	}
+	e.pub.Publish(ev)
 }
 
 // deprovision removes the user from every node it is bound to, best-effort so a

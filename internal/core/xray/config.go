@@ -6,8 +6,10 @@ package xray
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/vortexui/vortexui/internal/core"
+	"github.com/vortexui/vortexui/internal/core/reality"
 	"github.com/vortexui/vortexui/internal/domain"
 )
 
@@ -33,8 +35,6 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 			},
 			System: systemPolicy{StatsInboundUplink: true, StatsInboundDownlink: true},
 		},
-		Outbounds: []outbound{{Protocol: "freedom", Tag: "direct"}, {Protocol: "blackhole", Tag: "blocked"}},
-		Routing:   routingConf{Rules: []routingRule{{Type: "field", InboundTag: []string{APIInboundTag}, OutboundTag: "api"}}},
 	}
 
 	// Reserved loopback inbound carrying the Xray API.
@@ -53,7 +53,207 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 		x.Inbounds = append(x.Inbounds, built)
 	}
 
+	outbounds, err := buildOutbounds(cfg.Outbounds)
+	if err != nil {
+		return nil, err
+	}
+	x.Outbounds = outbounds
+
+	x.Routing = buildRouting(cfg.Routing, cfg.Balancers)
+	x.Observatory = buildObservatory(cfg.Balancers)
+
 	return json.MarshalIndent(x, "", "  ")
+}
+
+// buildOutbounds renders the egress handlers. Xray routes unmatched traffic to
+// the *first* outbound, so we always lead with the freedom "direct" handler —
+// regardless of the order outbounds arrive in — to keep the default egress safe
+// (never accidentally the blackhole). The well-known "direct" and "blocked" tags
+// are guaranteed to exist so routing rules and the API can always reference them.
+func buildOutbounds(outs []domain.Outbound) ([]outbound, error) {
+	built := map[string]outbound{}
+	var order []string
+	for i := range outs {
+		o := outs[i]
+		if !o.Enabled {
+			continue
+		}
+		if err := o.Validate(); err != nil {
+			return nil, fmt.Errorf("outbound %q: %w", o.Tag, err)
+		}
+		b, err := buildOutbound(o)
+		if err != nil {
+			return nil, fmt.Errorf("outbound %q: %w", o.Tag, err)
+		}
+		if _, dup := built[o.Tag]; !dup {
+			order = append(order, o.Tag)
+		}
+		built[o.Tag] = b
+	}
+	if _, ok := built["direct"]; !ok {
+		built["direct"] = outbound{Protocol: "freedom", Tag: "direct"}
+		order = append(order, "direct")
+	}
+	if _, ok := built["blocked"]; !ok {
+		built["blocked"] = outbound{Protocol: "blackhole", Tag: "blocked"}
+		order = append(order, "blocked")
+	}
+	// Lead with "direct" so it is Xray's default outbound; preserve the rest.
+	result := []outbound{built["direct"]}
+	for _, tag := range order {
+		if tag == "direct" {
+			continue
+		}
+		result = append(result, built[tag])
+	}
+	return result, nil
+}
+
+func buildOutbound(o domain.Outbound) (outbound, error) {
+	ob := outbound{Protocol: string(o.Protocol), Tag: o.Tag}
+	switch o.Protocol {
+	case domain.OutFreedom, domain.OutBlackhole, domain.OutDNS:
+		// No settings needed; freedom/blackhole/dns dispatch locally.
+	case domain.OutVLESS:
+		ob.Settings = mustRaw(map[string]any{"vnext": []map[string]any{{
+			"address": o.Address, "port": o.Port,
+			"users": []map[string]any{{"id": o.UUID, "encryption": "none", "flow": o.Flow}},
+		}}})
+	case domain.OutVMess:
+		ob.Settings = mustRaw(map[string]any{"vnext": []map[string]any{{
+			"address": o.Address, "port": o.Port,
+			"users": []map[string]any{{"id": o.UUID}},
+		}}})
+	case domain.OutTrojan:
+		ob.Settings = mustRaw(map[string]any{"servers": []map[string]any{{
+			"address": o.Address, "port": o.Port, "password": o.Password,
+		}}})
+	case domain.OutShadowsocks:
+		ob.Settings = mustRaw(map[string]any{"servers": []map[string]any{{
+			"address": o.Address, "port": o.Port, "password": o.Password, "method": orDefault(o.Method, "aes-128-gcm"),
+		}}})
+	case domain.OutSocks, domain.OutHTTP:
+		server := map[string]any{"address": o.Address, "port": o.Port}
+		if o.Username != "" {
+			server["users"] = []map[string]any{{"user": o.Username, "pass": o.Password}}
+		}
+		ob.Settings = mustRaw(map[string]any{"servers": []map[string]any{server}})
+	default:
+		return outbound{}, fmt.Errorf("unsupported outbound protocol %q", o.Protocol)
+	}
+	if o.Protocol.NeedsEndpoint() {
+		ob.StreamSettings = outboundStream(o)
+	}
+	return ob, nil
+}
+
+// outboundStream renders the transport/TLS for a proxy outbound, mirroring the
+// inbound streamSettings shape.
+func outboundStream(o domain.Outbound) json.RawMessage {
+	if o.Raw != nil {
+		if raw, ok := o.Raw["streamSettings"]; ok {
+			return mustRaw(raw)
+		}
+	}
+	ss := map[string]any{
+		"network":  orDefault(o.Network, "tcp"),
+		"security": string(orSecurity(o.Security)),
+	}
+	if o.Security == domain.SecurityTLS && o.SNI != "" {
+		ss["tlsSettings"] = map[string]any{"serverName": o.SNI}
+	}
+	switch o.Network {
+	case "ws":
+		ws := map[string]any{}
+		if o.Path != "" {
+			ws["path"] = o.Path
+		}
+		if o.Host != "" {
+			ws["headers"] = map[string]any{"Host": o.Host}
+		}
+		ss["wsSettings"] = ws
+	case "grpc":
+		ss["grpcSettings"] = map[string]any{"serviceName": o.Path}
+	}
+	return mustRaw(ss)
+}
+
+func orSecurity(s domain.Security) domain.Security {
+	if s == "" {
+		return domain.SecurityNone
+	}
+	return s
+}
+
+// buildRouting assembles the routing block. The API inbound is always routed to
+// the auto-created API outbound (whose tag equals api.tag = APIInboundTag — per
+// Xray docs the api feature builds an outbound named after its tag), then the
+// operator's enabled rules follow in priority order.
+func buildRouting(rules []domain.RoutingRule, balancers []domain.Balancer) routingConf {
+	rc := routingConf{
+		Rules: []routingRule{{
+			Type: "field", InboundTag: []string{APIInboundTag}, OutboundTag: APIInboundTag,
+		}},
+	}
+	for _, b := range balancers {
+		if !b.Enabled {
+			continue
+		}
+		bc := balancerConf{Tag: b.Tag, Selector: b.Selectors}
+		if b.Strategy != "" {
+			bc.Strategy = balancerStrategy{Type: string(b.Strategy)}
+		}
+		rc.Balancers = append(rc.Balancers, bc)
+	}
+	ordered := append([]domain.RoutingRule(nil), rules...)
+	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].Priority < ordered[j].Priority })
+	for _, r := range ordered {
+		if !r.Enabled {
+			continue
+		}
+		rule := routingRule{
+			Type:        "field",
+			InboundTag:  r.InboundTags,
+			Domain:      r.Domains,
+			IP:          r.IP,
+			Port:        r.Port,
+			Network:     r.Network,
+			Protocol:    r.Protocols,
+			OutboundTag: r.OutboundTag,
+			BalancerTag: r.BalancerTag,
+		}
+		rc.Rules = append(rc.Rules, rule)
+	}
+	return rc
+}
+
+// buildObservatory emits a single observatory probing every balancer that wants
+// health data. Xray supports one top-level observatory, so the subject selectors
+// are unioned; probe URL/interval come from the first balancer that sets them.
+func buildObservatory(balancers []domain.Balancer) *observatoryConf {
+	var subjects []string
+	probeURL, probeInterval := "", ""
+	for i := range balancers {
+		b := balancers[i]
+		if !b.Enabled || !b.WantsObservatory() {
+			continue
+		}
+		subjects = append(subjects, b.Selectors...)
+		if probeURL == "" && b.ProbeURL != "" {
+			probeURL = b.ProbeURL
+		}
+		if probeInterval == "" && b.ProbeInterval != "" {
+			probeInterval = b.ProbeInterval
+		}
+	}
+	if len(subjects) == 0 {
+		return nil
+	}
+	return &observatoryConf{
+		SubjectSelector: subjects,
+		ProbeURL:        orDefault(probeURL, "https://www.google.com/generate_204"),
+		ProbeInterval:   orDefault(probeInterval, "10s"),
+	}
 }
 
 func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound, error) {
@@ -131,13 +331,7 @@ func streamSettings(in domain.Inbound) json.RawMessage {
 		}
 		ss["tlsSettings"] = tls
 	case domain.SecurityReality:
-		// Reality keys/shortIds are expected in Raw until the evasion-profile
-		// layer is built; we still emit the block shape here.
-		reality := map[string]any{}
-		if len(in.SNI) > 0 {
-			reality["serverNames"] = in.SNI
-		}
-		ss["realitySettings"] = reality
+		ss["realitySettings"] = realitySettings(in)
 	}
 	switch in.Network {
 	case "ws":
@@ -160,6 +354,35 @@ func orDefault(v, def string) string {
 		return def
 	}
 	return v
+}
+
+// realitySettings renders the server-side REALITY block from the engine-neutral
+// params stored in Inbound.Raw["reality"]. serverNames and a default dest fall
+// back to the inbound SNI so a freshly generated profile is usable.
+func realitySettings(in domain.Inbound) map[string]any {
+	p := reality.ParseParams(in.Raw["reality"])
+	out := map[string]any{}
+	names := p.ServerNames
+	if len(names) == 0 {
+		names = in.SNI
+	}
+	if len(names) > 0 {
+		out["serverNames"] = names
+	}
+	if p.PrivateKey != "" {
+		out["privateKey"] = p.PrivateKey
+	}
+	if len(p.ShortIDs) > 0 {
+		out["shortIds"] = p.ShortIDs
+	}
+	dest := p.Dest
+	if dest == "" && len(names) > 0 {
+		dest = names[0] + ":443"
+	}
+	if dest != "" {
+		out["dest"] = dest
+	}
+	return out
 }
 
 func mustRaw(v any) json.RawMessage {

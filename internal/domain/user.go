@@ -101,3 +101,10 @@ func (u *User) DerivedStatus(now time.Time) UserStatus {
 		return UserStatusActive
 	}
 }
+
+// UserStats is an aggregate snapshot of the user base for the dashboard overview.
+type UserStats struct {
+	Total      int                `json:"total"`
+	ByStatus   map[UserStatus]int `json:"by_status"`
+	TotalUsed  int64              `json:"total_used"` // sum of used_traffic across all users
+}

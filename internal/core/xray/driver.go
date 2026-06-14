@@ -17,12 +17,12 @@ import (
 
 // Options configures a Driver. Zero values fall back to sensible defaults.
 type Options struct {
-	BinPath        string        // path to the xray binary
-	ConfigPath     string        // where the rendered config is written
-	APIPort        int           // loopback port for Xray's gRPC API
-	StatsInterval  time.Duration // how often to poll counters for deltas
-	APIDialer      APIDialer     // injected for testing; nil → defaultDialer
-	Logger         *slog.Logger
+	BinPath       string        // path to the xray binary
+	ConfigPath    string        // where the rendered config is written
+	APIPort       int           // loopback port for Xray's gRPC API
+	StatsInterval time.Duration // how often to poll counters for deltas
+	APIDialer     APIDialer     // injected for testing; nil → defaultDialer
+	Logger        *slog.Logger
 }
 
 func (o *Options) withDefaults() {
@@ -207,6 +207,20 @@ func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta,
 
 func (d *Driver) Health(_ context.Context) (domain.NodeHealth, error) {
 	return domain.NodeHealth{CoreRunning: d.proc.Running()}, nil
+}
+
+// OnlineStats reports live connection counts per user via the runtime API.
+func (d *Driver) OnlineStats(ctx context.Context) (map[string]int, error) {
+	api, err := d.currentAPI()
+	if err != nil {
+		return nil, err
+	}
+	return api.OnlineUsers(ctx)
+}
+
+// Logs returns the most recent core log lines captured by the supervisor.
+func (d *Driver) Logs(_ context.Context, limit int) ([]string, error) {
+	return d.proc.Logs(limit), nil
 }
 
 func (d *Driver) Version(_ context.Context) (string, error) {
