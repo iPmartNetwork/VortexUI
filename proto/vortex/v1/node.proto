@@ -27,6 +27,13 @@ service NodeService {
 
   // Health returns a live resource/liveness snapshot for failover decisions.
   rpc Health(HealthRequest) returns (HealthResponse);
+
+  // OnlineStats returns the current live-connection count per user (keyed by the
+  // user's stats email == UUID). Polled on demand by the panel.
+  rpc OnlineStats(OnlineStatsRequest) returns (OnlineStatsResponse);
+
+  // NodeLogs returns the most recent core log lines captured by the agent.
+  rpc NodeLogs(NodeLogsRequest) returns (NodeLogsResponse);
 }
 
 // ----- shared value types -----
@@ -60,6 +67,57 @@ message InboundSpec {
   string network = 5;
   string security = 6;
   bytes raw = 7;               // optional native JSON fragment
+  repeated string sni = 8;     // TLS/REALITY server names
+  string path = 9;             // ws path / grpc service name
+  repeated string host = 10;   // ws Host header(s)
+  string flow = 11;            // vless flow (e.g. xtls-rprx-vision)
+}
+
+// OutboundSpec is a rendered egress handler (freedom/blackhole/dns or a proxy
+// protocol). The node's builder translates it into engine-native JSON.
+message OutboundSpec {
+  string tag = 1;
+  string protocol = 2;
+  string address = 3;
+  uint32 port = 4;
+  string uuid = 5;
+  string password = 6;
+  string username = 7;
+  string method = 8;
+  string flow = 9;
+  string network = 10;
+  string security = 11;
+  string sni = 12;
+  string path = 13;
+  string host = 14;
+  bytes raw = 15;
+  bool enabled = 16;
+}
+
+// RoutingRuleSpec is one engine-neutral routing decision.
+message RoutingRuleSpec {
+  int32 priority = 1;
+  string name = 2;
+  repeated string inbound_tags = 3;
+  repeated string domains = 4;
+  repeated string ip = 5;
+  string port = 6;
+  repeated string protocols = 7;
+  string network = 8;
+  string outbound_tag = 9;
+  string balancer_tag = 10;
+  bool enabled = 11;
+}
+
+// BalancerSpec distributes traffic across outbounds selected by tag prefix.
+message BalancerSpec {
+  string tag = 1;
+  repeated string selectors = 2;
+  string strategy = 3;
+  bool observe = 4;
+  string probe_url = 5;
+  string probe_interval = 6;
+  bool enabled = 7;
 }
 
 // ----- request/response messages -----
@@ -70,6 +128,9 @@ message SyncRequest {
   repeated InboundSpec inbounds = 3;
   // users_by_inbound maps inbound tag -> users bound to it.
   map<string, UserList> users_by_inbound = 4;
+  repeated OutboundSpec outbounds = 5;
+  repeated RoutingRuleSpec routing = 6;
+  repeated BalancerSpec balancers = 7;
 }
 
 message UserList {
@@ -116,4 +177,20 @@ message HealthResponse {
 message Ack {
   bool ok = 1;
   string message = 2;          // human-readable detail on failure
+}
+
+message OnlineStatsRequest {}
+
+// OnlineStatsResponse maps a user's stats email (UUID) to its current live
+// connection count. Absent users have zero connections.
+message OnlineStatsResponse {
+  map<string, uint32> online = 1;
+}
+
+message NodeLogsRequest {
+  uint32 limit = 1; // 0 = all retained lines
+}
+
+message NodeLogsResponse {
+  repeated string lines = 1; // oldest first
 }

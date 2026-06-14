@@ -98,6 +98,58 @@ components:
         flow: {type: string}
         raw: {type: object, additionalProperties: true}
         enabled: {type: boolean}
+    Outbound:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        node_id: {type: string, format: uuid}
+        tag: {type: string}
+        protocol: {type: string, enum: [freedom, blackhole, dns, vmess, vless, trojan, shadowsocks, socks, http]}
+        address: {type: string, description: required for proxy protocols}
+        port: {type: integer, description: required for proxy protocols}
+        uuid: {type: string, description: vmess/vless credential}
+        password: {type: string, description: trojan/shadowsocks/socks/http credential}
+        username: {type: string, description: socks/http credential}
+        method: {type: string, description: shadowsocks cipher}
+        flow: {type: string}
+        network: {type: string, enum: [tcp, ws, grpc]}
+        security: {type: string, enum: [none, tls, reality]}
+        sni: {type: string}
+        path: {type: string}
+        host: {type: string}
+        raw: {type: object, additionalProperties: true}
+        enabled: {type: boolean}
+    RoutingRule:
+      type: object
+      description: >
+        Evaluated in ascending priority. At least one matcher and exactly one of
+        outbound_tag / balancer_tag are required.
+      properties:
+        id: {type: string, format: uuid}
+        node_id: {type: string, format: uuid}
+        priority: {type: integer}
+        name: {type: string}
+        inbound_tags: {type: array, items: {type: string}}
+        domains: {type: array, items: {type: string}}
+        ip: {type: array, items: {type: string}}
+        port: {type: string, description: '"443", "80,443", or "1000-2000"'}
+        protocols: {type: array, items: {type: string}}
+        network: {type: string, enum: [tcp, udp]}
+        outbound_tag: {type: string}
+        balancer_tag: {type: string}
+        enabled: {type: boolean}
+    Balancer:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        node_id: {type: string, format: uuid}
+        tag: {type: string}
+        selectors: {type: array, items: {type: string}, description: outbound tag prefixes}
+        strategy: {type: string, enum: [random, roundRobin, leastPing, leastLoad]}
+        observe: {type: boolean}
+        probe_url: {type: string}
+        probe_interval: {type: string, description: 'e.g. "10s"'}
+        enabled: {type: boolean}
     Admin:
       type: object
       properties:
@@ -192,6 +244,75 @@ paths:
         "200": {description: disabled}
         "400": {description: invalid code or 2FA not enabled}
 
+  /api/overview:
+    get:
+      tags: [Overview]
+      summary: Dashboard summary — user aggregates + node fleet (perm system:read)
+      description: >
+        User counts per status and total used traffic, plus each node's derived
+        connectivity (same staleness rule as subscriptions) and last reported
+        health. Computed from persisted state; no live hub round-trip.
+      responses:
+        "200":
+          description: overview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: object
+                    properties:
+                      total: {type: integer}
+                      total_used: {type: integer, format: int64}
+                      by_status: {type: object, additionalProperties: {type: integer}}
+                  nodes:
+                    type: object
+                    properties:
+                      total: {type: integer}
+                      online: {type: integer}
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: {type: string, format: uuid}
+                            name: {type: string}
+                            core: {type: string}
+                            online: {type: boolean}
+                            last_seen: {type: string, format: date-time, nullable: true}
+                            health: {type: object, additionalProperties: true}
+                            core_version: {type: string}
+                            agent_version: {type: string}
+
+  /api/logs:
+    get:
+      tags: [System]
+      summary: Recent panel logs (perm system:read)
+      description: >
+        Returns the panel's in-memory ring buffer of recent log records. Node and
+        core logs are not included. Filter by minimum level and cap the count.
+      parameters:
+        - {name: level, in: query, schema: {type: string, enum: [debug, info, warn, error]}, description: "minimum level (default info)"}
+        - {name: limit, in: query, schema: {type: integer, default: 200}}
+      responses:
+        "200":
+          description: log entries (oldest→newest)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        time: {type: string, format: date-time}
+                        level: {type: string}
+                        message: {type: string}
+                        attrs: {type: object, additionalProperties: true}
+
   /api/users:
     get:
       tags: [Users]
@@ -271,6 +392,81 @@ paths:
         "204": {description: deleted}
         "404": {$ref: '#/components/responses/NotFound'}
 
+  /api/users/{id}/sub:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [Users]
+      summary: Get a user's subscription URLs + share links (perm user:read)
+      description: >
+        Returns the subscription URL (absolute, derived from the request host,
+        and relative), per-format variants, and the individual share links for
+        QR rendering. Unhealthy nodes are pruned, as in the public endpoint.
+      responses:
+        "200":
+          description: subscription info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: {type: string}
+                  subscription_path: {type: string}
+                  subscription_url: {type: string}
+                  formats:
+                    type: object
+                    properties:
+                      auto: {type: string}
+                      clash: {type: string}
+                      singbox: {type: string}
+                      base64: {type: string}
+                  links: {type: array, items: {type: string}}
+        "404": {$ref: '#/components/responses/NotFound'}
+
+  /api/users/{id}/online:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [Users]
+      summary: A user's live connections + active devices (perm user:read)
+      description: >
+        `live_connections` is the real count summed across the cores the user is
+        bound to (Xray GetAllOnlineUsers); `live_tracking` is false when no online
+        source is wired. `active_devices` is the distinct devices seen within the
+        window from the Redis tracker (subscription-fetch activity); `device_tracking`
+        is false when Redis is not configured. Unreachable nodes are skipped.
+      responses:
+        "200":
+          description: online info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  live_connections: {type: integer}
+                  live_tracking: {type: boolean}
+                  active_devices: {type: integer}
+                  device_tracking: {type: boolean}
+                  window_seconds: {type: integer}
+
+  /api/users/{id}/reset:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    post:
+      tags: [Users]
+      summary: Reset a user's used traffic now (perm user:write)
+      description: Zeroes used traffic and re-activates + re-provisions the user if they were quota-limited.
+      responses:
+        "200": {description: reset, content: {application/json: {schema: {type: object, properties: {user: {$ref: '#/components/schemas/User'}, warning: {type: string}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+
+  /api/users/{id}/revoke-sub:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    post:
+      tags: [Users]
+      summary: Rotate a user's subscription token (perm user:write)
+      description: Issues a new subscription token, invalidating the old subscription URL. Protocol credentials are unchanged.
+      responses:
+        "200": {description: rotated, content: {application/json: {schema: {type: object, properties: {user: {$ref: '#/components/schemas/User'}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+
   /api/nodes:
     get:
       tags: [Nodes]
@@ -316,6 +512,20 @@ paths:
       summary: Deregister + delete a node (perm node:write)
       responses:
         "204": {description: deleted}
+  /api/nodes/{id}/logs:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [Nodes]
+      summary: Recent core log lines from a node (perm node:read)
+      description: >
+        Returns the node agent's in-memory ring buffer of recent core stdout/stderr
+        lines. Fails with 502 when the node is unreachable or its agent cannot
+        provide logs.
+      parameters:
+        - {name: limit, in: query, schema: {type: integer, default: 200}}
+      responses:
+        "200": {description: log lines (oldest first), content: {application/json: {schema: {type: object, properties: {lines: {type: array, items: {type: string}}}}}}}
+        "502": {description: node unreachable / logs unavailable}
 
   /api/inbounds:
     get:
@@ -366,6 +576,179 @@ paths:
       summary: Delete an inbound + resync (perm inbound:write)
       responses:
         "204": {description: deleted}
+
+  /api/outbounds:
+    get:
+      tags: [Outbounds]
+      summary: List a node's outbounds (perm inbound:read)
+      parameters: [{name: node_id, in: query, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        "200": {description: outbounds, content: {application/json: {schema: {type: object, properties: {outbounds: {type: array, items: {$ref: '#/components/schemas/Outbound'}}}}}}}
+    post:
+      tags: [Outbounds]
+      summary: Create an outbound + resync its node (perm inbound:write)
+      description: >
+        Egress handler. freedom/blackhole/dns need no endpoint; proxy protocols
+        (vmess/vless/trojan/shadowsocks/socks/http) require address+port. The
+        well-known tags `direct` (freedom) and `blocked` (blackhole) are always
+        synthesized if absent, and `direct` is forced to be the default egress.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/Outbound'}}}
+      responses:
+        "201": {description: created, content: {application/json: {schema: {type: object, properties: {outbound: {$ref: '#/components/schemas/Outbound'}, warning: {type: string}}}}}}
+        "400": {description: validation error}
+  /api/outbounds/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    put:
+      tags: [Outbounds]
+      summary: Update an outbound + resync (perm inbound:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/Outbound'}}}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {outbound: {$ref: '#/components/schemas/Outbound'}, warning: {type: string}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Outbounds]
+      summary: Delete an outbound + resync (perm inbound:write)
+      responses:
+        "204": {description: deleted}
+
+  /api/routing:
+    get:
+      tags: [Routing]
+      summary: List a node's routing rules in priority order (perm inbound:read)
+      parameters: [{name: node_id, in: query, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        "200": {description: rules, content: {application/json: {schema: {type: object, properties: {rules: {type: array, items: {$ref: '#/components/schemas/RoutingRule'}}}}}}}
+    post:
+      tags: [Routing]
+      summary: Create a routing rule + resync (perm inbound:write)
+      description: >
+        Rules are evaluated in ascending priority. A rule must have at least one
+        matcher and exactly one target (outbound_tag XOR balancer_tag).
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RoutingRule'}}}
+      responses:
+        "201": {description: created, content: {application/json: {schema: {type: object, properties: {rule: {$ref: '#/components/schemas/RoutingRule'}, warning: {type: string}}}}}}
+        "400": {description: validation error}
+  /api/routing/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    put:
+      tags: [Routing]
+      summary: Update a routing rule + resync (perm inbound:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RoutingRule'}}}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {rule: {$ref: '#/components/schemas/RoutingRule'}, warning: {type: string}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Routing]
+      summary: Delete a routing rule + resync (perm inbound:write)
+      responses:
+        "204": {description: deleted}
+
+  /api/balancers:
+    get:
+      tags: [Balancers]
+      summary: List a node's balancers (perm inbound:read)
+      parameters: [{name: node_id, in: query, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        "200": {description: balancers, content: {application/json: {schema: {type: object, properties: {balancers: {type: array, items: {$ref: '#/components/schemas/Balancer'}}}}}}}
+    post:
+      tags: [Balancers]
+      summary: Create a balancer + resync (perm inbound:write)
+      description: >
+        Distributes traffic across outbounds whose tag matches a selector prefix.
+        leastPing/leastLoad (or observe=true) drive an Xray observatory / sing-box
+        urltest group that probes members.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/Balancer'}}}
+      responses:
+        "201": {description: created, content: {application/json: {schema: {type: object, properties: {balancer: {$ref: '#/components/schemas/Balancer'}, warning: {type: string}}}}}}
+        "400": {description: validation error}
+  /api/balancers/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    put:
+      tags: [Balancers]
+      summary: Update a balancer + resync (perm inbound:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/Balancer'}}}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {balancer: {$ref: '#/components/schemas/Balancer'}, warning: {type: string}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Balancers]
+      summary: Delete a balancer + resync (perm inbound:write)
+      responses:
+        "204": {description: deleted}
+
+  /api/reality/keypair:
+    get:
+      tags: [Inbounds]
+      summary: Generate a REALITY X25519 keypair + short ID (perm inbound:write)
+      description: >
+        Returns fresh key material for building a REALITY inbound. Nothing is
+        persisted; store the chosen values under the inbound's
+        `raw.reality` ({private_key, short_ids, server_names, dest}).
+      responses:
+        "200":
+          description: key material
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  private_key: {type: string}
+                  public_key: {type: string}
+                  short_id: {type: string}
+
+  /api/backup:
+    get:
+      tags: [Backup]
+      summary: Export the full proxy configuration (perm admin:manage)
+      description: >
+        Downloads a portable JSON snapshot of nodes, inbounds, outbounds, routing
+        rules, balancers, users (with credentials), and user→inbound bindings.
+        Excludes traffic metrics and admin/auth records.
+      responses:
+        "200":
+          description: backup document
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: {type: integer}
+                  exported_at: {type: string, format: date-time}
+                  nodes: {type: array, items: {$ref: '#/components/schemas/Node'}}
+                  inbounds: {type: array, items: {$ref: '#/components/schemas/Inbound'}}
+                  outbounds: {type: array, items: {$ref: '#/components/schemas/Outbound'}}
+                  routing: {type: array, items: {$ref: '#/components/schemas/RoutingRule'}}
+                  balancers: {type: array, items: {$ref: '#/components/schemas/Balancer'}}
+                  users: {type: array, items: {$ref: '#/components/schemas/User'}}
+                  bindings:
+                    type: array
+                    items: {type: object, properties: {user_id: {type: string, format: uuid}, inbound_id: {type: string, format: uuid}}}
+  /api/backup/restore:
+    post:
+      tags: [Backup]
+      summary: Restore configuration from a snapshot (perm admin:manage)
+      description: >
+        DESTRUCTIVE. Wipes the current proxy configuration and re-applies the
+        posted document in a single transaction. Live cores reconcile when nodes
+        next (re)connect. Refuses a document with an unsupported version.
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object, description: a document previously returned by GET /api/backup}}}
+      responses:
+        "200": {description: restored, content: {application/json: {schema: {type: object, properties: {restored: {type: object, additionalProperties: {type: integer}}}}}}}
+        "400": {description: invalid or unsupported backup document}
 
   /api/admins:
     get:

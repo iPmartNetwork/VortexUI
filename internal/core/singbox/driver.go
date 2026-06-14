@@ -44,6 +44,7 @@ type applier interface {
 	Apply(ctx context.Context, raw []byte) error
 	Stop()
 	Running() bool
+	Logs(limit int) []string
 }
 
 // Driver implements core.CoreDriver for sing-box. Because sing-box cannot add a
@@ -217,6 +218,17 @@ func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta,
 
 func (d *Driver) Health(_ context.Context) (domain.NodeHealth, error) {
 	return domain.NodeHealth{CoreRunning: d.run.Running()}, nil
+}
+
+// OnlineStats is not supported by the sing-box V2Ray API (it has no
+// GetAllOnlineUsers equivalent), so it reports an empty set rather than erroring.
+func (d *Driver) OnlineStats(context.Context) (map[string]int, error) {
+	return map[string]int{}, nil
+}
+
+// Logs returns the most recent core log lines captured by the supervisor.
+func (d *Driver) Logs(_ context.Context, limit int) ([]string, error) {
+	return d.run.Logs(limit), nil
 }
 
 func (d *Driver) Version(_ context.Context) (string, error) { return "sing-box", nil }

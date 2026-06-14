@@ -44,6 +44,20 @@ func TestDeviceTracker(t *testing.T) {
 	if ok, _ := dt.Allow(ctx, user, "a", 2, time.Hour); !ok {
 		t.Error("known device should remain allowed")
 	}
+
+	// Online reports the active-device count (a and b admitted; c rejected so
+	// never stored) within the window.
+	n, err := dt.Online(ctx, user, time.Hour)
+	if err != nil {
+		t.Fatalf("online: %v", err)
+	}
+	if n != 2 {
+		t.Errorf("online active devices = %d, want 2", n)
+	}
+	// With a zero-length window every device has aged out.
+	if n, err := dt.Online(ctx, user, 0); err != nil || n != 0 {
+		t.Errorf("online with empty window = %d (err %v), want 0", n, err)
+	}
 }
 
 func TestRateLimiterFixedWindow(t *testing.T) {

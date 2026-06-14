@@ -28,6 +28,8 @@ type NodeConn interface {
 	RemoveUser(ctx context.Context, inboundTag string, userID uuid.UUID) error
 	Health(ctx context.Context) (domain.NodeHealth, error)
 	ConsumeTraffic(ctx context.Context, ingest func(domain.TrafficDelta)) error
+	OnlineStats(ctx context.Context) (map[string]int, error)
+	Logs(ctx context.Context, limit int) ([]string, error)
 	Close() error
 }
 
@@ -202,6 +204,32 @@ func (h *Hub) Status(nodeID uuid.UUID) (domain.NodeStatus, domain.NodeHealth, er
 	mn.mu.Lock()
 	defer mn.mu.Unlock()
 	return mn.status, mn.health, nil
+}
+
+// OnlineStats returns one node's live per-user connection counts.
+func (h *Hub) OnlineStats(ctx context.Context, nodeID uuid.UUID) (map[string]int, error) {
+	mn, err := h.managed(nodeID)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := mn.connection()
+	if err != nil {
+		return nil, err
+	}
+	return conn.OnlineStats(ctx)
+}
+
+// Logs returns up to limit recent core log lines from one node.
+func (h *Hub) Logs(ctx context.Context, nodeID uuid.UUID, limit int) ([]string, error) {
+	mn, err := h.managed(nodeID)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := mn.connection()
+	if err != nil {
+		return nil, err
+	}
+	return conn.Logs(ctx, limit)
 }
 
 // HealthyNodes returns a snapshot of currently-healthy managed nodes, used for

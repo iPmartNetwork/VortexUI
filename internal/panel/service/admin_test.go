@@ -62,8 +62,8 @@ func (s *stubAdminRepo) CountSudo(context.Context) (int, error) {
 	}
 	return n, nil
 }
-func (s *stubAdminRepo) CreateRole(context.Context, *domain.Role) error      { return nil }
-func (s *stubAdminRepo) ListRoles(context.Context) ([]*domain.Role, error)   { return nil, nil }
+func (s *stubAdminRepo) CreateRole(context.Context, *domain.Role) error    { return nil }
+func (s *stubAdminRepo) ListRoles(context.Context) ([]*domain.Role, error) { return nil, nil }
 
 func TestAdminCreate(t *testing.T) {
 	repo := newStubAdminRepo()

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/events"
 )
 
 type fakeEnforceRepo struct {
@@ -75,5 +76,39 @@ func TestEnforcerTickNoopWhenNothingToLimit(t *testing.T) {
 	}
 	if len(ops.removed) != 0 || len(repo.updated) != 0 {
 		t.Error("no users to limit should produce no side effects")
+	}
+}
+
+// capPublisher records published events for assertions.
+type capPublisher struct{ events []events.Event }
+
+func (c *capPublisher) Publish(e events.Event) { c.events = append(c.events, e) }
+
+func TestEnforcerPublishesLimitedAndExpiredEvents(t *testing.T) {
+	now := time.Date(2026, 6, 14, 12, 0, 0, 0, time.UTC)
+	past := now.Add(-time.Hour)
+
+	overLimit := &domain.User{ID: uuid.New(), Username: "heavy", Status: domain.UserStatusActive, DataLimit: 100, UsedTraffic: 150}
+	expired := &domain.User{ID: uuid.New(), Username: "old", Status: domain.UserStatusActive, ExpireAt: &past}
+
+	repo := &fakeEnforceRepo{toLimit: []*domain.User{overLimit, expired}}
+	pub := &capPublisher{}
+	e := NewEnforcer(repo, &fakeNodeOps{}, time.Minute, nil)
+	e.now = func() time.Time { return now }
+	e.SetPublisher(pub)
+
+	if err := e.Tick(context.Background()); err != nil {
+		t.Fatalf("tick: %v", err)
+	}
+
+	types := map[events.Type]string{}
+	for _, ev := range pub.events {
+		types[ev.Type] = ev.Username
+	}
+	if types[events.UserLimited] != "heavy" {
+		t.Errorf("user.limited event missing/wrong: %+v", pub.events)
+	}
+	if types[events.UserExpired] != "old" {
+		t.Errorf("user.expired event missing/wrong: %+v", pub.events)
 	}
 }

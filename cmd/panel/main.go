@@ -12,9 +12,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/vortexui/vortexui/internal/auth"
 	"github.com/vortexui/vortexui/internal/config"
+	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/events"
+	"github.com/vortexui/vortexui/internal/logbuf"
+	"github.com/vortexui/vortexui/internal/notify"
 	"github.com/vortexui/vortexui/internal/panel/api"
 	"github.com/vortexui/vortexui/internal/panel/hub"
 	"github.com/vortexui/vortexui/internal/panel/service"
@@ -25,7 +31,8 @@ import (
 )
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)
+	log := slog.New(logBuf)
 
 	// Root context cancelled on SIGINT/SIGTERM for graceful shutdown.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -47,7 +54,7 @@ func main() {
 	}
 	log.Info("starting VortexUI panel", "config", cfg.String())
 
-	if err := run(ctx, log, cfg); err != nil {
+	if err := run(ctx, log, logBuf, cfg); err != nil {
 		log.Error("panel exited with error", "err", err)
 		os.Exit(1)
 	}
@@ -59,7 +66,7 @@ func main() {
 //
 // Assembly order mirrors the dependency graph: storage → stats aggregator →
 // node hub → services → HTTP API.
-func run(ctx context.Context, log *slog.Logger, cfg *config.Panel) error {
+func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *config.Panel) error {
 	// 1. Storage. Apply pending migrations first (embedded, idempotent) so a
 	// fresh database is ready without a separate migration step.
 	if err := postgres.Migrate(cfg.DatabaseURL); err != nil {
@@ -85,8 +92,28 @@ func run(ctx context.Context, log *slog.Logger, cfg *config.Panel) error {
 	// 3. Node hub: dials every node over mTLS, drains traffic into the
 	// aggregator, and supervises health/failover.
 	tlsFiles := vgrpc.TLSFiles{Cert: cfg.TLSCert, Key: cfg.TLSKey, CA: cfg.TLSCA}
+
+	// Optional in-process local node: build its driver and ensure its DB record
+	// exists before the hub loads nodes, so the dialer can route it in-process.
+	var localID uuid.UUID
+	var localDriver core.CoreDriver
+	if cfg.LocalNode {
+		drv, err := buildLocalDriver(cfg, log)
+		if err != nil {
+			return err
+		}
+		localDriver = drv
+		defer localDriver.Stop(context.Background())
+		localNode, err := ensureLocalNode(ctx, nodes, cfg)
+		if err != nil {
+			return err
+		}
+		localID = localNode.ID
+		log.Info("local node enabled", "name", localNode.Name, "core", cfg.Core, "id", localID)
+	}
+
 	h := hub.New(hub.Options{
-		Dialer: nodeDialer(tlsFiles),
+		Dialer: localAwareDialer(tlsFiles, localID, localDriver),
 		Nodes:  nodes,
 		Ingest: agg.Ingest,
 		Logger: log,
@@ -106,37 +133,64 @@ func run(ctx context.Context, log *slog.Logger, cfg *config.Panel) error {
 	// runs, just without brute-force throttling.
 	var limiter api.RateLimiter
 	var devices api.DeviceLimiter
+	var online api.DeviceCounter
 	if rc, err := redis.Open(ctx, cfg.RedisURL); err != nil {
 		log.Warn("redis unavailable; login rate limiting and device limits disabled", "err", err)
 	} else {
 		defer rc.Close()
 		limiter = rc.RateLimiter()
 		devices = rc.Devices()
+		online = rc.Devices()
+	}
+
+	// Event bus + optional outbound notifiers (webhook, Telegram). Subscribers
+	// start first so no event is missed once the loops below begin publishing.
+	bus := events.New(log)
+	if cfg.WebhookURL != "" {
+		wh := notify.NewWebhook(cfg.WebhookURL, cfg.WebhookSecret, log)
+		go wh.Run(ctx, bus.Subscribe(256))
+		log.Info("webhook notifier enabled", "url", cfg.WebhookURL)
+	}
+	if cfg.TelegramToken != "" && cfg.TelegramChatID != "" {
+		tg := notify.NewTelegram(cfg.TelegramToken, cfg.TelegramChatID, log)
+		go tg.Run(ctx, bus.Subscribe(256))
+		log.Info("telegram notifier enabled")
 	}
 
 	// 4. Services + 5. HTTP API.
 	issuer := auth.NewIssuer([]byte(cfg.JWTSecret), cfg.JWTTTL)
 	// Enforcement loop: disables + de-provisions users who hit their cap/expiry.
 	enforcer := service.NewEnforcer(users, h, time.Minute, log)
+	enforcer.SetPublisher(bus)
 	go enforcer.Run(ctx)
 
 	// Reset loop: zeroes used traffic on schedule and re-activates quota-limited
 	// users — the complement to enforcement.
 	resetter := service.NewResetter(users, h, time.Hour, log)
+	resetter.SetPublisher(bus)
 	go resetter.Run(ctx)
 
 	authSvc := service.NewAuthService(admins, issuer)
 	userSvc := service.NewUserService(users, h)
+	userSvc.SetPublisher(bus)
+	userSvc.SetOnlineQuerier(h)
 	subSvc := service.NewSubscriptionService(users, nodes)
-	syncSvc := service.NewSyncService(store.Inbounds(), users, h)
+	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	nodeSvc := service.NewNodeService(nodes, h)
+	nodeSvc.SetLogQuerier(h)
 	inboundSvc := service.NewInboundService(store.Inbounds(), syncSvc)
+	outboundSvc := service.NewOutboundService(store.Outbounds(), syncSvc)
+	routingSvc := service.NewRoutingService(store.Routing(), syncSvc)
+	balancerSvc := service.NewBalancerService(store.Balancers(), syncSvc)
 	adminSvc := service.NewAdminService(admins)
+	overviewSvc := service.NewOverviewService(users, nodes)
+	backupSvc := service.NewBackupService(nodes, store.Inbounds(), store.Outbounds(), store.Routing(), store.Balancers(), users, store.Backup())
 
 	// Wire failover migration into the hub now that its dependencies exist (the
 	// migration service provisions onto the target via the hub itself).
 	migration := service.NewMigrationService(store.Inbounds(), users, users, users, h, log)
 	h.SetOnFailover(func(fctx context.Context, failed, target *domain.Node) {
+		bus.Publish(events.Event{Type: events.NodeDown, NodeID: failed.ID.String(), NodeName: failed.Name})
 		if err := migration.Migrate(fctx, failed, target); err != nil {
 			log.Error("failover migration failed", "failed", failed.Name, "err", err)
 		}
@@ -145,6 +199,7 @@ func run(ctx context.Context, log *slog.Logger, cfg *config.Panel) error {
 	// On (re)connect: repopulate the node with its own config, then shed any
 	// temporary copies that failover parked on other nodes while it was down.
 	h.SetOnConnect(func(cctx context.Context, node *domain.Node) {
+		bus.Publish(events.Event{Type: events.NodeUp, NodeID: node.ID.String(), NodeName: node.Name})
 		if err := syncSvc.Resync(cctx, node.ID); err != nil {
 			log.Error("node resync on connect failed", "node", node.Name, "err", err)
 		}
@@ -156,6 +211,9 @@ func run(ctx context.Context, log *slog.Logger, cfg *config.Panel) error {
 		Handlers: &api.Handlers{
 			Auth: authSvc, Users: userSvc, Sub: subSvc,
 			Nodes: nodeSvc, Inbounds: inboundSvc, Admins: adminSvc, Devices: devices,
+			Outbounds: outboundSvc, Routing: routingSvc, Balancers: balancerSvc,
+			Overview: overviewSvc, Backup: backupSvc,
+			Online: online, Logs: logBuf,
 			Repo: users, Traffic: traffic,
 		},
 		Issuer:  issuer,

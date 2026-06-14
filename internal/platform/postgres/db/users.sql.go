@@ -392,6 +392,40 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 	return err
 }
 
+const userStats = `-- name: UserStats :many
+SELECT status, COUNT(*)::bigint AS count, COALESCE(SUM(used_traffic), 0)::bigint AS used_traffic
+FROM users
+GROUP BY status
+`
+
+type UserStatsRow struct {
+	Status      string
+	Count       int64
+	UsedTraffic int64
+}
+
+// UserStats aggregates user counts and total used traffic per status, powering
+// the dashboard overview in a single round-trip.
+func (q *Queries) UserStats(ctx context.Context) ([]UserStatsRow, error) {
+	rows, err := q.db.Query(ctx, userStats)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []UserStatsRow{}
+	for rows.Next() {
+		var i UserStatsRow
+		if err := rows.Scan(&i.Status, &i.Count, &i.UsedTraffic); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const usersByNode = `-- name: UsersByNode :many
 SELECT i.tag, u.id, u.username, u.status, u.note, u.data_limit, u.used_traffic, u.expire_at, u.on_hold_expire, u.reset_strategy, u.last_reset, u.device_limit, u.allowed_hwids, u.vmess_uuid, u.vless_uuid, u.trojan_pass, u.ss_password, u.ss_method, u.sub_token, u.created_at, u.updated_at
 FROM inbounds i

@@ -121,3 +121,76 @@ func TestRenderSingboxIsValidJSON(t *testing.T) {
 		t.Errorf("first outbound should be selector, got %v", parsed.Outbounds[0]["type"])
 	}
 }
+
+func realityProxy() Proxy {
+	return Proxy{
+		Name: "reality1", Protocol: domain.ProtoVLESS, Host: "1.2.3.4", Port: 443,
+		Network: "tcp", Security: "reality", SNI: "www.microsoft.com", Flow: "xtls-rprx-vision",
+		UUID: "22222222-2222-2222-2222-222222222222",
+		PublicKey: "PUBKEY123", ShortID: "abcd1234", Fingerprint: "chrome",
+	}
+}
+
+func TestRealityShareLinkCarriesKeyMaterial(t *testing.T) {
+	link := ShareLink(realityProxy())
+	for _, want := range []string{"security=reality", "pbk=PUBKEY123", "sid=abcd1234", "fp=chrome", "flow=xtls-rprx-vision", "sni=www.microsoft.com"} {
+		if !strings.Contains(link, want) {
+			t.Errorf("reality vless link missing %q: %s", want, link)
+		}
+	}
+}
+
+func TestRealityClashCarriesRealityOpts(t *testing.T) {
+	body, err := Render(FormatClash, []Proxy{realityProxy()}, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Proxies []map[string]any `yaml:"proxies"`
+	}
+	if err := yaml.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("invalid yaml: %v", err)
+	}
+	if len(parsed.Proxies) != 1 {
+		t.Fatalf("want 1 proxy, got %d", len(parsed.Proxies))
+	}
+	ro, ok := parsed.Proxies[0]["reality-opts"].(map[string]any)
+	if !ok || ro["public-key"] != "PUBKEY123" || ro["short-id"] != "abcd1234" {
+		t.Errorf("reality-opts missing/wrong: %v", parsed.Proxies[0]["reality-opts"])
+	}
+	if parsed.Proxies[0]["client-fingerprint"] != "chrome" {
+		t.Errorf("client-fingerprint = %v", parsed.Proxies[0]["client-fingerprint"])
+	}
+}
+
+func TestRealitySingboxCarriesRealityBlock(t *testing.T) {
+	body, err := Render(FormatSingbox, []Proxy{realityProxy()}, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Outbounds []map[string]any `json:"outbounds"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("invalid json: %v", err)
+	}
+	// outbounds[0] is the selector; the proxy outbound follows.
+	var vless map[string]any
+	for _, o := range parsed.Outbounds {
+		if o["type"] == "vless" {
+			vless = o
+		}
+	}
+	if vless == nil {
+		t.Fatal("vless outbound missing")
+	}
+	tls, _ := vless["tls"].(map[string]any)
+	rl, _ := tls["reality"].(map[string]any)
+	if rl == nil || rl["public_key"] != "PUBKEY123" || rl["short_id"] != "abcd1234" {
+		t.Errorf("reality block missing/wrong: %v", tls["reality"])
+	}
+	utls, _ := tls["utls"].(map[string]any)
+	if utls == nil || utls["fingerprint"] != "chrome" {
+		t.Errorf("utls fingerprint missing: %v", tls["utls"])
+	}
+}

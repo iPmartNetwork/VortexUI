@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,24 +67,155 @@ func userFromSpec(s *genv1.UserSpec) *domain.User {
 }
 
 func inboundToSpec(in domain.Inbound) *genv1.InboundSpec {
-	return &genv1.InboundSpec{
+	spec := &genv1.InboundSpec{
 		Tag:      in.Tag,
 		Protocol: string(in.Protocol),
 		Listen:   in.Listen,
 		Port:     uint32(in.Port),
 		Network:  in.Network,
 		Security: string(in.Security),
+		Sni:      in.SNI,
+		Path:     in.Path,
+		Host:     in.Host,
+		Flow:     in.Flow,
 	}
+	if len(in.Raw) > 0 {
+		if b, err := json.Marshal(in.Raw); err == nil {
+			spec.Raw = b
+		}
+	}
+	return spec
 }
 
 func inboundFromSpec(s *genv1.InboundSpec) domain.Inbound {
-	return domain.Inbound{
+	in := domain.Inbound{
 		Tag:      s.GetTag(),
 		Protocol: domain.Protocol(s.GetProtocol()),
 		Listen:   s.GetListen(),
 		Port:     int(s.GetPort()),
 		Network:  s.GetNetwork(),
 		Security: domain.Security(s.GetSecurity()),
+		SNI:      s.GetSni(),
+		Path:     s.GetPath(),
+		Host:     s.GetHost(),
+		Flow:     s.GetFlow(),
+		Enabled:  true, // only enabled inbounds are ever synced
+	}
+	if raw := s.GetRaw(); len(raw) > 0 {
+		var m map[string]any
+		if err := json.Unmarshal(raw, &m); err == nil {
+			in.Raw = m
+		}
+	}
+	return in
+}
+
+func outboundToSpec(o domain.Outbound) *genv1.OutboundSpec {
+	spec := &genv1.OutboundSpec{
+		Tag:      o.Tag,
+		Protocol: string(o.Protocol),
+		Address:  o.Address,
+		Port:     uint32(o.Port),
+		Uuid:     o.UUID,
+		Password: o.Password,
+		Username: o.Username,
+		Method:   o.Method,
+		Flow:     o.Flow,
+		Network:  o.Network,
+		Security: string(o.Security),
+		Sni:      o.SNI,
+		Path:     o.Path,
+		Host:     o.Host,
+		Enabled:  o.Enabled,
+	}
+	if len(o.Raw) > 0 {
+		if b, err := json.Marshal(o.Raw); err == nil {
+			spec.Raw = b
+		}
+	}
+	return spec
+}
+
+func outboundFromSpec(s *genv1.OutboundSpec) domain.Outbound {
+	o := domain.Outbound{
+		Tag:      s.GetTag(),
+		Protocol: domain.OutboundProtocol(s.GetProtocol()),
+		Address:  s.GetAddress(),
+		Port:     int(s.GetPort()),
+		UUID:     s.GetUuid(),
+		Password: s.GetPassword(),
+		Username: s.GetUsername(),
+		Method:   s.GetMethod(),
+		Flow:     s.GetFlow(),
+		Network:  s.GetNetwork(),
+		Security: domain.Security(s.GetSecurity()),
+		SNI:      s.GetSni(),
+		Path:     s.GetPath(),
+		Host:     s.GetHost(),
+		Enabled:  s.GetEnabled(),
+	}
+	if raw := s.GetRaw(); len(raw) > 0 {
+		var m map[string]any
+		if err := json.Unmarshal(raw, &m); err == nil {
+			o.Raw = m
+		}
+	}
+	return o
+}
+
+func routingToSpec(r domain.RoutingRule) *genv1.RoutingRuleSpec {
+	return &genv1.RoutingRuleSpec{
+		Priority:    int32(r.Priority),
+		Name:        r.Name,
+		InboundTags: r.InboundTags,
+		Domains:     r.Domains,
+		Ip:          r.IP,
+		Port:        r.Port,
+		Protocols:   r.Protocols,
+		Network:     r.Network,
+		OutboundTag: r.OutboundTag,
+		BalancerTag: r.BalancerTag,
+		Enabled:     r.Enabled,
+	}
+}
+
+func routingFromSpec(s *genv1.RoutingRuleSpec) domain.RoutingRule {
+	return domain.RoutingRule{
+		Priority:    int(s.GetPriority()),
+		Name:        s.GetName(),
+		InboundTags: s.GetInboundTags(),
+		Domains:     s.GetDomains(),
+		IP:          s.GetIp(),
+		Port:        s.GetPort(),
+		Protocols:   s.GetProtocols(),
+		Network:     s.GetNetwork(),
+		OutboundTag: s.GetOutboundTag(),
+		BalancerTag: s.GetBalancerTag(),
+		Enabled:     s.GetEnabled(),
+	}
+}
+
+func balancerToSpec(b domain.Balancer) *genv1.BalancerSpec {
+	return &genv1.BalancerSpec{
+		Tag:           b.Tag,
+		Selectors:     b.Selectors,
+		Strategy:      string(b.Strategy),
+		Observe:       b.Observe,
+		ProbeUrl:      b.ProbeURL,
+		ProbeInterval: b.ProbeInterval,
+		Enabled:       b.Enabled,
+	}
+}
+
+func balancerFromSpec(s *genv1.BalancerSpec) domain.Balancer {
+	return domain.Balancer{
+		Tag:           s.GetTag(),
+		Selectors:     s.GetSelectors(),
+		Strategy:      domain.BalancerStrategy(s.GetStrategy()),
+		Observe:       s.GetObserve(),
+		ProbeURL:      s.GetProbeUrl(),
+		ProbeInterval: s.GetProbeInterval(),
+		Enabled:       s.GetEnabled(),
 	}
 }
 

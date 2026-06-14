@@ -71,11 +71,11 @@ func TestBuildAccountPerProtocol(t *testing.T) {
 
 func TestCipherType(t *testing.T) {
 	cases := map[string]ssproxy.CipherType{
-		"aes-128-gcm":            ssproxy.CipherType_AES_128_GCM,
-		"aes-256-gcm":            ssproxy.CipherType_AES_256_GCM,
-		"chacha20-poly1305":      ssproxy.CipherType_CHACHA20_POLY1305,
-		"none":                   ssproxy.CipherType_NONE,
-		"something-unknown":      ssproxy.CipherType_AES_128_GCM, // safe default
+		"aes-128-gcm":       ssproxy.CipherType_AES_128_GCM,
+		"aes-256-gcm":       ssproxy.CipherType_AES_256_GCM,
+		"chacha20-poly1305": ssproxy.CipherType_CHACHA20_POLY1305,
+		"none":              ssproxy.CipherType_NONE,
+		"something-unknown": ssproxy.CipherType_AES_128_GCM, // safe default
 	}
 	for method, want := range cases {
 		if got := cipherType(method); got != want {

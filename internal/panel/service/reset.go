@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/events"
 )
 
 // ResetRepo is the data access the reset loop needs. *postgres.UserRepo
@@ -27,6 +28,7 @@ type Resetter struct {
 	interval time.Duration
 	now      func() time.Time
 	log      *slog.Logger
+	pub      events.Publisher
 }
 
 // NewResetter wires the loop. interval of 0 defaults to one hour, which is a fine
@@ -38,7 +40,15 @@ func NewResetter(repo ResetRepo, nodes NodeOps, interval time.Duration, log *slo
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Resetter{repo: repo, nodes: nodes, interval: interval, now: time.Now, log: log}
+	return &Resetter{repo: repo, nodes: nodes, interval: interval, now: time.Now, log: log, pub: events.Nop{}}
+}
+
+// SetPublisher wires an event publisher (so resets emit user.reset). A nil
+// publisher leaves the no-op default in place.
+func (r *Resetter) SetPublisher(p events.Publisher) {
+	if p != nil {
+		r.pub = p
+	}
 }
 
 // Run ticks until ctx is cancelled.
@@ -81,6 +91,7 @@ func (r *Resetter) Tick(ctx context.Context) error {
 			r.reprovision(ctx, u)
 		}
 		r.log.Info("reset user traffic", "user", u.Username, "status", u.Status)
+		r.pub.Publish(events.Event{Type: events.UserReset, UserID: u.ID.String(), Username: u.Username})
 	}
 	return nil
 }

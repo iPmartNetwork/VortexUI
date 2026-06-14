@@ -44,6 +44,18 @@ func (s *Store) Nodes() *NodeRepo { return &NodeRepo{q: s.q} }
 // Inbounds returns the inbound repository.
 func (s *Store) Inbounds() *InboundRepo { return &InboundRepo{q: s.q} }
 
+// Outbounds returns the outbound repository.
+func (s *Store) Outbounds() *OutboundRepo { return &OutboundRepo{q: s.q} }
+
+// Routing returns the routing-rule repository.
+func (s *Store) Routing() *RoutingRepo { return &RoutingRepo{q: s.q} }
+
+// Balancers returns the balancer repository.
+func (s *Store) Balancers() *BalancerRepo { return &BalancerRepo{q: s.q} }
+
+// Backup returns the configuration backup/restore repository.
+func (s *Store) Backup() *BackupRepo { return &BackupRepo{pool: s.pool} }
+
 // Traffic returns the traffic repository.
 func (s *Store) Traffic() *TrafficRepo { return &TrafficRepo{q: s.q} }
 

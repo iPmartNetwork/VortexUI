@@ -18,17 +18,39 @@ type NodeRegistrar interface {
 	Deregister(nodeID uuid.UUID)
 }
 
+// NodeLogQuerier fetches recent core log lines from a node. *hub.Hub satisfies it.
+type NodeLogQuerier interface {
+	Logs(ctx context.Context, nodeID uuid.UUID, limit int) ([]string, error)
+}
+
 // NodeService manages the node fleet's persistent records and keeps the hub's
 // live management in step with them.
 type NodeService struct {
 	repo      port.NodeRepository
 	registrar NodeRegistrar
+	logs      NodeLogQuerier
 	now       func() time.Time
 }
 
 // NewNodeService wires the service.
 func NewNodeService(repo port.NodeRepository, registrar NodeRegistrar) *NodeService {
 	return &NodeService{repo: repo, registrar: registrar, now: time.Now}
+}
+
+// SetLogQuerier wires the source of live node logs (the hub).
+func (s *NodeService) SetLogQuerier(q NodeLogQuerier) {
+	if q != nil {
+		s.logs = q
+	}
+}
+
+// Logs fetches up to limit recent core log lines from a node. Errors when no log
+// source is wired or the node is unreachable.
+func (s *NodeService) Logs(ctx context.Context, id uuid.UUID, limit int) ([]string, error) {
+	if s.logs == nil {
+		return nil, errors.New("node logs source not configured")
+	}
+	return s.logs.Logs(ctx, id, limit)
 }
 
 // CreateNodeInput describes a new node.

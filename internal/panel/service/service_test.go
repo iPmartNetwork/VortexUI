@@ -36,9 +36,9 @@ func (f *fakeAdminRepo) GetRole(context.Context, uuid.UUID) (*domain.Role, error
 }
 
 type fakeUserRepo struct {
-	created   *domain.User
-	bound     []uuid.UUID
-	inbounds  []domain.Inbound
+	created  *domain.User
+	bound    []uuid.UUID
+	inbounds []domain.Inbound
 }
 
 func (f *fakeUserRepo) Create(_ context.Context, u *domain.User) error { f.created = u; return nil }
@@ -51,12 +51,12 @@ func (f *fakeUserRepo) GetByID(context.Context, uuid.UUID) (*domain.User, error)
 func (f *fakeUserRepo) GetBySubToken(context.Context, string) (*domain.User, error) {
 	return f.created, nil
 }
-func (f *fakeUserRepo) Update(context.Context, *domain.User) error          { return nil }
-func (f *fakeUserRepo) Delete(context.Context, uuid.UUID) error             { return nil }
+func (f *fakeUserRepo) Update(context.Context, *domain.User) error { return nil }
+func (f *fakeUserRepo) Delete(context.Context, uuid.UUID) error    { return nil }
 func (f *fakeUserRepo) List(context.Context, port.UserFilter) ([]*domain.User, int, error) {
 	return nil, 0, nil
 }
-func (f *fakeUserRepo) AddUsedTraffic(context.Context, uuid.UUID, int64) error          { return nil }
+func (f *fakeUserRepo) AddUsedTraffic(context.Context, uuid.UUID, int64) error         { return nil }
 func (f *fakeUserRepo) AddUsedTrafficBatch(context.Context, map[uuid.UUID]int64) error { return nil }
 func (f *fakeUserRepo) SetInbounds(_ context.Context, _ uuid.UUID, ids []uuid.UUID) error {
 	f.bound = ids
@@ -191,4 +191,165 @@ func TestUserServiceCreateGeneratesCredsAndProvisions(t *testing.T) {
 	if len(ops.added) != 1 || ops.added[0] != nodeID.String()+"/vless-ws" {
 		t.Errorf("provisioning = %v, want [%s/vless-ws]", ops.added, nodeID)
 	}
+}
+
+func TestUserResetUsageReactivatesAndReprovisions(t *testing.T) {
+	nodeID := uuid.New()
+	uid := uuid.New()
+	repo := &fakeUserRepo{
+		created: &domain.User{
+			ID: uid, Username: "alice", Status: domain.UserStatusLimited,
+			DataLimit: 100, UsedTraffic: 150,
+		},
+		inbounds: []domain.Inbound{{NodeID: nodeID, Tag: "vless-ws"}},
+	}
+	ops := &fakeNodeOps{}
+	svc := NewUserService(repo, ops)
+
+	u, err := svc.ResetUsage(context.Background(), uid)
+	if err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	if u.UsedTraffic != 0 || u.LastReset == nil {
+		t.Errorf("usage not reset: used=%d lastReset=%v", u.UsedTraffic, u.LastReset)
+	}
+	if u.Status != domain.UserStatusActive {
+		t.Errorf("status = %q, want active after reset", u.Status)
+	}
+	// Was limited (inactive) -> now active: must re-provision on the node.
+	if len(ops.added) != 1 || ops.added[0] != nodeID.String()+"/vless-ws" {
+		t.Errorf("re-provision = %v, want [%s/vless-ws]", ops.added, nodeID)
+	}
+}
+
+func TestUserResetUsageActiveUserDoesNotReprovision(t *testing.T) {
+	uid := uuid.New()
+	repo := &fakeUserRepo{
+		created:  &domain.User{ID: uid, Username: "bob", Status: domain.UserStatusActive, DataLimit: 1000, UsedTraffic: 10},
+		inbounds: []domain.Inbound{{NodeID: uuid.New(), Tag: "t"}},
+	}
+	ops := &fakeNodeOps{}
+	svc := NewUserService(repo, ops)
+
+	u, err := svc.ResetUsage(context.Background(), uid)
+	if err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	if u.UsedTraffic != 0 {
+		t.Errorf("used = %d, want 0", u.UsedTraffic)
+	}
+	// Already active -> no redundant provisioning.
+	if len(ops.added) != 0 {
+		t.Errorf("active user should not be re-provisioned, got %v", ops.added)
+	}
+}
+
+func TestUserRevokeSubTokenRotatesToken(t *testing.T) {
+	uid := uuid.New()
+	repo := &fakeUserRepo{created: &domain.User{ID: uid, Username: "alice", SubToken: "old-token"}}
+	svc := NewUserService(repo, &fakeNodeOps{})
+
+	u, err := svc.RevokeSubToken(context.Background(), uid)
+	if err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+	if u.SubToken == "old-token" || u.SubToken == "" {
+		t.Errorf("sub token not rotated: %q", u.SubToken)
+	}
+}
+
+func TestSubscriptionBuildForUserResolvesByID(t *testing.T) {
+	now := time.Date(2026, 6, 14, 12, 0, 0, 0, time.UTC)
+	fresh := now.Add(-5 * time.Second)
+	nodeID := uuid.New()
+	uid := uuid.New()
+	user := &domain.User{ID: uid, Username: "alice", SubToken: "tok", Proxies: domain.UserCredentials{VLESSUUID: uuid.New()}}
+	userRepo := &fakeUserRepo{
+		created:  user,
+		inbounds: []domain.Inbound{{ID: uuid.New(), NodeID: nodeID, Tag: "in", Protocol: domain.ProtoVLESS, Port: 443, Enabled: true}},
+	}
+	nodeRepo := &mapNodeRepo{nodes: map[uuid.UUID]*domain.Node{
+		nodeID: {ID: nodeID, Name: "n1", Address: "1.1.1.1:50051", LastSeen: &fresh, Health: domain.NodeHealth{CoreRunning: true}},
+	}}
+	svc := NewSubscriptionService(userRepo, nodeRepo)
+	svc.now = func() time.Time { return now }
+
+	res, err := svc.BuildForUser(context.Background(), uid)
+	if err != nil {
+		t.Fatalf("build for user: %v", err)
+	}
+	if res.User.ID != uid || len(res.Proxies) != 1 {
+		t.Errorf("unexpected result: user=%s proxies=%d", res.User.ID, len(res.Proxies))
+	}
+}
+
+// fakeOnlineQuerier returns per-node online maps for LiveConnections tests.
+type fakeOnlineQuerier struct {
+	byNode map[uuid.UUID]map[string]int
+	errs   map[uuid.UUID]bool
+}
+
+func (f *fakeOnlineQuerier) OnlineStats(_ context.Context, nodeID uuid.UUID) (map[string]int, error) {
+	if f.errs[nodeID] {
+		return nil, errors.New("node unreachable")
+	}
+	return f.byNode[nodeID], nil
+}
+
+func TestUserLiveConnectionsSumsAcrossNodesAndSkipsErrors(t *testing.T) {
+	uid := uuid.New()
+	nodeA, nodeB, nodeDown := uuid.New(), uuid.New(), uuid.New()
+	repo := &fakeUserRepo{
+		created: &domain.User{ID: uid, Username: "alice"},
+		inbounds: []domain.Inbound{
+			{NodeID: nodeA, Tag: "a1"},
+			{NodeID: nodeA, Tag: "a2"}, // same node: queried once
+			{NodeID: nodeB, Tag: "b1"},
+			{NodeID: nodeDown, Tag: "d1"}, // unreachable: skipped
+		},
+	}
+	svc := NewUserService(repo, &fakeNodeOps{})
+
+	// Without a querier wired: not tracked.
+	if n, tracked, err := svc.LiveConnections(context.Background(), uid); err != nil || tracked || n != 0 {
+		t.Errorf("untracked = (%d,%v,%v), want (0,false,nil)", n, tracked, err)
+	}
+
+	svc.SetOnlineQuerier(&fakeOnlineQuerier{
+		byNode: map[uuid.UUID]map[string]int{
+			nodeA: {uid.String(): 2},
+			nodeB: {uid.String(): 3},
+		},
+		errs: map[uuid.UUID]bool{nodeDown: true},
+	})
+	n, tracked, err := svc.LiveConnections(context.Background(), uid)
+	if err != nil || !tracked {
+		t.Fatalf("tracked query failed: tracked=%v err=%v", tracked, err)
+	}
+	if n != 5 {
+		t.Errorf("live connections = %d, want 5 (2+3, node queried once, down node skipped)", n)
+	}
+}
+
+func TestNodeServiceLogs(t *testing.T) {
+	id := uuid.New()
+	repo := &fakeNodeRepo{created: &domain.Node{ID: id}}
+	svc := NewNodeService(repo, &fakeRegistrar{})
+
+	// No querier wired -> error.
+	if _, err := svc.Logs(context.Background(), id, 10); err == nil {
+		t.Error("expected error without a log querier")
+	}
+
+	svc.SetLogQuerier(fakeLogQuerier{lines: []string{"l1", "l2"}})
+	lines, err := svc.Logs(context.Background(), id, 10)
+	if err != nil || len(lines) != 2 {
+		t.Errorf("logs = %v err=%v, want 2 lines", lines, err)
+	}
+}
+
+type fakeLogQuerier struct{ lines []string }
+
+func (f fakeLogQuerier) Logs(context.Context, uuid.UUID, int) ([]string, error) {
+	return f.lines, nil
 }

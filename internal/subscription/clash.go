@@ -75,6 +75,10 @@ func clashProxy(p Proxy) map[string]any {
 		base["servername"] = p.SNI
 		base["sni"] = p.SNI
 	}
+	if p.Security == "reality" {
+		base["reality-opts"] = map[string]any{"public-key": p.PublicKey, "short-id": p.ShortID}
+		base["client-fingerprint"] = orDefault(p.Fingerprint, "chrome")
+	}
 	return base
 }
 

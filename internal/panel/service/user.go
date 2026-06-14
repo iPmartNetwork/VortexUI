@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/events"
 	"github.com/vortexui/vortexui/internal/panel/port"
 )
 
@@ -23,17 +24,70 @@ type NodeOps interface {
 	RemoveUser(ctx context.Context, nodeID uuid.UUID, inboundTag string, userID uuid.UUID) error
 }
 
+// OnlineQuerier reports a node's live per-user connection counts (keyed by the
+// user's stats email == UUID). *hub.Hub satisfies it.
+type OnlineQuerier interface {
+	OnlineStats(ctx context.Context, nodeID uuid.UUID) (map[string]int, error)
+}
+
 // UserService creates and manages service users, keeping the database and the
 // live cores in sync.
 type UserService struct {
-	users port.UserRepository
-	nodes NodeOps
-	now   func() time.Time
+	users  port.UserRepository
+	nodes  NodeOps
+	now    func() time.Time
+	pub    events.Publisher
+	online OnlineQuerier
 }
 
 // NewUserService wires the user service.
 func NewUserService(users port.UserRepository, nodes NodeOps) *UserService {
-	return &UserService{users: users, nodes: nodes, now: time.Now}
+	return &UserService{users: users, nodes: nodes, now: time.Now, pub: events.Nop{}}
+}
+
+// SetPublisher wires an event publisher (so create/delete emit user.created /
+// user.deleted). A nil publisher leaves the no-op default in place.
+func (s *UserService) SetPublisher(p events.Publisher) {
+	if p != nil {
+		s.pub = p
+	}
+}
+
+// SetOnlineQuerier wires the source of live per-node connection counts (the
+// hub). Without it, LiveConnections reports "not tracked".
+func (s *UserService) SetOnlineQuerier(q OnlineQuerier) {
+	if q != nil {
+		s.online = q
+	}
+}
+
+// LiveConnections sums a user's current live connections across every node it is
+// bound to. The returned bool is false when no online source is wired (so the
+// caller can distinguish "zero connections" from "not tracked"). Unreachable
+// nodes are skipped rather than failing the whole query.
+func (s *UserService) LiveConnections(ctx context.Context, id uuid.UUID) (int, bool, error) {
+	if s.online == nil {
+		return 0, false, nil
+	}
+	inbounds, err := s.users.InboundsFor(ctx, id)
+	if err != nil {
+		return 0, false, err
+	}
+	email := id.String()
+	total := 0
+	seen := map[uuid.UUID]bool{}
+	for _, in := range inbounds {
+		if seen[in.NodeID] {
+			continue
+		}
+		seen[in.NodeID] = true
+		m, err := s.online.OnlineStats(ctx, in.NodeID)
+		if err != nil {
+			continue // node down / not connected: skip its contribution
+		}
+		total += m[email]
+	}
+	return total, true, nil
 }
 
 // CreateUserInput describes a new user. Credentials and the subscription token
@@ -93,6 +147,7 @@ func (s *UserService) Create(ctx context.Context, in CreateUserInput) (*domain.U
 	if err := s.users.Create(ctx, u); err != nil {
 		return nil, fmt.Errorf("persist user: %w", err)
 	}
+	s.pub.Publish(events.Event{Type: events.UserCreated, UserID: u.ID.String(), Username: u.Username})
 	if len(in.InboundIDs) > 0 {
 		if err := s.users.SetInbounds(ctx, u.ID, in.InboundIDs); err != nil {
 			return u, fmt.Errorf("bind inbounds: %w", err)
@@ -175,7 +230,11 @@ func (s *UserService) Delete(ctx context.Context, id uuid.UUID) error {
 		// Best-effort de-provision; a dead node must not block deletion.
 		_ = s.nodes.RemoveUser(ctx, in.NodeID, in.Tag, u.ID)
 	}
-	return s.users.Delete(ctx, id)
+	if err := s.users.Delete(ctx, id); err != nil {
+		return err
+	}
+	s.pub.Publish(events.Event{Type: events.UserDeleted, UserID: u.ID.String(), Username: u.Username})
+	return nil
 }
 
 // Sync re-applies a user to every node it is bound to, used after edits or to
@@ -186,6 +245,54 @@ func (s *UserService) Sync(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return s.provision(ctx, u)
+}
+
+// ResetUsage zeroes a user's used traffic immediately (a manual reset, distinct
+// from the scheduled Resetter) and recomputes status. If the reset lifts a
+// quota-driven block, the user is re-provisioned on the live cores. Returns the
+// updated user; a provisioning failure is returned as a non-nil warning error
+// alongside the (already durable) user.
+func (s *UserService) ResetUsage(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	u, err := s.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	now := s.now()
+	wasActive := u.IsActive(now)
+
+	u.UsedTraffic = 0
+	u.LastReset = &now
+	u.Status = u.DerivedStatus(now)
+	u.UpdatedAt = now
+	if err := s.users.Update(ctx, u); err != nil {
+		return nil, err
+	}
+	if !wasActive && u.Status == domain.UserStatusActive {
+		if err := s.provision(ctx, u); err != nil {
+			return u, fmt.Errorf("usage reset but re-provisioning incomplete: %w", err)
+		}
+	}
+	return u, nil
+}
+
+// RevokeSubToken rotates a user's subscription token, invalidating the old
+// subscription URL and issuing a new one. Protocol credentials are unchanged, so
+// the live cores need no update — only the public subscription link changes.
+func (s *UserService) RevokeSubToken(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	u, err := s.users.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	tok, err := randToken()
+	if err != nil {
+		return nil, err
+	}
+	u.SubToken = tok
+	u.UpdatedAt = s.now()
+	if err := s.users.Update(ctx, u); err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 // provision pushes the user to the live core on each inbound's node, collecting

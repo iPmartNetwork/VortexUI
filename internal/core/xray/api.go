@@ -26,6 +26,10 @@ type xrayAPI interface {
 	// what makes our accounting naturally incremental and restart-safe.
 	QueryTraffic(ctx context.Context, reset bool) ([]UserTraffic, error)
 
+	// OnlineUsers returns the number of online connections per user email via
+	// StatsService.GetAllOnlineUsers.
+	OnlineUsers(ctx context.Context) (map[string]int, error)
+
 	Close() error
 }
 

@@ -183,7 +183,11 @@ type InboundSpec struct {
 	Port          uint32                 `protobuf:"varint,4,opt,name=port,proto3" json:"port,omitempty"`
 	Network       string                 `protobuf:"bytes,5,opt,name=network,proto3" json:"network,omitempty"`
 	Security      string                 `protobuf:"bytes,6,opt,name=security,proto3" json:"security,omitempty"`
-	Raw           []byte                 `protobuf:"bytes,7,opt,name=raw,proto3" json:"raw,omitempty"` // optional native JSON fragment
+	Raw           []byte                 `protobuf:"bytes,7,opt,name=raw,proto3" json:"raw,omitempty"`    // optional native JSON fragment
+	Sni           []string               `protobuf:"bytes,8,rep,name=sni,proto3" json:"sni,omitempty"`    // TLS/REALITY server names
+	Path          string                 `protobuf:"bytes,9,opt,name=path,proto3" json:"path,omitempty"`  // ws path / grpc service name
+	Host          []string               `protobuf:"bytes,10,rep,name=host,proto3" json:"host,omitempty"` // ws Host header(s)
+	Flow          string                 `protobuf:"bytes,11,opt,name=flow,proto3" json:"flow,omitempty"` // vless flow (e.g. xtls-rprx-vision)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -267,6 +271,418 @@ func (x *InboundSpec) GetRaw() []byte {
 	return nil
 }
 
+func (x *InboundSpec) GetSni() []string {
+	if x != nil {
+		return x.Sni
+	}
+	return nil
+}
+
+func (x *InboundSpec) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *InboundSpec) GetHost() []string {
+	if x != nil {
+		return x.Host
+	}
+	return nil
+}
+
+func (x *InboundSpec) GetFlow() string {
+	if x != nil {
+		return x.Flow
+	}
+	return ""
+}
+
+// OutboundSpec is a rendered egress handler (freedom/blackhole/dns or a proxy
+// protocol). The node's builder translates it into engine-native JSON.
+type OutboundSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tag           string                 `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	Protocol      string                 `protobuf:"bytes,2,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	Address       string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	Port          uint32                 `protobuf:"varint,4,opt,name=port,proto3" json:"port,omitempty"`
+	Uuid          string                 `protobuf:"bytes,5,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Password      string                 `protobuf:"bytes,6,opt,name=password,proto3" json:"password,omitempty"`
+	Username      string                 `protobuf:"bytes,7,opt,name=username,proto3" json:"username,omitempty"`
+	Method        string                 `protobuf:"bytes,8,opt,name=method,proto3" json:"method,omitempty"`
+	Flow          string                 `protobuf:"bytes,9,opt,name=flow,proto3" json:"flow,omitempty"`
+	Network       string                 `protobuf:"bytes,10,opt,name=network,proto3" json:"network,omitempty"`
+	Security      string                 `protobuf:"bytes,11,opt,name=security,proto3" json:"security,omitempty"`
+	Sni           string                 `protobuf:"bytes,12,opt,name=sni,proto3" json:"sni,omitempty"`
+	Path          string                 `protobuf:"bytes,13,opt,name=path,proto3" json:"path,omitempty"`
+	Host          string                 `protobuf:"bytes,14,opt,name=host,proto3" json:"host,omitempty"`
+	Raw           []byte                 `protobuf:"bytes,15,opt,name=raw,proto3" json:"raw,omitempty"`
+	Enabled       bool                   `protobuf:"varint,16,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OutboundSpec) Reset() {
+	*x = OutboundSpec{}
+	mi := &file_vortex_v1_node_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OutboundSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OutboundSpec) ProtoMessage() {}
+
+func (x *OutboundSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OutboundSpec.ProtoReflect.Descriptor instead.
+func (*OutboundSpec) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *OutboundSpec) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetProtocol() string {
+	if x != nil {
+		return x.Protocol
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetPort() uint32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *OutboundSpec) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetMethod() string {
+	if x != nil {
+		return x.Method
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetFlow() string {
+	if x != nil {
+		return x.Flow
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetNetwork() string {
+	if x != nil {
+		return x.Network
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetSecurity() string {
+	if x != nil {
+		return x.Security
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetSni() string {
+	if x != nil {
+		return x.Sni
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *OutboundSpec) GetRaw() []byte {
+	if x != nil {
+		return x.Raw
+	}
+	return nil
+}
+
+func (x *OutboundSpec) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+// RoutingRuleSpec is one engine-neutral routing decision.
+type RoutingRuleSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Priority      int32                  `protobuf:"varint,1,opt,name=priority,proto3" json:"priority,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	InboundTags   []string               `protobuf:"bytes,3,rep,name=inbound_tags,json=inboundTags,proto3" json:"inbound_tags,omitempty"`
+	Domains       []string               `protobuf:"bytes,4,rep,name=domains,proto3" json:"domains,omitempty"`
+	Ip            []string               `protobuf:"bytes,5,rep,name=ip,proto3" json:"ip,omitempty"`
+	Port          string                 `protobuf:"bytes,6,opt,name=port,proto3" json:"port,omitempty"`
+	Protocols     []string               `protobuf:"bytes,7,rep,name=protocols,proto3" json:"protocols,omitempty"`
+	Network       string                 `protobuf:"bytes,8,opt,name=network,proto3" json:"network,omitempty"`
+	OutboundTag   string                 `protobuf:"bytes,9,opt,name=outbound_tag,json=outboundTag,proto3" json:"outbound_tag,omitempty"`
+	BalancerTag   string                 `protobuf:"bytes,10,opt,name=balancer_tag,json=balancerTag,proto3" json:"balancer_tag,omitempty"`
+	Enabled       bool                   `protobuf:"varint,11,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RoutingRuleSpec) Reset() {
+	*x = RoutingRuleSpec{}
+	mi := &file_vortex_v1_node_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RoutingRuleSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RoutingRuleSpec) ProtoMessage() {}
+
+func (x *RoutingRuleSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RoutingRuleSpec.ProtoReflect.Descriptor instead.
+func (*RoutingRuleSpec) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *RoutingRuleSpec) GetPriority() int32 {
+	if x != nil {
+		return x.Priority
+	}
+	return 0
+}
+
+func (x *RoutingRuleSpec) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RoutingRuleSpec) GetInboundTags() []string {
+	if x != nil {
+		return x.InboundTags
+	}
+	return nil
+}
+
+func (x *RoutingRuleSpec) GetDomains() []string {
+	if x != nil {
+		return x.Domains
+	}
+	return nil
+}
+
+func (x *RoutingRuleSpec) GetIp() []string {
+	if x != nil {
+		return x.Ip
+	}
+	return nil
+}
+
+func (x *RoutingRuleSpec) GetPort() string {
+	if x != nil {
+		return x.Port
+	}
+	return ""
+}
+
+func (x *RoutingRuleSpec) GetProtocols() []string {
+	if x != nil {
+		return x.Protocols
+	}
+	return nil
+}
+
+func (x *RoutingRuleSpec) GetNetwork() string {
+	if x != nil {
+		return x.Network
+	}
+	return ""
+}
+
+func (x *RoutingRuleSpec) GetOutboundTag() string {
+	if x != nil {
+		return x.OutboundTag
+	}
+	return ""
+}
+
+func (x *RoutingRuleSpec) GetBalancerTag() string {
+	if x != nil {
+		return x.BalancerTag
+	}
+	return ""
+}
+
+func (x *RoutingRuleSpec) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+// BalancerSpec distributes traffic across outbounds selected by tag prefix.
+type BalancerSpec struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tag           string                 `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	Selectors     []string               `protobuf:"bytes,2,rep,name=selectors,proto3" json:"selectors,omitempty"`
+	Strategy      string                 `protobuf:"bytes,3,opt,name=strategy,proto3" json:"strategy,omitempty"`
+	Observe       bool                   `protobuf:"varint,4,opt,name=observe,proto3" json:"observe,omitempty"`
+	ProbeUrl      string                 `protobuf:"bytes,5,opt,name=probe_url,json=probeUrl,proto3" json:"probe_url,omitempty"`
+	ProbeInterval string                 `protobuf:"bytes,6,opt,name=probe_interval,json=probeInterval,proto3" json:"probe_interval,omitempty"`
+	Enabled       bool                   `protobuf:"varint,7,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BalancerSpec) Reset() {
+	*x = BalancerSpec{}
+	mi := &file_vortex_v1_node_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BalancerSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BalancerSpec) ProtoMessage() {}
+
+func (x *BalancerSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BalancerSpec.ProtoReflect.Descriptor instead.
+func (*BalancerSpec) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *BalancerSpec) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *BalancerSpec) GetSelectors() []string {
+	if x != nil {
+		return x.Selectors
+	}
+	return nil
+}
+
+func (x *BalancerSpec) GetStrategy() string {
+	if x != nil {
+		return x.Strategy
+	}
+	return ""
+}
+
+func (x *BalancerSpec) GetObserve() bool {
+	if x != nil {
+		return x.Observe
+	}
+	return false
+}
+
+func (x *BalancerSpec) GetProbeUrl() string {
+	if x != nil {
+		return x.ProbeUrl
+	}
+	return ""
+}
+
+func (x *BalancerSpec) GetProbeInterval() string {
+	if x != nil {
+		return x.ProbeInterval
+	}
+	return ""
+}
+
+func (x *BalancerSpec) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
 type SyncRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Core     CoreType               `protobuf:"varint,1,opt,name=core,proto3,enum=vortex.v1.CoreType" json:"core,omitempty"`
@@ -274,13 +690,16 @@ type SyncRequest struct {
 	Inbounds []*InboundSpec         `protobuf:"bytes,3,rep,name=inbounds,proto3" json:"inbounds,omitempty"`
 	// users_by_inbound maps inbound tag -> users bound to it.
 	UsersByInbound map[string]*UserList `protobuf:"bytes,4,rep,name=users_by_inbound,json=usersByInbound,proto3" json:"users_by_inbound,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Outbounds      []*OutboundSpec      `protobuf:"bytes,5,rep,name=outbounds,proto3" json:"outbounds,omitempty"`
+	Routing        []*RoutingRuleSpec   `protobuf:"bytes,6,rep,name=routing,proto3" json:"routing,omitempty"`
+	Balancers      []*BalancerSpec      `protobuf:"bytes,7,rep,name=balancers,proto3" json:"balancers,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SyncRequest) Reset() {
 	*x = SyncRequest{}
-	mi := &file_vortex_v1_node_proto_msgTypes[2]
+	mi := &file_vortex_v1_node_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -292,7 +711,7 @@ func (x *SyncRequest) String() string {
 func (*SyncRequest) ProtoMessage() {}
 
 func (x *SyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[2]
+	mi := &file_vortex_v1_node_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -305,7 +724,7 @@ func (x *SyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncRequest.ProtoReflect.Descriptor instead.
 func (*SyncRequest) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{2}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SyncRequest) GetCore() CoreType {
@@ -336,6 +755,27 @@ func (x *SyncRequest) GetUsersByInbound() map[string]*UserList {
 	return nil
 }
 
+func (x *SyncRequest) GetOutbounds() []*OutboundSpec {
+	if x != nil {
+		return x.Outbounds
+	}
+	return nil
+}
+
+func (x *SyncRequest) GetRouting() []*RoutingRuleSpec {
+	if x != nil {
+		return x.Routing
+	}
+	return nil
+}
+
+func (x *SyncRequest) GetBalancers() []*BalancerSpec {
+	if x != nil {
+		return x.Balancers
+	}
+	return nil
+}
+
 type UserList struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Users         []*UserSpec            `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
@@ -345,7 +785,7 @@ type UserList struct {
 
 func (x *UserList) Reset() {
 	*x = UserList{}
-	mi := &file_vortex_v1_node_proto_msgTypes[3]
+	mi := &file_vortex_v1_node_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -357,7 +797,7 @@ func (x *UserList) String() string {
 func (*UserList) ProtoMessage() {}
 
 func (x *UserList) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[3]
+	mi := &file_vortex_v1_node_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -370,7 +810,7 @@ func (x *UserList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserList.ProtoReflect.Descriptor instead.
 func (*UserList) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{3}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UserList) GetUsers() []*UserSpec {
@@ -390,7 +830,7 @@ type AddUserRequest struct {
 
 func (x *AddUserRequest) Reset() {
 	*x = AddUserRequest{}
-	mi := &file_vortex_v1_node_proto_msgTypes[4]
+	mi := &file_vortex_v1_node_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -402,7 +842,7 @@ func (x *AddUserRequest) String() string {
 func (*AddUserRequest) ProtoMessage() {}
 
 func (x *AddUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[4]
+	mi := &file_vortex_v1_node_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -415,7 +855,7 @@ func (x *AddUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddUserRequest.ProtoReflect.Descriptor instead.
 func (*AddUserRequest) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{4}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AddUserRequest) GetInboundTag() string {
@@ -442,7 +882,7 @@ type RemoveUserRequest struct {
 
 func (x *RemoveUserRequest) Reset() {
 	*x = RemoveUserRequest{}
-	mi := &file_vortex_v1_node_proto_msgTypes[5]
+	mi := &file_vortex_v1_node_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -454,7 +894,7 @@ func (x *RemoveUserRequest) String() string {
 func (*RemoveUserRequest) ProtoMessage() {}
 
 func (x *RemoveUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[5]
+	mi := &file_vortex_v1_node_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -467,7 +907,7 @@ func (x *RemoveUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveUserRequest.ProtoReflect.Descriptor instead.
 func (*RemoveUserRequest) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{5}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RemoveUserRequest) GetInboundTag() string {
@@ -495,7 +935,7 @@ type StreamTrafficRequest struct {
 
 func (x *StreamTrafficRequest) Reset() {
 	*x = StreamTrafficRequest{}
-	mi := &file_vortex_v1_node_proto_msgTypes[6]
+	mi := &file_vortex_v1_node_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -507,7 +947,7 @@ func (x *StreamTrafficRequest) String() string {
 func (*StreamTrafficRequest) ProtoMessage() {}
 
 func (x *StreamTrafficRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[6]
+	mi := &file_vortex_v1_node_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -520,7 +960,7 @@ func (x *StreamTrafficRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamTrafficRequest.ProtoReflect.Descriptor instead.
 func (*StreamTrafficRequest) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{6}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *StreamTrafficRequest) GetMinReportIntervalMs() uint32 {
@@ -543,7 +983,7 @@ type TrafficDelta struct {
 
 func (x *TrafficDelta) Reset() {
 	*x = TrafficDelta{}
-	mi := &file_vortex_v1_node_proto_msgTypes[7]
+	mi := &file_vortex_v1_node_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -555,7 +995,7 @@ func (x *TrafficDelta) String() string {
 func (*TrafficDelta) ProtoMessage() {}
 
 func (x *TrafficDelta) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[7]
+	mi := &file_vortex_v1_node_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -568,7 +1008,7 @@ func (x *TrafficDelta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TrafficDelta.ProtoReflect.Descriptor instead.
 func (*TrafficDelta) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{7}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *TrafficDelta) GetUserId() string {
@@ -607,7 +1047,7 @@ type HealthRequest struct {
 
 func (x *HealthRequest) Reset() {
 	*x = HealthRequest{}
-	mi := &file_vortex_v1_node_proto_msgTypes[8]
+	mi := &file_vortex_v1_node_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -619,7 +1059,7 @@ func (x *HealthRequest) String() string {
 func (*HealthRequest) ProtoMessage() {}
 
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[8]
+	mi := &file_vortex_v1_node_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,7 +1072,7 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
 func (*HealthRequest) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{8}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{11}
 }
 
 type HealthResponse struct {
@@ -650,7 +1090,7 @@ type HealthResponse struct {
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_vortex_v1_node_proto_msgTypes[9]
+	mi := &file_vortex_v1_node_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -662,7 +1102,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[9]
+	mi := &file_vortex_v1_node_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -675,7 +1115,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{9}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *HealthResponse) GetCpuPercent() float64 {
@@ -738,7 +1178,7 @@ type Ack struct {
 
 func (x *Ack) Reset() {
 	*x = Ack{}
-	mi := &file_vortex_v1_node_proto_msgTypes[10]
+	mi := &file_vortex_v1_node_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -750,7 +1190,7 @@ func (x *Ack) String() string {
 func (*Ack) ProtoMessage() {}
 
 func (x *Ack) ProtoReflect() protoreflect.Message {
-	mi := &file_vortex_v1_node_proto_msgTypes[10]
+	mi := &file_vortex_v1_node_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -763,7 +1203,7 @@ func (x *Ack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ack.ProtoReflect.Descriptor instead.
 func (*Ack) Descriptor() ([]byte, []int) {
-	return file_vortex_v1_node_proto_rawDescGZIP(), []int{10}
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Ack) GetOk() bool {
@@ -778,6 +1218,176 @@ func (x *Ack) GetMessage() string {
 		return x.Message
 	}
 	return ""
+}
+
+type OnlineStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OnlineStatsRequest) Reset() {
+	*x = OnlineStatsRequest{}
+	mi := &file_vortex_v1_node_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OnlineStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OnlineStatsRequest) ProtoMessage() {}
+
+func (x *OnlineStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OnlineStatsRequest.ProtoReflect.Descriptor instead.
+func (*OnlineStatsRequest) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{14}
+}
+
+// OnlineStatsResponse maps a user's stats email (UUID) to its current live
+// connection count. Absent users have zero connections.
+type OnlineStatsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Online        map[string]uint32      `protobuf:"bytes,1,rep,name=online,proto3" json:"online,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OnlineStatsResponse) Reset() {
+	*x = OnlineStatsResponse{}
+	mi := &file_vortex_v1_node_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OnlineStatsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OnlineStatsResponse) ProtoMessage() {}
+
+func (x *OnlineStatsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OnlineStatsResponse.ProtoReflect.Descriptor instead.
+func (*OnlineStatsResponse) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *OnlineStatsResponse) GetOnline() map[string]uint32 {
+	if x != nil {
+		return x.Online
+	}
+	return nil
+}
+
+type NodeLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"` // 0 = all retained lines
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeLogsRequest) Reset() {
+	*x = NodeLogsRequest{}
+	mi := &file_vortex_v1_node_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeLogsRequest) ProtoMessage() {}
+
+func (x *NodeLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeLogsRequest.ProtoReflect.Descriptor instead.
+func (*NodeLogsRequest) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *NodeLogsRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type NodeLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Lines         []string               `protobuf:"bytes,1,rep,name=lines,proto3" json:"lines,omitempty"` // oldest first
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeLogsResponse) Reset() {
+	*x = NodeLogsResponse{}
+	mi := &file_vortex_v1_node_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeLogsResponse) ProtoMessage() {}
+
+func (x *NodeLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_vortex_v1_node_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeLogsResponse.ProtoReflect.Descriptor instead.
+func (*NodeLogsResponse) Descriptor() ([]byte, []int) {
+	return file_vortex_v1_node_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *NodeLogsResponse) GetLines() []string {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
 }
 
 var File_vortex_v1_node_proto protoreflect.FileDescriptor
@@ -796,7 +1406,7 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\vss_password\x18\x06 \x01(\tR\n" +
 	"ssPassword\x12\x1b\n" +
 	"\tss_method\x18\a \x01(\tR\bssMethod\x12\x12\n" +
-	"\x04flow\x18\b \x01(\tR\x04flow\"\xaf\x01\n" +
+	"\x04flow\x18\b \x01(\tR\x04flow\"\xfd\x01\n" +
 	"\vInboundSpec\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1a\n" +
 	"\bprotocol\x18\x02 \x01(\tR\bprotocol\x12\x16\n" +
@@ -804,12 +1414,59 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\x04port\x18\x04 \x01(\rR\x04port\x12\x18\n" +
 	"\anetwork\x18\x05 \x01(\tR\anetwork\x12\x1a\n" +
 	"\bsecurity\x18\x06 \x01(\tR\bsecurity\x12\x10\n" +
-	"\x03raw\x18\a \x01(\fR\x03raw\"\xb5\x02\n" +
+	"\x03raw\x18\a \x01(\fR\x03raw\x12\x10\n" +
+	"\x03sni\x18\b \x03(\tR\x03sni\x12\x12\n" +
+	"\x04path\x18\t \x01(\tR\x04path\x12\x12\n" +
+	"\x04host\x18\n" +
+	" \x03(\tR\x04host\x12\x12\n" +
+	"\x04flow\x18\v \x01(\tR\x04flow\"\xfe\x02\n" +
+	"\fOutboundSpec\x12\x10\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1a\n" +
+	"\bprotocol\x18\x02 \x01(\tR\bprotocol\x12\x18\n" +
+	"\aaddress\x18\x03 \x01(\tR\aaddress\x12\x12\n" +
+	"\x04port\x18\x04 \x01(\rR\x04port\x12\x12\n" +
+	"\x04uuid\x18\x05 \x01(\tR\x04uuid\x12\x1a\n" +
+	"\bpassword\x18\x06 \x01(\tR\bpassword\x12\x1a\n" +
+	"\busername\x18\a \x01(\tR\busername\x12\x16\n" +
+	"\x06method\x18\b \x01(\tR\x06method\x12\x12\n" +
+	"\x04flow\x18\t \x01(\tR\x04flow\x12\x18\n" +
+	"\anetwork\x18\n" +
+	" \x01(\tR\anetwork\x12\x1a\n" +
+	"\bsecurity\x18\v \x01(\tR\bsecurity\x12\x10\n" +
+	"\x03sni\x18\f \x01(\tR\x03sni\x12\x12\n" +
+	"\x04path\x18\r \x01(\tR\x04path\x12\x12\n" +
+	"\x04host\x18\x0e \x01(\tR\x04host\x12\x10\n" +
+	"\x03raw\x18\x0f \x01(\fR\x03raw\x12\x18\n" +
+	"\aenabled\x18\x10 \x01(\bR\aenabled\"\xba\x02\n" +
+	"\x0fRoutingRuleSpec\x12\x1a\n" +
+	"\bpriority\x18\x01 \x01(\x05R\bpriority\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
+	"\finbound_tags\x18\x03 \x03(\tR\vinboundTags\x12\x18\n" +
+	"\adomains\x18\x04 \x03(\tR\adomains\x12\x0e\n" +
+	"\x02ip\x18\x05 \x03(\tR\x02ip\x12\x12\n" +
+	"\x04port\x18\x06 \x01(\tR\x04port\x12\x1c\n" +
+	"\tprotocols\x18\a \x03(\tR\tprotocols\x12\x18\n" +
+	"\anetwork\x18\b \x01(\tR\anetwork\x12!\n" +
+	"\foutbound_tag\x18\t \x01(\tR\voutboundTag\x12!\n" +
+	"\fbalancer_tag\x18\n" +
+	" \x01(\tR\vbalancerTag\x12\x18\n" +
+	"\aenabled\x18\v \x01(\bR\aenabled\"\xd2\x01\n" +
+	"\fBalancerSpec\x12\x10\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1c\n" +
+	"\tselectors\x18\x02 \x03(\tR\tselectors\x12\x1a\n" +
+	"\bstrategy\x18\x03 \x01(\tR\bstrategy\x12\x18\n" +
+	"\aobserve\x18\x04 \x01(\bR\aobserve\x12\x1b\n" +
+	"\tprobe_url\x18\x05 \x01(\tR\bprobeUrl\x12%\n" +
+	"\x0eprobe_interval\x18\x06 \x01(\tR\rprobeInterval\x12\x18\n" +
+	"\aenabled\x18\a \x01(\bR\aenabled\"\xd9\x03\n" +
 	"\vSyncRequest\x12'\n" +
 	"\x04core\x18\x01 \x01(\x0e2\x13.vortex.v1.CoreTypeR\x04core\x12\x1b\n" +
 	"\tlog_level\x18\x02 \x01(\tR\blogLevel\x122\n" +
 	"\binbounds\x18\x03 \x03(\v2\x16.vortex.v1.InboundSpecR\binbounds\x12T\n" +
-	"\x10users_by_inbound\x18\x04 \x03(\v2*.vortex.v1.SyncRequest.UsersByInboundEntryR\x0eusersByInbound\x1aV\n" +
+	"\x10users_by_inbound\x18\x04 \x03(\v2*.vortex.v1.SyncRequest.UsersByInboundEntryR\x0eusersByInbound\x125\n" +
+	"\toutbounds\x18\x05 \x03(\v2\x17.vortex.v1.OutboundSpecR\toutbounds\x124\n" +
+	"\arouting\x18\x06 \x03(\v2\x1a.vortex.v1.RoutingRuleSpecR\arouting\x125\n" +
+	"\tbalancers\x18\a \x03(\v2\x17.vortex.v1.BalancerSpecR\tbalancers\x1aV\n" +
 	"\x13UsersByInboundEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12)\n" +
 	"\x05value\x18\x02 \x01(\v2\x13.vortex.v1.UserListR\x05value:\x028\x01\"5\n" +
@@ -843,18 +1500,30 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\ragent_version\x18\a \x01(\tR\fagentVersion\"/\n" +
 	"\x03Ack\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage*P\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x14\n" +
+	"\x12OnlineStatsRequest\"\x94\x01\n" +
+	"\x13OnlineStatsResponse\x12B\n" +
+	"\x06online\x18\x01 \x03(\v2*.vortex.v1.OnlineStatsResponse.OnlineEntryR\x06online\x1a9\n" +
+	"\vOnlineEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\rR\x05value:\x028\x01\"'\n" +
+	"\x0fNodeLogsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\"(\n" +
+	"\x10NodeLogsResponse\x12\x14\n" +
+	"\x05lines\x18\x01 \x03(\tR\x05lines*P\n" +
 	"\bCoreType\x12\x19\n" +
 	"\x15CORE_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eCORE_TYPE_XRAY\x10\x01\x12\x15\n" +
-	"\x11CORE_TYPE_SINGBOX\x10\x022\xbb\x02\n" +
+	"\x11CORE_TYPE_SINGBOX\x10\x022\xce\x03\n" +
 	"\vNodeService\x12.\n" +
 	"\x04Sync\x12\x16.vortex.v1.SyncRequest\x1a\x0e.vortex.v1.Ack\x124\n" +
 	"\aAddUser\x12\x19.vortex.v1.AddUserRequest\x1a\x0e.vortex.v1.Ack\x12:\n" +
 	"\n" +
 	"RemoveUser\x12\x1c.vortex.v1.RemoveUserRequest\x1a\x0e.vortex.v1.Ack\x12K\n" +
 	"\rStreamTraffic\x12\x1f.vortex.v1.StreamTrafficRequest\x1a\x17.vortex.v1.TrafficDelta0\x01\x12=\n" +
-	"\x06Health\x12\x18.vortex.v1.HealthRequest\x1a\x19.vortex.v1.HealthResponseB=Z;github.com/vortexui/vortexui/internal/transport/genv1;genv1b\x06proto3"
+	"\x06Health\x12\x18.vortex.v1.HealthRequest\x1a\x19.vortex.v1.HealthResponse\x12L\n" +
+	"\vOnlineStats\x12\x1d.vortex.v1.OnlineStatsRequest\x1a\x1e.vortex.v1.OnlineStatsResponse\x12C\n" +
+	"\bNodeLogs\x12\x1a.vortex.v1.NodeLogsRequest\x1a\x1b.vortex.v1.NodeLogsResponseB=Z;github.com/vortexui/vortexui/internal/transport/genv1;genv1b\x06proto3"
 
 var (
 	file_vortex_v1_node_proto_rawDescOnce sync.Once
@@ -869,46 +1538,62 @@ func file_vortex_v1_node_proto_rawDescGZIP() []byte {
 }
 
 var file_vortex_v1_node_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_vortex_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_vortex_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_vortex_v1_node_proto_goTypes = []any{
 	(CoreType)(0),                 // 0: vortex.v1.CoreType
 	(*UserSpec)(nil),              // 1: vortex.v1.UserSpec
 	(*InboundSpec)(nil),           // 2: vortex.v1.InboundSpec
-	(*SyncRequest)(nil),           // 3: vortex.v1.SyncRequest
-	(*UserList)(nil),              // 4: vortex.v1.UserList
-	(*AddUserRequest)(nil),        // 5: vortex.v1.AddUserRequest
-	(*RemoveUserRequest)(nil),     // 6: vortex.v1.RemoveUserRequest
-	(*StreamTrafficRequest)(nil),  // 7: vortex.v1.StreamTrafficRequest
-	(*TrafficDelta)(nil),          // 8: vortex.v1.TrafficDelta
-	(*HealthRequest)(nil),         // 9: vortex.v1.HealthRequest
-	(*HealthResponse)(nil),        // 10: vortex.v1.HealthResponse
-	(*Ack)(nil),                   // 11: vortex.v1.Ack
-	nil,                           // 12: vortex.v1.SyncRequest.UsersByInboundEntry
-	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(*OutboundSpec)(nil),          // 3: vortex.v1.OutboundSpec
+	(*RoutingRuleSpec)(nil),       // 4: vortex.v1.RoutingRuleSpec
+	(*BalancerSpec)(nil),          // 5: vortex.v1.BalancerSpec
+	(*SyncRequest)(nil),           // 6: vortex.v1.SyncRequest
+	(*UserList)(nil),              // 7: vortex.v1.UserList
+	(*AddUserRequest)(nil),        // 8: vortex.v1.AddUserRequest
+	(*RemoveUserRequest)(nil),     // 9: vortex.v1.RemoveUserRequest
+	(*StreamTrafficRequest)(nil),  // 10: vortex.v1.StreamTrafficRequest
+	(*TrafficDelta)(nil),          // 11: vortex.v1.TrafficDelta
+	(*HealthRequest)(nil),         // 12: vortex.v1.HealthRequest
+	(*HealthResponse)(nil),        // 13: vortex.v1.HealthResponse
+	(*Ack)(nil),                   // 14: vortex.v1.Ack
+	(*OnlineStatsRequest)(nil),    // 15: vortex.v1.OnlineStatsRequest
+	(*OnlineStatsResponse)(nil),   // 16: vortex.v1.OnlineStatsResponse
+	(*NodeLogsRequest)(nil),       // 17: vortex.v1.NodeLogsRequest
+	(*NodeLogsResponse)(nil),      // 18: vortex.v1.NodeLogsResponse
+	nil,                           // 19: vortex.v1.SyncRequest.UsersByInboundEntry
+	nil,                           // 20: vortex.v1.OnlineStatsResponse.OnlineEntry
+	(*timestamppb.Timestamp)(nil), // 21: google.protobuf.Timestamp
 }
 var file_vortex_v1_node_proto_depIdxs = []int32{
 	0,  // 0: vortex.v1.SyncRequest.core:type_name -> vortex.v1.CoreType
 	2,  // 1: vortex.v1.SyncRequest.inbounds:type_name -> vortex.v1.InboundSpec
-	12, // 2: vortex.v1.SyncRequest.users_by_inbound:type_name -> vortex.v1.SyncRequest.UsersByInboundEntry
-	1,  // 3: vortex.v1.UserList.users:type_name -> vortex.v1.UserSpec
-	1,  // 4: vortex.v1.AddUserRequest.user:type_name -> vortex.v1.UserSpec
-	13, // 5: vortex.v1.TrafficDelta.timestamp:type_name -> google.protobuf.Timestamp
-	4,  // 6: vortex.v1.SyncRequest.UsersByInboundEntry.value:type_name -> vortex.v1.UserList
-	3,  // 7: vortex.v1.NodeService.Sync:input_type -> vortex.v1.SyncRequest
-	5,  // 8: vortex.v1.NodeService.AddUser:input_type -> vortex.v1.AddUserRequest
-	6,  // 9: vortex.v1.NodeService.RemoveUser:input_type -> vortex.v1.RemoveUserRequest
-	7,  // 10: vortex.v1.NodeService.StreamTraffic:input_type -> vortex.v1.StreamTrafficRequest
-	9,  // 11: vortex.v1.NodeService.Health:input_type -> vortex.v1.HealthRequest
-	11, // 12: vortex.v1.NodeService.Sync:output_type -> vortex.v1.Ack
-	11, // 13: vortex.v1.NodeService.AddUser:output_type -> vortex.v1.Ack
-	11, // 14: vortex.v1.NodeService.RemoveUser:output_type -> vortex.v1.Ack
-	8,  // 15: vortex.v1.NodeService.StreamTraffic:output_type -> vortex.v1.TrafficDelta
-	10, // 16: vortex.v1.NodeService.Health:output_type -> vortex.v1.HealthResponse
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	19, // 2: vortex.v1.SyncRequest.users_by_inbound:type_name -> vortex.v1.SyncRequest.UsersByInboundEntry
+	3,  // 3: vortex.v1.SyncRequest.outbounds:type_name -> vortex.v1.OutboundSpec
+	4,  // 4: vortex.v1.SyncRequest.routing:type_name -> vortex.v1.RoutingRuleSpec
+	5,  // 5: vortex.v1.SyncRequest.balancers:type_name -> vortex.v1.BalancerSpec
+	1,  // 6: vortex.v1.UserList.users:type_name -> vortex.v1.UserSpec
+	1,  // 7: vortex.v1.AddUserRequest.user:type_name -> vortex.v1.UserSpec
+	21, // 8: vortex.v1.TrafficDelta.timestamp:type_name -> google.protobuf.Timestamp
+	20, // 9: vortex.v1.OnlineStatsResponse.online:type_name -> vortex.v1.OnlineStatsResponse.OnlineEntry
+	7,  // 10: vortex.v1.SyncRequest.UsersByInboundEntry.value:type_name -> vortex.v1.UserList
+	6,  // 11: vortex.v1.NodeService.Sync:input_type -> vortex.v1.SyncRequest
+	8,  // 12: vortex.v1.NodeService.AddUser:input_type -> vortex.v1.AddUserRequest
+	9,  // 13: vortex.v1.NodeService.RemoveUser:input_type -> vortex.v1.RemoveUserRequest
+	10, // 14: vortex.v1.NodeService.StreamTraffic:input_type -> vortex.v1.StreamTrafficRequest
+	12, // 15: vortex.v1.NodeService.Health:input_type -> vortex.v1.HealthRequest
+	15, // 16: vortex.v1.NodeService.OnlineStats:input_type -> vortex.v1.OnlineStatsRequest
+	17, // 17: vortex.v1.NodeService.NodeLogs:input_type -> vortex.v1.NodeLogsRequest
+	14, // 18: vortex.v1.NodeService.Sync:output_type -> vortex.v1.Ack
+	14, // 19: vortex.v1.NodeService.AddUser:output_type -> vortex.v1.Ack
+	14, // 20: vortex.v1.NodeService.RemoveUser:output_type -> vortex.v1.Ack
+	11, // 21: vortex.v1.NodeService.StreamTraffic:output_type -> vortex.v1.TrafficDelta
+	13, // 22: vortex.v1.NodeService.Health:output_type -> vortex.v1.HealthResponse
+	16, // 23: vortex.v1.NodeService.OnlineStats:output_type -> vortex.v1.OnlineStatsResponse
+	18, // 24: vortex.v1.NodeService.NodeLogs:output_type -> vortex.v1.NodeLogsResponse
+	18, // [18:25] is the sub-list for method output_type
+	11, // [11:18] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_vortex_v1_node_proto_init() }
@@ -922,7 +1607,7 @@ func file_vortex_v1_node_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_vortex_v1_node_proto_rawDesc), len(file_vortex_v1_node_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

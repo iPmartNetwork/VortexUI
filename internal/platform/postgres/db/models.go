@@ -23,6 +23,18 @@ type Admin struct {
 	CreatedAt    pgtype.Timestamptz
 }
 
+type Balancer struct {
+	ID            uuid.UUID
+	NodeID        uuid.UUID
+	Tag           string
+	Selectors     []byte
+	Strategy      string
+	Observe       bool
+	ProbeUrl      string
+	ProbeInterval string
+	Enabled       bool
+}
+
 type Inbound struct {
 	ID               uuid.UUID
 	NodeID           uuid.UUID
@@ -59,10 +71,47 @@ type Node struct {
 	CreatedAt    pgtype.Timestamptz
 }
 
+type Outbound struct {
+	ID       uuid.UUID
+	NodeID   uuid.UUID
+	Tag      string
+	Protocol string
+	Address  string
+	Port     int32
+	Uuid     string
+	Password string
+	Username string
+	Method   string
+	Flow     string
+	Network  string
+	Security string
+	Sni      string
+	Path     string
+	Host     string
+	Raw      []byte
+	Enabled  bool
+}
+
 type Role struct {
 	ID          uuid.UUID
 	Name        string
 	Permissions []byte
+}
+
+type RoutingRule struct {
+	ID          uuid.UUID
+	NodeID      uuid.UUID
+	Priority    int32
+	Name        string
+	InboundTags []byte
+	Domains     []byte
+	Ip          []byte
+	Port        string
+	Protocols   []byte
+	Network     string
+	OutboundTag string
+	BalancerTag string
+	Enabled     bool
 }
 
 type TrafficPoint struct {

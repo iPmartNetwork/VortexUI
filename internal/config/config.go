@@ -24,6 +24,22 @@ type Panel struct {
 	TLSCert string
 	TLSKey  string
 	TLSCA   string
+
+	// Optional outbound notifications (empty = disabled).
+	WebhookURL     string
+	WebhookSecret  string
+	TelegramToken  string
+	TelegramChatID string
+
+	// Optional in-process local node: run a proxy core on the panel host itself,
+	// managed in-process (no gRPC agent). Empty/false = disabled.
+	LocalNode     bool
+	LocalNodeName string // node name/identity in the DB (default "local")
+	LocalNodeHost string // public host advertised in subscriptions (default 127.0.0.1)
+	Core          string // xray | singbox
+	CoreBin       string // path to the core binary
+	CoreConfig    string // where the rendered core config is written
+	CoreAPIPort   int    // loopback port for the core's stats/control API
 }
 
 // Node holds node-agent configuration. The agent is a gRPC *server* (the panel
@@ -64,15 +80,29 @@ func LoadNode() (*Node, error) {
 // LoadPanel reads panel config from the environment, validating required keys.
 func LoadPanel() (*Panel, error) {
 	c := &Panel{
-		HTTPAddr:    env("VORTEX_HTTP_ADDR", ":8080"),
-		GRPCAddr:    env("VORTEX_GRPC_ADDR", ":50051"),
-		DatabaseURL: os.Getenv("VORTEX_DATABASE_URL"),
-		RedisURL:    env("VORTEX_REDIS_URL", "redis://localhost:6379/0"),
-		JWTSecret:   os.Getenv("VORTEX_JWT_SECRET"),
-		JWTTTL:      envDur("VORTEX_JWT_TTL", time.Hour),
-		TLSCert:     os.Getenv("VORTEX_TLS_CERT"),
-		TLSKey:      os.Getenv("VORTEX_TLS_KEY"),
-		TLSCA:       os.Getenv("VORTEX_TLS_CA"),
+		HTTPAddr:       env("VORTEX_HTTP_ADDR", ":8080"),
+		GRPCAddr:       env("VORTEX_GRPC_ADDR", ":50051"),
+		DatabaseURL:    os.Getenv("VORTEX_DATABASE_URL"),
+		RedisURL:       env("VORTEX_REDIS_URL", "redis://localhost:6379/0"),
+		JWTSecret:      os.Getenv("VORTEX_JWT_SECRET"),
+		JWTTTL:         envDur("VORTEX_JWT_TTL", time.Hour),
+		TLSCert:        os.Getenv("VORTEX_TLS_CERT"),
+		TLSKey:         os.Getenv("VORTEX_TLS_KEY"),
+		TLSCA:          os.Getenv("VORTEX_TLS_CA"),
+		WebhookURL:     os.Getenv("VORTEX_WEBHOOK_URL"),
+		WebhookSecret:  os.Getenv("VORTEX_WEBHOOK_SECRET"),
+		TelegramToken:  os.Getenv("VORTEX_TELEGRAM_TOKEN"),
+		TelegramChatID: os.Getenv("VORTEX_TELEGRAM_CHAT_ID"),
+		LocalNode:      envBool("VORTEX_LOCAL_NODE", false),
+		LocalNodeName:  env("VORTEX_LOCAL_NODE_NAME", "local"),
+		LocalNodeHost:  env("VORTEX_LOCAL_NODE_HOST", "127.0.0.1"),
+		Core:           env("VORTEX_CORE", "xray"),
+		CoreBin:        os.Getenv("VORTEX_CORE_BIN"),
+		CoreConfig:     env("VORTEX_CORE_CONFIG", "/etc/vortex/local-core.json"),
+		CoreAPIPort:    envInt("VORTEX_CORE_API_PORT", 10085),
+	}
+	if c.CoreBin == "" {
+		c.CoreBin = c.Core // resolve from PATH by core name
 	}
 	var errs []error
 	if c.DatabaseURL == "" {
@@ -104,6 +134,15 @@ func envInt(k string, def int) int {
 	if v := os.Getenv(k); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return def
+}
+
+func envBool(k string, def bool) bool {
+	if v := os.Getenv(k); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
 		}
 	}
 	return def

@@ -59,6 +59,15 @@ func vlessLink(p Proxy) string {
 	if p.Flow != "" {
 		q.Set("flow", p.Flow)
 	}
+	if p.Security == "reality" {
+		if p.PublicKey != "" {
+			q.Set("pbk", p.PublicKey)
+		}
+		if p.ShortID != "" {
+			q.Set("sid", p.ShortID)
+		}
+		q.Set("fp", orDefault(p.Fingerprint, "chrome"))
+	}
 	u := url.URL{
 		Scheme:   "vless",
 		User:     url.User(p.UUID),

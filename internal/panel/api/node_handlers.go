@@ -108,6 +108,21 @@ func (h *Handlers) DeleteNode(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// GetNodeLogs returns recent core log lines from a node (?limit=). Fails with
+// 502 when the node is unreachable or its agent cannot provide logs.
+func (h *Handlers) GetNodeLogs(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	limit := atoiDefault(c.QueryParam("limit"), 200)
+	lines, err := h.Nodes.Logs(c.Request().Context(), id, limit)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadGateway, "node logs unavailable: "+err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"lines": lines})
+}
+
 // --- inbounds ---
 
 type createInboundRequest struct {
