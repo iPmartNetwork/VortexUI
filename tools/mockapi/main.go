@@ -12,11 +12,21 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
 
 var start = time.Now()
+
+// atoi parses a non-negative int from a query param, returning 0 on error.
+func atoi(s string) int {
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
+}
 
 func j(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -123,7 +133,35 @@ func main() {
 		})
 	}
 	mux.HandleFunc("/api/users", func(w http.ResponseWriter, r *http.Request) {
-		j(w, map[string]any{"users": users, "total": len(users)})
+		q := r.URL.Query()
+		status := q.Get("status")
+		search := strings.ToLower(q.Get("search"))
+		// Filter by status and search to mirror the real backend.
+		filtered := make([]map[string]any, 0, len(users))
+		for _, u := range users {
+			if status != "" && u["status"] != status {
+				continue
+			}
+			if search != "" && !strings.Contains(strings.ToLower(u["username"].(string)), search) {
+				continue
+			}
+			filtered = append(filtered, u)
+		}
+		total := len(filtered)
+		// Paginate.
+		offset := atoi(q.Get("offset"))
+		limit := atoi(q.Get("limit"))
+		if limit <= 0 {
+			limit = 50
+		}
+		if offset > total {
+			offset = total
+		}
+		end := offset + limit
+		if end > total {
+			end = total
+		}
+		j(w, map[string]any{"users": filtered[offset:end], "total": total})
 	})
 
 	// --- user sub ---
