@@ -92,6 +92,28 @@ func (s *UserService) LiveConnections(ctx context.Context, id uuid.UUID) (int, b
 	return total, true, nil
 }
 
+// ActiveWithDeviceLimit returns active users that have a positive device limit —
+// the candidates for account-sharing checks. Paginated internally.
+func (s *UserService) ActiveWithDeviceLimit(ctx context.Context) ([]*domain.User, error) {
+	out := []*domain.User{}
+	const page = 200
+	for offset := 0; ; offset += page {
+		batch, total, err := s.users.List(ctx, port.UserFilter{Status: domain.UserStatusActive, Limit: page, Offset: offset})
+		if err != nil {
+			return nil, err
+		}
+		for _, u := range batch {
+			if u.DeviceLimit > 0 {
+				out = append(out, u)
+			}
+		}
+		if offset+page >= total || len(batch) == 0 {
+			break
+		}
+	}
+	return out, nil
+}
+
 // OnlineIP is one source IP currently online for a user, with its last-seen time.
 type OnlineIP struct {
 	IP       string    `json:"ip"`

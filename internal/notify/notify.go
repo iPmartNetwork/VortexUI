@@ -23,6 +23,12 @@ func describe(e events.Event) string {
 		return fmt.Sprintf("⏰ User expired: %s", e.Username)
 	case events.UserReset:
 		return fmt.Sprintf("🔄 User traffic reset: %s", e.Username)
+	case events.UserIPLimit:
+		ips, limit := e.Data["online_ips"], e.Data["device_limit"]
+		if limited, _ := e.Data["limited"].(bool); limited {
+			return fmt.Sprintf("👥 Account sharing — %s limited (%v IPs > %v devices)", e.Username, ips, limit)
+		}
+		return fmt.Sprintf("👥 Account sharing detected: %s (%v IPs > %v devices)", e.Username, ips, limit)
 	case events.NodeDown:
 		return fmt.Sprintf("🔴 Node down: %s", e.NodeName)
 	case events.NodeUp:

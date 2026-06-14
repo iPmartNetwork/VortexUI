@@ -40,6 +40,10 @@ type Panel struct {
 	CoreBin       string // path to the core binary
 	CoreConfig    string // where the rendered core config is written
 	CoreAPIPort   int    // loopback port for the core's stats/control API
+	// ShareAutoLimit, when true, makes the account-sharing guard actually limit
+	// (deprovision) users caught online from more IPs than their device limit.
+	// Default false: detection only emits an alert event.
+	ShareAutoLimit bool
 }
 
 // Node holds node-agent configuration. The agent is a gRPC *server* (the panel
@@ -100,6 +104,7 @@ func LoadPanel() (*Panel, error) {
 		CoreBin:        os.Getenv("VORTEX_CORE_BIN"),
 		CoreConfig:     env("VORTEX_CORE_CONFIG", "/etc/vortex/local-core.json"),
 		CoreAPIPort:    envInt("VORTEX_CORE_API_PORT", 10085),
+		ShareAutoLimit: envBool("VORTEX_SHARE_AUTOLIMIT", false),
 	}
 	if c.CoreBin == "" {
 		c.CoreBin = c.Core // resolve from PATH by core name
