@@ -58,6 +58,7 @@ const en = {
   "login.submit": "Sign in",
   "login.signingIn": "Signing in…",
   "login.invalid": "Invalid credentials",
+  "login.tooMany": "Too many attempts — try again later",
 
   "users.title": "Users",
   "users.new": "New user",
@@ -159,6 +160,7 @@ const fa: Record<string, string> = {
   "login.submit": "ورود",
   "login.signingIn": "در حال ورود…",
   "login.invalid": "اطلاعات ورود نادرست است",
+  "login.tooMany": "تلاش بیش از حد — کمی بعد دوباره امتحان کنید",
 
   "users.title": "کاربران",
   "users.new": "کاربر جدید",
@@ -260,6 +262,7 @@ const tr: Record<string, string> = {
   "login.submit": "Giriş yap",
   "login.signingIn": "Giriş yapılıyor…",
   "login.invalid": "Geçersiz kimlik bilgileri",
+  "login.tooMany": "Çok fazla deneme — sonra tekrar deneyin",
 
   "users.title": "Kullanıcılar",
   "users.new": "Yeni kullanıcı",
@@ -361,6 +364,7 @@ const ar: Record<string, string> = {
   "login.submit": "دخول",
   "login.signingIn": "جاري تسجيل الدخول…",
   "login.invalid": "بيانات غير صحيحة",
+  "login.tooMany": "محاولات كثيرة — حاول لاحقًا",
 
   "users.title": "المستخدمون",
   "users.new": "مستخدم جديد",
@@ -462,6 +466,7 @@ const ru: Record<string, string> = {
   "login.submit": "Войти",
   "login.signingIn": "Вход…",
   "login.invalid": "Неверные учётные данные",
+  "login.tooMany": "Слишком много попыток — повторите позже",
 
   "users.title": "Пользователи",
   "users.new": "Новый пользователь",
@@ -563,6 +568,7 @@ const zh: Record<string, string> = {
   "login.submit": "登录",
   "login.signingIn": "登录中…",
   "login.invalid": "凭据无效",
+  "login.tooMany": "尝试次数过多 — 请稍后再试",
 
   "users.title": "用户",
   "users.new": "新建用户",
@@ -664,6 +670,7 @@ const ja: Record<string, string> = {
   "login.submit": "ログイン",
   "login.signingIn": "ログイン中…",
   "login.invalid": "認証情報が無効です",
+  "login.tooMany": "試行回数が多すぎます — 後でもう一度お試しください",
 
   "users.title": "ユーザー",
   "users.new": "新規ユーザー",
@@ -765,6 +772,7 @@ const es: Record<string, string> = {
   "login.submit": "Iniciar sesión",
   "login.signingIn": "Iniciando sesión…",
   "login.invalid": "Credenciales inválidas",
+  "login.tooMany": "Demasiados intentos — inténtalo más tarde",
 
   "users.title": "Usuarios",
   "users.new": "Nuevo usuario",

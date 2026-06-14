@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,6 +40,7 @@ type Handlers struct {
 	Audit     AuditRecorder // optional; nil disables the audit log
 	Repo      port.UserRepository
 	Traffic   port.TrafficRepository
+	Throttle  *LoginThrottle // optional; nil disables login brute-force protection
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a
@@ -76,15 +79,22 @@ func (h *Handlers) Login(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
+	key := c.RealIP() + "|" + strings.ToLower(req.Username)
+	if d := h.Throttle.RetryAfter(key); d > 0 {
+		c.Response().Header().Set("Retry-After", strconv.Itoa(int(d.Seconds())+1))
+		return echo.NewHTTPError(http.StatusTooManyRequests, "too many attempts, try again later")
+	}
 	token, err := h.Auth.Login(c.Request().Context(), service.LoginInput{
 		Username: req.Username, Password: req.Password, TOTPCode: req.TOTPCode,
 	})
 	if errors.Is(err, service.ErrInvalidCredentials) {
+		h.Throttle.Fail(key)
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid credentials")
 	}
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "login failed")
 	}
+	h.Throttle.Reset(key)
 	return c.JSON(http.StatusOK, loginResponse{Token: token})
 }
 

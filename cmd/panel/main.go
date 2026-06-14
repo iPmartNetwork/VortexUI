@@ -223,6 +223,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Overview: overviewSvc, Backup: backupSvc,
 			Online: online, Logs: logBuf, Audit: store.Audit(),
 			Repo: users, Traffic: traffic,
+			Throttle: api.NewLoginThrottle(5, 15*time.Minute),
 		},
 		Issuer:  issuer,
 		Auth:    authSvc,
