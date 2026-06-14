@@ -9,12 +9,23 @@ import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { formatBytes } from "@/lib/utils";
 
+const PAGE_SIZE = 20;
+
 export function Users() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [viewing, setViewing] = useState<User | null>(null);
-  const { data, isLoading, error } = useUsers({ search, limit: 50 });
+  const { data, isLoading, error } = useUsers({ search, limit: PAGE_SIZE, offset: page * PAGE_SIZE });
+
+  const total = data?.total ?? 0;
+  const maxPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
+
+  function onSearch(v: string) {
+    setSearch(v);
+    setPage(0); // a new query resets to the first page
+  }
   const del = useDeleteUser();
   const confirm = useConfirm();
   const toast = useToast();
@@ -50,7 +61,7 @@ export function Users() {
             className="max-w-xs"
             placeholder="Search…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => onSearch(e.target.value)}
           />
           <Button onClick={() => setModalOpen(true)}>New user</Button>
         </div>
@@ -107,6 +118,22 @@ export function Users() {
           </table>
         )}
       </Card>
+
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="ghost" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button variant="ghost" disabled={page >= maxPage} onClick={() => setPage((p) => p + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
