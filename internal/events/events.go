@@ -20,8 +20,11 @@ const (
 	UserLimited Type = "user.limited" // crossed the data cap
 	UserExpired Type = "user.expired" // passed expire_at
 	UserReset   Type = "user.reset"   // traffic counter reset
-	NodeDown    Type = "node.down"    // became unhealthy/unreachable
-	NodeUp      Type = "node.up"      // (re)connected
+	// UserIPLimit fires when a user is online from more distinct source IPs than
+	// its device limit allows — a strong signal of account sharing.
+	UserIPLimit Type = "user.ip_limit"
+	NodeDown    Type = "node.down" // became unhealthy/unreachable
+	NodeUp      Type = "node.up"   // (re)connected
 )
 
 // Event is a single notification. Fields are flat and JSON-friendly so the

@@ -174,6 +174,13 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	userSvc := service.NewUserService(users, h)
 	userSvc.SetPublisher(bus)
 	userSvc.SetOnlineQuerier(h)
+
+	// Account-sharing guard: alerts (and optionally limits) users online from
+	// more distinct IPs than their device limit allows.
+	shareGuard := service.NewShareGuard(userSvc, users, h, 2*time.Minute, log)
+	shareGuard.SetPublisher(bus)
+	shareGuard.SetAutoLimit(cfg.ShareAutoLimit)
+	go shareGuard.Run(ctx)
 	subSvc := service.NewSubscriptionService(users, nodes)
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	nodeSvc := service.NewNodeService(nodes, h)
