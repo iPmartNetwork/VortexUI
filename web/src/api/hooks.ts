@@ -78,6 +78,15 @@ export function useCreateNode() {
   });
 }
 
+export function useUpdateNode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: { name?: string; address?: string; usage_ratio?: number } }) =>
+      api<{ node: Node; warning?: string }>(`/api/nodes/${id}`, { method: "PUT", body: input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["nodes"] }),
+  });
+}
+
 export function useDeleteNode() {
   const qc = useQueryClient();
   return useMutation({
@@ -131,6 +140,29 @@ export function useCreateInbound() {
       api<{ inbound: Inbound; warning?: string }>("/api/inbounds", { method: "POST", body: input }),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["inbounds", v.node_id] });
+      qc.invalidateQueries({ queryKey: ["inbounds-all"] });
+    },
+  });
+}
+
+export interface UpdateInboundInput {
+  listen?: string;
+  port: number;
+  network?: string;
+  security?: string;
+  sni?: string[];
+  path?: string;
+  flow?: string;
+  enabled: boolean;
+}
+
+export function useUpdateInbound() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateInboundInput }) =>
+      api<{ inbound: Inbound; warning?: string }>(`/api/inbounds/${id}`, { method: "PUT", body: input }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbounds"] });
       qc.invalidateQueries({ queryKey: ["inbounds-all"] });
     },
   });

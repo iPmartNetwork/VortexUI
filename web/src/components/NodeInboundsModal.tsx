@@ -1,43 +1,49 @@
 import { useState } from "react";
-import { useCreateInbound, useDeleteInbound, useNodeInbounds } from "@/api/hooks";
+import { useCreateInbound, useDeleteInbound, useNodeInbounds, useUpdateInbound, type Inbound } from "@/api/hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
+import { useToast } from "./toast";
 
 const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks"];
 const NETWORKS = ["tcp", "ws", "grpc"];
 const SECURITIES = ["none", "tls", "reality"];
 
+const blank = { editId: "", tag: "", protocol: "vless", port: "", network: "tcp", security: "tls", sni: "" };
+
 export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClose: () => void }) {
   const list = useNodeInbounds(node?.id ?? null);
   const create = useCreateInbound();
+  const update = useUpdateInbound();
   const del = useDeleteInbound();
-
-  const [tag, setTag] = useState("");
-  const [protocol, setProtocol] = useState("vless");
-  const [port, setPort] = useState("");
-  const [network, setNetwork] = useState("tcp");
-  const [security, setSecurity] = useState("tls");
-  const [sni, setSni] = useState("");
+  const toast = useToast();
+  const [f, setF] = useState({ ...blank });
 
   if (!node) return null;
+  const editing = f.editId !== "";
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setF((s) => ({ ...s, [k]: e.target.value }));
 
-  async function add(e: React.FormEvent) {
+  function startEdit(ib: Inbound) {
+    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: "" });
+  }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!node) return;
-    await create.mutateAsync({
-      node_id: node.id,
-      tag,
-      protocol,
-      port: Number(port),
-      network,
-      security,
-      sni: sni ? sni.split(",").map((s) => s.trim()) : [],
-      enabled: true,
-    });
-    setTag("");
-    setPort("");
-    setSni("");
+    const sni = f.sni ? f.sni.split(",").map((s) => s.trim()) : [];
+    try {
+      if (editing) {
+        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network: f.network, security: f.security, sni, enabled: true } });
+        toast.success(`Updated ${f.tag}`);
+      } else {
+        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, enabled: true });
+        toast.success(`Added ${f.tag}`);
+      }
+      setF({ ...blank });
+    } catch {
+      toast.error("Save failed");
+    }
   }
 
   return (
@@ -48,47 +54,45 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
             <div className="flex items-center gap-2">
               <span className="font-medium">{ib.tag}</span>
               <Badge>{ib.protocol}</Badge>
-              <span className="text-xs text-muted-foreground">
-                :{ib.port} · {ib.network}/{ib.security}
-              </span>
+              <span className="text-xs text-muted-foreground">:{ib.port} · {ib.network}/{ib.security}</span>
             </div>
-            <Button variant="ghost" className="text-destructive" onClick={() => del.mutate(ib.id)}>
-              Remove
-            </Button>
+            <div>
+              <Button variant="ghost" onClick={() => startEdit(ib)}>Edit</Button>
+              <Button variant="ghost" className="text-destructive" onClick={() => del.mutate(ib.id)}>Remove</Button>
+            </div>
           </div>
         ))}
-        {list.data?.inbounds?.length === 0 && (
-          <p className="py-2 text-sm text-muted-foreground">No inbounds on this node yet.</p>
-        )}
+        {list.data?.inbounds?.length === 0 && <p className="py-2 text-sm text-muted-foreground">No inbounds on this node yet.</p>}
       </div>
 
-      <form onSubmit={add} className="mt-4 space-y-3 border-t pt-4">
-        <p className="text-xs font-medium text-muted-foreground">Add inbound</p>
+      <form onSubmit={submit} className="mt-4 space-y-3 border-t pt-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-muted-foreground">{editing ? `Edit ${f.tag}` : "Add inbound"}</p>
+          {editing && (
+            <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setF({ ...blank })}>
+              cancel edit
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-2">
-          <Input placeholder="Tag (e.g. vless-ws)" value={tag} onChange={(e) => setTag(e.target.value)} required />
-          <Input placeholder="Port" value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric" required />
+          <Input placeholder="Tag" value={f.tag} onChange={set("tag")} required disabled={editing} />
+          <Input placeholder="Port" value={f.port} onChange={set("port")} inputMode="numeric" required />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Select value={protocol} onChange={(e) => setProtocol(e.target.value)}>
-            {PROTOCOLS.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
+          <Select value={f.protocol} onChange={set("protocol")} disabled={editing}>
+            {PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
-          <Select value={network} onChange={(e) => setNetwork(e.target.value)}>
-            {NETWORKS.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
+          <Select value={f.network} onChange={set("network")}>
+            {NETWORKS.map((n) => <option key={n} value={n}>{n}</option>)}
           </Select>
-          <Select value={security} onChange={(e) => setSecurity(e.target.value)}>
-            {SECURITIES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+          <Select value={f.security} onChange={set("security")}>
+            {SECURITIES.map((s) => <option key={s} value={s}>{s}</option>)}
           </Select>
         </div>
-        <Input placeholder="SNI (comma-separated, optional)" value={sni} onChange={(e) => setSni(e.target.value)} />
+        <Input placeholder="SNI (comma-separated, optional)" value={f.sni} onChange={set("sni")} />
         <div className="flex justify-end">
-          <Button type="submit" disabled={create.isPending}>
-            {create.isPending ? "Adding…" : "Add inbound"}
+          <Button type="submit" disabled={create.isPending || update.isPending}>
+            {editing ? "Save changes" : "Add inbound"}
           </Button>
         </div>
       </form>
