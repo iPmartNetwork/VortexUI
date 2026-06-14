@@ -99,6 +99,9 @@ func (f *fakeTrafficRepo) WriteBatch(context.Context, []domain.TrafficPoint) err
 func (f *fakeTrafficRepo) UsageSeries(context.Context, uuid.UUID, port.SeriesQuery) ([]domain.TrafficPoint, error) {
 	return f.points, nil
 }
+func (f *fakeTrafficRepo) TotalSeries(context.Context, port.SeriesQuery) ([]domain.TrafficPoint, error) {
+	return f.points, nil
+}
 
 type nopNodeOps struct{}
 

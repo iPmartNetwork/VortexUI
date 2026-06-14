@@ -44,6 +44,7 @@ func NewRouter(d Deps) *echo.Echo {
 
 	// Dashboard overview: user aggregates + node fleet health.
 	authed.GET("/overview", d.Handlers.GetOverview, RequirePermission(d.Auth, domain.PermSystemRead))
+	authed.GET("/traffic/series", d.Handlers.GetTrafficSeries, RequirePermission(d.Auth, domain.PermSystemRead))
 	// Recent panel logs (in-memory ring buffer).
 	authed.GET("/logs", d.Handlers.GetLogs, RequirePermission(d.Auth, domain.PermSystemRead))
 	// Live system info (process/memory).

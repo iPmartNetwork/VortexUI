@@ -60,3 +60,28 @@ func (r *TrafficRepo) UsageSeries(ctx context.Context, userID uuid.UUID, q port.
 	}
 	return out, nil
 }
+
+// TotalSeries buckets fleet-wide traffic (all users) for the dashboard chart.
+func (r *TrafficRepo) TotalSeries(ctx context.Context, q port.SeriesQuery) ([]domain.TrafficPoint, error) {
+	bucket, err := parseBucket(q.Bucket)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.q.TotalSeries(ctx, db.TotalSeriesParams{
+		Bucket: bucket,
+		FromTs: timeToTS(unixToTime(q.FromUnix)),
+		ToTs:   timeToTS(unixToTime(q.ToUnix)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.TrafficPoint, len(rows))
+	for i, row := range rows {
+		out[i] = domain.TrafficPoint{
+			Time: row.Bucket.Time,
+			Up:   row.Up,
+			Down: row.Down,
+		}
+	}
+	return out, nil
+}
