@@ -14,10 +14,20 @@
 {$SITE_ADDRESS::80} {
 	encode gzip
 
-	# Control-plane API, subscription delivery, and health all proxy to the panel.
-	# reverse_proxy transparently upgrades WebSocket/SSE connections.
-	@panel path /api/* /sub/* /health
-	reverse_proxy @panel panel:8080
+	# Control-plane API, subscription delivery, and health proxy to the panel.
+	# These MUST be `handle` blocks (mutually exclusive routing): a bare
+	# `try_files` in the SPA section would otherwise rewrite /api/* to
+	# /index.html before reverse_proxy runs, breaking the API. reverse_proxy
+	# upgrades WebSocket/SSE transparently.
+	handle /api/* {
+		reverse_proxy panel:8080
+	}
+	handle /sub/* {
+		reverse_proxy panel:8080
+	}
+	handle /health {
+		reverse_proxy panel:8080
+	}
 
 	# Everything else is the SPA, with client-side routing fallback.
 	handle {

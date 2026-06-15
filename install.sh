@@ -198,11 +198,20 @@ EOF
 }
 ${CADDY_SITE} {
 	encode gzip
-	@panel path /api/* /sub/* /health
-	reverse_proxy @panel 127.0.0.1:8080
-	root * /var/www/vortexui
-	try_files {path} /index.html
-	file_server
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8080
+	}
+	handle /sub/* {
+		reverse_proxy 127.0.0.1:8080
+	}
+	handle /health {
+		reverse_proxy 127.0.0.1:8080
+	}
+	handle {
+		root * /var/www/vortexui
+		try_files {path} /index.html
+		file_server
+	}
 }
 EOF
   systemctl restart caddy
