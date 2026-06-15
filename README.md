@@ -15,6 +15,10 @@
   ![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FiPmartNetwork%2FVortexUI&countColor=%23263759)
 
   <br />
+
+  <strong>English</strong> · <a href="README.fa.md">فارسی</a>
+
+  <br />
   
   [Features](#-features) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 </div>
