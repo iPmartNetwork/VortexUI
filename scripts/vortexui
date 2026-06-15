@@ -33,7 +33,7 @@ env_set()  {
   if grep -qE "^$1=" "$ENV_FILE" 2>/dev/null; then sed -i "s|^$1=.*|$1=$2|" "$ENV_FILE"
   else echo "$1=$2" >> "$ENV_FILE"; fi
 }
-public_host() { curl -fsS https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1; }
+public_host() { curl -fsS4 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1; }
 
 # Rewrite the native Caddyfile from the current .env and reload.
 write_caddy_native() {
