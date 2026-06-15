@@ -207,6 +207,9 @@ ${CADDY_SITE} {
 EOF
   systemctl restart caddy
 
+  # The native binary reads its DB/JWT config from the environment, so load the
+  # panel env before creating the admin (otherwise config validation fails).
+  set -a; . /etc/vortexui/panel.env; set +a
   bootstrap_admin "/usr/local/bin/vortex-panel admin create"
   install -m 0755 scripts/vortexui /usr/local/bin/vortexui && ok "installed 'vortexui' command."
   warn "native mode: manage the panel with systemctl {start,stop,restart} vortexui-panel"
