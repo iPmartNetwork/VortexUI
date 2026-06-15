@@ -159,6 +159,27 @@ func (h *Handlers) RestartNodeCore(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"ok": true, "message": "core restarted"})
 }
 
+type updateGeoRequest struct {
+	GeoipURL   string `json:"geoip_url"`   // empty = Iran-rules default
+	GeositeURL string `json:"geosite_url"` // empty = Iran-rules default
+}
+
+// UpdateNodeGeo refreshes a node's geoip/geosite routing databases. With no body
+// it uses the Iran-focused defaults (geoip:ir / geosite:ir and friends).
+func (h *Handlers) UpdateNodeGeo(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	var req updateGeoRequest
+	_ = c.Bind(&req) // body is optional; empty falls back to defaults
+	geoip, geosite, err := h.Nodes.UpdateGeo(c.Request().Context(), id, req.GeoipURL, req.GeositeURL)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadGateway, "geo update failed: "+err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"ok": true, "geoip_bytes": geoip, "geosite_bytes": geosite})
+}
+
 // StopNodeCore stops a node's proxy engine.
 func (h *Handlers) StopNodeCore(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))

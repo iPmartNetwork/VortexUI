@@ -72,6 +72,7 @@ func NewRouter(d Deps) *echo.Echo {
 	nodes.GET("/:id/logs", d.Handlers.GetNodeLogs, RequirePermission(d.Auth, domain.PermNodeRead))
 	nodes.GET("/:id/status", d.Handlers.GetNodeStatus, RequirePermission(d.Auth, domain.PermNodeRead))
 	nodes.POST("/:id/restart", d.Handlers.RestartNodeCore, RequirePermission(d.Auth, domain.PermNodeWrite))
+	nodes.POST("/:id/geo-update", d.Handlers.UpdateNodeGeo, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.POST("/:id/stop", d.Handlers.StopNodeCore, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.POST("", d.Handlers.CreateNode, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.PUT("/:id", d.Handlers.UpdateNode, RequirePermission(d.Auth, domain.PermNodeWrite))

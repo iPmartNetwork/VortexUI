@@ -27,7 +27,16 @@ type NodeLogQuerier interface {
 type NodeCoreController interface {
 	RestartCore(ctx context.Context, nodeID uuid.UUID) error
 	StopCore(ctx context.Context, nodeID uuid.UUID) error
+	UpdateGeo(ctx context.Context, nodeID uuid.UUID, geoipURL, geositeURL string) (geoip, geosite int64, err error)
 }
+
+// Iran-focused geo routing databases (country + domain rules), used by default
+// when an admin refreshes a node's geo data. They add geoip:ir / geosite:ir and
+// related categories so routing can target Iranian IPs and domains.
+const (
+	DefaultGeoIPURL   = "https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geoip.dat"
+	DefaultGeoSiteURL = "https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geosite.dat"
+)
 
 // NodeService manages the node fleet's persistent records and keeps the hub's
 // live management in step with them.
@@ -81,6 +90,21 @@ func (s *NodeService) StopCore(ctx context.Context, id uuid.UUID) error {
 		return errors.New("core controller not configured")
 	}
 	return s.core.StopCore(ctx, id)
+}
+
+// UpdateGeo refreshes a node's geoip/geosite routing databases. Empty URLs fall
+// back to the Iran-focused defaults. Returns the bytes written for each file.
+func (s *NodeService) UpdateGeo(ctx context.Context, id uuid.UUID, geoipURL, geositeURL string) (geoip, geosite int64, err error) {
+	if s.core == nil {
+		return 0, 0, errors.New("core controller not configured")
+	}
+	if geoipURL == "" {
+		geoipURL = DefaultGeoIPURL
+	}
+	if geositeURL == "" {
+		geositeURL = DefaultGeoSiteURL
+	}
+	return s.core.UpdateGeo(ctx, id, geoipURL, geositeURL)
 }
 
 // CreateNodeInput describes a new node.

@@ -321,6 +321,14 @@ func main() {
 
 	// --- node logs ---
 	mux.HandleFunc("/api/nodes/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/geo-update") {
+			j(w, map[string]any{"ok": true, "geoip_bytes": 1_950_000, "geosite_bytes": 2_300_000})
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/restart") || strings.HasSuffix(r.URL.Path, "/stop") {
+			j(w, map[string]any{"ok": true})
+			return
+		}
 		j(w, map[string]any{"lines": []string{
 			"2026/06/14 12:00:01 [Info] Xray 1.8.24 started",
 			"2026/06/14 12:00:01 [Info] Reading config: /etc/vortex/core.json",

@@ -30,6 +30,7 @@ type NodeConn interface {
 	ConsumeTraffic(ctx context.Context, ingest func(domain.TrafficDelta)) error
 	OnlineStats(ctx context.Context) (map[string]int, error)
 	OnlineIPs(ctx context.Context, userID string) (map[string]int64, error)
+	UpdateGeo(ctx context.Context, geoipURL, geositeURL string) (geoip, geosite int64, err error)
 	Logs(ctx context.Context, limit int) ([]string, error)
 	RestartCore(ctx context.Context) error
 	StopCore(ctx context.Context) error
@@ -234,6 +235,19 @@ func (h *Hub) OnlineIPs(ctx context.Context, nodeID uuid.UUID, userID string) (m
 		return nil, err
 	}
 	return conn.OnlineIPs(ctx, userID)
+}
+
+// UpdateGeo asks one node to refresh its geoip/geosite routing databases.
+func (h *Hub) UpdateGeo(ctx context.Context, nodeID uuid.UUID, geoipURL, geositeURL string) (geoip, geosite int64, err error) {
+	mn, err := h.managed(nodeID)
+	if err != nil {
+		return 0, 0, err
+	}
+	conn, err := mn.connection()
+	if err != nil {
+		return 0, 0, err
+	}
+	return conn.UpdateGeo(ctx, geoipURL, geositeURL)
 }
 
 // Logs returns up to limit recent core log lines from one node.

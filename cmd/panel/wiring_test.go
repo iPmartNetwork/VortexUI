@@ -113,4 +113,7 @@ func (fakeLocalDriverWiring) OnlineStats(context.Context) (map[string]int, error
 func (fakeLocalDriverWiring) OnlineIPList(context.Context, string) (map[string]int64, error) {
 	return nil, nil
 }
+func (fakeLocalDriverWiring) UpdateGeoAssets(context.Context, string, string) (int64, int64, error) {
+	return 0, 0, nil
+}
 func (fakeLocalDriverWiring) Logs(context.Context, int) ([]string, error) { return nil, nil }

@@ -3,8 +3,11 @@ package xray
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -21,6 +24,7 @@ type Options struct {
 	ConfigPath    string        // where the rendered config is written
 	APIPort       int           // loopback port for Xray's gRPC API
 	StatsInterval time.Duration // how often to poll counters for deltas
+	AssetDir      string        // geoip.dat / geosite.dat location (XRAY_LOCATION_ASSET)
 	APIDialer     APIDialer     // injected for testing; nil → defaultDialer
 	Logger        *slog.Logger
 }
@@ -34,6 +38,13 @@ func (o *Options) withDefaults() {
 	}
 	if o.APIDialer == nil {
 		o.APIDialer = defaultDialer
+	}
+	if o.AssetDir == "" {
+		if env := os.Getenv("XRAY_LOCATION_ASSET"); env != "" {
+			o.AssetDir = env
+		} else {
+			o.AssetDir = "/usr/local/share/xray"
+		}
 	}
 	if o.Logger == nil {
 		o.Logger = slog.Default()
@@ -225,6 +236,64 @@ func (d *Driver) OnlineIPList(ctx context.Context, email string) (map[string]int
 		return nil, err
 	}
 	return api.OnlineIPs(ctx, email)
+}
+
+// UpdateGeoAssets downloads geoip.dat and geosite.dat into the asset directory
+// and restarts the core so the new routing data takes effect. Empty URLs skip
+// that file. Returns the byte size written for each. Writes are atomic (temp +
+// rename) so a failed download never corrupts the running asset.
+func (d *Driver) UpdateGeoAssets(ctx context.Context, geoipURL, geositeURL string) (geoip, geosite int64, err error) {
+	if err := os.MkdirAll(d.opts.AssetDir, 0o755); err != nil {
+		return 0, 0, fmt.Errorf("asset dir: %w", err)
+	}
+	if geoipURL != "" {
+		if geoip, err = downloadFile(ctx, geoipURL, filepath.Join(d.opts.AssetDir, "geoip.dat")); err != nil {
+			return 0, 0, fmt.Errorf("geoip: %w", err)
+		}
+	}
+	if geositeURL != "" {
+		if geosite, err = downloadFile(ctx, geositeURL, filepath.Join(d.opts.AssetDir, "geosite.dat")); err != nil {
+			return geoip, 0, fmt.Errorf("geosite: %w", err)
+		}
+	}
+	// Restart so xray reloads the dat files (they are read at startup).
+	if d.proc.Running() {
+		if err := d.proc.Restart(ctx); err != nil {
+			return geoip, geosite, fmt.Errorf("restart: %w", err)
+		}
+	}
+	return geoip, geosite, nil
+}
+
+// downloadFile fetches url into dst atomically, returning the byte count.
+func downloadFile(ctx context.Context, url, dst string) (int64, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("download %s: status %d", url, resp.StatusCode)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(dst), ".geo-*")
+	if err != nil {
+		return 0, err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	n, err := io.Copy(tmp, resp.Body)
+	tmp.Close()
+	if err != nil {
+		return 0, err
+	}
+	if err := os.Rename(tmpName, dst); err != nil {
+		return 0, err
+	}
+	return n, nil
 }
 
 // Logs returns the most recent core log lines captured by the supervisor.
