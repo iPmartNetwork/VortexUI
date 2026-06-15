@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/domain"
@@ -22,9 +24,17 @@ type NodeClient struct {
 	rpc    genv1.NodeServiceClient
 }
 
-// Dial opens an mTLS connection to a node agent.
+// Dial opens an mTLS connection to a node agent with keepalive enabled so
+// intermediate firewalls/NAT don't kill idle long-lived streams.
 func Dial(nodeID uuid.UUID, address string, creds credentials.TransportCredentials) (*NodeClient, error) {
-	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(address,
+		grpc.WithTransportCredentials(creds),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                20 * time.Second, // ping every 20s if idle
+			Timeout:             10 * time.Second, // wait 10s for pong
+			PermitWithoutStream: true,             // keep connection alive even without active streams
+		}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("dial node %s: %w", address, err)
 	}

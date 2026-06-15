@@ -63,7 +63,8 @@ func ServerCreds(f TLSFiles) (credentials.TransportCredentials, error) {
 }
 
 // ClientCreds builds transport credentials for the panel dialing a node. serverName
-// must match the node certificate's SAN.
+// is used for TLS verification; if empty, hostname verification is skipped but the
+// peer certificate must still be signed by the trusted CA.
 func ClientCreds(f TLSFiles, serverName string) (credentials.TransportCredentials, error) {
 	if err := f.validate(); err != nil {
 		return nil, err
@@ -76,10 +77,28 @@ func ClientCreds(f TLSFiles, serverName string) (credentials.TransportCredential
 	if err != nil {
 		return nil, err
 	}
-	return credentials.NewTLS(&tls.Config{
+	tlsCfg := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      pool,
-		ServerName:   serverName,
 		MinVersion:   tls.VersionTLS13,
-	}), nil
+		// When nodes are accessed by IP, the node cert's SAN may not include that
+		// IP (it was generated with the panel's IP/localhost). We use a custom
+		// VerifyConnection to enforce CA trust without hostname matching.
+		InsecureSkipVerify: true, //nolint:gosec // CA validation done in VerifyConnection
+	}
+	tlsCfg.VerifyConnection = func(cs tls.ConnectionState) error {
+		if len(cs.PeerCertificates) == 0 {
+			return errors.New("node presented no certificate")
+		}
+		opts := x509.VerifyOptions{
+			Roots:         pool,
+			Intermediates: x509.NewCertPool(),
+		}
+		for _, c := range cs.PeerCertificates[1:] {
+			opts.Intermediates.AddCert(c)
+		}
+		_, err := cs.PeerCertificates[0].Verify(opts)
+		return err
+	}
+	return credentials.NewTLS(tlsCfg), nil
 }

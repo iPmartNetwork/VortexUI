@@ -120,6 +120,9 @@ access_url() {
 # ---------------------------------------------------------------- Docker method
 deploy_docker() {
   ensure_docker; ensure_git; checkout; ask_access; write_env; gen_certs docker
+  # Host advertised to clients in subscriptions (domain if set, else public IP).
+  case "$SITE_ADDRESS" in :*|"") NODE_HOST="$PUBLIC_HOST" ;; *) NODE_HOST="$SITE_ADDRESS" ;; esac
+  sed -i '/^LOCAL_NODE_HOST=/d' deploy/.env; echo "LOCAL_NODE_HOST=$NODE_HOST" >> deploy/.env
   COMPOSE="docker compose --env-file deploy/.env -f deploy/compose.yml"
   info "building and starting the stack…"
   $COMPOSE up -d --build

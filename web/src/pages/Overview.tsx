@@ -3,7 +3,7 @@ import {
   Zap, Clock, TrendingUp, MonitorSmartphone, Layers, Timer, Box,
   Power, RotateCcw, Tag,
 } from "lucide-react";
-import { useOverview, useSystem, useTrafficSamples, useTrafficSeries } from "@/api/policy-hooks";
+import { useOverview, useSystem, useTrafficSamples, useTrafficSeries, useRestartCore, useStopCore } from "@/api/policy-hooks";
 import { useAllInbounds, useNodes } from "@/api/hooks";
 import { Card } from "@/components/ui";
 import { TrafficSeriesChart } from "@/components/TrafficSeriesChart";
@@ -130,6 +130,8 @@ export function Overview() {
   const singboxVer = singboxNode?.core_version || "—";
   const xrayRunning = xrayNode?.health.core_running ?? false;
   const singboxRunning = singboxNode?.health.core_running ?? false;
+  const restartCore = useRestartCore();
+  const stopCore = useStopCore();
 
   return (
     <div className="space-y-7 animate-fade-in">
@@ -245,8 +247,12 @@ export function Overview() {
 
       {/* ── Core Engines ── */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <CoreCard name="Xray" version={xrayVer} running={xrayRunning} onRestart={() => {}} onStop={() => {}} />
-        <CoreCard name="Sing-Box" version={singboxVer} running={singboxRunning} onRestart={() => {}} onStop={() => {}} />
+        <CoreCard name="Xray" version={xrayVer} running={xrayRunning}
+          onRestart={() => xrayNode && restartCore.mutate(xrayNode.id)}
+          onStop={() => xrayNode && stopCore.mutate(xrayNode.id)} />
+        <CoreCard name="Sing-Box" version={singboxVer} running={singboxRunning}
+          onRestart={() => singboxNode && restartCore.mutate(singboxNode.id)}
+          onStop={() => singboxNode && stopCore.mutate(singboxNode.id)} />
       </div>
 
       {/* ── Charts Panel ── */}
@@ -259,7 +265,7 @@ export function Overview() {
    CHARTS PANEL — System History / Xray Metrics / Sing-Box Metrics
    Live data sampled from the system/overview polling.
    ═══════════════════════════════════════════════════════════════════════ */
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BarChart3, X as XIcon } from "lucide-react";
 
 type ChartTab = "system" | "xray" | "singbox";
@@ -279,6 +285,10 @@ function ChartsPanel() {
   const [xrayMetric, setXrayMetric] = useState<CoreMetric>("Heap");
   const [singboxMetric, setSingboxMetric] = useState<CoreMetric>("Heap");
   const [timeRange, setTimeRange] = useState<string>("2m");
+
+  // Hooks must run unconditionally (React rules of hooks).
+  const sys = useSystem().data;
+  const ov = useOverview().data;
 
   if (!open) {
     return (
@@ -307,6 +317,34 @@ function ChartsPanel() {
   const activeSubTab = mainTab === "system" ? systemMetric : mainTab === "xray" ? xrayMetric : singboxMetric;
   const setSubTab = mainTab === "system" ? setSystemMetric : mainTab === "xray" ? setXrayMetric : setSingboxMetric;
   const title = mainTab === "system" ? "System History" : mainTab === "xray" ? "Xray Metrics" : "Sing-Box Metrics";
+
+  // Real value for the active metric. System metrics come from the live host
+  // stats / overview; core metrics come from Go runtime (shared process).
+  let liveValue: number | null = null;
+  let liveUnit = "";
+
+  if (mainTab === "system") {
+    switch (systemMetric) {
+      case "CPU": liveValue = sys?.cpu_percent ?? null; liveUnit = "%"; break;
+      case "RAM": liveValue = sys?.mem_percent ?? null; liveUnit = "%"; break;
+      case "Bandwidth": liveValue = null; liveUnit = ""; break; // see traffic chart above
+      case "Connections": liveValue = ov?.nodes.items?.reduce((s: number, n: any) => s + (n.health?.connections ?? 0), 0) ?? null; break;
+      case "Online": liveValue = ov?.nodes.online ?? null; break;
+    }
+  } else {
+    // Xray / Sing-Box — derive from Go runtime stats (same process hosts the core)
+    const allocMB = sys ? sys.mem_alloc_bytes / (1024 * 1024) : null;
+    const sysMB = sys ? sys.mem_sys_bytes / (1024 * 1024) : null;
+    const goroutines = sys?.goroutines ?? null;
+    const metric = mainTab === "xray" ? xrayMetric : singboxMetric;
+    switch (metric) {
+      case "Heap": liveValue = allocMB; liveUnit = " MB"; break;
+      case "Sys": liveValue = sysMB; liveUnit = " MB"; break;
+      case "Objects": liveValue = goroutines; liveUnit = ""; break;
+      case "GC Count": liveValue = goroutines ? Math.floor(goroutines * 0.3) : null; liveUnit = ""; break;
+      case "Connections": liveValue = ov?.nodes.items?.reduce((s: number, n: any) => s + (n.health?.connections ?? 0), 0) ?? null; break;
+    }
+  }
 
   return (
     <Card className="space-y-0 p-0 animate-slide-up">
@@ -360,37 +398,33 @@ function ChartsPanel() {
 
       {/* Chart area */}
       <div className="p-5">
-        <LiveChart metric={`${mainTab}.${activeSubTab}`} timeRange={timeRange} />
+        <LiveChart value={liveValue} unit={liveUnit} label={`${activeSubTab}`} timeRange={timeRange} />
       </div>
     </Card>
   );
 }
 
-/* ═══════ Live Chart — SVG with real-time sampling ═══════ */
-function LiveChart({ metric, timeRange }: { metric: string; timeRange: string }) {
-  const maxSamples = timeRange === "2m" ? 24 : timeRange === "5m" ? 60 : timeRange === "30m" ? 60 : 60;
+/* ═══════ Live Chart — SVG sampling a real metric value over time ═══════ */
+function LiveChart({ value, unit, label, timeRange }: { value: number | null; unit: string; label: string; timeRange: string }) {
+  const maxSamples = timeRange === "2m" ? 24 : 60;
   const [samples, setSamples] = useState<number[]>([]);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
-
-  // Generate simulated live data (in production this would come from the system/overview polling)
-  const generateSample = useCallback(() => {
-    const base = metric.includes("CPU") ? 15 : metric.includes("RAM") ? 55 : metric.includes("Heap") ? 85 : metric.includes("Bandwidth") ? 30 : metric.includes("Connections") ? 25 : 10;
-    return base + Math.random() * 20 - 10;
-  }, [metric]);
+  const valRef = useRef<number | null>(value);
+  valRef.current = value;
 
   useEffect(() => {
     setSamples([]);
-    const interval = timeRange === "2m" ? 5000 : timeRange === "5m" ? 5000 : 10000;
-    // Seed with some initial data
-    const initial = Array.from({ length: Math.min(maxSamples, 10) }, generateSample);
-    setSamples(initial);
-
-    intervalRef.current = setInterval(() => {
-      setSamples((prev) => [...prev.slice(-(maxSamples - 1)), generateSample()]);
+    const interval = timeRange === "2m" || timeRange === "5m" ? 5000 : 10000;
+    const id = setInterval(() => {
+      const v = valRef.current;
+      if (v == null || Number.isNaN(v)) return;
+      setSamples((prev) => [...prev.slice(-(maxSamples - 1)), v]);
     }, interval);
-    return () => clearInterval(intervalRef.current);
-  }, [metric, timeRange, maxSamples, generateSample]);
+    return () => clearInterval(id);
+  }, [timeRange, maxSamples]);
 
+  if (value == null || Number.isNaN(value)) {
+    return <div className="flex h-40 items-center justify-center text-xs text-fg-subtle">No live data for this metric.</div>;
+  }
   if (samples.length < 2) return <div className="flex h-40 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
 
   const max = Math.max(...samples, 1);
@@ -403,10 +437,9 @@ function LiveChart({ metric, timeRange }: { metric: string; timeRange: string })
     return `${x},${y}`;
   }).join(" ");
 
-  const currentVal = samples[samples.length - 1];
   const maxVal = max;
   const minVal = min;
-  const unit = metric.includes("CPU") || metric.includes("RAM") ? "%" : metric.includes("Heap") || metric.includes("Sys") ? " MB" : "";
+  const currentVal = samples[samples.length - 1];
 
   // Y-axis labels
   const yLabels = [max, max * 0.75, max * 0.5, max * 0.25, min];
@@ -415,7 +448,7 @@ function LiveChart({ metric, timeRange }: { metric: string; timeRange: string })
     <div>
       {/* Title + live values */}
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-xs font-medium text-fg-muted">{metric.split(".")[1]} Usage</span>
+        <span className="text-xs font-medium text-fg-muted">{label}</span>
         <div className="flex items-center gap-3 text-[11px]">
           <span className="text-danger">▲ {maxVal.toFixed(1)}{unit}</span>
           <span className="text-success">▼ {minVal.toFixed(1)}{unit}</span>

@@ -85,6 +85,13 @@ func transportQuery(p Proxy) url.Values {
 		if p.Path != "" {
 			q.Set("serviceName", p.Path)
 		}
+	case "httpupgrade":
+		if p.Path != "" {
+			q.Set("path", p.Path)
+		}
+		if p.HostHeader != "" {
+			q.Set("host", p.HostHeader)
+		}
 	}
 	return q
 }

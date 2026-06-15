@@ -29,6 +29,7 @@ CREATE TABLE nodes (
     core          TEXT NOT NULL DEFAULT 'xray',
     status        TEXT NOT NULL DEFAULT 'disconnected',
     usage_ratio   DOUBLE PRECISION NOT NULL DEFAULT 1,
+    endpoint      TEXT NOT NULL DEFAULT '',
     last_seen     TIMESTAMPTZ,
     cpu_percent   DOUBLE PRECISION NOT NULL DEFAULT 0,
     mem_percent   DOUBLE PRECISION NOT NULL DEFAULT 0,

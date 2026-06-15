@@ -1,8 +1,14 @@
-# Full-stack VortexUI deployment: panel + Postgres/TimescaleDB + Redis + one node.
-# Generate mTLS certs first (make certs → deploy/certs), then:
+# Single-server VortexUI (Docker): an all-in-one panel that runs xray + sing-box
+# as an in-process local node, fronted by Caddy, with Postgres/TimescaleDB +
+# Redis. The panel and web use host networking so the proxy inbound ports (chosen
+# per inbound) bind directly on the host — the same model as a native install.
+#
 #   docker compose -f deploy/compose.yml up --build -d
 #   docker compose -f deploy/compose.yml exec panel /usr/local/bin/panel admin create \
 #       --username root --password 'change-me' --sudo
+#
+# For a multi-node fleet, run the lean `panel` target instead and add nodes in
+# the UI (each node a separate `vortex-node` install).
 services:
   db:
     image: timescale/timescaledb:latest-pg16
@@ -10,6 +16,8 @@ services:
       POSTGRES_USER: vortex
       POSTGRES_PASSWORD: ${DB_PASSWORD:-vortex}
       POSTGRES_DB: vortex
+    ports:
+      - "127.0.0.1:5432:5432" # reachable by the host-networked panel
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -17,77 +25,67 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
 
   panel:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-      target: panel
+      target: panel-aio
+    network_mode: host # bind :8080 + the proxy inbound ports directly on the host
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
     environment:
       VORTEX_HTTP_ADDR: ":8080"
-      VORTEX_DATABASE_URL: "postgres://vortex:${DB_PASSWORD:-vortex}@db:5432/vortex?sslmode=disable"
-      VORTEX_REDIS_URL: "redis://redis:6379/0"
+      VORTEX_DATABASE_URL: "postgres://vortex:${DB_PASSWORD:-vortex}@127.0.0.1:5432/vortex?sslmode=disable"
+      VORTEX_REDIS_URL: "redis://127.0.0.1:6379/0"
       VORTEX_JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (openssl rand -hex 32)}
       VORTEX_TLS_CERT: /certs/panel.crt
       VORTEX_TLS_KEY: /certs/panel.key
       VORTEX_TLS_CA: /certs/ca.crt
+      # In-process local node (single-server): the panel runs the core itself.
+      VORTEX_LOCAL_NODE: "true"
+      VORTEX_LOCAL_NODE_NAME: local
+      VORTEX_LOCAL_NODE_HOST: ${LOCAL_NODE_HOST:-127.0.0.1}
+      VORTEX_CORE: ${CORE:-xray}
+      VORTEX_CORE_BIN: /usr/local/bin/${CORE:-xray}
+      VORTEX_CORE_CONFIG: /etc/vortex/local-core.json
+      VORTEX_CORE_API_PORT: "10085"
     volumes:
       - ./certs:/certs:ro
-    # The panel is reached through the web reverse proxy; expose it directly only
-    # if you want to hit the raw API. Uncomment to publish on the host:
-    # ports:
-    #   - "8080:8080"
-    expose:
-      - "8080"
     restart: unless-stopped
 
-  # Web UI: serves the SPA, reverse-proxies /api + /sub to the panel, and
-  # terminates TLS. With SITE_ADDRESS set to a domain, Caddy auto-provisions a
-  # Let's Encrypt certificate; otherwise it serves plain HTTP on WEB_PORT.
+  # Web UI: serves the SPA, reverse-proxies /api + /sub to the panel on the host,
+  # and terminates TLS. With SITE_ADDRESS a domain, Caddy auto-provisions a
+  # Let's Encrypt certificate.
   web:
     build:
       context: ..
       dockerfile: deploy/web.Dockerfile
+    network_mode: host
     depends_on:
       - panel
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
       ACME_EMAIL: ${ACME_EMAIL:-}
-    ports:
-      - "${WEB_PORT:-80}:80"
-      - "443:443"
+      PANEL_UPSTREAM: 127.0.0.1:8080
     volumes:
       - caddy-data:/data
       - caddy-config:/config
     restart: unless-stopped
-
-  node:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      target: node
-    environment:
-      VORTEX_NODE_LISTEN: ":50051"
-      VORTEX_CORE: xray
-      VORTEX_TLS_CERT: /certs/node.crt
-      VORTEX_TLS_KEY: /certs/node.key
-      VORTEX_TLS_CA: /certs/ca.crt
-    volumes:
-      - ./certs:/certs:ro
-    ports:
-      - "50051:50051"
 
 volumes:
   db-data:

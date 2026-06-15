@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -22,6 +23,13 @@ const deviceWindow = 24 * time.Hour
 // User-Agent, overridable with ?format=clash|singbox|base64.
 func (h *Handlers) Subscribe(c echo.Context) error {
 	token := c.Param("token")
+
+	// If a regular browser opens the link (not a proxy client) and no explicit
+	// format is requested, show the pretty info page instead of raw configs.
+	if c.QueryParam("format") == "" && isBrowser(c.Request().UserAgent()) {
+		return h.SubscriptionInfoPage(c)
+	}
+
 	res, err := h.Sub.Build(c.Request().Context(), token)
 	if errors.Is(err, domain.ErrNotFound) || res == nil {
 		return echo.NewHTTPError(http.StatusNotFound, "not found")
@@ -52,6 +60,31 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 	c.Response().Header().Set("Profile-Title", res.User.Username)
 	c.Response().Header().Set("Profile-Update-Interval", "12")
 	return c.Blob(http.StatusOK, format.ContentType(), body)
+}
+
+// isBrowser returns true if the UA looks like a standard web browser (not a
+// proxy client like clash, sing-box, v2ray, etc.).
+func isBrowser(ua string) bool {
+	// Proxy clients typically identify themselves clearly.
+	proxyClients := []string{
+		"clash", "mihomo", "sing-box", "singbox", "v2ray", "xray",
+		"quantumult", "surge", "shadowrocket", "hiddify", "nekobox",
+		"nekoray", "v2rayng", "v2rayn", "streisand", "karing",
+	}
+	lower := strings.ToLower(ua)
+	for _, client := range proxyClients {
+		if strings.Contains(lower, client) {
+			return false
+		}
+	}
+	// Common browser signatures
+	browsers := []string{"mozilla", "chrome", "safari", "firefox", "edge", "opera"}
+	for _, b := range browsers {
+		if strings.Contains(lower, b) {
+			return true
+		}
+	}
+	return false
 }
 
 // enforceDevice applies both device controls: an explicit HWID allowlist (if the

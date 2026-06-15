@@ -10,12 +10,14 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [core, setCore] = useState("xray");
+  const [endpoint, setEndpoint] = useState("");
   const [error, setError] = useState("");
 
   function close() {
     setName("");
     setAddress("");
     setCore("xray");
+    setEndpoint("");
     setError("");
     onClose();
   }
@@ -24,7 +26,7 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
     e.preventDefault();
     setError("");
     try {
-      await create.mutateAsync({ name, address, core });
+      await create.mutateAsync({ name, address, core, endpoint: endpoint || undefined });
       toast.success(`Node ${name} added`);
       close();
     } catch {
@@ -46,6 +48,12 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
           <option value="xray">Xray-core</option>
           <option value="singbox">sing-box</option>
         </Select>
+        <Input
+          placeholder="Endpoint (optional — tunnel/CDN IP or domain)"
+          value={endpoint}
+          onChange={(e) => setEndpoint(e.target.value)}
+        />
+        <p className="text-[10px] text-fg-subtle">If set, subscription links use this address instead of the real server IP. Use for tunneled/relay/CDN setups.</p>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={close}>

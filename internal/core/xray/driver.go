@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -309,6 +311,11 @@ func (d *Driver) Logs(_ context.Context, limit int) ([]string, error) {
 }
 
 func (d *Driver) Version(_ context.Context) (string, error) {
-	// TODO: shell out to `xray version` once and cache; placeholder for now.
-	return "xray-core", nil
+	out, err := exec.Command(d.opts.BinPath, "version").Output()
+	if err != nil {
+		return "xray-core", nil
+	}
+	// First line: "Xray 1.8.24 (Xray, Penetrates Everything.) ..."
+	line := strings.SplitN(string(out), "\n", 2)[0]
+	return strings.TrimSpace(line), nil
 }

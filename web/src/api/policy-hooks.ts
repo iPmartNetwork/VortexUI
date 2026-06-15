@@ -38,6 +38,9 @@ export function useSystem() {
       mem_alloc_bytes: number;
       mem_sys_bytes: number;
       hostname: string;
+      cpu_percent: number;
+      mem_percent: number;
+      disk_percent: number;
     }>("/api/system"),
     refetchInterval: 5000,
   });

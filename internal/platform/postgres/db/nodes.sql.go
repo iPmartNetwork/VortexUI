@@ -13,8 +13,8 @@ import (
 )
 
 const createNode = `-- name: CreateNode :exec
-INSERT INTO nodes (id, name, address, core, status, usage_ratio, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO nodes (id, name, address, core, status, usage_ratio, endpoint, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type CreateNodeParams struct {
@@ -24,6 +24,7 @@ type CreateNodeParams struct {
 	Core       string
 	Status     string
 	UsageRatio float64
+	Endpoint   string
 	CreatedAt  pgtype.Timestamptz
 }
 
@@ -35,6 +36,7 @@ func (q *Queries) CreateNode(ctx context.Context, arg CreateNodeParams) error {
 		arg.Core,
 		arg.Status,
 		arg.UsageRatio,
+		arg.Endpoint,
 		arg.CreatedAt,
 	)
 	return err
@@ -50,7 +52,7 @@ func (q *Queries) DeleteNode(ctx context.Context, id uuid.UUID) error {
 }
 
 const getNodeByID = `-- name: GetNodeByID :one
-SELECT id, name, address, core, status, usage_ratio, last_seen, cpu_percent, mem_percent, disk_percent, core_running, connections, core_version, agent_version, created_at FROM nodes WHERE id = $1
+SELECT id, name, address, core, status, usage_ratio, endpoint, last_seen, cpu_percent, mem_percent, disk_percent, core_running, connections, core_version, agent_version, created_at FROM nodes WHERE id = $1
 `
 
 func (q *Queries) GetNodeByID(ctx context.Context, id uuid.UUID) (Node, error) {
@@ -63,6 +65,7 @@ func (q *Queries) GetNodeByID(ctx context.Context, id uuid.UUID) (Node, error) {
 		&i.Core,
 		&i.Status,
 		&i.UsageRatio,
+		&i.Endpoint,
 		&i.LastSeen,
 		&i.CpuPercent,
 		&i.MemPercent,
@@ -77,7 +80,7 @@ func (q *Queries) GetNodeByID(ctx context.Context, id uuid.UUID) (Node, error) {
 }
 
 const listNodes = `-- name: ListNodes :many
-SELECT id, name, address, core, status, usage_ratio, last_seen, cpu_percent, mem_percent, disk_percent, core_running, connections, core_version, agent_version, created_at FROM nodes ORDER BY created_at
+SELECT id, name, address, core, status, usage_ratio, endpoint, last_seen, cpu_percent, mem_percent, disk_percent, core_running, connections, core_version, agent_version, created_at FROM nodes ORDER BY created_at
 `
 
 func (q *Queries) ListNodes(ctx context.Context) ([]Node, error) {
@@ -96,6 +99,7 @@ func (q *Queries) ListNodes(ctx context.Context) ([]Node, error) {
 			&i.Core,
 			&i.Status,
 			&i.UsageRatio,
+			&i.Endpoint,
 			&i.LastSeen,
 			&i.CpuPercent,
 			&i.MemPercent,
@@ -117,7 +121,7 @@ func (q *Queries) ListNodes(ctx context.Context) ([]Node, error) {
 }
 
 const updateNode = `-- name: UpdateNode :exec
-UPDATE nodes SET name = $2, address = $3, core = $4, status = $5, usage_ratio = $6
+UPDATE nodes SET name = $2, address = $3, core = $4, status = $5, usage_ratio = $6, endpoint = $7
 WHERE id = $1
 `
 
@@ -128,6 +132,7 @@ type UpdateNodeParams struct {
 	Core       string
 	Status     string
 	UsageRatio float64
+	Endpoint   string
 }
 
 func (q *Queries) UpdateNode(ctx context.Context, arg UpdateNodeParams) error {
@@ -138,6 +143,7 @@ func (q *Queries) UpdateNode(ctx context.Context, arg UpdateNodeParams) error {
 		arg.Core,
 		arg.Status,
 		arg.UsageRatio,
+		arg.Endpoint,
 	)
 	return err
 }

@@ -11,8 +11,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/vortexui/vortexui/internal/config"
 	"github.com/vortexui/vortexui/internal/core"
@@ -72,7 +74,17 @@ func run(ctx context.Context, log *slog.Logger) error {
 	errCh := make(chan error, 1)
 	go func() {
 		log.Info("node agent listening (mTLS)", "addr", cfg.ListenAddr, "core", "xray")
-		errCh <- srv.Serve(lis, grpc.Creds(creds))
+		errCh <- srv.Serve(lis,
+			grpc.Creds(creds),
+			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+				MinTime:             10 * time.Second, // allow client pings every 10s
+				PermitWithoutStream: true,
+			}),
+			grpc.KeepaliveParams(keepalive.ServerParameters{
+				Time:    30 * time.Second, // server pings client every 30s
+				Timeout: 10 * time.Second,
+			}),
+		)
 	}()
 
 	select {

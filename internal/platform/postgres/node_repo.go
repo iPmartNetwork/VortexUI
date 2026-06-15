@@ -23,6 +23,7 @@ func (r *NodeRepo) Create(ctx context.Context, n *domain.Node) error {
 		Core:       string(n.Core),
 		Status:     string(n.Status),
 		UsageRatio: n.UsageRatio,
+		Endpoint:   n.Endpoint,
 		CreatedAt:  timeToTS(n.CreatedAt),
 	})
 }
@@ -43,6 +44,7 @@ func (r *NodeRepo) Update(ctx context.Context, n *domain.Node) error {
 		Core:       string(n.Core),
 		Status:     string(n.Status),
 		UsageRatio: n.UsageRatio,
+		Endpoint:   n.Endpoint,
 	})
 }
 
@@ -81,6 +83,7 @@ func nodeToDomain(n db.Node) *domain.Node {
 		Core:       domain.CoreType(n.Core),
 		Status:     domain.NodeStatus(n.Status),
 		UsageRatio: n.UsageRatio,
+		Endpoint:   n.Endpoint,
 		LastSeen:   tsToPtr(n.LastSeen),
 		Health: domain.NodeHealth{
 			CPUPercent:  n.CpuPercent,
