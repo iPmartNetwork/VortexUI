@@ -50,6 +50,11 @@ type CoreDriver interface {
 	// detect account sharing. Engines that cannot report this return an empty map.
 	OnlineIPList(ctx context.Context, email string) (map[string]int64, error)
 
+	// UpdateGeoAssets downloads geoip/geosite routing databases into the engine's
+	// asset directory and reloads so they take effect. Empty URLs skip that file.
+	// Returns the bytes written for each.
+	UpdateGeoAssets(ctx context.Context, geoipURL, geositeURL string) (geoip, geosite int64, err error)
+
 	// Logs returns up to limit of the most recent core log lines (oldest first);
 	// limit <= 0 returns all retained lines.
 	Logs(ctx context.Context, limit int) ([]string, error)

@@ -176,6 +176,15 @@ func (s *NodeServer) OnlineIPs(ctx context.Context, req *genv1.OnlineIPsRequest)
 	return &genv1.OnlineIPsResponse{Ips: ips}, nil
 }
 
+// UpdateGeo downloads geo routing databases on this node and reloads the core.
+func (s *NodeServer) UpdateGeo(ctx context.Context, req *genv1.UpdateGeoRequest) (*genv1.UpdateGeoResponse, error) {
+	geoip, geosite, err := s.driver.UpdateGeoAssets(ctx, req.GetGeoipUrl(), req.GetGeositeUrl())
+	if err != nil {
+		return nil, err
+	}
+	return &genv1.UpdateGeoResponse{GeoipBytes: geoip, GeositeBytes: geosite}, nil
+}
+
 // NodeLogs returns the agent's most recent captured core log lines.
 func (s *NodeServer) NodeLogs(ctx context.Context, req *genv1.NodeLogsRequest) (*genv1.NodeLogsResponse, error) {
 	lines, err := s.driver.Logs(ctx, int(req.GetLimit()))

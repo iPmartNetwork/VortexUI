@@ -111,6 +111,15 @@ func (c *NodeClient) OnlineIPs(ctx context.Context, userID string) (map[string]i
 	return r.GetIps(), nil
 }
 
+// UpdateGeo tells the node to download geo routing databases and reload.
+func (c *NodeClient) UpdateGeo(ctx context.Context, geoipURL, geositeURL string) (geoip, geosite int64, err error) {
+	r, err := c.rpc.UpdateGeo(ctx, &genv1.UpdateGeoRequest{GeoipUrl: geoipURL, GeositeUrl: geositeURL})
+	if err != nil {
+		return 0, 0, err
+	}
+	return r.GetGeoipBytes(), r.GetGeositeBytes(), nil
+}
+
 // Logs fetches up to limit recent core log lines from the node.
 func (c *NodeClient) Logs(ctx context.Context, limit int) ([]string, error) {
 	r, err := c.rpc.NodeLogs(ctx, &genv1.NodeLogsRequest{Limit: uint32(limit)})

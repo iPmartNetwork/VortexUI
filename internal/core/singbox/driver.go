@@ -2,6 +2,7 @@ package singbox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -229,6 +230,12 @@ func (d *Driver) OnlineStats(context.Context) (map[string]int, error) {
 // OnlineIPList is likewise unsupported by sing-box; reports an empty set.
 func (d *Driver) OnlineIPList(context.Context, string) (map[string]int64, error) {
 	return map[string]int64{}, nil
+}
+
+// UpdateGeoAssets is not wired for sing-box (it uses a different geo database
+// format and rule-set mechanism); callers get a clear error.
+func (d *Driver) UpdateGeoAssets(context.Context, string, string) (int64, int64, error) {
+	return 0, 0, errors.New("geo asset update is only supported on xray nodes")
 }
 
 // Logs returns the most recent core log lines captured by the supervisor.

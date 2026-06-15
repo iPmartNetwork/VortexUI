@@ -82,6 +82,11 @@ func (c *LocalConn) OnlineIPs(ctx context.Context, userID string) (map[string]in
 	return c.driver.OnlineIPList(ctx, userID)
 }
 
+// UpdateGeo refreshes the local core's geo routing databases.
+func (c *LocalConn) UpdateGeo(ctx context.Context, geoipURL, geositeURL string) (int64, int64, error) {
+	return c.driver.UpdateGeoAssets(ctx, geoipURL, geositeURL)
+}
+
 // Logs returns recent log lines from the local core.
 func (c *LocalConn) Logs(ctx context.Context, limit int) ([]string, error) {
 	return c.driver.Logs(ctx, limit)

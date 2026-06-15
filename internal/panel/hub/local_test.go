@@ -62,6 +62,9 @@ func (f *fakeLocalDriver) OnlineStats(context.Context) (map[string]int, error) {
 func (f *fakeLocalDriver) OnlineIPList(context.Context, string) (map[string]int64, error) {
 	return nil, nil
 }
+func (f *fakeLocalDriver) UpdateGeoAssets(context.Context, string, string) (int64, int64, error) {
+	return 0, 0, nil
+}
 func (f *fakeLocalDriver) Logs(context.Context, int) ([]string, error) { return f.logs, nil }
 
 func TestLocalConnDelegatesToDriver(t *testing.T) {

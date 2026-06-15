@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Cpu, Globe, HardDrive, MemoryStick, Server, Signal } from "lucide-react";
 import { useDeleteNode, useNodes } from "@/api/hooks";
-import { useRestartCore, useStopCore } from "@/api/policy-hooks";
+import { useRestartCore, useStopCore, useUpdateGeo } from "@/api/policy-hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button, Card, PageHeader } from "@/components/ui";
 import { CreateNodeModal } from "@/components/CreateNodeModal";
@@ -46,7 +46,7 @@ function timeAgoShort(iso: string | null): string {
 
 /* ─── Node Card (rich + actions) ─── */
 function NodeCard({
-  n, onInbounds, onLogs, onEdit, onDelete, onRestart, onStop,
+  n, onInbounds, onLogs, onEdit, onDelete, onRestart, onStop, onUpdateGeo,
 }: {
   n: Node;
   onInbounds: () => void;
@@ -55,6 +55,7 @@ function NodeCard({
   onDelete: () => void;
   onRestart: () => void;
   onStop: () => void;
+  onUpdateGeo: () => void;
 }) {
   const online = n.health.core_running;
   return (
@@ -114,6 +115,7 @@ function NodeCard({
         <Button variant="ghost" size="sm" onClick={onLogs}>Logs</Button>
         <Button variant="ghost" size="sm" onClick={onRestart}>Restart</Button>
         <Button variant="ghost" size="sm" className="text-warning" onClick={onStop}>Stop</Button>
+        <Button variant="ghost" size="sm" onClick={onUpdateGeo} title="Refresh Iran geoip/geosite routing data">Update Geo</Button>
         <div className="ms-auto flex gap-1">
           <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
           <Button variant="ghost" size="sm" className="text-danger" onClick={onDelete}>Delete</Button>
@@ -129,6 +131,7 @@ export function Nodes() {
   const del = useDeleteNode();
   const restart = useRestartCore();
   const stop = useStopCore();
+  const updateGeo = useUpdateGeo();
   const confirm = useConfirm();
   const toast = useToast();
   const { t } = useI18n();
@@ -145,6 +148,15 @@ export function Nodes() {
   async function doStop(n: Node) {
     if (await confirm({ title: `Stop core on ${n.name}?`, message: "The proxy engine will shut down. Users on this node will disconnect.", confirmLabel: "Stop", destructive: true }))
       stop.mutateAsync(n.id).then(() => toast.success("Core stopped")).catch(() => toast.error("Stop failed"));
+  }
+
+  async function doUpdateGeo(n: Node) {
+    if (await confirm({ title: `Update geo data on ${n.name}?`, message: "Downloads the latest Iran geoip/geosite databases and restarts the core (brief reconnect).", confirmLabel: "Update" })) {
+      toast.info("Updating geo data…");
+      updateGeo.mutateAsync(n.id)
+        .then((r) => toast.success(`Geo updated (${Math.round((r.geoip_bytes + r.geosite_bytes) / 1024)} KB)`))
+        .catch(() => toast.error("Geo update failed"));
+    }
   }
 
   return (
@@ -171,6 +183,7 @@ export function Nodes() {
             onDelete={() => remove(n)}
             onRestart={() => restart.mutateAsync(n.id).then(() => toast.success("Core restarted")).catch(() => toast.error("Restart failed"))}
             onStop={() => doStop(n)}
+            onUpdateGeo={() => doUpdateGeo(n)}
           />
         ))}
       </div>

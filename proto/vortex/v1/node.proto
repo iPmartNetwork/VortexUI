@@ -45,6 +45,11 @@ service NodeService {
   // (keyed by user stats email == UUID), with each IP's last-seen unix time.
   // Used to detect account sharing. Empty when the engine cannot report it.
   rpc OnlineIPs(OnlineIPsRequest) returns (OnlineIPsResponse);
+
+  // UpdateGeo downloads geoip/geosite routing databases into the engine's asset
+  // directory and reloads. Used to refresh country/domain routing data (e.g.
+  // Iran rules) without a full redeploy.
+  rpc UpdateGeo(UpdateGeoRequest) returns (UpdateGeoResponse);
 }
 
 // ----- shared value types -----
@@ -203,6 +208,16 @@ message OnlineStatsResponse {
 
 message OnlineIPsRequest {
   string user_id = 1; // user stats email == UUID
+}
+
+message UpdateGeoRequest {
+  string geoip_url = 1;   // empty = skip geoip.dat
+  string geosite_url = 2; // empty = skip geosite.dat
+}
+
+message UpdateGeoResponse {
+  int64 geoip_bytes = 1;
+  int64 geosite_bytes = 2;
 }
 
 // OnlineIPsResponse maps each currently-online source IP to its last-seen unix

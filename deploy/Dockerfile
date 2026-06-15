@@ -40,10 +40,13 @@ FROM alpine:3.20 AS node
 RUN apk add --no-cache ca-certificates && adduser -D -u 10001 vortex
 COPY --from=builder /out/node /usr/local/bin/node
 COPY --from=xray /xray/xray /usr/local/bin/xray
-COPY --from=xray /xray/*.dat /usr/local/share/xray/
+# Geo databases live in a writable dir so the panel can refresh them at runtime.
+COPY --from=xray /xray/*.dat /etc/vortex/assets/
+RUN chown -R vortex:vortex /etc/vortex
 ENV VORTEX_CORE=xray \
     VORTEX_CORE_BIN=/usr/local/bin/xray \
-    VORTEX_CORE_CONFIG=/etc/vortex/core.json
+    VORTEX_CORE_CONFIG=/etc/vortex/core.json \
+    XRAY_LOCATION_ASSET=/etc/vortex/assets
 EXPOSE 50051
 USER vortex
 ENTRYPOINT ["/usr/local/bin/node"]

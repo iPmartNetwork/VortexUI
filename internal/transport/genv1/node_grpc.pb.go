@@ -29,6 +29,7 @@ const (
 	NodeService_OnlineStats_FullMethodName   = "/vortex.v1.NodeService/OnlineStats"
 	NodeService_NodeLogs_FullMethodName      = "/vortex.v1.NodeService/NodeLogs"
 	NodeService_OnlineIPs_FullMethodName     = "/vortex.v1.NodeService/OnlineIPs"
+	NodeService_UpdateGeo_FullMethodName     = "/vortex.v1.NodeService/UpdateGeo"
 )
 
 // NodeServiceClient is the client API for NodeService service.
@@ -65,6 +66,10 @@ type NodeServiceClient interface {
 	// (keyed by user stats email == UUID), with each IP's last-seen unix time.
 	// Used to detect account sharing. Empty when the engine cannot report it.
 	OnlineIPs(ctx context.Context, in *OnlineIPsRequest, opts ...grpc.CallOption) (*OnlineIPsResponse, error)
+	// UpdateGeo downloads geoip/geosite routing databases into the engine's asset
+	// directory and reloads. Used to refresh country/domain routing data (e.g.
+	// Iran rules) without a full redeploy.
+	UpdateGeo(ctx context.Context, in *UpdateGeoRequest, opts ...grpc.CallOption) (*UpdateGeoResponse, error)
 }
 
 type nodeServiceClient struct {
@@ -184,6 +189,16 @@ func (c *nodeServiceClient) OnlineIPs(ctx context.Context, in *OnlineIPsRequest,
 	return out, nil
 }
 
+func (c *nodeServiceClient) UpdateGeo(ctx context.Context, in *UpdateGeoRequest, opts ...grpc.CallOption) (*UpdateGeoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateGeoResponse)
+	err := c.cc.Invoke(ctx, NodeService_UpdateGeo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NodeServiceServer is the server API for NodeService service.
 // All implementations must embed UnimplementedNodeServiceServer
 // for forward compatibility.
@@ -218,6 +233,10 @@ type NodeServiceServer interface {
 	// (keyed by user stats email == UUID), with each IP's last-seen unix time.
 	// Used to detect account sharing. Empty when the engine cannot report it.
 	OnlineIPs(context.Context, *OnlineIPsRequest) (*OnlineIPsResponse, error)
+	// UpdateGeo downloads geoip/geosite routing databases into the engine's asset
+	// directory and reloads. Used to refresh country/domain routing data (e.g.
+	// Iran rules) without a full redeploy.
+	UpdateGeo(context.Context, *UpdateGeoRequest) (*UpdateGeoResponse, error)
 	mustEmbedUnimplementedNodeServiceServer()
 }
 
@@ -257,6 +276,9 @@ func (UnimplementedNodeServiceServer) NodeLogs(context.Context, *NodeLogsRequest
 }
 func (UnimplementedNodeServiceServer) OnlineIPs(context.Context, *OnlineIPsRequest) (*OnlineIPsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method OnlineIPs not implemented")
+}
+func (UnimplementedNodeServiceServer) UpdateGeo(context.Context, *UpdateGeoRequest) (*UpdateGeoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateGeo not implemented")
 }
 func (UnimplementedNodeServiceServer) mustEmbedUnimplementedNodeServiceServer() {}
 func (UnimplementedNodeServiceServer) testEmbeddedByValue()                     {}
@@ -452,6 +474,24 @@ func _NodeService_OnlineIPs_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NodeService_UpdateGeo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateGeoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NodeServiceServer).UpdateGeo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NodeService_UpdateGeo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NodeServiceServer).UpdateGeo(ctx, req.(*UpdateGeoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NodeService_ServiceDesc is the grpc.ServiceDesc for NodeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -494,6 +534,10 @@ var NodeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OnlineIPs",
 			Handler:    _NodeService_OnlineIPs_Handler,
+		},
+		{
+			MethodName: "UpdateGeo",
+			Handler:    _NodeService_UpdateGeo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

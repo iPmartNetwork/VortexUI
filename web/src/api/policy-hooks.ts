@@ -207,6 +207,15 @@ export function useStopCore() {
   });
 }
 
+// useUpdateGeo refreshes a node's geoip/geosite routing databases. With no body
+// the server uses the Iran-focused defaults (geoip:ir / geosite:ir).
+export function useUpdateGeo() {
+  return useMutation({
+    mutationFn: (nodeId: string) =>
+      api<{ ok: boolean; geoip_bytes: number; geosite_bytes: number }>(`/api/nodes/${nodeId}/geo-update`, { method: "POST", body: {} }),
+  });
+}
+
 // --- api tokens ---
 
 export function useAPITokens() {
