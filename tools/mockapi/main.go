@@ -243,7 +243,7 @@ func main() {
 			return
 		}
 		// Route: /api/users/{id} (GET single user)
-		j(w, users[0])
+		j(w, map[string]any{"user": users[0], "inbound_ids": []string{"ib1", "ib3"}})
 	})
 
 	// --- inbounds ---

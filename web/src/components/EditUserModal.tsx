@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { useUpdateUser } from "@/api/hooks";
+import { useQuery } from "@tanstack/react-query";
+import { useUpdateUser, useAllInbounds } from "@/api/hooks";
+import { api } from "@/api/client";
 import type { User } from "@/api/types";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
@@ -23,6 +25,15 @@ export function EditUserModal({ user, onClose }: { user: User | null; onClose: (
   const [reset, setReset] = useState("no_reset");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
+  const [inbounds, setInbounds] = useState<string[]>([]);
+
+  const allInbounds = useAllInbounds();
+  // Load the user's current inbound bindings to pre-select them.
+  const detail = useQuery({
+    queryKey: ["user", user?.id],
+    enabled: !!user,
+    queryFn: () => api<{ user: User; inbound_ids: string[] }>(`/api/users/${user!.id}`),
+  });
 
   // Re-seed the form whenever a different user is opened.
   useEffect(() => {
@@ -35,6 +46,10 @@ export function EditUserModal({ user, onClose }: { user: User | null; onClose: (
     setNote(user.note ?? "");
     setError("");
   }, [user]);
+
+  useEffect(() => {
+    if (detail.data) setInbounds(detail.data.inbound_ids ?? []);
+  }, [detail.data]);
 
   if (!user) return null;
 
@@ -52,6 +67,7 @@ export function EditUserModal({ user, onClose }: { user: User | null; onClose: (
           data_limit: limitGB ? Math.round(Number(limitGB) * GB) : 0,
           device_limit: deviceLimit ? Number(deviceLimit) : 0,
           expire_at: expire ? new Date(expire).toISOString() : null,
+          inbound_ids: inbounds,
         },
       });
       toast.success(`Saved ${user.username}`);
@@ -100,6 +116,23 @@ export function EditUserModal({ user, onClose }: { user: User | null; onClose: (
           Note
           <Input className="mt-1" value={note} onChange={(e) => setNote(e.target.value)} placeholder="optional" />
         </label>
+        <div>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Inbounds</p>
+          <div className="max-h-32 space-y-1 overflow-auto rounded-md border border-border/60 p-2">
+            {allInbounds.data?.map((ib) => (
+              <label key={ib.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={inbounds.includes(ib.id)}
+                  onChange={(e) => setInbounds((s) => (e.target.checked ? [...s, ib.id] : s.filter((x) => x !== ib.id)))}
+                />
+                <span>{ib.tag}</span>
+                <span className="text-xs text-muted-foreground">{ib.protocol} · {ib.nodeName}</span>
+              </label>
+            ))}
+            {allInbounds.data?.length === 0 && <p className="text-xs text-muted-foreground">No inbounds yet.</p>}
+          </div>
+        </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>

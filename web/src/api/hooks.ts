@@ -71,6 +71,7 @@ export interface UpdateUserInput {
   expire_at?: string | null;
   device_limit?: number;
   reset_strategy?: string;
+  inbound_ids?: string[];
 }
 
 export function useUpdateUser() {
