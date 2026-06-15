@@ -6,9 +6,60 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/vortexui/vortexui/internal/core/reality"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/port"
+	"github.com/vortexui/vortexui/internal/pki"
 )
+
+// provisionSecurity fills in the material a secure inbound needs so the core
+// never starts with an unusable (and crash-inducing) security block: REALITY
+// inbounds get an auto-generated keypair + short id, and TLS inbounds get a
+// self-signed certificate. Operators who supply a full streamSettings override,
+// or who already provided the material, are left untouched.
+func provisionSecurity(in *domain.Inbound) {
+	if in.Raw == nil {
+		in.Raw = map[string]any{}
+	}
+	if _, ok := in.Raw["streamSettings"]; ok {
+		return // full manual override
+	}
+	switch in.Security {
+	case domain.SecurityReality:
+		if reality.ParseParams(in.Raw["reality"]).PrivateKey != "" {
+			return
+		}
+		kp, err := reality.GenerateKeypair()
+		if err != nil {
+			return
+		}
+		sid, _ := reality.ShortID(8)
+		sni := "www.cloudflare.com"
+		if len(in.SNI) > 0 && in.SNI[0] != "" {
+			sni = in.SNI[0]
+		}
+		in.Raw["reality"] = map[string]any{
+			"private_key":  kp.PrivateKey,
+			"public_key":   kp.PublicKey,
+			"short_ids":    []string{sid},
+			"server_names": []string{sni},
+			"dest":         sni + ":443",
+		}
+	case domain.SecurityTLS:
+		if _, ok := in.Raw["tls"]; ok {
+			return
+		}
+		host := ""
+		if len(in.SNI) > 0 {
+			host = in.SNI[0]
+		}
+		cert, key, err := pki.SelfSignedServer(host)
+		if err != nil {
+			return
+		}
+		in.Raw["tls"] = map[string]any{"certificate": cert, "key": key}
+	}
+}
 
 // InboundService manages inbounds and reconciles the owning node's live config
 // after every change via the SyncService.
@@ -62,6 +113,7 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 		Raw:      in.Raw,
 		Enabled:  in.Enabled,
 	}
+	provisionSecurity(inbound)
 	if err := s.repo.Create(ctx, inbound); err != nil {
 		return nil, err
 	}
@@ -104,6 +156,7 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	existing.Flow = in.Flow
 	existing.Raw = in.Raw
 	existing.Enabled = in.Enabled
+	provisionSecurity(existing)
 	if err := s.repo.Update(ctx, existing); err != nil {
 		return nil, err
 	}

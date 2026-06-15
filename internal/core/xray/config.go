@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/core/reality"
@@ -45,6 +46,11 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 	})
 
 	for _, in := range cfg.Inbounds {
+		// Skip inbounds whose security material is missing rather than letting one
+		// misconfigured inbound crash the entire engine.
+		if !inboundUsable(in) {
+			continue
+		}
 		users := cfg.UsersByInbound[in.Tag]
 		built, err := b.buildInbound(in, users)
 		if err != nil {
@@ -329,6 +335,9 @@ func streamSettings(in domain.Inbound) json.RawMessage {
 		if len(in.SNI) > 0 {
 			tls["serverName"] = in.SNI[0]
 		}
+		if cert := tlsCertificate(in.Raw["tls"]); cert != nil {
+			tls["certificates"] = []any{cert}
+		}
 		ss["tlsSettings"] = tls
 	case domain.SecurityReality:
 		ss["realitySettings"] = realitySettings(in)
@@ -383,6 +392,44 @@ func realitySettings(in domain.Inbound) map[string]any {
 		out["dest"] = dest
 	}
 	return out
+}
+
+// tlsCertificate renders an inline xray certificate object from the PEM strings
+// stored in Inbound.Raw["tls"] ({certificate, key}). xray accepts the PEM as an
+// array of lines. Returns nil when no certificate is present.
+func tlsCertificate(v any) map[string]any {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil
+	}
+	cert, _ := m["certificate"].(string)
+	key, _ := m["key"].(string)
+	if cert == "" || key == "" {
+		return nil
+	}
+	return map[string]any{
+		"certificate": strings.Split(strings.TrimRight(cert, "\n"), "\n"),
+		"key":         strings.Split(strings.TrimRight(key, "\n"), "\n"),
+	}
+}
+
+// inboundUsable reports whether an inbound's security block has the material the
+// core needs to start. A misconfigured inbound (REALITY without a private key,
+// TLS without a certificate) would crash the whole engine, so the builder skips
+// it instead — the rest of the config still loads. A full streamSettings
+// override is trusted as-is.
+func inboundUsable(in domain.Inbound) bool {
+	if _, ok := in.Raw["streamSettings"]; ok {
+		return true
+	}
+	switch in.Security {
+	case domain.SecurityReality:
+		return reality.ParseParams(in.Raw["reality"]).PrivateKey != ""
+	case domain.SecurityTLS:
+		return tlsCertificate(in.Raw["tls"]) != nil
+	default:
+		return true
+	}
 }
 
 func mustRaw(v any) json.RawMessage {
