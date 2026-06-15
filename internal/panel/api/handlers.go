@@ -41,6 +41,7 @@ type Handlers struct {
 	Repo      port.UserRepository
 	Traffic   port.TrafficRepository
 	Throttle  *LoginThrottle // optional; nil disables login brute-force protection
+	Events    EventStream    // optional; nil disables the SSE live-events endpoint
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a

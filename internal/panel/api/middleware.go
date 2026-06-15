@@ -32,6 +32,11 @@ func RequireAuth(a Authenticator) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			raw := bearerToken(c.Request().Header.Get("Authorization"))
 			if raw == "" {
+				// EventSource (SSE) cannot set headers, so it passes the token as
+				// a query parameter instead.
+				raw = c.QueryParam("access_token")
+			}
+			if raw == "" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "missing bearer token")
 			}
 			claims, err := a.Verify(raw)

@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/auth";
 import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
+import { useLiveEvents } from "@/api/live";
 import type { TKey, Lang } from "@/i18n/dict";
 
 const PANEL_VERSION = "0.1.0";
@@ -56,6 +57,7 @@ export function Layout() {
   const { t, lang, setLang } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  useLiveEvents(); // subscribe to the SSE event stream for live updates
 
   const sidebarContent = (
     <>
