@@ -1,8 +1,10 @@
 name: Build & Publish
 
-# Builds and publishes the Docker images automatically on every push to master
-# and on version tags (v*). Images go to the GitHub Container Registry (ghcr.io)
-# using the built-in GITHUB_TOKEN — no extra secrets needed.
+# Always builds the Docker images on push to master / version tags (verifying
+# they build). It additionally PUBLISHES them to GHCR only when a GHCR_PAT
+# secret is present — GitHub's built-in token can't create packages under a
+# personal namespace. Without the secret this stays green and simply skips the
+# push (the installer builds images locally, so packages are optional).
 
 on:
   push:
@@ -32,14 +34,13 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      # Publish only when a PAT is configured; otherwise build-only.
       - name: Log in to GHCR
+        if: ${{ secrets.GHCR_PAT != '' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          # The built-in GITHUB_TOKEN cannot create packages under a personal
-          # (user) namespace on GHCR, so authenticate with a PAT that has
-          # write:packages. Add it as the GHCR_PAT repository secret.
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Image metadata
@@ -53,13 +54,13 @@ jobs:
             type=ref,event=tag
             type=sha,format=short
 
-      - name: Build & push
+      - name: Build${{ secrets.GHCR_PAT != '' && ' & push' || ' (no publish)' }}
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.file }}
           target: ${{ matrix.target }}
-          push: true
+          push: ${{ secrets.GHCR_PAT != '' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: VERSION=${{ steps.ver.outputs.version }}
