@@ -25,9 +25,41 @@ func ShareLink(p Proxy) string {
 		return trojanLink(p)
 	case domain.ProtoShadowsocks:
 		return ssLink(p)
+	case domain.ProtoHysteria2:
+		return hysteria2Link(p)
+	case domain.ProtoTUIC:
+		return tuicLink(p)
 	default:
 		return ""
 	}
+}
+
+// hysteria2Link: hysteria2://password@host:port?sni=&insecure=1#name
+func hysteria2Link(p Proxy) string {
+	q := url.Values{}
+	if p.SNI != "" {
+		q.Set("sni", p.SNI)
+	}
+	if p.AllowInsecure {
+		q.Set("insecure", "1")
+	}
+	u := url.URL{Scheme: "hysteria2", User: url.User(p.Password), Host: hostPort(p.Host, p.Port), RawQuery: q.Encode(), Fragment: p.Name}
+	return u.String()
+}
+
+// tuicLink: tuic://uuid:password@host:port?sni=&congestion_control=bbr&alpn=h3#name
+func tuicLink(p Proxy) string {
+	q := url.Values{}
+	if p.SNI != "" {
+		q.Set("sni", p.SNI)
+	}
+	q.Set("congestion_control", "bbr")
+	q.Set("alpn", "h3")
+	if p.AllowInsecure {
+		q.Set("allow_insecure", "1")
+	}
+	u := url.URL{Scheme: "tuic", User: url.UserPassword(p.UUID, p.Password), Host: hostPort(p.Host, p.Port), RawQuery: q.Encode(), Fragment: p.Name}
+	return u.String()
 }
 
 // transportQuery builds the shared query parameters used by VLESS/Trojan URIs.

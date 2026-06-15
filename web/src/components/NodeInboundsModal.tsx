@@ -8,7 +8,9 @@ import { CopyField } from "./CopyField";
 import { JsonCodeEditor } from "./JsonCodeEditor";
 import { useToast } from "./toast";
 
-const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks"];
+// xray supports vless/vmess/trojan/shadowsocks; hysteria2/tuic require a
+// sing-box node (switch the local node's core, or add a sing-box node).
+const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic"];
 const NETWORKS = ["tcp", "ws", "grpc"];
 const SECURITIES = ["none", "tls", "reality"];
 
