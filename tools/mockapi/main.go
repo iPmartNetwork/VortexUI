@@ -288,6 +288,31 @@ func main() {
 		j(w, map[string]any{"entries": entries})
 	})
 
+	// Live event stream (SSE). The mock just opens the channel and emits a demo
+	// heartbeat so the frontend's EventSource stays connected without errors.
+	mux.HandleFunc("/api/events/stream", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "stream unsupported", http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprint(w, "event: ready\ndata: {}\n\n")
+		flusher.Flush()
+		tick := time.NewTicker(25 * time.Second)
+		defer tick.Stop()
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-tick.C:
+				fmt.Fprint(w, ": keepalive\n\n")
+				flusher.Flush()
+			}
+		}
+	})
+
 	mux.HandleFunc("/api/traffic/series", func(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 		points := make([]map[string]any, 60)

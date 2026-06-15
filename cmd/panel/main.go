@@ -225,6 +225,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Online: online, Logs: logBuf, Audit: store.Audit(),
 			Repo: users, Traffic: traffic,
 			Throttle: api.NewLoginThrottle(5, 15*time.Minute),
+			Events:   bus,
 		},
 		APITokens: &api.APITokenHandlers{Svc: tokenSvc},
 		Issuer:    issuer,

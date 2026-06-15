@@ -65,6 +65,8 @@ func New(log *slog.Logger) *Bus {
 
 // Subscribe registers a consumer and returns its event channel. buffer sizes the
 // per-subscriber queue; pick it large enough to absorb bursts during slow I/O.
+// Long-lived but transient consumers (e.g. an SSE connection) must call
+// Unsubscribe when done, or the channel leaks.
 func (b *Bus) Subscribe(buffer int) <-chan Event {
 	if buffer <= 0 {
 		buffer = 64
@@ -74,6 +76,20 @@ func (b *Bus) Subscribe(buffer int) <-chan Event {
 	b.subs = append(b.subs, ch)
 	b.mu.Unlock()
 	return ch
+}
+
+// Unsubscribe removes and closes a channel returned by Subscribe. Safe to call
+// once per channel; unknown channels are ignored.
+func (b *Bus) Unsubscribe(ch <-chan Event) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for i, c := range b.subs {
+		if (<-chan Event)(c) == ch {
+			b.subs = append(b.subs[:i], b.subs[i+1:]...)
+			close(c)
+			return
+		}
+	}
 }
 
 // Publish delivers e to every subscriber without blocking. The event time is
