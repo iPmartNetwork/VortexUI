@@ -160,13 +160,17 @@ func (h *Hub) Deregister(nodeID uuid.UUID) {
 	}
 }
 
-// Sync pushes desired state to one node.
+// Sync pushes desired state to one node. It uses ensureConn (not connection) so
+// it (re)dials if the cached connection was transiently dropped — critical for
+// the in-process local node, whose traffic loop drops the shared connection
+// while its core is still starting, which would otherwise leave a freshly-booted
+// local node unable to ever sync its config (and thus never start the core).
 func (h *Hub) Sync(ctx context.Context, nodeID uuid.UUID, cfg *core.GeneratedConfig) error {
 	mn, err := h.managed(nodeID)
 	if err != nil {
 		return err
 	}
-	conn, err := mn.connection()
+	conn, err := mn.ensureConn()
 	if err != nil {
 		return err
 	}
@@ -179,7 +183,7 @@ func (h *Hub) AddUser(ctx context.Context, nodeID uuid.UUID, inboundTag string, 
 	if err != nil {
 		return err
 	}
-	conn, err := mn.connection()
+	conn, err := mn.ensureConn()
 	if err != nil {
 		return err
 	}
@@ -192,7 +196,7 @@ func (h *Hub) RemoveUser(ctx context.Context, nodeID uuid.UUID, inboundTag strin
 	if err != nil {
 		return err
 	}
-	conn, err := mn.connection()
+	conn, err := mn.ensureConn()
 	if err != nil {
 		return err
 	}
