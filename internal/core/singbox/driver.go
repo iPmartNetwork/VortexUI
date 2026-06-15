@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/core"
+	"github.com/vortexui/vortexui/internal/core/hostmetrics"
 	"github.com/vortexui/vortexui/internal/domain"
 )
 
@@ -218,7 +219,13 @@ func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta,
 }
 
 func (d *Driver) Health(_ context.Context) (domain.NodeHealth, error) {
-	return domain.NodeHealth{CoreRunning: d.run.Running()}, nil
+	m := hostmetrics.Read()
+	return domain.NodeHealth{
+		CoreRunning: d.run.Running(),
+		CPUPercent:  m.CPU,
+		MemPercent:  m.Mem,
+		DiskPercent: m.Disk,
+	}, nil
 }
 
 // OnlineStats is not supported by the sing-box V2Ray API (it has no

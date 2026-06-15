@@ -150,7 +150,11 @@ install_cores() {
     aarch64|arm64) xarch="arm64-v8a";  sarch="arm64" ;;
     *) warn "unknown arch '$arch' — install cores manually"; return ;;
   esac
-  command -v unzip >/dev/null 2>&1 || { apt-get install -y unzip || yum install -y unzip || apk add unzip; }
+  if ! command -v unzip >/dev/null 2>&1 || ! command -v tar >/dev/null 2>&1; then
+    info "installing unzip/tar…"
+    (apt-get update -y && apt-get install -y unzip tar) || yum install -y unzip tar || apk add --no-cache unzip tar || true
+  fi
+  command -v unzip >/dev/null 2>&1 || die "could not install 'unzip' — install it manually and re-run."
   mkdir -p /etc/vortex/assets
 
   if [ ! -x /usr/local/bin/xray ]; then

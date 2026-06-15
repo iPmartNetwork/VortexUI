@@ -160,8 +160,8 @@
 | **Shadowsocks** | ✅ | ✅ | TCP |
 | **SOCKS** | — | ✅ | TCP |
 | **HTTP** | — | ✅ | TCP |
-| **Hysteria2** | 🔜 | — | UDP |
-| **TUIC** | 🔜 | — | UDP |
+| **Hysteria2** | ✅ (sing-box) | — | UDP |
+| **TUIC** | ✅ (sing-box) | — | UDP |
 | **WireGuard** | 🔜 | — | UDP |
 
 </div>
@@ -333,9 +333,11 @@ the offender (reversible).
 - [x] Real-time dashboard with live charts
 - [x] Live updates over SSE (push, not polling)
 - [x] Automatic HTTPS (Caddy + Let's Encrypt)
+- [x] Hot-switch core engine per node (xray ↔ sing-box)
 - [x] GeoIP/Geosite updater with Iran routing rules
 - [x] One-line installer + `vortexui` management console
-- [ ] Hysteria2 / TUIC / WireGuard protocols
+- [x] Hysteria2 + TUIC inbounds (sing-box)
+- [ ] WireGuard protocol
 - [ ] DNS management
 - [ ] Evasion profiles (fragment, fingerprint presets)
 - [ ] Payment integration

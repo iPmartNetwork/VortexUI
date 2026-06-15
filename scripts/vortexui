@@ -189,21 +189,25 @@ c_switch_core() {
 c_uninstall() {
   read -r -p "${r}Remove everything incl. volumes (data loss)?${n} [y/N] " a
   [ "$a" = "y" ] || [ "$a" = "Y" ] || { echo "aborted."; return 0; }
+  # Don't let one failing step abort the rest of the teardown.
+  set +e
   case "$MODE" in
     node)
-      systemctl disable --now vortexui-node 2>/dev/null || true
+      systemctl disable --now vortexui-node 2>/dev/null
       rm -f /etc/systemd/system/vortexui-node.service; systemctl daemon-reload
       rm -rf /usr/local/bin/vortex-node /etc/vortexui ;;
     native)
-      systemctl disable --now vortexui-panel 2>/dev/null || true
+      systemctl disable --now vortexui-panel 2>/dev/null
       rm -f /etc/systemd/system/vortexui-panel.service; systemctl daemon-reload
-      $DEPS down -v
-      rm -rf /usr/local/bin/vortex-panel /usr/local/bin/vortex-node /etc/vortexui /var/www/vortexui ;;
+      systemctl disable --now caddy 2>/dev/null
+      $DEPS down -v 2>/dev/null
+      rm -rf /usr/local/bin/vortex-panel /usr/local/bin/vortex-node /etc/vortexui /var/www/vortexui /etc/caddy/Caddyfile ;;
     *)
-      $COMPOSE down -v ;;
+      $COMPOSE down -v 2>/dev/null ;;
   esac
   rm -f /usr/local/bin/vortexui
-  echo "Removed. Source remains at $DIR."
+  set -e
+  echo "${g}✓ Removed.${n} Source remains at $DIR (delete with: rm -rf $DIR)."
 }
 
 usage() {
