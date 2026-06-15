@@ -166,6 +166,26 @@ c_set_domain() {
   if [ "$MODE" = native ]; then write_caddy_native; else $COMPOSE up -d web; fi
 }
 
+# Switch the local node's proxy engine between xray and sing-box.
+c_switch_core() {
+  if [ "$MODE" != native ]; then
+    echo "${y}core switch is available on native installs (edit VORTEX_CORE in compose for Docker).${n}"; return
+  fi
+  local cur; cur="$(grep '^VORTEX_CORE=' "$PANEL_ENV" 2>/dev/null | cut -d= -f2-)"
+  echo "  current local-node core: ${g}${cur:-xray}${n}"
+  echo "   ${b}1)${n} xray      ${b}2)${n} sing-box"
+  read -r -p "  choose [1/2]: " c
+  local newcore cbin
+  case "$c" in
+    2) newcore=singbox; cbin=/usr/local/bin/sing-box ;;
+    *) newcore=xray;    cbin=/usr/local/bin/xray ;;
+  esac
+  [ -x "$cbin" ] || { echo "${r}$cbin is not installed${n}"; return 1; }
+  sed -i "s|^VORTEX_CORE=.*|VORTEX_CORE=$newcore|; s|^VORTEX_CORE_BIN=.*|VORTEX_CORE_BIN=$cbin|" "$PANEL_ENV"
+  systemctl restart vortexui-panel
+  echo "${g}✓ local node now runs $newcore — give it a few seconds to start.${n}"
+}
+
 c_uninstall() {
   read -r -p "${r}Remove everything incl. volumes (data loss)?${n} [y/N] " a
   [ "$a" = "y" ] || [ "$a" = "Y" ] || { echo "aborted."; return 0; }
@@ -215,7 +235,8 @@ menu() {
     else
       echo "   ${b}7)${n} Create admin     ${b}8)${n} Change web port"
       echo "   ${b}9)${n} Domain / SSL     ${b}10)${n} Settings / URL"
-      echo "   ${b}11)${n} ${r}Uninstall${n}      ${b}0)${n} Exit"
+      echo "   ${b}12)${n} Switch core      ${b}11)${n} ${r}Uninstall${n}"
+      echo "   ${b}0)${n} Exit"
     fi
     echo
     read -r -p "  choose: " choice
@@ -231,6 +252,7 @@ menu() {
       9) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_set_domain ;;
       10) [ "$MODE" = node ] && c_status || show_settings ;;
       11) c_uninstall; exit 0 ;;
+      12) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_switch_core ;;
       0) exit 0 ;;
       *) echo "  ${y}invalid choice${n}" ;;
     esac
@@ -249,6 +271,7 @@ case "$cmd" in
   update)             c_update ;;
   admin)              c_admin "$@" ;;
   settings)           show_settings ;;
+  core)               c_switch_core ;;
   uninstall)          c_uninstall ;;
   menu)               menu ;;
   -h|--help|help)     usage ;;
