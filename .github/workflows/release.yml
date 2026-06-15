@@ -1,0 +1,53 @@
+name: Release
+
+# Creates a GitHub Release with cross-compiled binaries whenever a v* tag is
+# pushed. The Docker images for the same tag are published by build.yml.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Build binaries
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          VERSION="${GITHUB_REF_NAME#v}"
+          for arch in amd64 arm64; do
+            for bin in panel node; do
+              out="vortexui-${bin}-linux-${arch}"
+              CGO_ENABLED=0 GOOS=linux GOARCH="${arch}" go build -trimpath \
+                -ldflags "-s -w -X main.version=${VERSION}" \
+                -o "dist/${out}" "./cmd/${bin}"
+              tar -C dist -czf "dist/${out}.tar.gz" "${out}"
+              rm "dist/${out}"
+            done
+          done
+          (cd dist && sha256sum *.tar.gz > checksums.txt)
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            VortexUI ${{ github.ref_name }} — see [CHANGELOG.md](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md).
+
+            Docker images: `ghcr.io/ipmartnetwork/vortexui-{panel,node,web}:${{ github.ref_name }}`
+          files: |
+            dist/*.tar.gz
+            dist/checksums.txt
