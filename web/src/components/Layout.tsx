@@ -27,7 +27,7 @@ import { useI18n } from "@/i18n/i18n";
 import { useLiveEvents } from "@/api/live";
 import type { TKey, Lang } from "@/i18n/dict";
 
-const PANEL_VERSION = "0.1.0";
+const PANEL_VERSION = "1.0.0";
 
 const nav: { to: string; key: TKey; icon: React.ElementType }[] = [
   { to: "/overview", key: "nav.overview", icon: LayoutDashboard },

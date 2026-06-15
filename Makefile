@@ -2,13 +2,15 @@
 
 BIN := bin
 GOFLAGS :=
+VERSION := $(shell cat VERSION 2>/dev/null || echo dev)
+LDFLAGS := -s -w -X main.version=$(VERSION)
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-14s\033[0m %s\n",$$1,$$2}'
 
 build: ## Build panel and node binaries
-	go build $(GOFLAGS) -o $(BIN)/panel ./cmd/panel
-	go build $(GOFLAGS) -o $(BIN)/node ./cmd/node
+	go build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BIN)/panel ./cmd/panel
+	go build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BIN)/node ./cmd/node
 
 certs: ## Generate a dev mTLS chain into deploy/certs
 	go run ./cmd/gencerts -out deploy/certs -san localhost,127.0.0.1

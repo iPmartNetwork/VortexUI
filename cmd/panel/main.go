@@ -30,9 +30,14 @@ import (
 	vgrpc "github.com/vortexui/vortexui/internal/transport/grpc"
 )
 
+// version is the panel build version. It defaults to the contents of the VERSION
+// file and is overridden at build time via -ldflags "-X main.version=...".
+var version = "1.0.0"
+
 func main() {
 	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)
 	log := slog.New(logBuf)
+	log.Info("starting VortexUI panel", "version", version)
 
 	// Root context cancelled on SIGINT/SIGTERM for graceful shutdown.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
