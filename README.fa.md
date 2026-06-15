@@ -79,6 +79,30 @@
 
 ---
 
+## 📸 تصاویر
+
+<details open>
+<summary><strong>☀️ حالت روشن</strong></summary>
+<br />
+
+| داشبورد | نودها | کاربران |
+|:-------:|:-----:|:-------:|
+| ![Overview Light](img/panel/overview_light.png) | ![Nodes Light](img/panel/Node_light.png) | ![Users Light](img/panel/User_light.png) |
+
+</details>
+
+<details>
+<summary><strong>🌙 حالت تیره</strong></summary>
+<br />
+
+| داشبورد | نودها | کاربران |
+|:-------:|:-----:|:-------:|
+| ![Overview Dark](img/panel/overview_dark.png) | ![Nodes Dark](img/panel/Node_dark.png) | ![Users Dark](img/panel/User_dark.png) |
+
+</details>
+
+---
+
 ## ⚖️ مقایسه
 
 | | VortexUI | 3x-ui | Marzban | Hiddify |
@@ -187,6 +211,17 @@ make build && make certs && make run-panel
 
 ---
 
+## 📖 مستندات
+
+| موضوع | لینک |
+|-------|------|
+| مرجع API (OpenAPI 3.0) | [`docs/openapi.yaml`](docs/openapi.yaml) |
+| متغیرهای محیطی | [`.env.example`](.env.example) |
+| استقرار با Docker | [`deploy/`](deploy/) |
+| CI/CD | [`.github/workflows/`](.github/workflows/) |
+
+---
+
 ## 🗺 نقشه‌راه
 
 - [x] هسته‌ی مستقل (Xray + sing-box)
@@ -204,6 +239,53 @@ make build && make certs && make run-panel
 - [ ] مدیریت DNS
 - [ ] بات تلگرام کاربران
 - [ ] زیرپنل‌های نمایندگی (Reseller)
+
+---
+
+## 💝 حمایت
+
+اگر VortexUI برایت مفید بود:
+
+- ⭐ به مخزن **ستاره** بده
+- 🍴 **Fork** کن و مشارکت کن
+- 📢 با دیگران **به اشتراک** بگذار
+- 💰 برای حمایت از توسعه، **کریپتو اهدا** کن
+
+| شبکه | آدرس |
+|:----:|------|
+| **USDT (TRC20)** | `TRLnjZ7YDSwjh3oay28qigEYNieGPMs6ew` |
+| **BTC** | `bc1qszt4g7jdv7ev2t3pexctc07ults8nfflht3nj5` |
+| **TON** | `UQAYSSSirtQ9_67ZHYUgLVLMx9Ir9vvh3vpcq2qbpit_8-Db` |
+
+---
+
+## 🤝 مشارکت
+
+مشارکت‌ها استقبال می‌شوند! لطفاً:
+
+۱. مخزن را Fork کن
+۲. یک شاخه‌ی ویژگی بساز (`git checkout -b feat/amazing`)
+۳. کامیت کن (`git commit -m 'feat: add amazing feature'`)
+۴. push کن (`git push origin feat/amazing`)
+۵. یک Pull Request باز کن
+
+برای راهنمای کامل [CONTRIBUTING.md](CONTRIBUTING.md) را ببین.
+
+---
+
+## 🌐 چندزبانگی
+
+| 🇺🇸 English | 🇮🇷 فارسی | 🇹🇷 Türkçe | 🇸🇦 العربية |
+|:-----------:|:---------:|:----------:|:-----------:|
+| 🇷🇺 Русский | 🇨🇳 中文 | 🇯🇵 日本語 | 🇪🇸 Español |
+
+پشتیبانی کامل RTL برای فارسی و عربی.
+
+---
+
+## 📄 لایسنس
+
+این پروژه تحت لایسنس **AGPL-3.0** منتشر شده است — فایل [LICENSE](LICENSE) را ببین.
 
 ---
 
