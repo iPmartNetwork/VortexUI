@@ -17,6 +17,10 @@ func TestBuilder_RendersValidXrayConfig(t *testing.T) {
 	in := domain.Inbound{
 		Tag: "vless-ws", Protocol: domain.ProtoVLESS, Port: 443,
 		Network: "ws", Security: domain.SecurityTLS, SNI: []string{"example.com"}, Path: "/v",
+		Raw: map[string]any{"tls": map[string]any{
+			"certificate": "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----",
+			"key":         "-----BEGIN PRIVATE KEY-----\nMIIB\n-----END PRIVATE KEY-----",
+		}},
 	}
 	cfg := &core.GeneratedConfig{
 		Inbounds:       []domain.Inbound{in},

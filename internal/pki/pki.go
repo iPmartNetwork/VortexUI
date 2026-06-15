@@ -111,6 +111,40 @@ func issue(ca *x509.Certificate, caKey *ecdsa.PrivateKey, cn string, dns []strin
 	return &KeyPair{CertPEM: encodeCert(der), KeyPEM: keyPEM}, nil
 }
 
+// SelfSignedServer generates a standalone self-signed TLS server certificate for
+// host (an SNI hostname or IP), returned as PEM strings. It bootstraps TLS
+// inbounds that have no operator-provided certificate so the core can start;
+// clients must trust it explicitly (or prefer REALITY) for production use.
+func SelfSignedServer(host string) (certPEM, keyPEM string, err error) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", err
+	}
+	dns, ips := splitSANs([]string{host})
+	if host == "" {
+		dns = []string{"localhost"}
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: serial(),
+		Subject:      pkix.Name{CommonName: host},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().AddDate(10, 0, 0),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		DNSNames:     dns,
+		IPAddresses:  ips,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		return "", "", err
+	}
+	kp, err := encodeKey(key)
+	if err != nil {
+		return "", "", err
+	}
+	return string(encodeCert(der)), string(kp), nil
+}
+
 func splitSANs(sans []string) (dns []string, ips []net.IP) {
 	for _, s := range sans {
 		if ip := net.ParseIP(s); ip != nil {
