@@ -11,10 +11,16 @@ DIR="${VORTEXUI_DIR:-/opt/vortexui}"
 [ -d "$DIR" ] || { echo "VortexUI is not installed at $DIR" >&2; exit 1; }
 ENV_FILE="$DIR/deploy/.env"
 
-# Detect install method.
+# Detect install role/method: node | native (panel) | docker (panel).
 PANEL_ENV="/etc/vortexui/panel.env"
 PANEL_BIN="/usr/local/bin/vortex-panel"
-if [ -x "$PANEL_BIN" ] && [ -f "$PANEL_ENV" ]; then MODE=native; else MODE=docker; fi
+if [ -f /etc/vortexui/node.env ] && [ -x /usr/local/bin/vortex-node ]; then
+  MODE=node
+elif [ -x "$PANEL_BIN" ] && [ -f "$PANEL_ENV" ]; then
+  MODE=native
+else
+  MODE=docker
+fi
 
 COMPOSE="docker compose --env-file $ENV_FILE -f $DIR/deploy/compose.yml"   # docker mode
 DEPS="docker compose -f $DIR/docker-compose.yml"                            # native deps (db+redis)
@@ -77,32 +83,51 @@ show_settings() {
 
 # --- actions (mode-aware) -----------------------------------------------------
 c_start() {
-  if [ "$MODE" = native ]; then $DEPS up -d; systemctl start vortexui-panel caddy
-  else $COMPOSE up -d; fi
+  case "$MODE" in
+    node)   systemctl start vortexui-node ;;
+    native) $DEPS up -d; systemctl start vortexui-panel caddy ;;
+    *)      $COMPOSE up -d ;;
+  esac
 }
 c_stop() {
-  if [ "$MODE" = native ]; then systemctl stop vortexui-panel caddy; $DEPS stop
-  else $COMPOSE down; fi
+  case "$MODE" in
+    node)   systemctl stop vortexui-node ;;
+    native) systemctl stop vortexui-panel caddy; $DEPS stop ;;
+    *)      $COMPOSE down ;;
+  esac
 }
 c_restart() {
-  if [ "$MODE" = native ]; then systemctl restart vortexui-panel caddy
-  else $COMPOSE restart "$@"; fi
+  case "$MODE" in
+    node)   systemctl restart vortexui-node ;;
+    native) systemctl restart vortexui-panel caddy ;;
+    *)      $COMPOSE restart "$@" ;;
+  esac
 }
 c_status() {
-  if [ "$MODE" = native ]; then systemctl --no-pager status vortexui-panel caddy 2>/dev/null | head -20; $DEPS ps
-  else $COMPOSE ps; fi
+  case "$MODE" in
+    node)   systemctl --no-pager status vortexui-node 2>/dev/null | head -20 ;;
+    native) systemctl --no-pager status vortexui-panel caddy 2>/dev/null | head -20; $DEPS ps ;;
+    *)      $COMPOSE ps ;;
+  esac
 }
 c_logs() {
-  if [ "$MODE" = native ]; then journalctl -u "vortexui-${1:-panel}" -f --no-pager
-  else $COMPOSE logs -f --tail=200 "$@"; fi
+  case "$MODE" in
+    node)   journalctl -u vortexui-node -f --no-pager ;;
+    native) journalctl -u "vortexui-${1:-panel}" -f --no-pager ;;
+    *)      $COMPOSE logs -f --tail=200 "$@" ;;
+  esac
 }
 c_update() {
   git -C "$DIR" pull --ff-only
-  if [ "$MODE" = native ]; then
-    ( cd "$DIR" && go build -o /usr/local/bin/vortex-panel ./cmd/panel && go build -o /usr/local/bin/vortex-node ./cmd/node )
-    ( cd "$DIR/web" && npm ci && npm run build && mkdir -p /var/www/vortexui && cp -r dist/* /var/www/vortexui/ )
-    systemctl restart vortexui-panel caddy
-  else $COMPOSE up -d --build; fi
+  case "$MODE" in
+    node)
+      ( cd "$DIR" && go build -o /usr/local/bin/vortex-node ./cmd/node ) && systemctl restart vortexui-node ;;
+    native)
+      ( cd "$DIR" && go build -o /usr/local/bin/vortex-panel ./cmd/panel && go build -o /usr/local/bin/vortex-node ./cmd/node )
+      ( cd "$DIR/web" && npm ci && npm run build && mkdir -p /var/www/vortexui && cp -r dist/* /var/www/vortexui/ )
+      systemctl restart vortexui-panel caddy ;;
+    *)      $COMPOSE up -d --build ;;
+  esac
 }
 
 # Run a 'panel admin ...' command in either mode.
@@ -144,14 +169,19 @@ c_set_domain() {
 c_uninstall() {
   read -r -p "${r}Remove everything incl. volumes (data loss)?${n} [y/N] " a
   [ "$a" = "y" ] || [ "$a" = "Y" ] || { echo "aborted."; return 0; }
-  if [ "$MODE" = native ]; then
-    systemctl disable --now vortexui-panel 2>/dev/null || true
-    rm -f /etc/systemd/system/vortexui-panel.service; systemctl daemon-reload
-    $DEPS down -v
-    rm -rf /usr/local/bin/vortex-panel /usr/local/bin/vortex-node /etc/vortexui /var/www/vortexui
-  else
-    $COMPOSE down -v
-  fi
+  case "$MODE" in
+    node)
+      systemctl disable --now vortexui-node 2>/dev/null || true
+      rm -f /etc/systemd/system/vortexui-node.service; systemctl daemon-reload
+      rm -rf /usr/local/bin/vortex-node /etc/vortexui ;;
+    native)
+      systemctl disable --now vortexui-panel 2>/dev/null || true
+      rm -f /etc/systemd/system/vortexui-panel.service; systemctl daemon-reload
+      $DEPS down -v
+      rm -rf /usr/local/bin/vortex-panel /usr/local/bin/vortex-node /etc/vortexui /var/www/vortexui ;;
+    *)
+      $COMPOSE down -v ;;
+  esac
   rm -f /usr/local/bin/vortexui
   echo "Removed. Source remains at $DIR."
 }
@@ -180,9 +210,13 @@ menu() {
     echo "   ${b}1)${n} Start            ${b}2)${n} Stop"
     echo "   ${b}3)${n} Restart          ${b}4)${n} Status"
     echo "   ${b}5)${n} Logs             ${b}6)${n} Update"
-    echo "   ${b}7)${n} Create admin     ${b}8)${n} Change web port"
-    echo "   ${b}9)${n} Domain / SSL     ${b}10)${n} Settings / URL"
-    echo "   ${b}11)${n} ${r}Uninstall${n}      ${b}0)${n} Exit"
+    if [ "$MODE" = node ]; then
+      echo "   ${b}11)${n} ${r}Uninstall${n}      ${b}0)${n} Exit"
+    else
+      echo "   ${b}7)${n} Create admin     ${b}8)${n} Change web port"
+      echo "   ${b}9)${n} Domain / SSL     ${b}10)${n} Settings / URL"
+      echo "   ${b}11)${n} ${r}Uninstall${n}      ${b}0)${n} Exit"
+    fi
     echo
     read -r -p "  choose: " choice
     case "$choice" in
@@ -190,12 +224,12 @@ menu() {
       2) c_stop ;;
       3) c_restart ;;
       4) c_status ;;
-      5) read -r -p "  service (panel/caddy, blank=panel): " s; c_logs ${s:+"$s"} ;;
+      5) c_logs ;;
       6) c_update ;;
-      7) c_create_admin ;;
-      8) c_change_port ;;
-      9) c_set_domain ;;
-      10) show_settings ;;
+      7) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_create_admin ;;
+      8) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_change_port ;;
+      9) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_set_domain ;;
+      10) [ "$MODE" = node ] && c_status || show_settings ;;
       11) c_uninstall; exit 0 ;;
       0) exit 0 ;;
       *) echo "  ${y}invalid choice${n}" ;;

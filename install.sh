@@ -274,6 +274,75 @@ EOF
   warn "native mode: manage the panel with systemctl {start,stop,restart} vortexui-panel"
 }
 
+# ----------------------------------------------------------------- Node agent
+# Installs this host as a node agent that an existing panel connects to over
+# mTLS. No database/panel here — just the node binary, the proxy engines, and
+# the certificates issued by the panel.
+deploy_node() {
+  ensure_git; checkout
+  local arch sarch
+  arch="$(uname -m)"; case "$arch" in x86_64|amd64) sarch=amd64 ;; aarch64|arm64) sarch=arm64 ;; *) die "unsupported arch $arch" ;; esac
+
+  install_cores
+
+  # Prefer a prebuilt release binary; fall back to building from source.
+  info "installing node agent…"
+  local rel; rel="$(curl -fsSL https://api.github.com/repos/iPmartNetwork/VortexUI/releases/latest | grep -oE '"tag_name": *"v[0-9.]+"' | head -1 | grep -oE 'v[0-9.]+')"
+  if [ -n "$rel" ] && curl -fL -o /tmp/node.tgz "https://github.com/iPmartNetwork/VortexUI/releases/download/${rel}/vortexui-node-linux-${sarch}.tar.gz" 2>/dev/null; then
+    tar -xzf /tmp/node.tgz -C /tmp && install -m 0755 "/tmp/vortexui-node-linux-${sarch}" /usr/local/bin/vortex-node
+  else
+    ensure_go; ( cd "$INSTALL_DIR" && go build -o /usr/local/bin/vortex-node ./cmd/node )
+  fi
+
+  # mTLS material issued by the panel (ca.crt + node.crt + node.key).
+  mkdir -p /etc/vortexui/certs /etc/vortex/assets
+  echo
+  echo "  ${b}This node needs mTLS certs from your panel:${n} ca.crt, node.crt, node.key"
+  echo "  ${d}On the panel server they are in /opt/vortexui/deploy/certs/ — copy them here.${n}"
+  read -r -p "  directory with ca.crt/node.crt/node.key [/etc/vortexui/certs]: " CERTDIR
+  CERTDIR="${CERTDIR:-/etc/vortexui/certs}"
+  for f in ca.crt node.crt node.key; do
+    [ -f "$CERTDIR/$f" ] || die "missing $CERTDIR/$f — copy it from the panel's deploy/certs and re-run."
+  done
+
+  read -r -p "  node listen port [50051]: " NPORT; NPORT="${NPORT:-50051}"
+  read -r -p "  core engine (xray/singbox) [xray]: " NCORE; NCORE="${NCORE:-xray}"
+  local cbin=/usr/local/bin/xray; [ "$NCORE" = singbox ] && cbin=/usr/local/bin/sing-box
+
+  cat > /etc/vortexui/node.env <<EOF
+VORTEX_NODE_LISTEN=:$NPORT
+VORTEX_CORE=$NCORE
+VORTEX_CORE_BIN=$cbin
+VORTEX_CORE_CONFIG=/etc/vortex/node-core.json
+VORTEX_TLS_CERT=$CERTDIR/node.crt
+VORTEX_TLS_KEY=$CERTDIR/node.key
+VORTEX_TLS_CA=$CERTDIR/ca.crt
+XRAY_LOCATION_ASSET=/etc/vortex/assets
+EOF
+  chmod 600 /etc/vortexui/node.env
+
+  cat > /etc/systemd/system/vortexui-node.service <<EOF
+[Unit]
+Description=VortexUI node agent
+After=network.target
+[Service]
+EnvironmentFile=/etc/vortexui/node.env
+ExecStart=/usr/local/bin/vortex-node
+Restart=always
+RestartSec=3
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable --now vortexui-node
+  install -m 0755 scripts/vortexui /usr/local/bin/vortexui
+  echo
+  ok "node agent running on :$NPORT (${NCORE})."
+  echo "   ${b}Add it in the panel${n} → Nodes → New:"
+  echo "     address: ${g}$PUBLIC_HOST:$NPORT${n}   core: ${g}$NCORE${n}"
+  echo "   Manage with: ${g}vortexui {start|stop|status|logs}${n}"
+}
+
 # Bootstrap the first admin via the given 'admin create' command prefix.
 # Interactively asks for a username and password (with confirmation); falls back
 # to VORTEXUI_ADMIN_USER/PASS env vars, then to admin + a random password.
@@ -324,11 +393,29 @@ bootstrap_admin() { # $1 = command prefix
 }
 
 # ----------------------------------------------------------------------- main
-if [ -z "$METHOD" ] && [ -z "${VORTEXUI_NONINTERACTIVE:-}" ]; then
+# ROLE: panel (full control plane + local node) or node (agent for a panel).
+ROLE="${VORTEXUI_ROLE:-}"
+if [ -z "$ROLE" ] && [ -z "${VORTEXUI_NONINTERACTIVE:-}" ]; then
   echo
   echo "  ${g}VortexUI installer${n}"
   echo "  ${d}─────────────────────${n}"
-  echo "  Choose an installation method:"
+  echo "  What are you installing on this server?"
+  echo "   ${b}1)${n} Panel  ${d}— full control plane; build inbounds here (single-server ready)${n}"
+  echo "   ${b}2)${n} Node   ${d}— agent only; connects to an existing panel over mTLS${n}"
+  read -r -p "  choose [1/2]: " rr
+  case "$rr" in 2) ROLE=node ;; *) ROLE=panel ;; esac
+fi
+ROLE="${ROLE:-panel}"
+
+if [ "$ROLE" = node ]; then
+  deploy_node
+  exit 0
+fi
+
+# Panel role: choose the deployment method.
+if [ -z "$METHOD" ] && [ -z "${VORTEXUI_NONINTERACTIVE:-}" ]; then
+  echo
+  echo "  Choose how to run the panel:"
   echo "   ${b}1)${n} Docker Compose   ${d}— recommended, everything in containers${n}"
   echo "   ${b}2)${n} Native (systemd) ${d}— host binaries + Caddy, DB/Redis in Docker${n}"
   read -r -p "  choose [1/2]: " m
