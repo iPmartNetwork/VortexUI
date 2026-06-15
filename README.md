@@ -45,7 +45,9 @@
 
 ### 🌐 Network Policy
 - Outbounds: freedom/blackhole/dns + proxy chaining
+- Outbound/Inbound JSON editor + share-link import
 - Routing rules: domain/IP/port/protocol matchers
+- GeoIP/Geosite updater with Iran routing rules
 - Load balancers: random/roundRobin/leastPing/leastLoad
 - Observatory with health probing
 
@@ -57,6 +59,7 @@
 - Auto-failover + migrate-back on recovery
 - Live health monitoring (CPU/RAM/Disk)
 - Remote restart / stop core
+- One-click GeoIP/Geosite refresh (Iran rules)
 - Per-node logs streaming
 
 ### 🔔 Notifications
@@ -77,7 +80,8 @@
 - 8 languages (EN/FA/TR/AR/RU/ZH/JA/ES)
 - Dark (Navy Blue) + Light (Pastel) themes
 - Responsive (mobile drawer)
-- Real-time dashboard with live charts
+- Real-time dashboard + live updates (SSE)
+- Automatic HTTPS via Caddy / Let's Encrypt
 
 </td>
 </tr>
@@ -170,6 +174,45 @@
 bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
 ```
 
+The installer is interactive and asks two things:
+
+1. **Installation method**
+   - **Docker Compose** *(recommended)* — the whole stack (web · panel · node ·
+     PostgreSQL/TimescaleDB · Redis) runs in containers.
+   - **Native (systemd)** — Go binaries run as host services, the SPA is served by
+     Caddy, and only PostgreSQL + Redis run in Docker.
+2. **How the panel is reached**
+   - **Domain + automatic HTTPS** — enter a domain (and optional email); Caddy
+     obtains and auto-renews a **Let's Encrypt** certificate (needs ports **80 + 443**
+     open and the domain's DNS pointed at the server).
+   - **IP + HTTP** — pick a plain-HTTP port instead.
+
+It then generates secrets and mTLS certificates, brings the stack up, creates the
+first admin, prints the URL/credentials, and installs the `vortexui` command.
+
+To script it non-interactively:
+
+```bash
+VORTEXUI_METHOD=docker VORTEXUI_NONINTERACTIVE=1 \
+  VORTEXUI_ADMIN_USER=admin VORTEXUI_ADMIN_PASS='s3cret' \
+  bash install.sh
+```
+
+### Management console (`vortexui`)
+
+After install, run **`vortexui`** for an interactive menu (3x-ui style):
+
+```text
+   1) Start            2) Stop
+   3) Restart          4) Status
+   5) Logs             6) Update
+   7) Create admin     8) Change web port
+   9) Domain / SSL     10) Settings / URL
+   11) Uninstall       0) Exit
+```
+
+Or use it as a subcommand: `vortexui start|stop|restart|status|logs|update|admin|settings|uninstall`.
+
 ### Manual Setup
 
 ```bash
@@ -222,6 +265,39 @@ VORTEX_LOCAL_NODE_HOST=your-public-ip
 
 ---
 
+## 🔒 Operations
+
+### Automatic HTTPS
+The web tier is **Caddy**. Set a domain (`SITE_ADDRESS` in `deploy/.env`, or pick it
+during install) and Caddy automatically obtains and renews a **Let's Encrypt**
+certificate — no certbot, no cron. Leave it as `:80` for plain HTTP behind your own
+proxy. Switch any time with `vortexui` → *Domain / SSL*. Certificates persist in the
+`caddy-data` volume. Requires ports **80** and **443** reachable.
+
+### Live updates (SSE)
+The panel streams domain events to the browser over **Server-Sent Events**
+(`GET /api/events/stream`). The UI subscribes once and refreshes the affected views
+the instant something changes — a node goes down, a user hits their limit, sharing is
+detected — instead of polling. Events also drive toasts. Caddy proxies the stream
+transparently; the token is passed as `?access_token=` since `EventSource` can't set
+headers.
+
+### GeoIP / Geosite (Iran rules)
+Each node ships with `geoip.dat` / `geosite.dat`. **Nodes → Update Geo** downloads the
+latest **[Iran-v2ray-rules](https://github.com/chocolate4u/Iran-v2ray-rules)**
+databases (adds `geoip:ir`, `geosite:ir`, `category-ir`, ad/malware categories, …)
+into the node's asset dir and reloads the core, so routing rules can target Iranian
+IPs and domains (e.g. *Iran direct, everything else via proxy*). Custom URLs are
+accepted via the API (`POST /api/nodes/:id/geo-update`).
+
+### Account-sharing guard
+A background loop compares each user's distinct **online source IPs** (Xray
+`GetStatsOnlineIpList`) against their device limit. Violations raise a `user.ip_limit`
+alert (webhook/Telegram) and, with `VORTEX_SHARE_AUTOLIMIT=true`, automatically limit
+the offender (reversible).
+
+---
+
 ## 📖 Documentation
 
 | Topic | Link |
@@ -249,6 +325,10 @@ VORTEX_LOCAL_NODE_HOST=your-public-ip
 - [x] Import from 3x-ui / Marzban
 - [x] 8-language frontend + RTL
 - [x] Real-time dashboard with live charts
+- [x] Live updates over SSE (push, not polling)
+- [x] Automatic HTTPS (Caddy + Let's Encrypt)
+- [x] GeoIP/Geosite updater with Iran routing rules
+- [x] One-line installer + `vortexui` management console
 - [ ] Hysteria2 / TUIC / WireGuard protocols
 - [ ] DNS management
 - [ ] Evasion profiles (fragment, fingerprint presets)
