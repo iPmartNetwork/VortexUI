@@ -1,0 +1,27 @@
+name: ✨ Feature request
+description: Suggest an idea or enhancement for VortexUI
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do, and what's missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: input
+    id: prior-art
+    attributes:
+      label: Prior art
+      placeholder: "How 3x-ui / Marzban / s-ui / Hiddify handle this, if relevant"

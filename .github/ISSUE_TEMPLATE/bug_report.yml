@@ -1,0 +1,54 @@
+name: 🐛 Bug report
+description: Report a problem with VortexUI
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please do **not** use this for
+        security vulnerabilities — see [SECURITY.md](../blob/master/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Click '...'
+        3. See error
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: "v1.0.0 or git sha"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install method
+      options:
+        - Docker Compose
+        - Native (systemd)
+        - Other / development
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, Xray/sing-box version, browser"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Output of `vortexui logs` or panel/node logs.
+      render: shell
