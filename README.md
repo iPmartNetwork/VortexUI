@@ -167,7 +167,7 @@
 ### One-line Install
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
 ```
 
 ### Manual Setup
