@@ -399,7 +399,7 @@ Full RTL support for Persian and Arabic.
 
 ## 📄 License
 
-This project is licensed under the **AGPL-3.0** License — see the [LICENSE](LICENSE) file.
+This project is licensed under the **GPL-3.0** License — see the [LICENSE](LICENSE) file.
 
 ---
 

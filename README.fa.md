@@ -287,7 +287,7 @@ make build && make certs && make run-panel
 
 ## 📄 لایسنس
 
-این پروژه تحت لایسنس **AGPL-3.0** منتشر شده است — فایل [LICENSE](LICENSE) را ببین.
+این پروژه تحت لایسنس **GPL-3.0** منتشر شده است — فایل [LICENSE](LICENSE) را ببین.
 
 ---
 
