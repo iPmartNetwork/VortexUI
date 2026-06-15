@@ -213,18 +213,51 @@ EOF
 }
 
 # Bootstrap the first admin via the given 'admin create' command prefix.
+# Interactively asks for a username and password (with confirmation); falls back
+# to VORTEXUI_ADMIN_USER/PASS env vars, then to admin + a random password.
 bootstrap_admin() { # $1 = command prefix
-  ADMIN_USER="${VORTEXUI_ADMIN_USER:-admin}"
-  ADMIN_PASS="${VORTEXUI_ADMIN_PASS:-$(openssl rand -hex 8 2>/dev/null || echo changeme$RANDOM)}"
-  if [ ! -f deploy/.admin-created ]; then
-    info "creating the initial admin…"
-    if $1 --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo; then
-      touch deploy/.admin-created; ok "admin '$ADMIN_USER' created."
-    else
-      warn "admin creation failed (may already exist)."; ADMIN_PASS="(unchanged)"
+  if [ -f deploy/.admin-created ]; then
+    warn "admin already bootstrapped (skipping)."
+    ADMIN_USER="${VORTEXUI_ADMIN_USER:-admin}"; ADMIN_PASS_DISPLAY="(unchanged)"
+    return
+  fi
+
+  ADMIN_USER="${VORTEXUI_ADMIN_USER:-}"
+  ADMIN_PASS="${VORTEXUI_ADMIN_PASS:-}"
+  ADMIN_PASS_DISPLAY=""
+
+  if [ -z "${VORTEXUI_NONINTERACTIVE:-}" ]; then
+    echo
+    echo "  ${b}Create the admin account${n}"
+    if [ -z "$ADMIN_USER" ]; then
+      read -r -p "  admin username [admin]: " ADMIN_USER
+      ADMIN_USER="${ADMIN_USER:-admin}"
     fi
+    if [ -z "$ADMIN_PASS" ]; then
+      while :; do
+        read -r -s -p "  admin password: " ADMIN_PASS; echo
+        read -r -s -p "  confirm password: " _p2; echo
+        if [ -z "$ADMIN_PASS" ]; then echo "  ${y}password cannot be empty${n}"; continue; fi
+        if [ "$ADMIN_PASS" != "$_p2" ]; then echo "  ${y}passwords do not match — try again${n}"; continue; fi
+        break
+      done
+      ADMIN_PASS_DISPLAY="(the password you set)"
+    fi
+  fi
+
+  ADMIN_USER="${ADMIN_USER:-admin}"
+  if [ -z "$ADMIN_PASS" ]; then
+    ADMIN_PASS="$(openssl rand -hex 8 2>/dev/null || echo changeme$RANDOM)"
+    ADMIN_PASS_DISPLAY="$ADMIN_PASS"   # generated — show it so it isn't lost
+  fi
+  [ -n "$ADMIN_PASS_DISPLAY" ] || ADMIN_PASS_DISPLAY="(as provided)"
+
+  info "creating the initial admin…"
+  if $1 --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo; then
+    touch deploy/.admin-created; ok "admin '$ADMIN_USER' created."
   else
-    warn "admin already bootstrapped."; ADMIN_PASS="(unchanged)"
+    warn "admin creation failed (it may already exist) — create one later with: vortexui admin create --username U --password P --sudo"
+    ADMIN_PASS_DISPLAY="(creation failed)"
   fi
 }
 
@@ -251,6 +284,6 @@ echo
 ok "VortexUI is up (${METHOD} install)."
 echo "   ${b}URL:${n}      $(access_url)"
 echo "   ${b}Username:${n} ${ADMIN_USER:-admin}"
-echo "   ${b}Password:${n} ${ADMIN_PASS:-(unchanged)}"
+echo "   ${b}Password:${n} ${ADMIN_PASS_DISPLAY:-(unchanged)}"
 echo
 echo "   Manage with: ${g}vortexui${n}  (interactive menu) or ${g}vortexui {start|stop|status|logs|update}${n}"
