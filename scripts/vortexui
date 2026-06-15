@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+#
+# vortexui — lifecycle wrapper around the VortexUI Docker Compose stack.
+# Installed to /usr/local/bin/vortexui by install.sh.
+set -euo pipefail
+
+DIR="${VORTEXUI_DIR:-/opt/vortexui}"
+[ -d "$DIR" ] || { echo "VortexUI is not installed at $DIR" >&2; exit 1; }
+COMPOSE="docker compose --env-file $DIR/deploy/.env -f $DIR/deploy/compose.yml"
+
+usage() {
+  cat <<EOF
+vortexui — manage the VortexUI stack
+
+  vortexui start              start all services
+  vortexui stop               stop all services
+  vortexui restart [svc]      restart everything (or one service)
+  vortexui status             show service status
+  vortexui logs [svc]         follow logs (optionally one service)
+  vortexui update             pull latest code and rebuild
+  vortexui admin ...          run 'panel admin' (e.g. admin create --username U --password P --sudo)
+  vortexui uninstall          stop and remove the stack (DELETES data)
+EOF
+}
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  start)     $COMPOSE up -d ;;
+  stop)      $COMPOSE down ;;
+  restart)   $COMPOSE restart "$@" ;;
+  status|ps) $COMPOSE ps ;;
+  logs)      $COMPOSE logs -f --tail=200 "$@" ;;
+  update)
+    git -C "$DIR" pull --ff-only
+    $COMPOSE up -d --build
+    ;;
+  admin)     $COMPOSE exec -T panel /usr/local/bin/panel admin "$@" ;;
+  uninstall)
+    read -r -p "This removes all containers and volumes (data loss). Continue? [y/N] " a
+    [ "$a" = "y" ] || [ "$a" = "Y" ] || { echo "aborted."; exit 0; }
+    $COMPOSE down -v
+    rm -f /usr/local/bin/vortexui
+    echo "Removed the stack. Source remains at $DIR (delete manually if desired)."
+    ;;
+  ""|-h|--help|help) usage ;;
+  *) echo "unknown command: $cmd" >&2; usage; exit 1 ;;
+esac
