@@ -73,4 +73,4 @@ Include the version/commit, your platform, repro steps, and relevant logs
 public issue.
 
 By contributing, you agree that your contributions are licensed under the project's
-**AGPL-3.0** license.
+**GPL-3.0** license.
