@@ -1,47 +1,135 @@
 #!/usr/bin/env bash
 #
-# vortexui — lifecycle wrapper around the VortexUI Docker Compose stack.
+# vortexui — management console for the VortexUI Docker Compose stack.
+# Run bare (`vortexui`) for an interactive menu, 3x-ui style, or pass a
+# subcommand (`vortexui start`, `vortexui logs panel`, …) for scripting.
 # Installed to /usr/local/bin/vortexui by install.sh.
 set -euo pipefail
 
 DIR="${VORTEXUI_DIR:-/opt/vortexui}"
 [ -d "$DIR" ] || { echo "VortexUI is not installed at $DIR" >&2; exit 1; }
-COMPOSE="docker compose --env-file $DIR/deploy/.env -f $DIR/deploy/compose.yml"
+ENV_FILE="$DIR/deploy/.env"
+COMPOSE="docker compose --env-file $ENV_FILE -f $DIR/deploy/compose.yml"
+
+g=$'\e[32m'; b=$'\e[34m'; y=$'\e[33m'; r=$'\e[31m'; d=$'\e[2m'; n=$'\e[0m'
+
+# --- helpers ------------------------------------------------------------------
+env_get()  { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-; }
+env_set()  { # key value
+  if grep -qE "^$1=" "$ENV_FILE" 2>/dev/null; then
+    sed -i "s|^$1=.*|$1=$2|" "$ENV_FILE"
+  else
+    echo "$1=$2" >> "$ENV_FILE"
+  fi
+}
+public_host() { curl -fsS https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1; }
+
+show_settings() {
+  local host port
+  host="$(public_host)"; port="$(env_get WEB_PORT)"; port="${port:-80}"
+  echo
+  echo "  ${b}Panel URL:${n}  http://$host:$port"
+  echo "  ${b}Install:${n}    $DIR"
+  echo "  ${b}Web port:${n}   $port"
+  echo
+  $COMPOSE ps
+}
+
+# --- actions ------------------------------------------------------------------
+c_start()    { $COMPOSE up -d; }
+c_stop()     { $COMPOSE down; }
+c_restart()  { $COMPOSE restart "$@"; }
+c_status()   { $COMPOSE ps; }
+c_logs()     { $COMPOSE logs -f --tail=200 "$@"; }
+c_update()   { git -C "$DIR" pull --ff-only && $COMPOSE up -d --build; }
+c_admin()    { $COMPOSE exec -T panel /usr/local/bin/panel admin "$@"; }
+
+c_create_admin() {
+  local u p
+  read -r -p "username: " u
+  read -r -s -p "password: " p; echo
+  [ -n "$u" ] && [ -n "$p" ] || { echo "${r}username and password required${n}"; return 1; }
+  $COMPOSE exec -T panel /usr/local/bin/panel admin create --username "$u" --password "$p" --sudo \
+    && echo "${g}✓ admin '$u' created${n}"
+}
+
+c_change_port() {
+  local p
+  read -r -p "new web port [current $(env_get WEB_PORT)]: " p
+  [[ "$p" =~ ^[0-9]+$ ]] || { echo "${r}invalid port${n}"; return 1; }
+  env_set WEB_PORT "$p"
+  $COMPOSE up -d web
+  echo "${g}✓ web now on port $p${n}"
+}
+
+c_uninstall() {
+  read -r -p "${r}Remove all containers and volumes (data loss)?${n} [y/N] " a
+  [ "$a" = "y" ] || [ "$a" = "Y" ] || { echo "aborted."; return 0; }
+  $COMPOSE down -v
+  rm -f /usr/local/bin/vortexui
+  echo "Removed. Source remains at $DIR."
+}
 
 usage() {
   cat <<EOF
 vortexui — manage the VortexUI stack
 
-  vortexui start              start all services
-  vortexui stop               stop all services
-  vortexui restart [svc]      restart everything (or one service)
-  vortexui status             show service status
-  vortexui logs [svc]         follow logs (optionally one service)
-  vortexui update             pull latest code and rebuild
-  vortexui admin ...          run 'panel admin' (e.g. admin create --username U --password P --sudo)
-  vortexui uninstall          stop and remove the stack (DELETES data)
+  vortexui                     interactive menu
+  vortexui start|stop|restart  control services
+  vortexui status              service status
+  vortexui logs [svc]          follow logs
+  vortexui update              pull latest and rebuild
+  vortexui admin ...           run 'panel admin' (e.g. admin create --username U --password P --sudo)
+  vortexui settings            show URL / port / status
+  vortexui uninstall           remove the stack (DELETES data)
 EOF
 }
 
-cmd="${1:-}"; shift || true
+# --- interactive menu ---------------------------------------------------------
+menu() {
+  while true; do
+    echo
+    echo "  ${g}VortexUI${n} ${d}· management console${n}"
+    echo "  ${d}────────────────────────────${n}"
+    echo "   ${b}1)${n} Start            ${b}2)${n} Stop"
+    echo "   ${b}3)${n} Restart          ${b}4)${n} Status"
+    echo "   ${b}5)${n} Logs             ${b}6)${n} Update"
+    echo "   ${b}7)${n} Create admin     ${b}8)${n} Change web port"
+    echo "   ${b}9)${n} Settings / URL   ${b}10)${n} ${r}Uninstall${n}"
+    echo "   ${b}0)${n} Exit"
+    echo
+    read -r -p "  choose: " choice
+    case "$choice" in
+      1) c_start ;;
+      2) c_stop ;;
+      3) c_restart ;;
+      4) c_status ;;
+      5) read -r -p "  service (blank=all): " s; c_logs ${s:+"$s"} ;;
+      6) c_update ;;
+      7) c_create_admin ;;
+      8) c_change_port ;;
+      9) show_settings ;;
+      10) c_uninstall; exit 0 ;;
+      0) exit 0 ;;
+      *) echo "  ${y}invalid choice${n}" ;;
+    esac
+  done
+}
+
+# --- dispatch -----------------------------------------------------------------
+cmd="${1:-}"; [ $# -gt 0 ] && shift || true
 case "$cmd" in
-  start)     $COMPOSE up -d ;;
-  stop)      $COMPOSE down ;;
-  restart)   $COMPOSE restart "$@" ;;
-  status|ps) $COMPOSE ps ;;
-  logs)      $COMPOSE logs -f --tail=200 "$@" ;;
-  update)
-    git -C "$DIR" pull --ff-only
-    $COMPOSE up -d --build
-    ;;
-  admin)     $COMPOSE exec -T panel /usr/local/bin/panel admin "$@" ;;
-  uninstall)
-    read -r -p "This removes all containers and volumes (data loss). Continue? [y/N] " a
-    [ "$a" = "y" ] || [ "$a" = "Y" ] || { echo "aborted."; exit 0; }
-    $COMPOSE down -v
-    rm -f /usr/local/bin/vortexui
-    echo "Removed the stack. Source remains at $DIR (delete manually if desired)."
-    ;;
-  ""|-h|--help|help) usage ;;
+  "")                 menu ;;
+  start)              c_start ;;
+  stop)               c_stop ;;
+  restart)            c_restart "$@" ;;
+  status|ps)          c_status ;;
+  logs)               c_logs "$@" ;;
+  update)             c_update ;;
+  admin)              c_admin "$@" ;;
+  settings)           show_settings ;;
+  uninstall)          c_uninstall ;;
+  menu)               menu ;;
+  -h|--help|help)     usage ;;
   *) echo "unknown command: $cmd" >&2; usage; exit 1 ;;
 esac
