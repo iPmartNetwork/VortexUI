@@ -23,6 +23,15 @@ type Admin struct {
 	CreatedAt    pgtype.Timestamptz
 }
 
+type ApiToken struct {
+	ID         uuid.UUID
+	Name       string
+	TokenHash  string
+	AdminID    uuid.UUID
+	CreatedAt  pgtype.Timestamptz
+	LastUsedAt pgtype.Timestamptz
+}
+
 type AuditLog struct {
 	ID      uuid.UUID
 	Time    pgtype.Timestamptz

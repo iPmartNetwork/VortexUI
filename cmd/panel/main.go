@@ -215,6 +215,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			log.Error("migrate-back failed", "node", node.Name, "err", err)
 		}
 	})
+	tokenSvc := service.NewAPITokenService(store.APITokens())
 	router := api.NewRouter(api.Deps{
 		Handlers: &api.Handlers{
 			Auth: authSvc, Users: userSvc, Sub: subSvc,
@@ -225,10 +226,11 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Repo: users, Traffic: traffic,
 			Throttle: api.NewLoginThrottle(5, 15*time.Minute),
 		},
-		Issuer:  issuer,
-		Auth:    authSvc,
-		Limiter: limiter,
-		Audit:   store.Audit(),
+		APITokens: &api.APITokenHandlers{Svc: tokenSvc},
+		Issuer:    issuer,
+		Auth:      authSvc,
+		Limiter:   limiter,
+		Audit:     store.Audit(),
 	})
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: router, ReadHeaderTimeout: 10 * time.Second}

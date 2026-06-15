@@ -346,6 +346,18 @@ func main() {
 		j(w, map[string]any{"ok": true})
 	})
 
+	// --- api tokens ---
+	mux.HandleFunc("/api/tokens", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			j(w, map[string]any{"token": map[string]any{"id": "tok-1", "name": "CI bot"}, "raw": "vtx_" + fmt.Sprintf("%064x", rand.Int63())})
+			return
+		}
+		j(w, map[string]any{"tokens": []map[string]any{
+			{"id": "tok-1", "name": "CI Deploy", "admin_id": "a1", "created_at": time.Now().Add(-7 * 24 * time.Hour).Format(time.RFC3339), "last_used_at": time.Now().Add(-2 * time.Hour).Format(time.RFC3339)},
+			{"id": "tok-2", "name": "Telegram Bot", "admin_id": "a1", "created_at": time.Now().Add(-30 * 24 * time.Hour).Format(time.RFC3339), "last_used_at": nil},
+		}})
+	})
+
 	// --- catch-all for POST/PUT/DELETE ---
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
