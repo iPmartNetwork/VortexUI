@@ -12,7 +12,12 @@ const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks"];
 const NETWORKS = ["tcp", "ws", "grpc"];
 const SECURITIES = ["none", "tls", "reality"];
 
-const blank = { editId: "", tag: "", protocol: "vless", port: "", network: "tcp", security: "tls", sni: "" };
+// randomPort picks a high port (10000–60000) so new inbounds default to a free,
+// non-conflicting port. The admin can still type any port.
+const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
+
+const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "reality", sni: "" });
+const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {
   tag: "inbound-443",
@@ -67,7 +72,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, enabled: true });
         toast.success(`Added ${f.tag}`);
       }
-      setF({ ...blank });
+      setF(newBlank());
     } catch {
       toast.error("Save failed");
     }
@@ -155,7 +160,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">{editing ? `Edit ${f.tag}` : "Add inbound"}</p>
           {editing && (
-            <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setF({ ...blank })}>
+            <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setF(newBlank())}>
               cancel edit
             </button>
           )}
