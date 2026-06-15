@@ -306,13 +306,17 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 		return mustRaw(map[string]any{"clients": clients}), nil
 
 	case domain.ProtoShadowsocks:
-		clients := make([]map[string]any, 0, len(users))
-		for _, u := range users {
-			clients = append(clients, map[string]any{
-				"password": u.Proxies.ShadowsocksP, "method": u.Proxies.SSMethod, "email": u.ID.String(),
-			})
+		// Standard Shadowsocks ciphers (aes-*-gcm, chacha20) are single-user in
+		// xray: a "clients" array is only valid for SS-2022 methods, and emitting
+		// one crashes the inbound. Render a valid single-user listener from the
+		// first bound user. (Multi-user SS needs SS-2022, tracked separately.)
+		method := "aes-128-gcm"
+		password := ""
+		if len(users) > 0 {
+			method = orDefault(users[0].Proxies.SSMethod, method)
+			password = users[0].Proxies.ShadowsocksP
 		}
-		return mustRaw(map[string]any{"clients": clients}), nil
+		return mustRaw(map[string]any{"method": method, "password": password, "network": "tcp,udp"}), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q for xray", in.Protocol)
