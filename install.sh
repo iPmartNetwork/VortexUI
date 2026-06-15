@@ -140,6 +140,41 @@ ensure_go() {
   rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz
   export PATH="$PATH:/usr/local/go/bin"
 }
+
+# Download the xray-core and sing-box engines to the host and stage geo data.
+install_cores() {
+  local arch xarch sarch
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64|amd64)  xarch="64";         sarch="amd64" ;;
+    aarch64|arm64) xarch="arm64-v8a";  sarch="arm64" ;;
+    *) warn "unknown arch '$arch' — install cores manually"; return ;;
+  esac
+  command -v unzip >/dev/null 2>&1 || { apt-get install -y unzip || yum install -y unzip || apk add unzip; }
+  mkdir -p /etc/vortex/assets
+
+  if [ ! -x /usr/local/bin/xray ]; then
+    info "installing xray-core…"
+    curl -fsSL -o /tmp/xray.zip "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-${xarch}.zip"
+    unzip -o /tmp/xray.zip -d /tmp/xray-dl >/dev/null
+    install -m 0755 /tmp/xray-dl/xray /usr/local/bin/xray
+    cp -f /tmp/xray-dl/*.dat /etc/vortex/assets/ 2>/dev/null || true
+    rm -rf /tmp/xray-dl /tmp/xray.zip
+    ok "xray-core installed."
+  else warn "xray already present — skipping."; fi
+
+  if [ ! -x /usr/local/bin/sing-box ]; then
+    info "installing sing-box…"
+    local ver; ver="$(curl -fsSL https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep -oE '"tag_name": *"v[0-9.]+"' | head -1 | grep -oE 'v[0-9.]+')"
+    ver="${ver:-v1.9.3}"
+    curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${ver}/sing-box-${ver#v}-linux-${sarch}.tar.gz"
+    tar -xzf /tmp/sb.tgz -C /tmp
+    install -m 0755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box
+    rm -rf /tmp/sing-box-* /tmp/sb.tgz
+    ok "sing-box installed."
+  else warn "sing-box already present — skipping."; fi
+}
+
 deploy_native() {
   ensure_docker; ensure_git; checkout; ask_access; write_env; ensure_go; gen_certs go
   info "bringing up PostgreSQL + Redis (Docker)…"
@@ -149,12 +184,19 @@ deploy_native() {
   /usr/local/go/bin/go build -o /usr/local/bin/vortex-panel ./cmd/panel 2>/dev/null || go build -o /usr/local/bin/vortex-panel ./cmd/panel
   go build -o /usr/local/bin/vortex-node ./cmd/node || true
 
+  # Proxy engines (xray + sing-box).
+  install_cores
+
   info "building web UI…"
   command -v node >/dev/null 2>&1 || { curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs; }
   ( cd web && npm ci && npm run build )
   mkdir -p /var/www/vortexui && cp -r web/dist/* /var/www/vortexui/
 
-  # Native env for the panel service.
+  # Host advertised to clients in subscriptions (domain if set, else public IP).
+  case "$SITE_ADDRESS" in :*|"") NODE_HOST="$PUBLIC_HOST" ;; *) NODE_HOST="$SITE_ADDRESS" ;; esac
+
+  # Native env for the panel service. The panel runs an in-process local node so
+  # a single server serves proxy traffic without a separate node agent.
   mkdir -p /etc/vortexui
   cat > /etc/vortexui/panel.env <<EOF
 VORTEX_HTTP_ADDR=:8080
@@ -164,6 +206,14 @@ VORTEX_JWT_SECRET=$JWT_SECRET
 VORTEX_TLS_CERT=$INSTALL_DIR/deploy/certs/panel.crt
 VORTEX_TLS_KEY=$INSTALL_DIR/deploy/certs/panel.key
 VORTEX_TLS_CA=$INSTALL_DIR/deploy/certs/ca.crt
+VORTEX_LOCAL_NODE=true
+VORTEX_LOCAL_NODE_NAME=local
+VORTEX_LOCAL_NODE_HOST=$NODE_HOST
+VORTEX_CORE=xray
+VORTEX_CORE_BIN=/usr/local/bin/xray
+VORTEX_CORE_CONFIG=/etc/vortex/local-core.json
+VORTEX_CORE_API_PORT=10085
+XRAY_LOCATION_ASSET=/etc/vortex/assets
 EOF
   chmod 600 /etc/vortexui/panel.env
 

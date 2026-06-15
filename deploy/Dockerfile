@@ -27,6 +27,16 @@ RUN apk add --no-cache curl unzip && \
       "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${TARGETARCH}.zip" && \
     unzip /tmp/xray.zip -d /xray && chmod +x /xray/xray
 
+# ---- sing-box fetch (for the node image) ----
+FROM alpine:3.20 AS singbox
+ARG SINGBOX_VERSION=1.9.3
+ARG SB_ARCH=amd64
+RUN apk add --no-cache curl tar && \
+    curl -fsSL -o /tmp/sb.tgz \
+      "https://github.com/SagerNet/sing-box/releases/download/v${SINGBOX_VERSION}/sing-box-${SINGBOX_VERSION}-linux-${SB_ARCH}.tar.gz" && \
+    tar -xzf /tmp/sb.tgz -C /tmp && \
+    mv /tmp/sing-box-*/sing-box /usr/local/bin/sing-box && chmod +x /usr/local/bin/sing-box
+
 # ---- panel (control plane) ----
 FROM gcr.io/distroless/static-debian12 AS panel
 COPY --from=builder /out/panel /usr/local/bin/panel
@@ -40,9 +50,12 @@ FROM alpine:3.20 AS node
 RUN apk add --no-cache ca-certificates && adduser -D -u 10001 vortex
 COPY --from=builder /out/node /usr/local/bin/node
 COPY --from=xray /xray/xray /usr/local/bin/xray
+COPY --from=singbox /usr/local/bin/sing-box /usr/local/bin/sing-box
 # Geo databases live in a writable dir so the panel can refresh them at runtime.
 COPY --from=xray /xray/*.dat /etc/vortex/assets/
 RUN chown -R vortex:vortex /etc/vortex
+# Defaults to xray; set VORTEX_CORE=singbox + VORTEX_CORE_BIN=/usr/local/bin/sing-box
+# on a node to run sing-box instead.
 ENV VORTEX_CORE=xray \
     VORTEX_CORE_BIN=/usr/local/bin/xray \
     VORTEX_CORE_CONFIG=/etc/vortex/core.json \
