@@ -18,7 +18,7 @@ func Migrate(dsn string) error {
 	if err != nil {
 		return fmt.Errorf("open for migrate: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	goose.SetBaseFS(migrations.FS)
 	goose.SetLogger(goose.NopLogger()) // keep startup logs clean; we log a summary

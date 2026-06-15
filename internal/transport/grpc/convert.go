@@ -25,15 +25,6 @@ func coreTypeToProto(c domain.CoreType) genv1.CoreType {
 	}
 }
 
-func coreTypeFromProto(c genv1.CoreType) domain.CoreType {
-	switch c {
-	case genv1.CoreType_CORE_TYPE_SINGBOX:
-		return domain.CoreSingbox
-	default:
-		return domain.CoreXray
-	}
-}
-
 // userToSpec renders a domain user into the minimal identity a core needs. The
 // proto "email" is the per-inbound stats key; we use the user id for stability.
 func userToSpec(u *domain.User) *genv1.UserSpec {

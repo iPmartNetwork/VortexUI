@@ -286,7 +286,7 @@ func downloadFile(ctx context.Context, url, dst string) (int64, error) {
 	tmpName := tmp.Name()
 	defer os.Remove(tmpName)
 	n, err := io.Copy(tmp, resp.Body)
-	tmp.Close()
+	_ = tmp.Close()
 	if err != nil {
 		return 0, err
 	}

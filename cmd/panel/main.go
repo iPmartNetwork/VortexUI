@@ -142,7 +142,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	if rc, err := redis.Open(ctx, cfg.RedisURL); err != nil {
 		log.Warn("redis unavailable; login rate limiting and device limits disabled", "err", err)
 	} else {
-		defer rc.Close()
+		defer func() { _ = rc.Close() }()
 		limiter = rc.RateLimiter()
 		devices = rc.Devices()
 		online = rc.Devices()
