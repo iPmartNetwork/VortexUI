@@ -38,6 +38,9 @@ func transportQuery(p Proxy) url.Values {
 	if p.SNI != "" {
 		q.Set("sni", p.SNI)
 	}
+	if p.AllowInsecure {
+		q.Set("allowInsecure", "1")
+	}
 	switch p.Network {
 	case "ws":
 		if p.Path != "" {

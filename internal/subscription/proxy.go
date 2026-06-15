@@ -22,6 +22,10 @@ type Proxy struct {
 	Path       string
 	HostHeader string
 	Flow       string
+	// AllowInsecure tells clients to skip TLS certificate verification — set for
+	// inbounds using an auto-generated self-signed certificate so the handshake
+	// succeeds instead of timing out on an untrusted cert.
+	AllowInsecure bool
 
 	// Credentials (only the field relevant to Protocol is populated).
 	UUID     string // vmess / vless
