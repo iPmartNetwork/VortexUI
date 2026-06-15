@@ -121,6 +121,13 @@ func buildProxy(u *domain.User, in domain.Inbound, host, name string) subscripti
 		SNI:        first(in.SNI),
 		HostHeader: first(in.Host),
 	}
+	// A TLS inbound carrying an auto-generated self-signed cert needs clients to
+	// skip verification, or the handshake times out.
+	if in.Security == domain.SecurityTLS {
+		if _, ok := in.Raw["tls"]; ok {
+			p.AllowInsecure = true
+		}
+	}
 	switch in.Protocol {
 	case domain.ProtoVLESS:
 		p.UUID = u.Proxies.VLESSUUID.String()
