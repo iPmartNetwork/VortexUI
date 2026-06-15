@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/core"
+	"github.com/vortexui/vortexui/internal/core/hostmetrics"
 	"github.com/vortexui/vortexui/internal/core/proc"
 	"github.com/vortexui/vortexui/internal/domain"
 )
@@ -217,7 +218,13 @@ func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta,
 }
 
 func (d *Driver) Health(_ context.Context) (domain.NodeHealth, error) {
-	return domain.NodeHealth{CoreRunning: d.proc.Running()}, nil
+	m := hostmetrics.Read()
+	return domain.NodeHealth{
+		CoreRunning: d.proc.Running(),
+		CPUPercent:  m.CPU,
+		MemPercent:  m.Mem,
+		DiskPercent: m.Disk,
+	}, nil
 }
 
 // OnlineStats reports live connection counts per user via the runtime API.

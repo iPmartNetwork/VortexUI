@@ -2,6 +2,8 @@ package hub
 
 import (
 	"context"
+	"errors"
+	"sync"
 
 	"github.com/google/uuid"
 
@@ -17,6 +19,9 @@ import (
 type LocalConn struct {
 	nodeID uuid.UUID
 	driver core.CoreDriver
+
+	mu      sync.Mutex
+	lastCfg *core.GeneratedConfig // remembered so Restart/Start can re-apply it
 }
 
 var _ NodeConn = (*LocalConn)(nil)
@@ -26,9 +31,13 @@ func NewLocalConn(nodeID uuid.UUID, driver core.CoreDriver) *LocalConn {
 	return &LocalConn{nodeID: nodeID, driver: driver}
 }
 
-// Sync applies the full config by (re)starting the local core. coreType is
-// ignored: the driver is already a concrete engine.
+// Sync applies the full config by (re)starting the local core, remembering the
+// config so Restart/Start can re-apply it. coreType is ignored: the driver is
+// already a concrete engine.
 func (c *LocalConn) Sync(ctx context.Context, cfg *core.GeneratedConfig, _ domain.CoreType) error {
+	c.mu.Lock()
+	c.lastCfg = cfg
+	c.mu.Unlock()
 	return c.driver.Start(ctx, cfg)
 }
 
@@ -92,9 +101,16 @@ func (c *LocalConn) Logs(ctx context.Context, limit int) ([]string, error) {
 	return c.driver.Logs(ctx, limit)
 }
 
-// RestartCore reloads the local core.
+// RestartCore re-applies the last synced config — restarting a running core or
+// starting a stopped one. Passing nil (the old behaviour) crashed the builder.
 func (c *LocalConn) RestartCore(ctx context.Context) error {
-	return c.driver.Reload(ctx, nil)
+	c.mu.Lock()
+	cfg := c.lastCfg
+	c.mu.Unlock()
+	if cfg == nil {
+		return errors.New("local core has no config yet; create an inbound first")
+	}
+	return c.driver.Start(ctx, cfg)
 }
 
 // StopCore stops the local core.

@@ -12,13 +12,13 @@ import { useToast } from "./toast";
 // sing-box node (switch the local node's core, or add a sing-box node).
 const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic"];
 const NETWORKS = ["tcp", "ws", "grpc"];
-const SECURITIES = ["none", "tls", "reality"];
+const SECURITIES = ["none", "tls"];
 
 // randomPort picks a high port (10000–60000) so new inbounds default to a free,
 // non-conflicting port. The admin can still type any port.
 const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
 
-const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "reality", sni: "" });
+const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "" });
 const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {

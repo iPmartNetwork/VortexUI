@@ -46,7 +46,7 @@ function timeAgoShort(iso: string | null): string {
 
 /* ─── Node Card (rich + actions) ─── */
 function NodeCard({
-  n, onInbounds, onLogs, onEdit, onDelete, onRestart, onStop, onUpdateGeo,
+  n, onInbounds, onLogs, onEdit, onDelete, onRestart, onStop, onStart, onUpdateGeo,
 }: {
   n: Node;
   onInbounds: () => void;
@@ -55,6 +55,7 @@ function NodeCard({
   onDelete: () => void;
   onRestart: () => void;
   onStop: () => void;
+  onStart: () => void;
   onUpdateGeo: () => void;
 }) {
   const online = n.health.core_running;
@@ -113,8 +114,12 @@ function NodeCard({
       <div className="flex flex-wrap items-center gap-1 border-t border-border/40 px-3 py-2.5">
         <Button variant="ghost" size="sm" onClick={onInbounds}>Inbounds</Button>
         <Button variant="ghost" size="sm" onClick={onLogs}>Logs</Button>
+        {online ? (
+          <Button variant="ghost" size="sm" className="text-warning" onClick={onStop}>Stop</Button>
+        ) : (
+          <Button variant="ghost" size="sm" className="text-success" onClick={onStart}>Start</Button>
+        )}
         <Button variant="ghost" size="sm" onClick={onRestart}>Restart</Button>
-        <Button variant="ghost" size="sm" className="text-warning" onClick={onStop}>Stop</Button>
         <Button variant="ghost" size="sm" onClick={onUpdateGeo} title="Refresh Iran geoip/geosite routing data">Update Geo</Button>
         <div className="ms-auto flex gap-1">
           <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
@@ -182,6 +187,7 @@ export function Nodes() {
             onEdit={() => setEditing(n)}
             onDelete={() => remove(n)}
             onRestart={() => restart.mutateAsync(n.id).then(() => toast.success("Core restarted")).catch(() => toast.error("Restart failed"))}
+            onStart={() => restart.mutateAsync(n.id).then(() => toast.success("Core started")).catch(() => toast.error("Start failed"))}
             onStop={() => doStop(n)}
             onUpdateGeo={() => doUpdateGeo(n)}
           />
