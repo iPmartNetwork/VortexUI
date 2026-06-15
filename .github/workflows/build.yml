@@ -1,10 +1,9 @@
-name: Build & Publish
+name: Build
 
-# Always builds the Docker images on push to master / version tags (verifying
-# they build). It additionally PUBLISHES them to GHCR only when a GHCR_PAT
-# secret is present — GitHub's built-in token can't create packages under a
-# personal namespace. Without the secret this stays green and simply skips the
-# push (the installer builds images locally, so packages are optional).
+# Verifies the Docker images build on every push to master / version tags.
+# Images are NOT published — the installer builds them locally, so GHCR
+# packages are optional. To publish later, add a login step with a GHCR_PAT
+# secret and set push: true.
 
 on:
   push:
@@ -14,7 +13,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   images:
@@ -34,35 +32,14 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # Publish only when a PAT is configured; otherwise build-only.
-      - name: Log in to GHCR
-        if: ${{ secrets.GHCR_PAT != '' }}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_PAT }}
-
-      - name: Image metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/ipmartnetwork/vortexui-${{ matrix.name }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ steps.ver.outputs.version }},enable={{is_default_branch}}
-            type=ref,event=tag
-            type=sha,format=short
-
-      - name: Build${{ secrets.GHCR_PAT != '' && ' & push' || ' (no publish)' }}
+      - name: Build ${{ matrix.name }} image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.file }}
           target: ${{ matrix.target }}
-          push: ${{ secrets.GHCR_PAT != '' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
+          tags: vortexui-${{ matrix.name }}:${{ steps.ver.outputs.version }}
           build-args: VERSION=${{ steps.ver.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
