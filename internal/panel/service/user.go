@@ -237,6 +237,9 @@ type UpdateUserInput struct {
 	ExpireAt      *time.Time
 	DeviceLimit   int
 	ResetStrategy domain.ResetStrategy
+	// InboundIDs replaces the user's inbound bindings. nil leaves them unchanged;
+	// an empty (non-nil) slice clears all bindings.
+	InboundIDs []uuid.UUID
 }
 
 // Update applies metadata changes to a user and persists them. Quota/expiry are
@@ -259,6 +262,21 @@ func (s *UserService) Update(ctx context.Context, id uuid.UUID, in UpdateUserInp
 	}
 	if err := s.users.Update(ctx, u); err != nil {
 		return nil, err
+	}
+
+	// Rebind inbounds if requested: drop the user from its old inbounds on the
+	// live cores, repoint the bindings, then re-provision onto the new set.
+	if in.InboundIDs != nil {
+		old, _ := s.users.InboundsFor(ctx, u.ID)
+		if err := s.users.SetInbounds(ctx, u.ID, in.InboundIDs); err != nil {
+			return u, fmt.Errorf("rebind inbounds: %w", err)
+		}
+		for _, ib := range old {
+			_ = s.nodes.RemoveUser(ctx, ib.NodeID, ib.Tag, u.ID)
+		}
+		if u.Status != domain.UserStatusDisabled {
+			_ = s.provision(ctx, u)
+		}
 	}
 
 	nowDisabled := u.Status == domain.UserStatusDisabled

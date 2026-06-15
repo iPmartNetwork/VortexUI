@@ -19,11 +19,12 @@ export function UserDetail() {
   const toast = useToast();
   const confirm = useConfirm();
 
-  const { data: user, isLoading } = useQuery({
+  const { data: detail, isLoading } = useQuery({
     queryKey: ["user", id],
-    queryFn: () => api<User>(`/api/users/${id}`),
+    queryFn: () => api<{ user: User; inbound_ids: string[] }>(`/api/users/${id}`),
     enabled: !!id,
   });
+  const user = detail?.user;
   const usage = useUserUsage(id ?? null);
   const sub = useUserSub(id ?? null);
   const online = useUserOnline(id ?? null);

@@ -402,6 +402,7 @@ type updateUserRequest struct {
 	ExpireAt      *time.Time `json:"expire_at"`
 	DeviceLimit   int        `json:"device_limit"`
 	ResetStrategy string     `json:"reset_strategy"`
+	InboundIDs    *[]string  `json:"inbound_ids"` // nil/omitted = leave bindings unchanged
 }
 
 // UpdateUser replaces a user's mutable metadata.
@@ -418,9 +419,21 @@ func (h *Handlers) UpdateUser(c echo.Context) error {
 	if status == "" {
 		status = domain.UserStatusActive
 	}
+	var inboundIDs []uuid.UUID
+	if req.InboundIDs != nil {
+		parsed, perr := parseUUIDs(*req.InboundIDs)
+		if perr != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
+		}
+		inboundIDs = parsed
+		if inboundIDs == nil {
+			inboundIDs = []uuid.UUID{} // non-nil empty = clear all bindings
+		}
+	}
 	u, err := h.Users.Update(c.Request().Context(), id, service.UpdateUserInput{
 		Note: req.Note, Status: status, DataLimit: req.DataLimit, ExpireAt: req.ExpireAt,
 		DeviceLimit: req.DeviceLimit, ResetStrategy: domain.ResetStrategy(req.ResetStrategy),
+		InboundIDs: inboundIDs,
 	})
 	if errors.Is(err, domain.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, "user not found")
@@ -463,7 +476,14 @@ func (h *Handlers) GetUser(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
 	}
-	return c.JSON(http.StatusOK, u)
+	// Include the user's current inbound bindings so the UI can pre-select them.
+	inboundIDs := []string{}
+	if ins, err := h.Repo.InboundsFor(c.Request().Context(), id); err == nil {
+		for _, in := range ins {
+			inboundIDs = append(inboundIDs, in.ID.String())
+		}
+	}
+	return c.JSON(http.StatusOK, echo.Map{"user": u, "inbound_ids": inboundIDs})
 }
 
 // GetUserUsage returns a user's bucketed traffic series. Defaults to the last 7
