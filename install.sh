@@ -28,7 +28,7 @@ die()  { echo "${r}✗ $*${n}" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "please run as root (sudo)."
 
-PUBLIC_HOST="$(curl -fsS https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1)"
+PUBLIC_HOST="$(curl -fsS4 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1)"
 
 ensure_docker() {
   if ! command -v docker >/dev/null 2>&1; then
