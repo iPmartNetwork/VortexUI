@@ -10,11 +10,11 @@ export interface TrafficSeriesPoint {
 // throughput over time (download stacked on upload), one band per bucket.
 export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] }) {
   if (points.length < 2) {
-    return <div className="flex h-44 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
+    return <div className="flex h-32 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
   }
 
   const w = 560;
-  const h = 180;
+  const h = 130;
   const padX = 6;
   const padTop = 10;
   const padBottom = 18;

@@ -13,11 +13,12 @@ import (
 
 // Deps are the dependencies needed to build the HTTP API.
 type Deps struct {
-	Handlers *Handlers
-	Issuer   *auth.Issuer
-	Auth     *service.AuthService
-	Limiter  RateLimiter   // nil disables login rate limiting
-	Audit    AuditRecorder // nil disables audit logging
+	Handlers  *Handlers
+	APITokens *APITokenHandlers
+	Issuer    *auth.Issuer
+	Auth      *service.AuthService
+	Limiter   RateLimiter   // nil disables login rate limiting
+	Audit     AuditRecorder // nil disables audit logging
 }
 
 // NewRouter builds the Echo instance with all routes and middleware mounted.
@@ -129,6 +130,12 @@ func NewRouter(d Deps) *echo.Echo {
 	account.POST("/2fa/setup", d.Handlers.SetupTOTP)
 	account.POST("/2fa/confirm", d.Handlers.ConfirmTOTP)
 	account.POST("/2fa/disable", d.Handlers.DisableTOTP)
+
+	// API Tokens (Personal Access Tokens)
+	tokens := authed.Group("/tokens")
+	tokens.GET("", d.APITokens.ListAPITokens)
+	tokens.POST("", d.APITokens.CreateAPIToken)
+	tokens.DELETE("/:id", d.APITokens.DeleteAPIToken)
 
 	return e
 }

@@ -8,6 +8,7 @@ import { useAllInbounds, useNodes } from "@/api/hooks";
 import { Card } from "@/components/ui";
 import { TrafficSeriesChart } from "@/components/TrafficSeriesChart";
 import { useI18n } from "@/i18n/i18n";
+import { useTitle } from "@/lib/useTitle";
 import { cn, formatBytes } from "@/lib/utils";
 
 /* ═══════ Hero Stat Card ═══════ */
@@ -102,6 +103,7 @@ function CoreCard({ name, version, running, onStop, onRestart }: {
    OVERVIEW PAGE
    ═══════════════════════════════════════════════════════════════════════ */
 export function Overview() {
+  useTitle("Overview");
   const { data, dataUpdatedAt } = useOverview();
   const sys = useSystem();
   const inbounds = useAllInbounds();
@@ -201,7 +203,7 @@ export function Overview() {
           <span className="text-[11px] text-fg-subtle">1-minute buckets</span>
         </div>
         {trafficSeries.isLoading ? (
-          <div className="h-44 animate-pulse rounded-lg bg-surface-2/50" />
+          <div className="h-32 animate-pulse rounded-lg bg-surface-2/50" />
         ) : (
           <TrafficSeriesChart points={trafficSeries.data?.points ?? []} />
         )}

@@ -207,7 +207,28 @@ export function useStopCore() {
   });
 }
 
-// --- user online ---
+// --- api tokens ---
+
+export function useAPITokens() {
+  return useQuery({ queryKey: ["api-tokens"], queryFn: () => api<{ tokens: { id: string; name: string; admin_id: string; created_at: string; last_used_at: string | null }[] }>("/api/tokens") });
+}
+
+export function useCreateAPIToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => api<{ token: { id: string; name: string }; raw: string }>("/api/tokens", { method: "POST", body: { name } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["api-tokens"] }),
+  });
+}
+
+export function useDeleteAPIToken() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/api/tokens/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["api-tokens"] }),
+  });
+}
+
 
 export function useUserOnline(id: string | null) {
   return useQuery({

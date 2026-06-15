@@ -108,6 +108,17 @@ CREATE TABLE audit_log (
     ip       TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE api_tokens (
+    id           UUID PRIMARY KEY,
+    name         TEXT NOT NULL,
+    token_hash   TEXT NOT NULL UNIQUE,
+    admin_id     UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_used_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_api_tokens_admin ON api_tokens (admin_id);
+
 
 CREATE TABLE outbounds (
     id        UUID PRIMARY KEY,

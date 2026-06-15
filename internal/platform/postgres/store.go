@@ -56,6 +56,9 @@ func (s *Store) Balancers() *BalancerRepo { return &BalancerRepo{q: s.q} }
 // Backup returns the configuration backup/restore repository.
 func (s *Store) Backup() *BackupRepo { return &BackupRepo{pool: s.pool} }
 
+// APITokens returns the API token repository.
+func (s *Store) APITokens() *APITokenRepo { return &APITokenRepo{q: s.q} }
+
 // Traffic returns the traffic repository.
 func (s *Store) Traffic() *TrafficRepo { return &TrafficRepo{q: s.q} }
 
