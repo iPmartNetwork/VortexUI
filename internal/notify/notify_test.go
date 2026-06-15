@@ -111,12 +111,18 @@ func TestTelegramSendsMessage(t *testing.T) {
 }
 
 func TestTelegramRunFormatsEvents(t *testing.T) {
-	var text string
+	// The handler runs on the httptest server's goroutine; pass the received
+	// text back over a channel so the test reads it without a data race.
+	got := make(chan string, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		raw, _ := io.ReadAll(r.Body)
 		_ = json.Unmarshal(raw, &body)
-		text, _ = body["text"].(string)
+		text, _ := body["text"].(string)
+		select {
+		case got <- text:
+		default:
+		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -131,18 +137,15 @@ func TestTelegramRunFormatsEvents(t *testing.T) {
 
 	ch <- events.Event{Type: events.UserExpired, Username: "bob", Time: time.Unix(0, 0)}
 
-	deadline := time.After(2 * time.Second)
-	for {
-		if strings.Contains(text, "bob") {
-			break
+	select {
+	case text := <-got:
+		if !strings.Contains(text, "bob") {
+			t.Errorf("text should name the user: %q", text)
 		}
-		select {
-		case <-deadline:
-			t.Fatalf("message not sent / wrong text: %q", text)
-		case <-time.After(10 * time.Millisecond):
+		if !strings.Contains(text, "expired") {
+			t.Errorf("text should describe expiry: %q", text)
 		}
-	}
-	if !strings.Contains(text, "expired") {
-		t.Errorf("text should describe expiry: %q", text)
+	case <-time.After(2 * time.Second):
+		t.Fatal("message not sent in time")
 	}
 }
