@@ -88,7 +88,12 @@ export function useRevokeSub() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/api/users/${id}/revoke-sub`, { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+    onSuccess: (_d, id) => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      // Refresh the subscription link/QR so the UI shows the new token, not the
+      // revoked one.
+      qc.invalidateQueries({ queryKey: ["usersub", id] });
+    },
   });
 }
 

@@ -82,8 +82,12 @@ func (s *SubscriptionService) buildFor(ctx context.Context, user *domain.User) (
 			info = s.resolveNode(ctx, in.NodeID, user.Username, now)
 			cache[in.NodeID] = info
 		}
-		if info == nil || !info.live {
-			continue // node missing or known-unhealthy: prune from the subscription
+		// Include every enabled inbound the user is bound to (3x-ui style); only
+		// skip when the node record or its host is missing. A momentarily
+		// unhealthy node still gets its config — the client just can't connect
+		// until it recovers, rather than the config silently vanishing.
+		if info == nil || info.host == "" {
+			continue
 		}
 		proxies = append(proxies, buildProxy(user, in, info.host, info.name))
 	}
