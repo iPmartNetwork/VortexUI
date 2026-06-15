@@ -20,13 +20,13 @@
 	# /index.html before reverse_proxy runs, breaking the API. reverse_proxy
 	# upgrades WebSocket/SSE transparently.
 	handle /api/* {
-		reverse_proxy panel:8080
+		reverse_proxy {$PANEL_UPSTREAM:panel:8080}
 	}
 	handle /sub/* {
-		reverse_proxy panel:8080
+		reverse_proxy {$PANEL_UPSTREAM:panel:8080}
 	}
 	handle /health {
-		reverse_proxy panel:8080
+		reverse_proxy {$PANEL_UPSTREAM:panel:8080}
 	}
 
 	# Everything else is the SPA, with client-side routing fallback.

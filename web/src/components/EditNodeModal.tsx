@@ -11,6 +11,7 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [ratio, setRatio] = useState("");
+  const [endpoint, setEndpoint] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
     setName(node.name);
     setAddress(node.address);
     setRatio(String(node.usage_ratio));
+    setEndpoint(node.endpoint || "");
     setError("");
   }, [node]);
 
@@ -28,7 +30,7 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
     if (!node) return;
     setError("");
     try {
-      await update.mutateAsync({ id: node.id, input: { name, address, usage_ratio: ratio ? Number(ratio) : undefined } });
+      await update.mutateAsync({ id: node.id, input: { name, address, usage_ratio: ratio ? Number(ratio) : undefined, endpoint } });
       toast.success(`Saved ${name}`);
       onClose();
     } catch {
@@ -51,6 +53,11 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
           Usage ratio
           <Input className="mt-1" value={ratio} onChange={(e) => setRatio(e.target.value)} inputMode="decimal" />
         </label>
+        <label className="block text-xs text-muted-foreground">
+          Endpoint (tunnel/CDN address)
+          <Input className="mt-1" placeholder="Leave empty to use real IP" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} />
+        </label>
+        <p className="text-[10px] text-fg-subtle">Subscription links will use this address instead of the real server IP. Useful for tunneled or relay setups.</p>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>

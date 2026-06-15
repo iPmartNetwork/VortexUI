@@ -37,12 +37,24 @@ RUN apk add --no-cache curl tar && \
     tar -xzf /tmp/sb.tgz -C /tmp && \
     mv /tmp/sing-box-*/sing-box /usr/local/bin/sing-box && chmod +x /usr/local/bin/sing-box
 
-# ---- panel (control plane) ----
+# ---- panel (control plane, lean — for multi-node setups) ----
 FROM gcr.io/distroless/static-debian12 AS panel
 COPY --from=builder /out/panel /usr/local/bin/panel
 COPY --from=builder /src/migrations /migrations
 EXPOSE 8080
 USER nonroot:nonroot
+ENTRYPOINT ["/usr/local/bin/panel"]
+
+# ---- panel-aio (all-in-one: panel + xray + sing-box for a single-server,
+#      in-process local node). Used by the default single-server compose. ----
+FROM alpine:3.20 AS panel-aio
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /out/panel /usr/local/bin/panel
+COPY --from=xray /xray/xray /usr/local/bin/xray
+COPY --from=singbox /usr/local/bin/sing-box /usr/local/bin/sing-box
+COPY --from=xray /xray/*.dat /etc/vortex/assets/
+ENV XRAY_LOCATION_ASSET=/etc/vortex/assets
+EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/panel"]
 
 # ---- node (agent + xray-core) ----

@@ -11,8 +11,11 @@ import { useToast } from "./toast";
 // xray supports vless/vmess/trojan/shadowsocks; hysteria2/tuic require a
 // sing-box node (switch the local node's core, or add a sing-box node).
 const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic"];
-const NETWORKS = ["tcp", "ws", "grpc"];
-const SECURITIES = ["none", "tls"];
+const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "h2", "quic", "udp"];
+const SECURITIES = ["none", "tls", "reality"];
+
+// Protocols that run over UDP (QUIC-based) — transport/security are fixed.
+const UDP_PROTOCOLS = ["hysteria2", "tuic"];
 
 // randomPort picks a high port (10000–60000) so new inbounds default to a free,
 // non-conflicting port. The admin can still type any port.
@@ -47,7 +50,14 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   if (!node) return null;
   const editing = f.editId !== "";
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setF((s) => ({ ...s, [k]: e.target.value }));
+    setF((s) => {
+      const val = e.target.value;
+      // When protocol changes to UDP-based (hysteria2/tuic), lock transport to udp + security to tls
+      if (k === "protocol" && UDP_PROTOCOLS.includes(val)) {
+        return { ...s, [k]: val, network: "udp", security: "tls" };
+      }
+      return { ...s, [k]: val };
+    });
 
   function startEdit(ib: Inbound) {
     setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: "" });
@@ -175,10 +185,10 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
           <Select value={f.protocol} onChange={set("protocol")} disabled={editing}>
             {PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
-          <Select value={f.network} onChange={set("network")}>
+          <Select value={f.network} onChange={set("network")} disabled={UDP_PROTOCOLS.includes(f.protocol)}>
             {NETWORKS.map((n) => <option key={n} value={n}>{n}</option>)}
           </Select>
-          <Select value={f.security} onChange={set("security")}>
+          <Select value={f.security} onChange={set("security")} disabled={UDP_PROTOCOLS.includes(f.protocol)}>
             {SECURITIES.map((s) => <option key={s} value={s}>{s}</option>)}
           </Select>
         </div>

@@ -117,7 +117,7 @@ export function useNodes() {
 export function useCreateNode() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; address: string; core: string; usage_ratio?: number }) =>
+    mutationFn: (input: { name: string; address: string; core: string; usage_ratio?: number; endpoint?: string }) =>
       api<{ node: Node; warning?: string }>("/api/nodes", { method: "POST", body: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nodes"] }),
   });
@@ -126,7 +126,7 @@ export function useCreateNode() {
 export function useUpdateNode() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: { name?: string; address?: string; usage_ratio?: number } }) =>
+    mutationFn: ({ id, input }: { id: string; input: { name?: string; address?: string; usage_ratio?: number; endpoint?: string } }) =>
       api<{ node: Node; warning?: string }>(`/api/nodes/${id}`, { method: "PUT", body: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nodes"] }),
   });

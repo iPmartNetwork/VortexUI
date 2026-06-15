@@ -31,11 +31,21 @@ var (
 )
 
 // nodeDialer builds the hub.Dialer used in production: every node connection is
-// an mTLS gRPC link. The node's Name is used as the expected TLS server name, so
-// each node's certificate SAN must match its registered name.
+// an mTLS gRPC link. The node's address host is used as the expected TLS server
+// name so the node certificate's SAN must include that IP or hostname.
 func nodeDialer(tls vgrpc.TLSFiles) hub.Dialer {
 	return func(n *domain.Node) (hub.NodeConn, error) {
-		creds, err := vgrpc.ClientCreds(tls, n.Name)
+		// Extract host from "host:port" address for TLS ServerName verification.
+		host := n.Address
+		if idx := len(host) - 1; idx > 0 {
+			for i := idx; i >= 0; i-- {
+				if host[i] == ':' {
+					host = host[:i]
+					break
+				}
+			}
+		}
+		creds, err := vgrpc.ClientCreds(tls, host)
 		if err != nil {
 			return nil, err
 		}

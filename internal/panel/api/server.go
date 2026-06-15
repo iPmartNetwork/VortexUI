@@ -39,6 +39,7 @@ func NewRouter(d Deps) *echo.Echo {
 
 	// Public subscription endpoint, authenticated only by the opaque token.
 	e.GET("/sub/:token", d.Handlers.Subscribe)
+	e.GET("/sub/:token/info", d.Handlers.SubscriptionInfoPage)
 
 	// Authenticated subtree. The audit middleware records every mutating request.
 	authed := api.Group("", RequireAuth(d.Issuer), Audit(d.Audit))

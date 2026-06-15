@@ -79,6 +79,7 @@ type Node struct {
 	Core         string
 	Status       string
 	UsageRatio   float64
+	Endpoint     string
 	LastSeen     pgtype.Timestamptz
 	CpuPercent   float64
 	MemPercent   float64

@@ -105,8 +105,14 @@ func (s *SubscriptionService) resolveNode(ctx context.Context, nodeID uuid.UUID,
 	if err != nil {
 		return nil
 	}
+	// If the node has a custom endpoint (tunnel/CDN/relay), use that instead of
+	// the real IP so clients connect via the intermediate address.
+	host := node.Endpoint
+	if host == "" {
+		host = hostOf(node.Address)
+	}
 	return &nodeInfo{
-		host: hostOf(node.Address),
+		host: host,
 		name: username + " @ " + node.Name,
 		live: node.Live(now, s.staleAfter),
 	}

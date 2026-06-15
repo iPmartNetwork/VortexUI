@@ -113,6 +113,7 @@ type CreateNodeInput struct {
 	Address    string
 	Core       domain.CoreType
 	UsageRatio float64
+	Endpoint   string
 }
 
 // Create persists a node and immediately brings it under hub management so its
@@ -136,6 +137,7 @@ func (s *NodeService) Create(ctx context.Context, in CreateNodeInput) (*domain.N
 		Core:       core,
 		Status:     domain.NodeDisconnected,
 		UsageRatio: ratio,
+		Endpoint:   in.Endpoint,
 		CreatedAt:  s.now(),
 	}
 	if err := s.repo.Create(ctx, n); err != nil {
@@ -163,6 +165,7 @@ type UpdateNodeInput struct {
 	Name       string
 	Address    string
 	UsageRatio float64
+	Endpoint   string
 }
 
 // Update persists node changes and re-establishes hub management so an address
@@ -182,6 +185,8 @@ func (s *NodeService) Update(ctx context.Context, id uuid.UUID, in UpdateNodeInp
 	if in.UsageRatio > 0 {
 		n.UsageRatio = in.UsageRatio
 	}
+	// Endpoint can be set to empty string to clear it (revert to real IP).
+	n.Endpoint = in.Endpoint
 	if err := s.repo.Update(ctx, n); err != nil {
 		return nil, err
 	}

@@ -18,6 +18,7 @@ type createNodeRequest struct {
 	Address    string  `json:"address"`
 	Core       string  `json:"core"`
 	UsageRatio float64 `json:"usage_ratio"`
+	Endpoint   string  `json:"endpoint"`
 }
 
 // CreateNode registers a new node and brings it under live management.
@@ -27,7 +28,7 @@ func (h *Handlers) CreateNode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
 	n, err := h.Nodes.Create(c.Request().Context(), service.CreateNodeInput{
-		Name: req.Name, Address: req.Address, Core: domain.CoreType(req.Core), UsageRatio: req.UsageRatio,
+		Name: req.Name, Address: req.Address, Core: domain.CoreType(req.Core), UsageRatio: req.UsageRatio, Endpoint: req.Endpoint,
 	})
 	if n == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
@@ -68,6 +69,7 @@ type updateNodeRequest struct {
 	Name       string  `json:"name"`
 	Address    string  `json:"address"`
 	UsageRatio float64 `json:"usage_ratio"`
+	Endpoint   string  `json:"endpoint"`
 }
 
 // UpdateNode edits a node and re-establishes its hub connection.
@@ -81,7 +83,7 @@ func (h *Handlers) UpdateNode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
 	n, err := h.Nodes.Update(c.Request().Context(), id, service.UpdateNodeInput{
-		Name: req.Name, Address: req.Address, UsageRatio: req.UsageRatio,
+		Name: req.Name, Address: req.Address, UsageRatio: req.UsageRatio, Endpoint: req.Endpoint,
 	})
 	if errors.Is(err, domain.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, "node not found")

@@ -36,6 +36,11 @@ type Node struct {
 	// UsageRatio lets you weight a node when distributing/auto-failing-over users.
 	UsageRatio float64 `json:"usage_ratio"`
 
+	// Endpoint overrides the public host/IP used in subscription links. When set,
+	// clients receive this address instead of the node's real IP — essential for
+	// tunnel/CDN/relay setups where the user should connect via an intermediate.
+	Endpoint string `json:"endpoint,omitempty"`
+
 	// Live health, refreshed by the hub from the agent's heartbeat.
 	LastSeen  *time.Time `json:"last_seen,omitempty"`
 	Health    NodeHealth `json:"health"`

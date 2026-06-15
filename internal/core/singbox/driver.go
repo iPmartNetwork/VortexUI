@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -250,4 +252,12 @@ func (d *Driver) Logs(_ context.Context, limit int) ([]string, error) {
 	return d.run.Logs(limit), nil
 }
 
-func (d *Driver) Version(_ context.Context) (string, error) { return "sing-box", nil }
+func (d *Driver) Version(_ context.Context) (string, error) {
+	out, err := exec.Command(d.opts.BinPath, "version").Output()
+	if err != nil {
+		return "sing-box", nil
+	}
+	// First line: "sing-box version 1.9.3"
+	line := strings.SplitN(string(out), "\n", 2)[0]
+	return strings.TrimSpace(line), nil
+}

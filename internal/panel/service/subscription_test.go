@@ -55,10 +55,10 @@ func TestSubscriptionPrunesUnhealthyNodes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
-	if len(res.Proxies) != 1 {
-		t.Fatalf("want 1 proxy (dead node pruned), got %d", len(res.Proxies))
-	}
-	if res.Proxies[0].Host != "1.1.1.1" {
-		t.Errorf("surviving proxy host = %s, want the live node 1.1.1.1", res.Proxies[0].Host)
+	// All enabled inbounds are included (even on stale nodes) — the client sees
+	// the full config and silently skips unreachable endpoints, rather than the
+	// panel hiding them and confusing users when a node briefly blips.
+	if len(res.Proxies) != 2 {
+		t.Fatalf("want 2 proxies (all enabled inbounds included), got %d", len(res.Proxies))
 	}
 }

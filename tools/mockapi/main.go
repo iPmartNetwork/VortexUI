@@ -58,6 +58,10 @@ func main() {
 			"mem_alloc_bytes": m.Alloc,
 			"mem_sys_bytes":   m.Sys,
 			"hostname":       host,
+			"cpu_percent":    12.0 + rand.Float64()*15,
+			"mem_percent":    55.0 + rand.Float64()*10,
+			"disk_percent":   42.0 + rand.Float64()*3,
+			"gc_count":       m.NumGC,
 		})
 	})
 
@@ -72,6 +76,11 @@ func main() {
 			"nodes": map[string]any{
 				"total":  3,
 				"online": 2,
+				"items": []map[string]any{
+					{"id": "n1", "name": "Germany-1", "core": "xray", "online": true, "health": map[string]any{"cpu_percent": 23.0, "mem_percent": 61.0, "disk_percent": 44.0, "core_running": true, "connections": 34 + rand.Intn(10)}},
+					{"id": "n2", "name": "Netherlands-1", "core": "singbox", "online": true, "health": map[string]any{"cpu_percent": 45.0, "mem_percent": 72.0, "disk_percent": 55.0, "core_running": true, "connections": 52 + rand.Intn(15)}},
+					{"id": "n3", "name": "Finland-1", "core": "xray", "online": false, "health": map[string]any{"cpu_percent": 0.0, "mem_percent": 0.0, "disk_percent": 38.0, "core_running": false, "connections": 0}},
+				},
 			},
 		})
 	})

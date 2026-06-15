@@ -42,6 +42,7 @@ export interface Node {
   core: "xray" | "singbox";
   status: "connected" | "disconnected" | "error" | "disabled";
   usage_ratio: number;
+  endpoint?: string;
   last_seen: string | null;
   health: NodeHealth;
   core_version?: string;

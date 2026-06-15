@@ -118,7 +118,9 @@ c_logs() {
   esac
 }
 c_update() {
-  git -C "$DIR" pull --ff-only
+  local branch; branch="$(git -C "$DIR" rev-parse --abbrev-ref HEAD)"
+  git -C "$DIR" fetch origin "$branch"
+  git -C "$DIR" reset --hard "origin/$branch"
   case "$MODE" in
     node)
       ( cd "$DIR" && go build -o /usr/local/bin/vortex-node ./cmd/node ) && systemctl restart vortexui-node ;;

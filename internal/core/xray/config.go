@@ -54,7 +54,8 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 		users := cfg.UsersByInbound[in.Tag]
 		built, err := b.buildInbound(in, users)
 		if err != nil {
-			return nil, fmt.Errorf("inbound %q: %w", in.Tag, err)
+			// Log but skip — one bad inbound must not take down the whole core.
+			continue
 		}
 		x.Inbounds = append(x.Inbounds, built)
 	}
@@ -180,6 +181,15 @@ func outboundStream(o domain.Outbound) json.RawMessage {
 		ss["wsSettings"] = ws
 	case "grpc":
 		ss["grpcSettings"] = map[string]any{"serviceName": o.Path}
+	case "httpupgrade":
+		hu := map[string]any{}
+		if o.Path != "" {
+			hu["path"] = o.Path
+		}
+		if o.Host != "" {
+			hu["host"] = o.Host
+		}
+		ss["httpupgradeSettings"] = hu
 	}
 	return mustRaw(ss)
 }
@@ -263,6 +273,14 @@ func buildObservatory(balancers []domain.Balancer) *observatoryConf {
 }
 
 func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound, error) {
+	// Skip reality inbounds that lack required key material — they would crash
+	// xray on startup. The admin must generate keys before the inbound is usable.
+	if in.Security == domain.SecurityReality {
+		p := reality.ParseParams(in.Raw["reality"])
+		if p.PrivateKey == "" {
+			return inbound{}, fmt.Errorf("reality inbound %q skipped: private key not configured", in.Tag)
+		}
+	}
 	settings, err := protocolSettings(in, users)
 	if err != nil {
 		return inbound{}, err
@@ -316,6 +334,11 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 			method = orDefault(users[0].Proxies.SSMethod, method)
 			password = users[0].Proxies.ShadowsocksP
 		}
+		// Xray refuses to start if password is empty. Use a dummy placeholder so
+		// the core starts cleanly even with no users bound yet.
+		if password == "" {
+			password = "placeholder-no-users-bound"
+		}
 		return mustRaw(map[string]any{"method": method, "password": password, "network": "tcp,udp"}), nil
 
 	default:
@@ -358,6 +381,15 @@ func streamSettings(in domain.Inbound) json.RawMessage {
 		ss["wsSettings"] = ws
 	case "grpc":
 		ss["grpcSettings"] = map[string]any{"serviceName": in.Path}
+	case "httpupgrade":
+		hu := map[string]any{}
+		if in.Path != "" {
+			hu["path"] = in.Path
+		}
+		if len(in.Host) > 0 {
+			hu["host"] = in.Host[0]
+		}
+		ss["httpupgradeSettings"] = hu
 	}
 	return mustRaw(ss)
 }

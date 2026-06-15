@@ -35,7 +35,8 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 		users := cfg.UsersByInbound[in.Tag]
 		built, err := buildInbound(in, users)
 		if err != nil {
-			return nil, fmt.Errorf("inbound %q: %w", in.Tag, err)
+			// Skip misconfigured inbounds — one bad entry must not crash the core.
+			continue
 		}
 		inbounds = append(inbounds, built)
 		for _, u := range users {
@@ -241,6 +242,26 @@ func outboundTransport(o domain.Outbound) map[string]any {
 		return t
 	case "grpc":
 		return map[string]any{"type": "grpc", "service_name": o.Path}
+	case "httpupgrade":
+		t := map[string]any{"type": "httpupgrade"}
+		if o.Path != "" {
+			t["path"] = o.Path
+		}
+		if o.Host != "" {
+			t["host"] = o.Host
+		}
+		return t
+	case "http", "h2":
+		t := map[string]any{"type": "http"}
+		if o.Path != "" {
+			t["path"] = o.Path
+		}
+		if o.Host != "" {
+			t["host"] = []string{o.Host}
+		}
+		return t
+	case "quic":
+		return map[string]any{"type": "quic"}
 	default:
 		return nil
 	}
@@ -535,6 +556,26 @@ func transportBlock(in domain.Inbound) map[string]any {
 		return t
 	case "grpc":
 		return map[string]any{"type": "grpc", "service_name": in.Path}
+	case "httpupgrade":
+		t := map[string]any{"type": "httpupgrade"}
+		if in.Path != "" {
+			t["path"] = in.Path
+		}
+		if len(in.Host) > 0 {
+			t["host"] = in.Host[0]
+		}
+		return t
+	case "http", "h2":
+		t := map[string]any{"type": "http"}
+		if in.Path != "" {
+			t["path"] = in.Path
+		}
+		if len(in.Host) > 0 {
+			t["host"] = in.Host
+		}
+		return t
+	case "quic":
+		return map[string]any{"type": "quic"}
 	default:
 		return nil
 	}

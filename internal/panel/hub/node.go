@@ -83,7 +83,7 @@ func (m *managedNode) dropConn() {
 // runTraffic keeps the node's traffic stream draining into the aggregator,
 // redialing with capped backoff whenever it drops, until ctx is cancelled.
 func (m *managedNode) runTraffic(ctx context.Context) {
-	bo := backoff{min: time.Second, max: 30 * time.Second}
+	bo := backoff{min: 500 * time.Millisecond, max: 15 * time.Second}
 	for {
 		if ctx.Err() != nil {
 			return

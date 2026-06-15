@@ -307,6 +307,7 @@ the offender (reversible).
 | Topic | Link |
 |-------|------|
 | API Reference (OpenAPI 3.0) | [`docs/openapi.yaml`](docs/openapi.yaml) |
+| Protocols & Config Examples | [`docs/protocols.md`](docs/protocols.md) |
 | Environment Variables | [`.env.example`](.env.example) |
 | Docker Deploy | [`deploy/`](deploy/) |
 | CI/CD | [`.github/workflows/`](.github/workflows/) |
