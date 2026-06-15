@@ -310,6 +310,8 @@ the offender (reversible).
 | Environment Variables | [`.env.example`](.env.example) |
 | Docker Deploy | [`deploy/`](deploy/) |
 | CI/CD | [`.github/workflows/`](.github/workflows/) |
+| Changelog | [`CHANGELOG.md`](CHANGELOG.md) |
+| Contributing | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
 ---
 

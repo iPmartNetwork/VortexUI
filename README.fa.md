@@ -219,6 +219,8 @@ make build && make certs && make run-panel
 | متغیرهای محیطی | [`.env.example`](.env.example) |
 | استقرار با Docker | [`deploy/`](deploy/) |
 | CI/CD | [`.github/workflows/`](.github/workflows/) |
+| تغییرات نسخه‌ها | [`CHANGELOG.md`](CHANGELOG.md) |
+| راهنمای مشارکت | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
 ---
 
