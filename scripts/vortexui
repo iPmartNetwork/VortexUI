@@ -25,14 +25,35 @@ env_set()  { # key value
 public_host() { curl -fsS https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1; }
 
 show_settings() {
-  local host port
+  local host port site url
   host="$(public_host)"; port="$(env_get WEB_PORT)"; port="${port:-80}"
+  site="$(env_get SITE_ADDRESS)"
+  case "$site" in
+    ""|:*) url="http://$host:$port" ;;
+    *)     url="https://$site" ;;
+  esac
   echo
-  echo "  ${b}Panel URL:${n}  http://$host:$port"
-  echo "  ${b}Install:${n}    $DIR"
-  echo "  ${b}Web port:${n}   $port"
+  echo "  ${b}Panel URL:${n}   $url"
+  echo "  ${b}Install:${n}     $DIR"
+  echo "  ${b}Site addr:${n}   ${site:-:$port}"
   echo
   $COMPOSE ps
+}
+
+c_set_domain() {
+  local domain email
+  read -r -p "domain/subdomain (blank = back to IP/HTTP): " domain
+  if [ -z "$domain" ]; then
+    env_set SITE_ADDRESS ":$(env_get WEB_PORT)"
+    env_set ACME_EMAIL ""
+    echo "${y}reverting to HTTP on port $(env_get WEB_PORT)${n}"
+  else
+    read -r -p "Let's Encrypt email (optional): " email
+    env_set SITE_ADDRESS "$domain"
+    env_set ACME_EMAIL "$email"
+    echo "${g}✓ domain set — make sure $domain points here and 80/443 are open${n}"
+  fi
+  $COMPOSE up -d web
 }
 
 # --- actions ------------------------------------------------------------------
@@ -95,8 +116,8 @@ menu() {
     echo "   ${b}3)${n} Restart          ${b}4)${n} Status"
     echo "   ${b}5)${n} Logs             ${b}6)${n} Update"
     echo "   ${b}7)${n} Create admin     ${b}8)${n} Change web port"
-    echo "   ${b}9)${n} Settings / URL   ${b}10)${n} ${r}Uninstall${n}"
-    echo "   ${b}0)${n} Exit"
+    echo "   ${b}9)${n} Domain / SSL     ${b}10)${n} Settings / URL"
+    echo "   ${b}11)${n} ${r}Uninstall${n}      ${b}0)${n} Exit"
     echo
     read -r -p "  choose: " choice
     case "$choice" in
@@ -108,8 +129,9 @@ menu() {
       6) c_update ;;
       7) c_create_admin ;;
       8) c_change_port ;;
-      9) show_settings ;;
-      10) c_uninstall; exit 0 ;;
+      9) c_set_domain ;;
+      10) show_settings ;;
+      11) c_uninstall; exit 0 ;;
       0) exit 0 ;;
       *) echo "  ${y}invalid choice${n}" ;;
     esac

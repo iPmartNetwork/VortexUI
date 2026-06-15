@@ -45,7 +45,29 @@ fi
 cd "$INSTALL_DIR"
 ok "source ready."
 
-# --- 3. Environment + secrets -------------------------------------------------
+# --- 3. Access mode: domain + automatic SSL, or IP-only HTTP ------------------
+SITE_ADDRESS=":${WEB_PORT}"
+ACME_EMAIL=""
+if [ -z "${VORTEXUI_NONINTERACTIVE:-}" ]; then
+  echo
+  echo "  ${b}How should the panel be reached?${n}"
+  echo "   ${b}1)${n} Domain with automatic HTTPS (Let's Encrypt)  ${d}— recommended${n}"
+  echo "   ${b}2)${n} IP address, plain HTTP on a port"
+  read -r -p "  choose [1/2]: " mode
+  if [ "$mode" = "1" ]; then
+    read -r -p "  domain/subdomain (e.g. panel.example.com): " DOMAIN
+    [ -n "$DOMAIN" ] || die "a domain is required for HTTPS mode."
+    read -r -p "  email for Let's Encrypt (optional): " ACME_EMAIL
+    SITE_ADDRESS="$DOMAIN"
+    warn "point $DOMAIN's DNS A record to this server and open ports 80 + 443."
+  else
+    read -r -p "  HTTP port [${WEB_PORT}]: " p
+    WEB_PORT="${p:-$WEB_PORT}"
+    SITE_ADDRESS=":${WEB_PORT}"
+  fi
+fi
+
+# --- 4. Environment + secrets -------------------------------------------------
 ENV_FILE="deploy/.env"
 if [ ! -f "$ENV_FILE" ]; then
   info "generating secrets…"
@@ -55,11 +77,16 @@ if [ ! -f "$ENV_FILE" ]; then
 JWT_SECRET=$JWT_SECRET
 DB_PASSWORD=$DB_PASSWORD
 WEB_PORT=$WEB_PORT
+SITE_ADDRESS=$SITE_ADDRESS
+ACME_EMAIL=$ACME_EMAIL
 EOF
   chmod 600 "$ENV_FILE"
   ok "wrote $ENV_FILE (keep it safe)."
 else
-  warn "$ENV_FILE exists — keeping existing secrets."
+  warn "$ENV_FILE exists — updating access settings, keeping secrets."
+  # refresh access-mode keys without touching JWT/DB secrets
+  sed -i "/^WEB_PORT=/d;/^SITE_ADDRESS=/d;/^ACME_EMAIL=/d" "$ENV_FILE"
+  printf 'WEB_PORT=%s\nSITE_ADDRESS=%s\nACME_EMAIL=%s\n' "$WEB_PORT" "$SITE_ADDRESS" "$ACME_EMAIL" >> "$ENV_FILE"
 fi
 
 # --- 4. mTLS chain for the panel↔node hub -------------------------------------
@@ -105,9 +132,14 @@ fi
 # --- 7. Management CLI ---------------------------------------------------------
 install -m 0755 scripts/vortexui /usr/local/bin/vortexui 2>/dev/null && ok "installed 'vortexui' management command."
 
+case "$SITE_ADDRESS" in
+  :*) ACCESS_URL="http://$PUBLIC_HOST:$WEB_PORT" ;;
+  *)  ACCESS_URL="https://$SITE_ADDRESS" ;;
+esac
+
 echo
 ok "VortexUI is up."
-echo "   ${c_blue}URL:${c_reset}      http://$PUBLIC_HOST:$WEB_PORT"
+echo "   ${c_blue}URL:${c_reset}      $ACCESS_URL"
 echo "   ${c_blue}Username:${c_reset} $ADMIN_USER"
 echo "   ${c_blue}Password:${c_reset} $ADMIN_PASS"
 echo

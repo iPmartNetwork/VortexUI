@@ -1,5 +1,6 @@
-# Builds the VortexUI web SPA and serves it with nginx, reverse-proxying the API
-# and subscription endpoints to the panel. Build from the repo root:
+# Builds the VortexUI web SPA and serves it with Caddy, which reverse-proxies the
+# API + subscription endpoints to the panel and handles automatic HTTPS
+# (Let's Encrypt) when a domain is configured. Build from the repo root:
 #   docker build -f deploy/web.Dockerfile -t vortexui/web .
 
 # ---- build the Vite bundle ----
@@ -10,8 +11,8 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-# ---- serve with nginx ----
-FROM nginx:1.27-alpine
-COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /web/dist /usr/share/nginx/html
-EXPOSE 80
+# ---- serve with Caddy ----
+FROM caddy:2-alpine
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /web/dist /usr/share/caddy
+EXPOSE 80 443

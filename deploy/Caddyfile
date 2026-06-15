@@ -1,0 +1,28 @@
+# Caddy serves the VortexUI SPA and reverse-proxies the API + subscription
+# endpoints to the panel. When SITE_ADDRESS is a domain, Caddy automatically
+# obtains and renews a Let's Encrypt certificate (HTTP-01 over port 80, served on
+# 443). When it is ":80" (the default), it serves plain HTTP for IP-only setups.
+#
+#   SITE_ADDRESS  panel.example.com   → automatic HTTPS
+#   SITE_ADDRESS  :80                 → HTTP only
+#   ACME_EMAIL    you@example.com     → optional, for Let's Encrypt notices
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_ADDRESS::80} {
+	encode gzip
+
+	# Control-plane API, subscription delivery, and health all proxy to the panel.
+	# reverse_proxy transparently upgrades WebSocket/SSE connections.
+	@panel path /api/* /sub/* /health
+	reverse_proxy @panel panel:8080
+
+	# Everything else is the SPA, with client-side routing fallback.
+	handle {
+		root * /usr/share/caddy
+		try_files {path} /index.html
+		file_server
+	}
+}

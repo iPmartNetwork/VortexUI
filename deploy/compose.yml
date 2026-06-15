@@ -53,15 +53,24 @@ services:
       - "8080"
     restart: unless-stopped
 
-  # Web UI: serves the SPA and reverse-proxies /api + /sub to the panel.
+  # Web UI: serves the SPA, reverse-proxies /api + /sub to the panel, and
+  # terminates TLS. With SITE_ADDRESS set to a domain, Caddy auto-provisions a
+  # Let's Encrypt certificate; otherwise it serves plain HTTP on WEB_PORT.
   web:
     build:
       context: ..
       dockerfile: deploy/web.Dockerfile
     depends_on:
       - panel
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      ACME_EMAIL: ${ACME_EMAIL:-}
     ports:
       - "${WEB_PORT:-80}:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
     restart: unless-stopped
 
   node:
@@ -82,3 +91,5 @@ services:
 
 volumes:
   db-data:
+  caddy-data:
+  caddy-config:
