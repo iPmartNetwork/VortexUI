@@ -45,8 +45,24 @@ services:
       VORTEX_TLS_CA: /certs/ca.crt
     volumes:
       - ./certs:/certs:ro
+    # The panel is reached through the web reverse proxy; expose it directly only
+    # if you want to hit the raw API. Uncomment to publish on the host:
+    # ports:
+    #   - "8080:8080"
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  # Web UI: serves the SPA and reverse-proxies /api + /sub to the panel.
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile
+    depends_on:
+      - panel
     ports:
-      - "8080:8080"
+      - "${WEB_PORT:-80}:80"
+    restart: unless-stopped
 
   node:
     build:
