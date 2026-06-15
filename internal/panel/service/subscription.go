@@ -138,6 +138,11 @@ func buildProxy(u *domain.User, in domain.Inbound, host, name string) subscripti
 	case domain.ProtoShadowsocks:
 		p.Password = u.Proxies.ShadowsocksP
 		p.SSMethod = u.Proxies.SSMethod
+	case domain.ProtoHysteria2:
+		p.Password = u.Proxies.TrojanPass
+	case domain.ProtoTUIC:
+		p.UUID = u.Proxies.VLESSUUID.String()
+		p.Password = u.Proxies.TrojanPass
 	}
 	// REALITY clients need the public key + short id; pull them from the
 	// inbound's neutral reality params and prefer its server name as the SNI.

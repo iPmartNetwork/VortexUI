@@ -367,6 +367,13 @@ func buildInbound(in domain.Inbound, users []*domain.User) (map[string]any, erro
 		m["type"] = "shadowsocks"
 		m["method"] = ssMethod(users)
 		m["users"] = ssUsers(users)
+	case domain.ProtoHysteria2:
+		m["type"] = "hysteria2"
+		m["users"] = hysteria2Users(users)
+	case domain.ProtoTUIC:
+		m["type"] = "tuic"
+		m["users"] = tuicUsers(users)
+		m["congestion_control"] = "bbr"
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q for sing-box", in.Protocol)
 	}
@@ -411,6 +418,24 @@ func trojanUsers(users []*domain.User) []map[string]any {
 	return out
 }
 
+// hysteria2Users renders the per-user password list. Reuses the trojan password.
+func hysteria2Users(users []*domain.User) []map[string]any {
+	out := make([]map[string]any, 0, len(users))
+	for _, u := range users {
+		out = append(out, map[string]any{"name": u.ID.String(), "password": u.Proxies.TrojanPass})
+	}
+	return out
+}
+
+// tuicUsers renders per-user uuid+password. Reuses the vless uuid + trojan pass.
+func tuicUsers(users []*domain.User) []map[string]any {
+	out := make([]map[string]any, 0, len(users))
+	for _, u := range users {
+		out = append(out, map[string]any{"name": u.ID.String(), "uuid": u.Proxies.VLESSUUID.String(), "password": u.Proxies.TrojanPass})
+	}
+	return out
+}
+
 func ssUsers(users []*domain.User) []map[string]any {
 	out := make([]map[string]any, 0, len(users))
 	for _, u := range users {
@@ -438,8 +463,28 @@ func tlsBlock(in domain.Inbound) map[string]any {
 	}
 	if in.Security == domain.SecurityReality {
 		tls["reality"] = realityBlock(in)
+	} else if cert, key := tlsCertLines(in.Raw["tls"]); cert != nil {
+		// Inline the auto-generated (or operator-supplied) certificate so TLS
+		// inbounds — including the mandatory-TLS hysteria2/tuic — actually start.
+		tls["certificate"] = cert
+		tls["key"] = key
 	}
 	return tls
+}
+
+// tlsCertLines splits the PEM strings in Inbound.Raw["tls"] ({certificate, key})
+// into the line arrays sing-box expects. Returns nil when absent.
+func tlsCertLines(v any) (cert, key []string) {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return nil, nil
+	}
+	c, _ := m["certificate"].(string)
+	k, _ := m["key"].(string)
+	if c == "" || k == "" {
+		return nil, nil
+	}
+	return strings.Split(strings.TrimRight(c, "\n"), "\n"), strings.Split(strings.TrimRight(k, "\n"), "\n")
 }
 
 // realityBlock renders the sing-box server REALITY config from the engine-neutral

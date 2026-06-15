@@ -24,6 +24,11 @@ func provisionSecurity(in *domain.Inbound) {
 	if _, ok := in.Raw["streamSettings"]; ok {
 		return // full manual override
 	}
+	// Hysteria2 and TUIC mandate TLS; ensure they carry a certificate even if the
+	// admin left security unset.
+	if (in.Protocol == domain.ProtoHysteria2 || in.Protocol == domain.ProtoTUIC) && in.Security != domain.SecurityReality {
+		in.Security = domain.SecurityTLS
+	}
 	switch in.Security {
 	case domain.SecurityReality:
 		if reality.ParseParams(in.Raw["reality"]).PrivateKey != "" {
