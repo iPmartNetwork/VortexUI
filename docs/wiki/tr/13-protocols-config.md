@@ -1,6 +1,6 @@
 # 13. Protokoller ve Yapılandırma
 
-> Tam İngilizce JSON örnekleri: [`docs/protocols.md`](../../protocols.md)
+> Tam İngilizce JSON örnekleri: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
 
 !!! tip
     Ağır sansür altında: **VLESS + REALITY + Vision** — anahtarları UI'dan oluşturun.

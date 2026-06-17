@@ -131,12 +131,12 @@ GPL-3.0 — مشتقات باید source باز باشند.
 1. [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues)
 2. نسخه: `vortexui settings` یا sidebar
 3. لاگ: `vortexui logs` (بدون secret)
-4. [SECURITY.md](../../../SECURITY.md) برای آسیب‌پذیری
+4. [SECURITY.md](https://github.com/iPmartNetwork/VortexUI/blob/master/SECURITY.md) برای آسیب‌پذیری
 
 ---
 
 ## Community
 
 - ⭐ Star on GitHub
-- [Contributing](../../../CONTRIBUTING.md)
-- [Changelog](../../../CHANGELOG.md)
+- [Contributing](https://github.com/iPmartNetwork/VortexUI/blob/master/CONTRIBUTING.md)
+- [Changelog](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md)

@@ -1,13 +1,13 @@
 # ۱۲. مرجع API
 
 !!! note
-    مرجع کامل: [`docs/openapi.yaml`](../../openapi.yaml) — همه endpointها و RBAC.
+    مرجع کامل: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) — همه endpointها و RBAC.
 
 ---
 
 ## OpenAPI
 
-مشخصات کامل: [`docs/openapi.yaml`](../../openapi.yaml)
+مشخصات کامل: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml)
 
 ### مشاهده تعاملی
 

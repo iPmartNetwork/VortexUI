@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 LANGS = ("en", "fa", "ar", "tr")
+GITHUB = "https://github.com/iPmartNetwork/VortexUI/blob/master"
 
 ALERT_MAP = {
     "NOTE": "note",
@@ -88,6 +89,21 @@ def fix_admonition_quotes(text: str) -> str:
             in_admonition = False
         out.append(line)
     return "\n".join(out)
+
+
+def fix_external_links(text: str) -> str:
+    """Point repo-root references at GitHub (outside docs_dir)."""
+    replacements = {
+        "../../openapi.yaml": f"{GITHUB}/docs/openapi.yaml",
+        "../../protocols.md": f"{GITHUB}/docs/protocols.md",
+        "../../../.env.example": f"{GITHUB}/.env.example",
+        "../../../SECURITY.md": f"{GITHUB}/SECURITY.md",
+        "../../../CONTRIBUTING.md": f"{GITHUB}/CONTRIBUTING.md",
+        "../../../CHANGELOG.md": f"{GITHUB}/CHANGELOG.md",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
 
 
 def simplify_nav_line(text: str) -> str:
@@ -178,6 +194,7 @@ def sanitize_chapter(path: Path) -> None:
     text = github_alerts_to_material(text)
     text = fix_admonition_quotes(text)
     text = simplify_nav_line(text)
+    text = fix_external_links(text)
     text = ensure_table_spacing(text)
     text = re.sub(r"\n{3,}", "\n\n", text).strip() + "\n"
     path.write_text(text, encoding="utf-8")

@@ -164,7 +164,7 @@ Docker Compose'ta bu varsayılan olarak etkindir.
 | `VORTEX_TELEGRAM_TOKEN` | — | Telegram bot token'ı |
 | `VORTEX_CF_API_TOKEN` | — | Cloudflare DNS otomasyonu |
 
-Tam liste: [`.env.example`](../../../.env.example)
+Tam liste: [`.env.example`](https://github.com/iPmartNetwork/VortexUI/blob/master/.env.example)
 
 ---
 

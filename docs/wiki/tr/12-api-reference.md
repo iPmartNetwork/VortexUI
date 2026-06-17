@@ -1,13 +1,13 @@
 # 12. API Referansı
 
 !!! note
-    Tam şema: [`docs/openapi.yaml`](../../openapi.yaml) — tüm endpoint'ler ve RBAC.
+    Tam şema: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) — tüm endpoint'ler ve RBAC.
 
 ---
 
 ## OpenAPI
 
-Tam spesifikasyon: [`docs/openapi.yaml`](../../openapi.yaml)
+Tam spesifikasyon: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml)
 
 ### Etkileşimli görüntüleme
 

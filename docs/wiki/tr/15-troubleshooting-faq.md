@@ -131,12 +131,12 @@ GPL-3.0 — türevler açık kaynak olmalıdır.
 1. [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues)
 2. Sürüm: `vortexui settings` veya kenar çubuğu
 3. Loglar: `vortexui logs` (sırlar olmadan)
-4. Güvenlik açıkları için [SECURITY.md](../../../SECURITY.md)
+4. Güvenlik açıkları için [SECURITY.md](https://github.com/iPmartNetwork/VortexUI/blob/master/SECURITY.md)
 
 ---
 
 ## Topluluk
 
 - ⭐ Star on GitHub
-- [Contributing](../../../CONTRIBUTING.md)
-- [Changelog](../../../CHANGELOG.md)
+- [Contributing](https://github.com/iPmartNetwork/VortexUI/blob/master/CONTRIBUTING.md)
+- [Changelog](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md)

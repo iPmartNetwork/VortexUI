@@ -164,7 +164,7 @@ VORTEX_CORE_BIN=/usr/local/bin/xray
 | `VORTEX_TELEGRAM_TOKEN` | — | رمز بوت Telegram |
 | `VORTEX_CF_API_TOKEN` | — | أتمتة DNS Cloudflare |
 
-القائمة الكاملة: [`.env.example`](../../../.env.example)
+القائمة الكاملة: [`.env.example`](https://github.com/iPmartNetwork/VortexUI/blob/master/.env.example)
 
 ---
 
