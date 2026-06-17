@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/15-troubleshooting-faq.md) · [EN](../en/15-troubleshooting-faq.md) · [AR](../ar/15-troubleshooting-faq.md)
+[Wiki](./README.md) · [FA](../fa/15-troubleshooting-faq.md) · [EN](../en/15-troubleshooting-faq.md) · [AR](../ar/15-troubleshooting-faq.md)
 
 </div>
 

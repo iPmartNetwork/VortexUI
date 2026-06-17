@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/09-plans-payments.md) · [EN](../en/09-plans-payments.md) · [AR](../ar/09-plans-payments.md)
+[Wiki](./README.md) · [FA](../fa/09-plans-payments.md) · [EN](../en/09-plans-payments.md) · [AR](../ar/09-plans-payments.md)
 
 </div>
 

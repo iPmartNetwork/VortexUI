@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/01-introduction.md) · [EN](../en/01-introduction.md) · [TR](../tr/01-introduction.md)
+[Wiki](./README.md) · [FA](../fa/01-introduction.md) · [EN](../en/01-introduction.md) · [TR](../tr/01-introduction.md)
 
 </div>
 

@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [EN](../en/08-security-administration.md) · [AR](../ar/08-security-administration.md) · [TR](../tr/08-security-administration.md)
+[Wiki](./README.md) · [EN](../en/08-security-administration.md) · [AR](../ar/08-security-administration.md) · [TR](../tr/08-security-administration.md)
 
 </div>
 

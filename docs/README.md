@@ -37,9 +37,9 @@ Push to `master` — GitHub Actions workflow [`.github/workflows/docs.yml`](../.
 
 ## Wiki (Markdown source)
 
-Markdown files live in [`wiki/`](wiki/README.md) (FA / EN / AR / TR).
+Markdown files live in [`wiki/`](WIKI-HUB.md) (FA / EN / AR / TR).
 
-**[📚 wiki/README.md](wiki/README.md)** · [فارسی](wiki/fa/README.md) · [English](wiki/en/README.md) · [العربية](wiki/ar/README.md) · [Türkçe](wiki/tr/README.md)
+**[📚 WIKI-HUB.md](WIKI-HUB.md)** · [فارسی](wiki/fa/README.md) · [English](wiki/en/README.md) · [العربية](wiki/ar/README.md) · [Türkçe](wiki/tr/README.md)
 
 Edit wiki Markdown → CI rebuilds the site automatically.
 

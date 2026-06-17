@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/04-dashboard.md) · [EN](../en/04-dashboard.md) · [TR](../tr/04-dashboard.md)
+[Wiki](./README.md) · [FA](../fa/04-dashboard.md) · [EN](../en/04-dashboard.md) · [TR](../tr/04-dashboard.md)
 
 </div>
 
