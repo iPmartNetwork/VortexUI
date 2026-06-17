@@ -51,11 +51,13 @@ type Node struct {
 
 // NodeHealth is the resource snapshot pushed by an agent heartbeat.
 type NodeHealth struct {
-	CPUPercent  float64 `json:"cpu_percent"`
-	MemPercent  float64 `json:"mem_percent"`
-	DiskPercent float64 `json:"disk_percent"`
-	CoreRunning bool    `json:"core_running"`
-	Connections int     `json:"connections"`
+	CPUPercent   float64 `json:"cpu_percent"`
+	MemPercent   float64 `json:"mem_percent"`
+	DiskPercent  float64 `json:"disk_percent"`
+	CoreRunning  bool    `json:"core_running"`
+	Connections  int     `json:"connections"`
+	CoreVersion  string  `json:"core_version,omitempty"`
+	AgentVersion string  `json:"agent_version,omitempty"`
 }
 
 // IsHealthy is the gate used by failover: an unhealthy node should not receive users.

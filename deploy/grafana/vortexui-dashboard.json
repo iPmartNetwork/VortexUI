@@ -1,0 +1,84 @@
+{
+  "annotations": {"list": []},
+  "title": "VortexUI Panel",
+  "uid": "vortexui-main",
+  "version": 1,
+  "schemaVersion": 38,
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "title": "Uptime",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "targets": [{"expr": "vortexui_uptime_seconds", "legendFormat": "uptime"}],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "title": "Total Users",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "targets": [{"expr": "vortexui_users_total", "legendFormat": "users"}]
+    },
+    {
+      "title": "Active Users",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "targets": [{"expr": "vortexui_users_active", "legendFormat": "active"}]
+    },
+    {
+      "title": "Nodes Online",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "targets": [{"expr": "vortexui_nodes_online", "legendFormat": "online"}]
+    },
+    {
+      "title": "Live Connections",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "targets": [{"expr": "vortexui_connections_active", "legendFormat": "conns"}]
+    },
+    {
+      "title": "Total Traffic",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "targets": [{"expr": "vortexui_traffic_bytes_total", "legendFormat": "bytes"}],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "title": "Traffic Rate",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [{"expr": "rate(vortexui_traffic_bytes_total[5m])", "legendFormat": "bytes/sec"}],
+      "fieldConfig": {"defaults": {"unit": "Bps"}}
+    },
+    {
+      "title": "Connections Over Time",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [{"expr": "vortexui_connections_active", "legendFormat": "connections"}]
+    },
+    {
+      "title": "Users Over Time",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "targets": [
+        {"expr": "vortexui_users_total", "legendFormat": "total"},
+        {"expr": "vortexui_users_active", "legendFormat": "active"}
+      ]
+    },
+    {
+      "title": "Nodes Status",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "targets": [
+        {"expr": "vortexui_nodes_total", "legendFormat": "total"},
+        {"expr": "vortexui_nodes_online", "legendFormat": "online"}
+      ]
+    }
+  ],
+  "templating": {"list": []},
+  "links": [],
+  "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}
+}

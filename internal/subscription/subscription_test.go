@@ -97,7 +97,7 @@ func TestRenderClashIsValidYAML(t *testing.T) {
 	if len(parsed.Proxies) != 3 {
 		t.Errorf("want 3 clash proxies, got %d", len(parsed.Proxies))
 	}
-	if len(parsed.ProxyGroups) != 1 || parsed.ProxyGroups[0].Name != "MyProfile" {
+	if len(parsed.ProxyGroups) != 2 || parsed.ProxyGroups[0].Name != "MyProfile" {
 		t.Errorf("proxy-group malformed: %+v", parsed.ProxyGroups)
 	}
 }
@@ -113,9 +113,9 @@ func TestRenderSingboxIsValidJSON(t *testing.T) {
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		t.Fatalf("invalid singbox json: %v\n%s", err, body)
 	}
-	// 1 selector + 3 proxies + 1 direct = 5 outbounds.
-	if len(parsed.Outbounds) != 5 {
-		t.Errorf("want 5 outbounds, got %d", len(parsed.Outbounds))
+	// 1 selector + 1 urltest + 3 proxies + 1 direct = 6 outbounds.
+	if len(parsed.Outbounds) != 6 {
+		t.Errorf("want 6 outbounds, got %d", len(parsed.Outbounds))
 	}
 	if parsed.Outbounds[0]["type"] != "selector" {
 		t.Errorf("first outbound should be selector, got %v", parsed.Outbounds[0]["type"])

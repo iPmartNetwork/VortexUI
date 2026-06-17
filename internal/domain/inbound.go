@@ -47,6 +47,10 @@ type Inbound struct {
 	// speed_limit field.
 	SpeedLimit int64 `json:"speed_limit,omitempty"`
 
+	// GeoPolicy restricts which countries can connect to this inbound.
+	// Empty = no restriction (all countries allowed).
+	GeoPolicy *GeoPolicy `json:"geo_policy,omitempty"`
+
 	// EvasionProfileID optionally links a reusable DPI-evasion policy (fragment,
 	// reality keys, fingerprint) so operators apply hardening with one click.
 	EvasionProfileID *uuid.UUID `json:"evasion_profile_id,omitempty"`

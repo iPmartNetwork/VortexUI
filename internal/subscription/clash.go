@@ -25,11 +25,21 @@ func renderClash(proxies []Proxy, title string) ([]byte, error) {
 
 	cfg := map[string]any{
 		"proxies": clashProxies,
-		"proxy-groups": []map[string]any{{
-			"name":    title,
-			"type":    "select",
-			"proxies": append([]string{"DIRECT"}, names...),
-		}},
+		"proxy-groups": []map[string]any{
+			{
+				"name":    title,
+				"type":    "select",
+				"proxies": append([]string{"♻️ Auto", "DIRECT"}, names...),
+			},
+			{
+				"name":     "♻️ Auto",
+				"type":     "url-test",
+				"proxies":  names,
+				"url":      "https://www.gstatic.com/generate_204",
+				"interval": 300,
+				"tolerance": 50,
+			},
+		},
 		"rules": []string{"MATCH," + title},
 	}
 	return yaml.Marshal(cfg)

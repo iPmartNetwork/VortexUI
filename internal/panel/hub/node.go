@@ -154,6 +154,13 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 	if m.hub.opts.Nodes != nil {
 		_ = m.hub.opts.Nodes.UpdateHealth(ctx, m.node.ID, h)
 	}
+	// Update version fields on the node struct so they're visible in the API.
+	if h.CoreVersion != "" {
+		m.node.CoreVer = h.CoreVersion
+	}
+	if h.AgentVersion != "" {
+		m.node.AgentVer = h.AgentVersion
+	}
 	// Unreachable -> reachable edge: (re)push the node's full config so a freshly
 	// started or recovered agent is repopulated without manual intervention.
 	if !wasReachable {

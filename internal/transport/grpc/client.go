@@ -90,11 +90,13 @@ func (c *NodeClient) Health(ctx context.Context) (domain.NodeHealth, error) {
 		return domain.NodeHealth{}, err
 	}
 	return domain.NodeHealth{
-		CPUPercent:  r.GetCpuPercent(),
-		MemPercent:  r.GetMemPercent(),
-		DiskPercent: r.GetDiskPercent(),
-		CoreRunning: r.GetCoreRunning(),
-		Connections: int(r.GetConnections()),
+		CPUPercent:   r.GetCpuPercent(),
+		MemPercent:   r.GetMemPercent(),
+		DiskPercent:  r.GetDiskPercent(),
+		CoreRunning:  r.GetCoreRunning(),
+		Connections:  int(r.GetConnections()),
+		CoreVersion:  r.GetCoreVersion(),
+		AgentVersion: r.GetAgentVersion(),
 	}, nil
 }
 

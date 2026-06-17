@@ -13,6 +13,9 @@ import { Admins } from "@/pages/Admins";
 import { Audit } from "@/pages/Audit";
 import { Logs } from "@/pages/Logs";
 import { Settings } from "@/pages/Settings";
+import { Plans } from "@/pages/Plans";
+import { Orders } from "@/pages/Orders";
+import { Evasion } from "@/pages/Evasion";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -38,6 +41,9 @@ export function App() {
         <Route path="/routing" element={<Routing />} />
         <Route path="/balancers" element={<Balancers />} />
         <Route path="/admins" element={<Admins />} />
+        <Route path="/plans" element={<Plans />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/evasion" element={<Evasion />} />
         <Route path="/audit" element={<Audit />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/settings" element={<Settings />} />

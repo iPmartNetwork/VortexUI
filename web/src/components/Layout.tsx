@@ -27,7 +27,7 @@ import { useI18n } from "@/i18n/i18n";
 import { useLiveEvents } from "@/api/live";
 import type { TKey, Lang } from "@/i18n/dict";
 
-const PANEL_VERSION = "1.0.0";
+const PANEL_VERSION = "1.0.1";
 
 const nav: { to: string; key: TKey; icon: React.ElementType }[] = [
   { to: "/overview", key: "nav.overview", icon: LayoutDashboard },
@@ -37,6 +37,9 @@ const nav: { to: string; key: TKey; icon: React.ElementType }[] = [
   { to: "/routing", key: "nav.routing", icon: RouteIcon },
   { to: "/balancers", key: "nav.balancers", icon: Scale },
   { to: "/admins", key: "nav.admins", icon: ShieldCheck },
+  { to: "/plans", key: "nav.plans" as any, icon: Network },
+  { to: "/orders", key: "nav.orders" as any, icon: History },
+  { to: "/evasion", key: "nav.evasion" as any, icon: ShieldCheck },
   { to: "/audit", key: "nav.audit", icon: History },
   { to: "/logs", key: "nav.logs", icon: ScrollText },
   { to: "/settings", key: "nav.settings", icon: SettingsIcon },

@@ -51,9 +51,15 @@ func (c *LocalConn) RemoveUser(ctx context.Context, inboundTag string, userID uu
 	return c.driver.RemoveUser(ctx, inboundTag, userID.String())
 }
 
-// Health returns the local core's liveness snapshot.
+// Health returns the local core's liveness snapshot including version.
 func (c *LocalConn) Health(ctx context.Context) (domain.NodeHealth, error) {
-	return c.driver.Health(ctx)
+	h, err := c.driver.Health(ctx)
+	if err != nil {
+		return h, err
+	}
+	ver, _ := c.driver.Version(ctx)
+	h.CoreVersion = ver
+	return h, nil
 }
 
 // ConsumeTraffic drains the driver's delta stream into ingest, stamping each
