@@ -172,7 +172,6 @@ plugins:
           site_name: وثائق VortexUI
           theme:
             language: ar
-            direction: rtl
           nav_translations:
             Home: الرئيسية
             Getting started: البدء
