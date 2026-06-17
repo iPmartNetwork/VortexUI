@@ -21,6 +21,7 @@ linters:
     gosec:
       excludes:
         - G115 # integer conversions (ports/quotas/counters) — noisy false positives
+        - G117 # struct field name matches "secret" pattern — false positive on WARP config
         - G204 # subprocess: launching the configured core binary is the design
         - G301 # dir perms 0755 on asset/cert dirs is intentional
         - G304 # file inclusion: cert/config paths come from trusted config

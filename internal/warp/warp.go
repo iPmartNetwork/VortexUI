@@ -17,7 +17,7 @@ import (
 // For sing-box: native wireguard outbound.
 type Config struct {
 	// PrivateKey is the WireGuard private key from warp-cli registration.
-	PrivateKey string `json:"private_key"`
+	PrivateKey string `json:"private_key"` //nolint:gosec // not a hardcoded secret, user-provided
 	// PublicKey is Cloudflare's WARP public key.
 	PublicKey string `json:"public_key"`
 	// Address is the assigned IPv4/IPv6 from WARP registration.
@@ -38,15 +38,17 @@ const DefaultPublicKey = "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo="
 
 // XrayOutbound generates an Xray WireGuard outbound JSON config for WARP.
 func (c Config) XrayOutbound(tag string) map[string]any {
-	if c.Endpoint == "" {
-		c.Endpoint = DefaultEndpoint
+	endpoint := c.Endpoint
+	if endpoint == "" {
+		endpoint = DefaultEndpoint
 	}
-	if c.PublicKey == "" {
-		c.PublicKey = DefaultPublicKey
+	pubKey := c.PublicKey
+	if pubKey == "" {
+		pubKey = DefaultPublicKey
 	}
 	peers := []map[string]any{{
-		"publicKey": c.PublicKey,
-		"endpoint":  c.Endpoint,
+		"publicKey": pubKey,
+		"endpoint":  endpoint,
 	}}
 	settings := map[string]any{
 		"secretKey": c.PrivateKey,
@@ -66,19 +68,23 @@ func (c Config) XrayOutbound(tag string) map[string]any {
 
 // SingboxOutbound generates a sing-box WireGuard outbound config for WARP.
 func (c Config) SingboxOutbound(tag string) map[string]any {
-	if c.Endpoint == "" {
-		c.Endpoint = DefaultEndpoint
+	pubKey := c.PublicKey
+	if pubKey == "" {
+		pubKey = DefaultPublicKey
 	}
-	if c.PublicKey == "" {
-		c.PublicKey = DefaultPublicKey
+	server := "engage.cloudflareclient.com"
+	port := 2408
+	if c.Endpoint != "" {
+		server = c.Endpoint
+		// If endpoint contains a port, it's handled by the client
 	}
 	out := map[string]any{
-		"type":        "wireguard",
-		"tag":         tag,
-		"server":      "engage.cloudflareclient.com",
-		"server_port": 2408,
-		"private_key": c.PrivateKey,
-		"peer_public_key": c.PublicKey,
+		"type":            "wireguard",
+		"tag":             tag,
+		"server":          server,
+		"server_port":     port,
+		"private_key":     c.PrivateKey,
+		"peer_public_key": pubKey,
 		"local_address":   c.Address,
 		"mtu":             1280,
 	}

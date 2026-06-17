@@ -31,32 +31,32 @@ func (c *Collector) Handler() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		uptime := time.Since(c.UptimeStart).Seconds()
 
-		fmt.Fprintf(w, "# HELP vortexui_uptime_seconds Panel uptime in seconds.\n")
-		fmt.Fprintf(w, "# TYPE vortexui_uptime_seconds gauge\n")
-		fmt.Fprintf(w, "vortexui_uptime_seconds %.0f\n\n", uptime)
+		_, _ = fmt.Fprintf(w, "# HELP vortexui_uptime_seconds Panel uptime in seconds.\n")
+		_, _ = fmt.Fprintf(w, "# TYPE vortexui_uptime_seconds gauge\n")
+		_, _ = fmt.Fprintf(w, "vortexui_uptime_seconds %.0f\n\n", uptime)
 
-		fmt.Fprintf(w, "# HELP vortexui_users_total Total registered users.\n")
-		fmt.Fprintf(w, "# TYPE vortexui_users_total gauge\n")
-		fmt.Fprintf(w, "vortexui_users_total %d\n\n", c.TotalUsers.Load())
+		_, _ = fmt.Fprintf(w, "# HELP vortexui_users_total Total registered users.\n")
+		_, _ = fmt.Fprintf(w, "# TYPE vortexui_users_total gauge\n")
+		_, _ = fmt.Fprintf(w, "vortexui_users_total %d\n\n", c.TotalUsers.Load())
 
-		fmt.Fprintf(w, "# HELP vortexui_users_active Currently active users.\n")
-		fmt.Fprintf(w, "# TYPE vortexui_users_active gauge\n")
-		fmt.Fprintf(w, "vortexui_users_active %d\n\n", c.ActiveUsers.Load())
+		_, _ = fmt.Fprintf(w, "# HELP vortexui_users_active Currently active users.\n")
+		_, _ = fmt.Fprintf(w, "# TYPE vortexui_users_active gauge\n")
+		_, _ = fmt.Fprintf(w, "vortexui_users_active %d\n\n", c.ActiveUsers.Load())
 
-		fmt.Fprintf(w, "# HELP vortexui_nodes_total Total registered nodes.\n")
-		fmt.Fprintf(w, "# TYPE vortexui_nodes_total gauge\n")
-		fmt.Fprintf(w, "vortexui_nodes_total %d\n\n", c.TotalNodes.Load())
+		_, _ = fmt.Fprintf(w, "# HELP vortexui_nodes_total Total registered nodes.\n")
+		_, _ = fmt.Fprintf(w, "# TYPE vortexui_nodes_total gauge\n")
+		_, _ = fmt.Fprintf(w, "vortexui_nodes_total %d\n\n", c.TotalNodes.Load())
 
-		fmt.Fprintf(w, "# HELP vortexui_nodes_online Currently online nodes.\n")
-		fmt.Fprintf(w, "# TYPE vortexui_nodes_online gauge\n")
-		fmt.Fprintf(w, "vortexui_nodes_online %d\n\n", c.OnlineNodes.Load())
+		_, _ = fmt.Fprintf(w, "# HELP vortexui_nodes_online Currently online nodes.\n")
+		_, _ = fmt.Fprintf(w, "# TYPE vortexui_nodes_online gauge\n")
+		_, _ = fmt.Fprintf(w, "vortexui_nodes_online %d\n\n", c.OnlineNodes.Load())
 
-		fmt.Fprintf(w, "# HELP vortexui_traffic_bytes_total Total traffic processed (bytes).\n")
-		fmt.Fprintf(w, "# TYPE vortexui_traffic_bytes_total counter\n")
-		fmt.Fprintf(w, "vortexui_traffic_bytes_total %d\n\n", c.TotalTraffic.Load())
+		_, _ = fmt.Fprintf(w, "# HELP vortexui_traffic_bytes_total Total traffic processed (bytes).\n")
+		_, _ = fmt.Fprintf(w, "# TYPE vortexui_traffic_bytes_total counter\n")
+		_, _ = fmt.Fprintf(w, "vortexui_traffic_bytes_total %d\n\n", c.TotalTraffic.Load())
 
-		fmt.Fprintf(w, "# HELP vortexui_connections_active Current live connections.\n")
-		fmt.Fprintf(w, "# TYPE vortexui_connections_active gauge\n")
-		fmt.Fprintf(w, "vortexui_connections_active %d\n\n", c.ActiveConns.Load())
+		_, _ = fmt.Fprintf(w, "# HELP vortexui_connections_active Current live connections.\n")
+		_, _ = fmt.Fprintf(w, "# TYPE vortexui_connections_active gauge\n")
+		_, _ = fmt.Fprintf(w, "vortexui_connections_active %d\n\n", c.ActiveConns.Load())
 	}
 }

@@ -313,6 +313,8 @@ the offender (reversible).
 
 | Topic | Link |
 |-------|------|
+| **Documentation site (MkDocs)** | **[ipmartnetwork.github.io/VortexUI](https://ipmartnetwork.github.io/VortexUI/)** — FA · EN · AR · TR |
+| **Wiki (Markdown source)** | [`docs/wiki/README.md`](docs/wiki/README.md) · [فارسی](docs/wiki/fa/README.md) · [English](docs/wiki/en/README.md) · [العربية](docs/wiki/ar/README.md) · [Türkçe](docs/wiki/tr/README.md) |
 | API Reference (OpenAPI 3.0) | [`docs/openapi.yaml`](docs/openapi.yaml) |
 | Protocols & Config Examples | [`docs/protocols.md`](docs/protocols.md) |
 | Environment Variables | [`.env.example`](.env.example) |
