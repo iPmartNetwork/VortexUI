@@ -1,6 +1,6 @@
 # ۷. سیاست شبکه
 
-!!! tip
+!!! tip "راهنما"
     الگوی رایج: `geosite:ir` و `geoip:ir` → direct، بقیه → proxy.
 
 ---

@@ -11,6 +11,7 @@
   [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat-square&logo=go)](https://go.dev)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
   [![Docker](https://img.shields.io/docker/pulls/ipmartnetwork/vortexui?style=flat-square&logo=docker)](https://hub.docker.com/r/ipmartnetwork/vortexui)
+  [![Telegram](https://img.shields.io/badge/Telegram-@vortex__ui-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/vortex_ui)
   
   ![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FiPmartNetwork%2FVortexUI&countColor=%23263759)
 
@@ -314,6 +315,8 @@ the offender (reversible).
 | Topic | Link |
 |-------|------|
 | **Documentation site (MkDocs)** | **[ipmartnetwork.github.io/VortexUI](https://ipmartnetwork.github.io/VortexUI/)** — FA · EN · AR · TR |
+| **Telegram channel** | [**@vortex_ui**](https://t.me/vortex_ui) — news, releases, community |
+| **GitHub Discussions** | [Q&A & support](https://github.com/iPmartNetwork/VortexUI/discussions) |
 | **Wiki (Markdown source)** | [`docs/WIKI-HUB.md`](docs/WIKI-HUB.md) · [فارسی](docs/wiki/fa/README.md) · [English](docs/wiki/en/README.md) · [العربية](docs/wiki/ar/README.md) · [Türkçe](docs/wiki/tr/README.md) |
 | API Reference (OpenAPI 3.0) | [`docs/openapi.yaml`](docs/openapi.yaml) |
 | Protocols & Config Examples | [`docs/protocols.md`](docs/protocols.md) |
@@ -387,6 +390,7 @@ If you find VortexUI useful, please consider:
 - ⭐ **Star** this repository
 - 🍴 **Fork** and contribute
 - 📢 **Share** with others
+- 💬 **Join** the [Telegram channel](https://t.me/vortex_ui) (@vortex_ui)
 - 💰 **Donate** crypto to support development
 
 <div align="center">
@@ -445,6 +449,8 @@ This project is licensed under the **GPL-3.0** License — see the [LICENSE](LIC
   <br /><br />
   
   **Made with ❤️ by [iPmart Network](https://github.com/iPmartNetwork)**
+  
+  [Telegram @vortex_ui](https://t.me/vortex_ui) · [Documentation](https://ipmartnetwork.github.io/VortexUI/)
   
   ⭐ Star this repo if you find it useful!
 </div>

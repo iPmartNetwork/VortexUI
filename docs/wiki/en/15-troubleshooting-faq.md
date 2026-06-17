@@ -1,6 +1,6 @@
 # 15. Troubleshooting & FAQ
 
-!!! tip
+!!! tip "Tip"
     Start with **`vortexui logs`** and **`/api/health`** — most issues are JWT, DB, or firewall.
 
 ---

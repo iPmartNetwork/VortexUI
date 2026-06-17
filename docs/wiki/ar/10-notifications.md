@@ -1,6 +1,6 @@
 # ١٠. الإشعارات
 
-!!! tip
+!!! tip "نصيحة"
     Webhooks موقّعة بـ `X-Vortex-Signature: sha256=...` — اضبط secret في env.
 
 ---

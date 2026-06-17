@@ -2,7 +2,7 @@
 
 > Tam İngilizce JSON örnekleri: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
 
-!!! tip
+!!! tip "İpucu"
     Ağır sansür altında: **VLESS + REALITY + Vision** — anahtarları UI'dan oluşturun.
 
 ---

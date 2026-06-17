@@ -1,6 +1,6 @@
 # 9. Planlar ve Ödemeler
 
-!!! note
+!!! note "Not"
     Başarılı ödemeden sonra kullanıcı plan parametreleriyle otomatik oluşturulur/yenilenir.
 
 ---

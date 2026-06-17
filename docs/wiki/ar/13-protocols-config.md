@@ -2,7 +2,7 @@
 
 > أمثلة JSON كاملة بالإنجليزية: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
 
-!!! tip
+!!! tip "نصيحة"
     تحت رقابة شديدة: **VLESS + REALITY + Vision** — أنشئ المفاتيح من الواجهة.
 
 ---

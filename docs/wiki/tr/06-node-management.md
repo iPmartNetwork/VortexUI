@@ -1,6 +1,6 @@
 # 6. Node Yönetimi
 
-!!! tip
+!!! tip "İpucu"
     İran yönlendirme kuralları için **Nodes → Update Geo** kullanın.
 
 ---

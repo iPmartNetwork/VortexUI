@@ -1,6 +1,6 @@
 # 1. Introduction & Core Concepts
 
-!!! note
+!!! note "Note"
     VortexUI is **user-centric** — one subscription covers all assigned inbounds.
 
 ---

@@ -1,6 +1,6 @@
 # 7. Network Policy
 
-!!! tip
+!!! tip "Tip"
     Common pattern: `geosite:ir` and `geoip:ir` → direct, everything else → proxy.
 
 ---

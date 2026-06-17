@@ -1,6 +1,6 @@
 # 11. Settings & Backup
 
-!!! tip
+!!! tip "Tip"
     Always take a current backup before **Restore**.
 
 ---

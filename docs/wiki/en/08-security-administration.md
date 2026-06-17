@@ -1,6 +1,6 @@
 # 8. Security & Administration
 
-!!! important
+!!! important "Important"
     Enable **2FA** and a strong JWT secret (≥32 bytes) for the primary admin.
 
 ---

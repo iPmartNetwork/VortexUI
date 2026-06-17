@@ -1,6 +1,6 @@
 # ٧. سياسة الشبكة
 
-!!! tip
+!!! tip "نصيحة"
     النمط الشائع: `geosite:ir` و `geoip:ir` → direct، الباقي → proxy.
 
 ---

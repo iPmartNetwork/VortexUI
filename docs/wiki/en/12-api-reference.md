@@ -1,6 +1,6 @@
 # 12. API Reference
 
-!!! note
+!!! note "Note"
     Full spec: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) — all endpoints and RBAC.
 
 ---

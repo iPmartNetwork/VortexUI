@@ -36,7 +36,34 @@
   font-size: 0.85rem;
 }
 
-/* Center screenshot tables from wiki markdown */
-.md-typeset div[align="center"] table {
-  margin: 1rem auto;
+.md-typeset .grid.cards > ul > li {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+[dir="rtl"] .md-typeset blockquote {
+  border-right: 0.2rem solid var(--md-default-fg-color--lighter);
+  border-left: 0;
+  padding-right: 0.6rem;
+  padding-left: 0;
+}
+
+[dir="rtl"] .md-typeset .admonition {
+  border-right: 0.2rem solid;
+  border-left: none;
+}
+
+[dir="rtl"] .md-typeset .admonition > .admonition-title {
+  padding-right: 2.6rem;
+  padding-left: 0.6rem;
+}
+
+[dir="rtl"] .md-typeset .admonition > .admonition-title::before {
+  right: 0.6rem;
+  left: auto;
 }

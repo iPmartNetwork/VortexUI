@@ -1,6 +1,6 @@
 # 10. Notifications
 
-!!! tip
+!!! tip "Tip"
     Webhooks are signed with `X-Vortex-Signature: sha256=...` — set the secret in env.
 
 ---

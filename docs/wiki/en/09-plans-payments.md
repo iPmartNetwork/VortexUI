@@ -1,6 +1,6 @@
 # 9. Plans & Payments
 
-!!! note
+!!! note "Note"
     After successful payment, a user is auto-created/renewed with the plan parameters.
 
 ---

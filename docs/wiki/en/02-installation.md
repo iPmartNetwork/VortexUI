@@ -1,6 +1,6 @@
 # 2. Installation
 
-!!! important
+!!! important "Important"
     Before installing, prepare **ports 80 and 443** (for HTTPS) and your domain DNS.
 
 ---

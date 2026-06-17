@@ -1,6 +1,6 @@
 # 4. Dashboard (Overview)
 
-!!! note
+!!! note "Note"
     The dashboard updates via **SSE** without refresh — no polling needed.
 
 ---
