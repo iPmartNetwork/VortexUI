@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/14-operations-maintenance.md) · [AR](../ar/14-operations-maintenance.md) · [TR](../tr/14-operations-maintenance.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۱۴. عملیات و نگهداری
 
-[← پروتکل‌ها](./13-protocols-config.md) · [فهرست](./README.md) · [بعدی: عیب‌یابی →](./15-troubleshooting-faq.md)
-
-> [!TIP]
-> بعد از نصب `vortexui status` و `curl .../api/health` را برای sanity check اجرا کنید.
+!!! tip
+    بعد از نصب `vortexui status` و `curl .../api/health` را برای sanity check اجرا کنید.
 
 ---
 
@@ -145,5 +131,3 @@ journalctl -u vortexui-panel -f
 - [ ] Disk >85% warning
 - [ ] DB connection pool
 - [ ] Certificate expiry (Caddy auto — verify port 80)
-
-</div>

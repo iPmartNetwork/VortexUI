@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/09-plans-payments.md) · [EN](../en/09-plans-payments.md) · [AR](../ar/09-plans-payments.md)
-
-</div>
-
-<div>
-
 # 9. Planlar ve Ödemeler
 
-[← Güvenlik](./08-security-administration.md) · [Dizin](./README.md) · [Sonraki: Bildirimler →](./10-notifications.md)
-
-> [!NOTE]
-> Başarılı ödemeden sonra kullanıcı plan parametreleriyle otomatik oluşturulur/yenilenir.
+!!! note
+    Başarılı ödemeden sonra kullanıcı plan parametreleriyle otomatik oluşturulur/yenilenir.
 
 ---
 
@@ -94,5 +80,3 @@ POST /api/payment/ipn/nowpayments
 ## Bayi + Planlar
 
 Bayi kotası dahilinde plan satabilir — kullanıcılar kendi `admin_id`'si altında kaydedilir.
-
-</div>

@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/11-settings-backup.md) · [EN](../en/11-settings-backup.md) · [TR](../tr/11-settings-backup.md)
-
-</div>
-
-<div dir="rtl">
-
 # ١١. الإعدادات والنسخ الاحتياطي
 
-[← الإشعارات](./10-notifications.md) · [الفهرس](./README.md) · [التالي: API →](./12-api-reference.md)
-
-> [!TIP]
-> خذ نسخة احتياطية حالية دائماً قبل **Restore**.
+!!! tip
+    خذ نسخة احتياطية حالية دائماً قبل **Restore**.
 
 ---
 
@@ -122,5 +108,3 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 - tail مباشر
 
 لسجلات النواة: **Nodes → Logs**
-
-</div>

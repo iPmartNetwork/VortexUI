@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/11-settings-backup.md) · [AR](../ar/11-settings-backup.md) · [TR](../tr/11-settings-backup.md)
-
-</div>
-
-<div>
-
 # 11. Settings & Backup
 
-[← Notifications](./10-notifications.md) · [Index](./README.md) · [Next: API →](./12-api-reference.md)
-
-> [!TIP]
-> Always take a current backup before **Restore**.
+!!! tip
+    Always take a current backup before **Restore**.
 
 ---
 
@@ -122,5 +108,3 @@ The panel is a **Progressive Web App** — from mobile browser use "Add to Home 
 - Real-time tail
 
 For core logs: **Nodes → Logs**
-
-</div>

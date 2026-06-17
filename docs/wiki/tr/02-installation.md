@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/02-installation.md) · [EN](../en/02-installation.md) · [AR](../ar/02-installation.md)
-
-</div>
-
-<div>
-
 # 2. Kurulum
 
-[← Giriş](./01-introduction.md) · [Dizin](./README.md) · [Sonraki: İlk adımlar →](./03-first-steps.md)
-
-> [!IMPORTANT]
-> Kurulumdan önce **80 ve 443 portlarını** (HTTPS) ve alan adı DNS'ini hazırlayın.
+!!! important
+    Kurulumdan önce **80 ve 443 portlarını** (HTTPS) ve alan adı DNS'ini hazırlayın.
 
 ---
 
@@ -202,5 +188,3 @@ cd /opt/vortexui && git pull && docker compose -f deploy/compose.yml up -d --bui
 ```
 
 Kurulum betiğini yeniden çalıştırmak **güvenlidir** — sırlar ve DB verileri korunur.
-
-</div>

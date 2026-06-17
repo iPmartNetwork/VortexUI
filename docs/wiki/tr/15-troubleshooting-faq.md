@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/15-troubleshooting-faq.md) · [EN](../en/15-troubleshooting-faq.md) · [AR](../ar/15-troubleshooting-faq.md)
-
-</div>
-
-<div>
-
 # 15. Sorun Giderme ve SSS
 
-[← İşletim](./14-operations-maintenance.md) · [Dizin](./README.md)
-
-> [!TIP]
-> Önce **`vortexui logs`** ve **`/api/health`** — çoğu sorun JWT, DB veya firewall.
+!!! tip
+    Önce **`vortexui logs`** ve **`/api/health`** — çoğu sorun JWT, DB veya firewall.
 
 ---
 
@@ -154,5 +140,3 @@ GPL-3.0 — türevler açık kaynak olmalıdır.
 - ⭐ Star on GitHub
 - [Contributing](../../../CONTRIBUTING.md)
 - [Changelog](../../../CHANGELOG.md)
-
-</div>

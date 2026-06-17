@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/02-installation.md) · [AR](../ar/02-installation.md) · [TR](../tr/02-installation.md)
-
-</div>
-
-<div>
-
 # 2. Installation
 
-[← Introduction](./01-introduction.md) · [Index](./README.md) · [Next: First steps →](./03-first-steps.md)
-
-> [!IMPORTANT]
-> Before installing, prepare **ports 80 and 443** (for HTTPS) and your domain DNS.
+!!! important
+    Before installing, prepare **ports 80 and 443** (for HTTPS) and your domain DNS.
 
 ---
 
@@ -202,5 +188,3 @@ cd /opt/vortexui && git pull && docker compose -f deploy/compose.yml up -d --bui
 ```
 
 Re-running the install script is **safe** — secrets and DB data are preserved.
-
-</div>

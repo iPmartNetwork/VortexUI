@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/11-settings-backup.md) · [AR](../ar/11-settings-backup.md) · [TR](../tr/11-settings-backup.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۱۱. تنظیمات و پشتیبان‌گیری
 
-[← اعلان‌ها](./10-notifications.md) · [فهرست](./README.md) · [بعدی: API →](./12-api-reference.md)
-
-> [!TIP]
-> قبل از **Restore** حتماً backup فعلی بگیرید.
+!!! tip
+    قبل از **Restore** حتماً backup فعلی بگیرید.
 
 ---
 
@@ -122,5 +108,3 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 - real-time tail
 
 برای لاگ هسته: **Nodes → Logs**
-
-</div>

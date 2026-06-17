@@ -1,31 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/05-user-management.md) · [AR](../ar/05-user-management.md) · [TR](../tr/05-user-management.md)
-
-</div>
-
-<div>
-
 # 5. User Management
 
-[← Dashboard](./04-dashboard.md) · [Index](./README.md) · [Next: Nodes →](./06-node-management.md)
-
-> [!WARNING]
-> **Revoke Sub** invalidates the old link — use only if the token was leaked.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![Users page — user management and subscriptions](../assets/panel/User_light.png) | ![Users page — user management and subscriptions](../assets/panel/User_dark.png) |
-
-*Users page — user management and subscriptions*
-
-</div>
+!!! warning
+    **Revoke Sub** invalidates the old link — use only if the token was leaked.
 
 ---
 
@@ -119,5 +95,3 @@ In subscriptions you can enable url-test to automatically select the lowest-late
 
 - **Telegram user bot**: user logs in with token — `/usage`, `/renew`
 - **Expiry warning**: 3 days before — `user.expiry_warning` event
-
-</div>

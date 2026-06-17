@@ -1,23 +1,9 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/13-protocols-config.md) · [AR](../ar/13-protocols-config.md) · [TR](../tr/13-protocols-config.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۱۳. پروتکل‌ها و پیکربندی
-
-[← API](./12-api-reference.md) · [فهرست](./README.md) · [بعدی: عملیات →](./14-operations-maintenance.md)
 
 > مثال‌های JSON کامل انگلیسی: [`docs/protocols.md`](../../protocols.md)
 
-> [!TIP]
-> برای سانسور شدید: **VLESS + REALITY + Vision** — کلیدها را از UI Generate کنید.
+!!! tip
+    برای سانسور شدید: **VLESS + REALITY + Vision** — کلیدها را از UI Generate کنید.
 
 ---
 
@@ -166,5 +152,3 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 | UDP blocked | TCP-based protocols |
 | سرعت بالا | REALITY یا XTLS-Vision |
 | موبایل ایران | Fragment evasion profile |
-
-</div>

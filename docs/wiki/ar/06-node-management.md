@@ -1,31 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/06-node-management.md) · [EN](../en/06-node-management.md) · [TR](../tr/06-node-management.md)
-
-</div>
-
-<div dir="rtl">
-
 # ٦. إدارة العقد
 
-[← المستخدمون](./05-user-management.md) · [الفهرس](./README.md) · [التالي: سياسة الشبكة →](./07-network-policy.md)
-
-> [!TIP]
-> لقواعد التوجيه الإيرانية استخدم **Nodes → Update Geo**.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![صفحة Nodes — مراقبة CPU/RAM وإجراءات العقد](../assets/panel/Node_light.png) | ![صفحة Nodes — مراقبة CPU/RAM وإجراءات العقد](../assets/panel/Node_dark.png) |
-
-*صفحة Nodes — مراقبة CPU/RAM وإجراءات العقد*
-
-</div>
+!!! tip
+    لقواعد التوجيه الإيرانية استخدم **Nodes → Update Geo**.
 
 ---
 
@@ -154,5 +130,3 @@ VORTEX_CF_ZONE_ID=...
 ## gRPC Keepalive
 
 اتصالات panel↔node الخاملة تُبقى حية بـ keepalive — لا تنقطع.
-
-</div>

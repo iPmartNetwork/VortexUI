@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/01-introduction.md) · [EN](../en/01-introduction.md) · [TR](../tr/01-introduction.md)
-
-</div>
-
-<div dir="rtl">
-
 # ١. المقدمة والمفاهيم الأساسية
 
-[← العودة إلى الفهرس](./README.md) · [التالي: التثبيت →](./02-installation.md)
-
-> [!NOTE]
-> VortexUI **يركز على المستخدم** — اشتراك واحد يغطي جميع inbounds المعيّنة.
+!!! note
+    VortexUI **يركز على المستخدم** — اشتراك واحد يغطي جميع inbounds المعيّنة.
 
 ---
 
@@ -145,5 +131,3 @@ erDiagram
 - تطبيق React Native للجوال
 - توثيق متعدد اللغات (هذا الويكي هو الخطوة الأولى)
 - تحديد معدل لكل مستخدم على البروكسي
-
-</div>

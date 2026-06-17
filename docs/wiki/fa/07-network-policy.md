@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/07-network-policy.md) · [AR](../ar/07-network-policy.md) · [TR](../tr/07-network-policy.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۷. سیاست شبکه
 
-[← نودها](./06-node-management.md) · [فهرست](./README.md) · [بعدی: امنیت →](./08-security-administration.md)
-
-> [!TIP]
-> الگوی رایج: `geosite:ir` و `geoip:ir` → direct، بقیه → proxy.
+!!! tip
+    الگوی رایج: `geosite:ir` و `geoip:ir` → direct، بقیه → proxy.
 
 ---
 
@@ -122,5 +108,3 @@ Outbound نوع WARP برای عبور از Cloudflare — مفید برای byp
 
 - سفارشی‌سازی خروجی Clash/sing-box
 - ruleهای پیش‌فرض، proxy-groups، dns
-
-</div>

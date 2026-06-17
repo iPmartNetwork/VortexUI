@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/02-installation.md) · [EN](../en/02-installation.md) · [TR](../tr/02-installation.md)
-
-</div>
-
-<div dir="rtl">
-
 # ٢. التثبيت
 
-[← المقدمة](./01-introduction.md) · [الفهرس](./README.md) · [التالي: الخطوات الأولى →](./03-first-steps.md)
-
-> [!IMPORTANT]
-> قبل التثبيت، جهّز **المنافذ 80 و 443** (لـ HTTPS) وDNS النطاق.
+!!! important
+    قبل التثبيت، جهّز **المنافذ 80 و 443** (لـ HTTPS) وDNS النطاق.
 
 ---
 
@@ -202,5 +188,3 @@ cd /opt/vortexui && git pull && docker compose -f deploy/compose.yml up -d --bui
 ```
 
 إعادة تشغيل سكربت التثبيت **آمنة** — الأسرار وبيانات DB محفوظة.
-
-</div>

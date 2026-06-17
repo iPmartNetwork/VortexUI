@@ -40,7 +40,7 @@ jobs:
         run: pip install -r docs/requirements.txt
 
       - name: Build site
-        run: mkdocs build || true
+        run: mkdocs build --strict
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'

@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/10-notifications.md) · [EN](../en/10-notifications.md) · [TR](../tr/10-notifications.md)
-
-</div>
-
-<div dir="rtl">
-
 # ١٠. الإشعارات
 
-[← الخطط](./09-plans-payments.md) · [الفهرس](./README.md) · [التالي: الإعدادات →](./11-settings-backup.md)
-
-> [!TIP]
-> Webhooks موقّعة بـ `X-Vortex-Signature: sha256=...` — اضبط secret في env.
+!!! tip
+    Webhooks موقّعة بـ `X-Vortex-Signature: sha256=...` — اضبط secret في env.
 
 ---
 
@@ -117,5 +103,3 @@ VORTEX_TELEGRAM_CHAT_ID=-1001234567890
 ## SSE (UI)
 
 بالإضافة إلى webhooks، الواجهة تشترك في نفس الحافلة عبر SSE — toasts وتحديث تلقائي.
-
-</div>

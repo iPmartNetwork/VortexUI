@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/07-network-policy.md) · [AR](../ar/07-network-policy.md) · [TR](../tr/07-network-policy.md)
-
-</div>
-
-<div>
-
 # 7. Network Policy
 
-[← Nodes](./06-node-management.md) · [Index](./README.md) · [Next: Security →](./08-security-administration.md)
-
-> [!TIP]
-> Common pattern: `geosite:ir` and `geoip:ir` → direct, everything else → proxy.
+!!! tip
+    Common pattern: `geosite:ir` and `geoip:ir` → direct, everything else → proxy.
 
 ---
 
@@ -122,5 +108,3 @@ WARP-type outbound for Cloudflare tunneling — useful for bypass or privacy lay
 
 - Customize Clash/sing-box output
 - Default rules, proxy-groups, DNS
-
-</div>

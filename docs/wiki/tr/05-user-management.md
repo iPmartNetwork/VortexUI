@@ -1,31 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/05-user-management.md) · [EN](../en/05-user-management.md) · [AR](../ar/05-user-management.md)
-
-</div>
-
-<div>
-
 # 5. Kullanıcı Yönetimi
 
-[← Gösterge paneli](./04-dashboard.md) · [Dizin](./README.md) · [Sonraki: Node'lar →](./06-node-management.md)
-
-> [!WARNING]
-> **Revoke Sub** eski bağlantıyı geçersiz kılar — yalnızca token sızdıysa kullanın.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![Users sayfası — kullanıcı yönetimi ve abonelik](../assets/panel/User_light.png) | ![Users sayfası — kullanıcı yönetimi ve abonelik](../assets/panel/User_dark.png) |
-
-*Users sayfası — kullanıcı yönetimi ve abonelik*
-
-</div>
+!!! warning
+    **Revoke Sub** eski bağlantıyı geçersiz kılar — yalnızca token sızdıysa kullanın.
 
 ---
 
@@ -119,5 +95,3 @@ Aboneliklerde url-test etkinleştirilerek en düşük gecikmeli aktif node otoma
 
 - **Telegram kullanıcı botu**: kullanıcı token ile giriş yapar — `/usage`, `/renew`
 - **Süre dolumu uyarısı**: 3 gün önce — `user.expiry_warning` olayı
-
-</div>

@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/01-introduction.md) · [AR](../ar/01-introduction.md) · [TR](../tr/01-introduction.md)
-
-</div>
-
-<div>
-
 # 1. Introduction & Core Concepts
 
-[← Back to index](./README.md) · [Next: Installation →](./02-installation.md)
-
-> [!NOTE]
-> VortexUI is **user-centric** — one subscription covers all assigned inbounds.
+!!! note
+    VortexUI is **user-centric** — one subscription covers all assigned inbounds.
 
 ---
 
@@ -145,5 +131,3 @@ Items in active development:
 - React Native mobile app
 - Multilingual documentation (this wiki is the first step)
 - Per-user rate limiting on the proxy
-
-</div>

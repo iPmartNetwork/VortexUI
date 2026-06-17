@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/09-plans-payments.md) · [AR](../ar/09-plans-payments.md) · [TR](../tr/09-plans-payments.md)
-
-</div>
-
-<div>
-
 # 9. Plans & Payments
 
-[← Security](./08-security-administration.md) · [Index](./README.md) · [Next: Notifications →](./10-notifications.md)
-
-> [!NOTE]
-> After successful payment, a user is auto-created/renewed with the plan parameters.
+!!! note
+    After successful payment, a user is auto-created/renewed with the plan parameters.
 
 ---
 
@@ -94,5 +80,3 @@ POST /api/payment/ipn/nowpayments
 ## Reseller + Plans
 
 A reseller can sell plans within their quota — users are recorded under their `admin_id`.
-
-</div>

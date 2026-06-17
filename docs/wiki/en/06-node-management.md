@@ -1,31 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/06-node-management.md) · [AR](../ar/06-node-management.md) · [TR](../tr/06-node-management.md)
-
-</div>
-
-<div>
-
 # 6. Node Management
 
-[← Users](./05-user-management.md) · [Index](./README.md) · [Next: Network policy →](./07-network-policy.md)
-
-> [!TIP]
-> For Iran routing rules, use **Nodes → Update Geo**.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![Nodes page — CPU/RAM monitoring and node actions](../assets/panel/Node_light.png) | ![Nodes page — CPU/RAM monitoring and node actions](../assets/panel/Node_dark.png) |
-
-*Nodes page — CPU/RAM monitoring and node actions*
-
-</div>
+!!! tip
+    For Iran routing rules, use **Nodes → Update Geo**.
 
 ---
 
@@ -154,5 +130,3 @@ Each node can switch between **xray** and **sing-box** (Hysteria2/TUIC only on s
 ## gRPC Keepalive
 
 Idle panel↔node connections are kept alive with keepalive — they do not drop.
-
-</div>

@@ -1,31 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/03-first-steps.md) · [EN](../en/03-first-steps.md) · [TR](../tr/03-first-steps.md)
-
-</div>
-
-<div dir="rtl">
-
 # ٣. الخطوات الأولى
 
-[← التثبيت](./02-installation.md) · [الفهرس](./README.md) · [التالي: لوحة المعلومات →](./04-dashboard.md)
-
-> [!TIP]
-> أكمل هذا المسار في **5 دقائق**: عقدة → inbound → مستخدم → اشتراك → اختبار.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![نظرة عامة على اللوحة — الوضع الفاتح](../assets/panel/overview_light.png) | ![نظرة عامة على اللوحة — الوضع الفاتح](../assets/panel/overview_dark.png) |
-
-*نظرة عامة على اللوحة — الوضع الفاتح*
-
-</div>
+!!! tip
+    أكمل هذا المسار في **5 دقائق**: عقدة → inbound → مستخدم → اشتراك → اختبار.
 
 ---
 
@@ -155,5 +131,3 @@ flowchart LR
 | البحث عن المستخدمين | Users → مربع البحث |
 | سجلات العقدة | Nodes → Logs |
 | الأحداث المباشرة | تلقائي — toast في الزاوية |
-
-</div>

@@ -1,31 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/05-user-management.md) · [AR](../ar/05-user-management.md) · [TR](../tr/05-user-management.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۵. مدیریت کاربران
 
-[← داشبورد](./04-dashboard.md) · [فهرست](./README.md) · [بعدی: نودها →](./06-node-management.md)
-
-> [!WARNING]
-> **Revoke Sub** لینک قبلی را باطل می‌کند — فقط در صورت نشت token استفاده کنید.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![صفحه Users — مدیریت کاربران و subscription](../assets/panel/User_light.png) | ![صفحه Users — مدیریت کاربران و subscription](../assets/panel/User_dark.png) |
-
-*صفحه Users — مدیریت کاربران و subscription*
-
-</div>
+!!! warning
+    **Revoke Sub** لینک قبلی را باطل می‌کند — فقط در صورت نشت token استفاده کنید.
 
 ---
 
@@ -119,5 +95,3 @@
 
 - **Telegram user bot**: کاربر با token لاگین می‌کند — `/usage`, `/renew`
 - **Expiry warning**: ۳ روز قبل — رویداد `user.expiry_warning`
-
-</div>

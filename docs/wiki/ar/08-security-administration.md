@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/08-security-administration.md) · [EN](../en/08-security-administration.md) · [TR](../tr/08-security-administration.md)
-
-</div>
-
-<div dir="rtl">
-
 # ٨. الأمان والإدارة
 
-[← سياسة الشبكة](./07-network-policy.md) · [الفهرس](./README.md) · [التالي: الخطط →](./09-plans-payments.md)
-
-> [!IMPORTANT]
-> فعّل **2FA** وJWT secret قوي (≥32 بايت) للمسؤول الرئيسي.
+!!! important
+    فعّل **2FA** وJWT secret قوي (≥32 بايت) للمسؤول الرئيسي.
 
 ---
 
@@ -133,5 +119,3 @@ curl -H "Authorization: Bearer <PAT>" \
 - [ ] نسخ احتياطي مشفر خارج الموقع
 - [ ] webhook secret لـ HMAC
 - [ ] منفذ اللوحة مغلق من الإنترنت العام (Caddy 443 فقط)
-
-</div>

@@ -1,31 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/04-dashboard.md) · [AR](../ar/04-dashboard.md) · [TR](../tr/04-dashboard.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۴. داشبورد (Overview)
 
-[← اولین قدم‌ها](./03-first-steps.md) · [فهرست](./README.md) · [بعدی: کاربران →](./05-user-management.md)
-
-> [!NOTE]
-> داشبورد با **SSE** بدون refresh به‌روز می‌شود — polling لازم نیست.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![داشبورد Overview — آمار زنده و نمودار ترافیک](../assets/panel/overview_light.png) | ![داشبورد Overview — آمار زنده و نمودار ترافیک](../assets/panel/overview_dark.png) |
-
-*داشبورد Overview — آمار زنده و نمودار ترافیک*
-
-</div>
+!!! note
+    داشبورد با **SSE** بدون refresh به‌روز می‌شود — polling لازم نیست.
 
 ---
 
@@ -78,5 +54,3 @@ GET /api/events/stream?access_token=<JWT>
 ## Prometheus / Grafana
 
 متریک‌ها در endpoint Prometheus در دسترس هستند (برای مانیتورینگ خارجی). جزئیات: [فصل ۱۴ — عملیات](./14-operations-maintenance.md).
-
-</div>

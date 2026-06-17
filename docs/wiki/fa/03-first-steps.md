@@ -1,31 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/03-first-steps.md) · [AR](../ar/03-first-steps.md) · [TR](../tr/03-first-steps.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۳. اولین قدم‌ها
 
-[← نصب](./02-installation.md) · [فهرست](./README.md) · [بعدی: داشبورد →](./04-dashboard.md)
-
-> [!TIP]
-> کل این گردش کار را در **۵ دقیقه** انجام دهید: نود → inbound → user → subscription → تست.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![نمای کلی پنل — حالت روشن](../assets/panel/overview_light.png) | ![نمای کلی پنل — حالت روشن](../assets/panel/overview_dark.png) |
-
-*نمای کلی پنل — حالت روشن*
-
-</div>
+!!! tip
+    کل این گردش کار را در **۵ دقیقه** انجام دهید: نود → inbound → user → subscription → تست.
 
 ---
 
@@ -155,5 +131,3 @@ flowchart LR
 | جستجوی کاربر | Users → search box |
 | لاگ نود | Nodes → Logs |
 | رویدادهای زنده | خودکار — toast در گوشه |
-
-</div>
