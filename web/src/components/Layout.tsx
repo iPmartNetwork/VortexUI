@@ -40,6 +40,7 @@ const nav: { to: string; key: TKey; icon: React.ElementType }[] = [
   { to: "/plans", key: "nav.plans" as any, icon: Network },
   { to: "/orders", key: "nav.orders" as any, icon: History },
   { to: "/evasion", key: "nav.evasion" as any, icon: ShieldCheck },
+  { to: "/monitor", key: "nav.monitor" as any, icon: Server },
   { to: "/audit", key: "nav.audit", icon: History },
   { to: "/logs", key: "nav.logs", icon: ScrollText },
   { to: "/settings", key: "nav.settings", icon: SettingsIcon },
