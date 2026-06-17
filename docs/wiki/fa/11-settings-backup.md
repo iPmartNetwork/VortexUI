@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [EN](../en/11-settings-backup.md) · [AR](../ar/11-settings-backup.md) · [TR](../tr/11-settings-backup.md)
+[Wiki](./README.md) · [EN](../en/11-settings-backup.md) · [AR](../ar/11-settings-backup.md) · [TR](../tr/11-settings-backup.md)
 
 </div>
 

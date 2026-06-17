@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/03-first-steps.md) · [EN](../en/03-first-steps.md) · [AR](../ar/03-first-steps.md)
+[Wiki](./README.md) · [FA](../fa/03-first-steps.md) · [EN](../en/03-first-steps.md) · [AR](../ar/03-first-steps.md)
 
 </div>
 

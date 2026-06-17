@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/05-user-management.md) · [EN](../en/05-user-management.md) · [TR](../tr/05-user-management.md)
+[Wiki](./README.md) · [FA](../fa/05-user-management.md) · [EN](../en/05-user-management.md) · [TR](../tr/05-user-management.md)
 
 </div>
 

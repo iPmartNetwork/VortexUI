@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/13-protocols-config.md) · [EN](../en/13-protocols-config.md) · [AR](../ar/13-protocols-config.md)
+[Wiki](./README.md) · [FA](../fa/13-protocols-config.md) · [EN](../en/13-protocols-config.md) · [AR](../ar/13-protocols-config.md)
 
 </div>
 

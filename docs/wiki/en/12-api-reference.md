@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/12-api-reference.md) · [AR](../ar/12-api-reference.md) · [TR](../tr/12-api-reference.md)
+[Wiki](./README.md) · [FA](../fa/12-api-reference.md) · [AR](../ar/12-api-reference.md) · [TR](../tr/12-api-reference.md)
 
 </div>
 

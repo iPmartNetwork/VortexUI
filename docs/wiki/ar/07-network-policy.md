@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/07-network-policy.md) · [EN](../en/07-network-policy.md) · [TR](../tr/07-network-policy.md)
+[Wiki](./README.md) · [FA](../fa/07-network-policy.md) · [EN](../en/07-network-policy.md) · [TR](../tr/07-network-policy.md)
 
 </div>
 

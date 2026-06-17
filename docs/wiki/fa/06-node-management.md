@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [EN](../en/06-node-management.md) · [AR](../ar/06-node-management.md) · [TR](../tr/06-node-management.md)
+[Wiki](./README.md) · [EN](../en/06-node-management.md) · [AR](../ar/06-node-management.md) · [TR](../tr/06-node-management.md)
 
 </div>
 

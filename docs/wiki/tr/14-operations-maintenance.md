@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/14-operations-maintenance.md) · [EN](../en/14-operations-maintenance.md) · [AR](../ar/14-operations-maintenance.md)
+[Wiki](./README.md) · [FA](../fa/14-operations-maintenance.md) · [EN](../en/14-operations-maintenance.md) · [AR](../ar/14-operations-maintenance.md)
 
 </div>
 

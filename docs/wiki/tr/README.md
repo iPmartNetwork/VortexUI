@@ -9,7 +9,7 @@
 [![Release](https://img.shields.io/github/v/release/iPmartNetwork/VortexUI?style=flat-square&color=blue)](https://github.com/iPmartNetwork/VortexUI/releases)
 [![License](https://img.shields.io/github/license/iPmartNetwork/VortexUI?style=flat-square)](../../../LICENSE)
 
-[← Çok Dilli Wiki](../README.md) · [English](../en/README.md) · [فارسی](../fa/README.md) · [العربية](../ar/README.md) · [English README](../../../README.md) · [README فارسی](../../../README.fa.md)
+[← Çok Dilli Wiki](./README.md) · [English](../en/README.md) · [فارسی](../fa/README.md) · [العربية](../ar/README.md) · [English README](../../../README.md) · [README فارسی](../../../README.fa.md)
 
 </div>
 

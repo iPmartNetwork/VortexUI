@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/10-notifications.md) · [AR](../ar/10-notifications.md) · [TR](../tr/10-notifications.md)
+[Wiki](./README.md) · [FA](../fa/10-notifications.md) · [AR](../ar/10-notifications.md) · [TR](../tr/10-notifications.md)
 
 </div>
 

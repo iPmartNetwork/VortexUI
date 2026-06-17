@@ -4,7 +4,7 @@
 
 **VortexUI Wiki**
 
-[Wiki](../README.md) · [FA](../fa/02-installation.md) · [EN](../en/02-installation.md) · [AR](../ar/02-installation.md)
+[Wiki](./README.md) · [FA](../fa/02-installation.md) · [EN](../en/02-installation.md) · [AR](../ar/02-installation.md)
 
 </div>
 
