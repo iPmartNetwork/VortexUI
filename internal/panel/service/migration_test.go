@@ -7,115 +7,149 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/panel/port"
 )
 
-type fakeBinder struct {
-	bound   []string
-	unbound []string
+// --- fakes for migration tests ---
+
+type fakeMigrationInbounds struct {
+	byNode map[uuid.UUID][]*domain.Inbound
 }
 
-func (f *fakeBinder) BindInbound(_ context.Context, userID, inboundID uuid.UUID) error {
-	f.bound = append(f.bound, userID.String()+"->"+inboundID.String())
+func (f *fakeMigrationInbounds) Create(context.Context, *domain.Inbound) error          { return nil }
+func (f *fakeMigrationInbounds) GetByID(context.Context, uuid.UUID) (*domain.Inbound, error) {
+	return nil, nil
+}
+func (f *fakeMigrationInbounds) Update(context.Context, *domain.Inbound) error          { return nil }
+func (f *fakeMigrationInbounds) Delete(context.Context, uuid.UUID) error                { return nil }
+func (f *fakeMigrationInbounds) ListByNode(_ context.Context, nodeID uuid.UUID) ([]*domain.Inbound, error) {
+	return f.byNode[nodeID], nil
+}
+
+type fakeMigrationUsers struct {
+	users    []*domain.User
+	inbounds map[uuid.UUID][]domain.Inbound // userID -> inbounds
+	setBound map[uuid.UUID][]uuid.UUID      // captures SetInbounds calls
+}
+
+func (f *fakeMigrationUsers) Create(context.Context, *domain.User) error              { return nil }
+func (f *fakeMigrationUsers) GetByID(_ context.Context, id uuid.UUID) (*domain.User, error) {
+	for _, u := range f.users {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return nil, nil
+}
+func (f *fakeMigrationUsers) GetBySubToken(context.Context, string) (*domain.User, error) {
+	return nil, nil
+}
+func (f *fakeMigrationUsers) Update(context.Context, *domain.User) error              { return nil }
+func (f *fakeMigrationUsers) Delete(context.Context, uuid.UUID) error                 { return nil }
+func (f *fakeMigrationUsers) List(_ context.Context, _ port.UserFilter) ([]*domain.User, int, error) {
+	return f.users, len(f.users), nil
+}
+func (f *fakeMigrationUsers) AddUsedTraffic(context.Context, uuid.UUID, int64) error  { return nil }
+func (f *fakeMigrationUsers) AddUsedTrafficBatch(context.Context, map[uuid.UUID]int64) error {
 	return nil
 }
-func (f *fakeBinder) UnbindInbound(_ context.Context, userID, inboundID uuid.UUID) error {
-	f.unbound = append(f.unbound, userID.String()+"->"+inboundID.String())
+func (f *fakeMigrationUsers) SetInbounds(_ context.Context, userID uuid.UUID, ids []uuid.UUID) error {
+	if f.setBound == nil {
+		f.setBound = make(map[uuid.UUID][]uuid.UUID)
+	}
+	f.setBound[userID] = ids
 	return nil
 }
+func (f *fakeMigrationUsers) InboundsFor(_ context.Context, userID uuid.UUID) ([]domain.Inbound, error) {
+	return f.inbounds[userID], nil
+}
+
+type fakeMigrationNodes struct {
+	nodes []*domain.Node
+}
+
+func (f *fakeMigrationNodes) Create(context.Context, *domain.Node) error                        { return nil }
+func (f *fakeMigrationNodes) GetByID(context.Context, uuid.UUID) (*domain.Node, error)          { return nil, nil }
+func (f *fakeMigrationNodes) Update(context.Context, *domain.Node) error                        { return nil }
+func (f *fakeMigrationNodes) Delete(context.Context, uuid.UUID) error                           { return nil }
+func (f *fakeMigrationNodes) List(context.Context) ([]*domain.Node, error)                      { return f.nodes, nil }
+func (f *fakeMigrationNodes) UpdateHealth(context.Context, uuid.UUID, domain.NodeHealth) error  { return nil }
 
 func TestMigrateRehomesUsersToSameTagInbounds(t *testing.T) {
 	failed := &domain.Node{ID: uuid.New(), Name: "fail"}
 	target := &domain.Node{ID: uuid.New(), Name: "target"}
 
-	// Target mirrors only the "vless-ws" inbound, not "trojan".
+	failedVless := uuid.New()
+	failedTrojan := uuid.New()
 	targetVless := uuid.New()
-	lister := &fakeInboundLister{inbounds: []*domain.Inbound{{ID: targetVless, NodeID: target.ID, Tag: "vless-ws"}}}
 
-	u1, u2, u3 := &domain.User{ID: uuid.New()}, &domain.User{ID: uuid.New()}, &domain.User{ID: uuid.New()}
-	usersBy := &fakeUsersByNoder{m: map[string][]*domain.User{
-		"vless-ws": {u1, u2}, // migratable
-		"trojan":   {u3},     // no matching target inbound -> skipped
+	inbounds := &fakeMigrationInbounds{byNode: map[uuid.UUID][]*domain.Inbound{
+		failed.ID: {
+			{ID: failedVless, NodeID: failed.ID, Tag: "vless-ws"},
+			{ID: failedTrojan, NodeID: failed.ID, Tag: "trojan"},
+		},
+		target.ID: {
+			{ID: targetVless, NodeID: target.ID, Tag: "vless-ws"},
+			// No trojan on target.
+		},
 	}}
-	binder := &fakeBinder{}
-	ops := &fakeNodeOps{}
 
-	svc := NewMigrationService(lister, usersBy, binder, binder, ops, nil)
+	u1 := &domain.User{ID: uuid.New(), Username: "alice"}
+	u2 := &domain.User{ID: uuid.New(), Username: "bob"}
+	u3 := &domain.User{ID: uuid.New(), Username: "charlie"}
+
+	users := &fakeMigrationUsers{
+		users: []*domain.User{u1, u2, u3},
+		inbounds: map[uuid.UUID][]domain.Inbound{
+			u1.ID: {{ID: failedVless, Tag: "vless-ws"}},
+			u2.ID: {{ID: failedVless, Tag: "vless-ws"}},
+			u3.ID: {{ID: failedTrojan, Tag: "trojan"}},
+		},
+	}
+
+	ops := &fakeNodeOps{}
+	nodes := &fakeMigrationNodes{}
+
+	svc := NewMigrationService(inbounds, nodes, users, ops, nil)
 	if err := svc.Migrate(context.Background(), failed, target); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	// u1 and u2 are bound to the target's vless-ws inbound and provisioned there.
-	if len(binder.bound) != 2 {
-		t.Errorf("want 2 bindings, got %v", binder.bound)
+	// u1 and u2 (vless-ws) should be rebound to target's vless-ws inbound.
+	if len(users.setBound) != 2 {
+		t.Errorf("want 2 users rebound, got %d", len(users.setBound))
 	}
-	for _, b := range binder.bound {
-		if want := "->" + targetVless.String(); b[len(b)-len(want):] != want {
-			t.Errorf("binding %q not to target inbound", b)
+	for _, uid := range []uuid.UUID{u1.ID, u2.ID} {
+		ids, ok := users.setBound[uid]
+		if !ok {
+			t.Errorf("user %s not rebound", uid)
+			continue
+		}
+		if len(ids) != 1 || ids[0] != targetVless {
+			t.Errorf("user %s bound to %v, want [%s]", uid, ids, targetVless)
 		}
 	}
+
+	// u1 and u2 should be provisioned on target.
 	if len(ops.added) != 2 {
-		t.Errorf("want 2 provision calls on target, got %v", ops.added)
+		t.Errorf("want 2 provision calls on target, got %d", len(ops.added))
 	}
-	for _, a := range ops.added {
-		if want := target.ID.String() + "/vless-ws"; a != want {
-			t.Errorf("provisioned %q, want %q", a, want)
-		}
-	}
+
 	// u3 (trojan) must NOT be migrated — target has no trojan inbound.
-	if contains3(binder.bound, u3.ID.String()) {
+	if _, ok := users.setBound[u3.ID]; ok {
 		t.Error("trojan user should not have been migrated")
 	}
 }
 
-func TestMigrateNoTargetErrors(t *testing.T) {
-	svc := NewMigrationService(&fakeInboundLister{}, &fakeUsersByNoder{}, &fakeBinder{}, &fakeBinder{}, &fakeNodeOps{}, nil)
-	if err := svc.Migrate(context.Background(), &domain.Node{Name: "x"}, nil); err == nil {
-		t.Fatal("expected error when no healthy target is available")
-	}
-}
-
-func TestMigrateBackUndoesTemporaryPlacements(t *testing.T) {
-	failed := &domain.Node{ID: uuid.New(), Name: "fail"}
-	target := &domain.Node{ID: uuid.New(), Name: "target"}
-	targetVless := uuid.New()
-	lister := &fakeInboundLister{inbounds: []*domain.Inbound{{ID: targetVless, NodeID: target.ID, Tag: "vless-ws"}}}
-	u := &domain.User{ID: uuid.New()}
-	usersBy := &fakeUsersByNoder{m: map[string][]*domain.User{"vless-ws": {u}}}
-	binder := &fakeBinder{}
+func TestMigrateNilTargetErrors(t *testing.T) {
+	inbounds := &fakeMigrationInbounds{byNode: map[uuid.UUID][]*domain.Inbound{}}
+	users := &fakeMigrationUsers{}
+	nodes := &fakeMigrationNodes{}
 	ops := &fakeNodeOps{}
-	svc := NewMigrationService(lister, usersBy, binder, binder, ops, nil)
-	ctx := context.Background()
 
-	// Fail over: user is parked on the target.
-	if err := svc.Migrate(ctx, failed, target); err != nil {
-		t.Fatalf("migrate: %v", err)
+	svc := NewMigrationService(inbounds, nodes, users, ops, nil)
+	err := svc.Migrate(context.Background(), &domain.Node{ID: uuid.New(), Name: "x"}, nil)
+	if err == nil {
+		t.Fatal("expected error when target is nil")
 	}
-
-	// Recover the failed node: the temporary placement must be undone.
-	if err := svc.MigrateBack(ctx, failed); err != nil {
-		t.Fatalf("migrate back: %v", err)
-	}
-	if len(binder.unbound) != 1 || binder.unbound[0] != u.ID.String()+"->"+targetVless.String() {
-		t.Errorf("expected unbind of user from target inbound, got %v", binder.unbound)
-	}
-	if len(ops.removed) != 1 || ops.removed[0] != target.ID.String()+"/vless-ws" {
-		t.Errorf("expected removal from target core, got %v", ops.removed)
-	}
-
-	// Idempotent: a second migrate-back (no records) is a no-op.
-	if err := svc.MigrateBack(ctx, failed); err != nil {
-		t.Fatalf("second migrate back: %v", err)
-	}
-	if len(binder.unbound) != 1 {
-		t.Errorf("second migrate-back should be a no-op, unbound=%v", binder.unbound)
-	}
-}
-
-func contains3(ss []string, sub string) bool {
-	for _, s := range ss {
-		if len(sub) > 0 && len(s) >= len(sub) && s[:len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }

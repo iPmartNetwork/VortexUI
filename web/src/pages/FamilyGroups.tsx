@@ -1,0 +1,186 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/api/client";
+import { Button, Card, Input, PageHeader, Badge } from "@/components/ui";
+import { Modal } from "@/components/Modal";
+import { useToast } from "@/components/toast";
+import { useConfirm } from "@/components/confirm";
+import { formatBytes } from "@/lib/utils";
+
+interface FamilyMember {
+  id: string;
+  user_id: string;
+  username: string;
+  used_traffic: number;
+  label: string;
+  joined_at: string;
+}
+
+interface FamilyGroup {
+  id: string;
+  name: string;
+  owner_id: string;
+  owner_name: string;
+  data_limit: number;
+  used_traffic: number;
+  max_members: number;
+  member_quota: number;
+  members: FamilyMember[];
+  created_at: string;
+}
+
+export function FamilyGroups() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [viewId, setViewId] = useState<string | null>(null);
+
+  const { data } = useQuery({
+    queryKey: ["family-groups"],
+    queryFn: () => api<{ groups: FamilyGroup[]; total: number }>("/api/families"),
+  });
+
+  const delMut = useMutation({
+    mutationFn: (id: string) => api<void>(`/api/families/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["family-groups"] }),
+  });
+
+  async function remove(g: FamilyGroup) {
+    const ok = await confirm({ title: `Delete group "${g.name}"?`, confirmLabel: "Delete", destructive: true });
+    if (!ok) return;
+    await delMut.mutateAsync(g.id);
+    toast.success("Deleted");
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <PageHeader title="Family Groups" subtitle="Shared subscription pools for multiple devices/users" />
+        <Button onClick={() => setCreateOpen(true)}>New Group</Button>
+      </div>
+      <CreateGroupModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      {viewId && <GroupDetailModal groupId={viewId} onClose={() => setViewId(null)} />}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {data?.groups?.map((g) => (
+          <Card key={g.id} className="space-y-3 cursor-pointer hover:ring-1 hover:ring-primary/30" onClick={() => setViewId(g.id)}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-fg">{g.name}</h3>
+              <Badge color="active">{g.members?.length ?? 0}/{g.max_members}</Badge>
+            </div>
+            <div className="text-xs text-fg-muted">Owner: {g.owner_name}</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div><span className="text-fg-subtle">Pool:</span> <strong>{formatBytes(g.data_limit, false)}</strong></div>
+              <div><span className="text-fg-subtle">Used:</span> <strong>{formatBytes(g.used_traffic, false)}</strong></div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <Button variant="ghost" size="sm" className="text-destructive text-xs" onClick={(e) => { e.stopPropagation(); remove(g); }}>Delete</Button>
+            </div>
+          </Card>
+        ))}
+        {(!data?.groups || data.groups.length === 0) && (
+          <p className="col-span-full text-center text-sm text-fg-muted py-8">No family groups yet.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [f, setF] = useState({ name: "", owner_id: "", data_limit: "100", max_members: "5", member_quota: "0" });
+  const [ownerSearch, setOwnerSearch] = useState("");
+
+  const { data: usersData } = useQuery({
+    queryKey: ["users-for-family", ownerSearch],
+    queryFn: () => api<{ users: { id: string; username: string }[] }>("/api/users", { query: { search: ownerSearch, limit: 10 } }),
+    enabled: open,
+  });
+
+  const create = useMutation({
+    mutationFn: (input: Record<string, unknown>) => api("/api/families", { method: "POST", body: input }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["family-groups"] }); onClose(); toast.success("Group created"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <Modal open={open} onClose={onClose} title="New Family Group">
+      <form onSubmit={(e) => { e.preventDefault(); create.mutate({ name: f.name, owner_id: f.owner_id, data_limit: Number(f.data_limit) * 1024 * 1024 * 1024, max_members: Number(f.max_members), member_quota: Number(f.member_quota) * 1024 * 1024 * 1024 }); }} className="space-y-3">
+        <Input placeholder="Group name" value={f.name} onChange={(e) => setF(s => ({ ...s, name: e.target.value }))} required />
+        <div>
+          <Input placeholder="Search user..." value={ownerSearch} onChange={(e) => { setOwnerSearch(e.target.value); }} />
+          {usersData?.users && usersData.users.length > 0 && !f.owner_id && (
+            <div className="mt-1 max-h-32 overflow-y-auto rounded-lg border border-border/40 bg-surface-2/40">
+              {usersData.users.map(u => (
+                <button key={u.id} type="button" className="w-full px-3 py-1.5 text-left text-xs text-fg hover:bg-primary/10" onClick={() => { setF(s => ({ ...s, owner_id: u.id })); setOwnerSearch(u.username); }}>
+                  {u.username} <span className="text-fg-muted">({u.id.slice(0, 8)})</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {f.owner_id && <p className="mt-1 text-[10px] text-fg-subtle">Selected: {ownerSearch}</p>}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Input placeholder="Pool (GB)" value={f.data_limit} onChange={(e) => setF(s => ({ ...s, data_limit: e.target.value }))} inputMode="numeric" />
+          <Input placeholder="Max members" value={f.max_members} onChange={(e) => setF(s => ({ ...s, max_members: e.target.value }))} inputMode="numeric" />
+          <Input placeholder="Per-member cap (GB)" value={f.member_quota} onChange={(e) => setF(s => ({ ...s, member_quota: e.target.value }))} inputMode="numeric" />
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={create.isPending}>Create</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function GroupDetailModal({ groupId, onClose }: { groupId: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [newUser, setNewUser] = useState({ user_id: "", label: "" });
+
+  const { data } = useQuery({
+    queryKey: ["family-group", groupId],
+    queryFn: () => api<{ group: FamilyGroup }>(`/api/families/${groupId}`),
+  });
+
+  const addMut = useMutation({
+    mutationFn: (input: { user_id: string; label: string }) => api(`/api/families/${groupId}/members`, { method: "POST", body: input }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["family-group", groupId] }); setNewUser({ user_id: "", label: "" }); toast.success("Member added"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (uid: string) => api<void>(`/api/families/${groupId}/members/${uid}`, { method: "DELETE" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["family-group", groupId] }); toast.success("Removed"); },
+  });
+
+  const group = data?.group;
+
+  return (
+    <Modal open={true} onClose={onClose} title={group?.name || "Group"} className="max-w-lg">
+      <div className="space-y-4">
+        <div className="text-xs text-fg-muted">Owner: {group?.owner_name} | Members: {group?.members?.length ?? 0}/{group?.max_members}</div>
+        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+          {group?.members?.map((m) => (
+            <div key={m.id} className="flex items-center justify-between rounded-lg bg-surface-2/40 px-3 py-2">
+              <div>
+                <span className="text-sm font-medium text-fg">{m.username}</span>
+                {m.label && <span className="ml-2 text-xs text-fg-muted">({m.label})</span>}
+                <div className="text-xs text-fg-subtle">{formatBytes(m.used_traffic, false)}</div>
+              </div>
+              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeMut.mutate(m.user_id)}>Remove</Button>
+            </div>
+          ))}
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); addMut.mutate(newUser); }} className="flex gap-2">
+          <Input placeholder="User ID" value={newUser.user_id} onChange={(e) => setNewUser(s => ({ ...s, user_id: e.target.value }))} className="flex-1" />
+          <Input placeholder="Label" value={newUser.label} onChange={(e) => setNewUser(s => ({ ...s, label: e.target.value }))} className="w-28" />
+          <Button type="submit" size="sm" disabled={addMut.isPending || !newUser.user_id}>Add</Button>
+        </form>
+      </div>
+    </Modal>
+  );
+}

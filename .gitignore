@@ -44,3 +44,7 @@ Thumbs.db
 # Go workspace
 go.work
 go.work.sum
+
+# IDE / AI assistant local config
+.claude/
+.kiro/

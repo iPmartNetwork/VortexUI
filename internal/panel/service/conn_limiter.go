@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,7 +22,6 @@ type ConnectionLimiter struct {
 	interval time.Duration
 	log      *slog.Logger
 	pub      events.Publisher
-	mu       sync.Mutex
 	warned   map[uuid.UUID]time.Time // dedup warnings
 }
 

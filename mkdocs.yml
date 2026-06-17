@@ -140,6 +140,7 @@ plugins:
             Protocols: Protocols & config
             Operations: Operations
             Troubleshooting: Troubleshooting & FAQ
+            v1.2.0 Features: v1.2.0 Features
         - locale: fa
           name: فارسی
           build: true
@@ -166,6 +167,7 @@ plugins:
             Protocols: پروتکل‌ها
             Operations: عملیات
             Troubleshooting: عیب‌یابی و FAQ
+            v1.2.0 Features: ویژگی‌های نسخه 1.2.0
         - locale: ar
           name: العربية
           build: true
@@ -192,6 +194,7 @@ plugins:
             Protocols: البروتوكولات
             Operations: العمليات
             Troubleshooting: استكشاف الأخطاء
+            v1.2.0 Features: ميزات الإصدار 1.2.0
         - locale: tr
           name: Türkçe
           build: true
@@ -218,6 +221,7 @@ plugins:
             Protocols: Protokoller
             Operations: Operasyonlar
             Troubleshooting: Sorun giderme
+            v1.2.0 Features: v1.2.0 Özellikleri
 
 nav:
   - Home: README.md
@@ -239,5 +243,6 @@ nav:
       - Protocols: 13-protocols-config.md
       - Operations: 14-operations-maintenance.md
       - Troubleshooting: 15-troubleshooting-faq.md
+  - v1.2.0 Features: 16-v120-features.md
 
 # _enhance_wiki.py is a maintenance script, not published

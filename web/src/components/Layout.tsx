@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users as UsersIcon,
@@ -19,6 +19,24 @@ import {
   Menu,
   X,
   Globe,
+  Scan,
+  Gauge,
+  Link2,
+  EyeOff,
+  BarChart3,
+  LifeBuoy,
+  ArrowRightLeft,
+  Shield,
+  Users2,
+  Gift,
+  Wifi,
+  Lock,
+  Fingerprint as FingerprintIcon,
+  Layers,
+  QrCode,
+  Bell,
+  Unplug,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/auth";
@@ -27,23 +45,74 @@ import { useI18n } from "@/i18n/i18n";
 import { useLiveEvents } from "@/api/live";
 import type { TKey, Lang } from "@/i18n/dict";
 
-const PANEL_VERSION = "1.0.1";
+const PANEL_VERSION = "1.2.0";
 
-const nav: { to: string; key: TKey; icon: React.ElementType }[] = [
-  { to: "/overview", key: "nav.overview", icon: LayoutDashboard },
-  { to: "/users", key: "nav.users", icon: UsersIcon },
-  { to: "/nodes", key: "nav.nodes", icon: Server },
-  { to: "/outbounds", key: "nav.outbounds", icon: Network },
-  { to: "/routing", key: "nav.routing", icon: RouteIcon },
-  { to: "/balancers", key: "nav.balancers", icon: Scale },
-  { to: "/admins", key: "nav.admins", icon: ShieldCheck },
-  { to: "/plans", key: "nav.plans" as any, icon: Network },
-  { to: "/orders", key: "nav.orders" as any, icon: History },
-  { to: "/evasion", key: "nav.evasion" as any, icon: ShieldCheck },
-  { to: "/monitor", key: "nav.monitor" as any, icon: Server },
-  { to: "/audit", key: "nav.audit", icon: History },
-  { to: "/logs", key: "nav.logs", icon: ScrollText },
-  { to: "/settings", key: "nav.settings", icon: SettingsIcon },
+// Grouped navigation with collapsible sections
+interface NavItem { to: string; key: TKey; icon: React.ElementType }
+interface NavSection { label: string; id: string; items: NavItem[] }
+
+const navSections: NavSection[] = [
+  {
+    label: "nav.section.dashboard",
+    id: "dashboard",
+    items: [
+      { to: "/overview", key: "nav.overview", icon: LayoutDashboard },
+      { to: "/monitor", key: "nav.monitor", icon: Server },
+      { to: "/analytics", key: "nav.analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "nav.section.users",
+    id: "users",
+    items: [
+      { to: "/users", key: "nav.users", icon: UsersIcon },
+      { to: "/family-groups", key: "nav.familyGroups", icon: Users2 },
+      { to: "/plans", key: "nav.plans", icon: Network },
+      { to: "/orders", key: "nav.orders", icon: History },
+      { to: "/smart-quota", key: "nav.smartQuota", icon: Gauge },
+      { to: "/quota-notifications", key: "nav.quotaNotify", icon: Bell },
+      { to: "/referrals", key: "nav.referrals", icon: Gift },
+      { to: "/tickets", key: "nav.tickets", icon: LifeBuoy },
+    ],
+  },
+  {
+    label: "nav.section.network",
+    id: "network",
+    items: [
+      { to: "/nodes", key: "nav.nodes", icon: Server },
+      { to: "/outbounds", key: "nav.outbounds", icon: Network },
+      { to: "/routing", key: "nav.routing", icon: RouteIcon },
+      { to: "/balancers", key: "nav.balancers", icon: Scale },
+      { to: "/relay-chains", key: "nav.relayChains", icon: Link2 },
+      { to: "/migration", key: "nav.migration", icon: ArrowRightLeft },
+      { to: "/federation", key: "nav.federation", icon: Layers },
+    ],
+  },
+  {
+    label: "nav.section.security",
+    id: "security",
+    items: [
+      { to: "/evasion", key: "nav.evasion", icon: ShieldCheck },
+      { to: "/tls-tricks", key: "nav.tlsTricks", icon: Unplug },
+      { to: "/sni-manager", key: "nav.sniManager", icon: Lock },
+      { to: "/reality-scanner", key: "nav.realityScanner", icon: Scan },
+      { to: "/decoy-website", key: "nav.decoyWebsite", icon: EyeOff },
+      { to: "/probing-protection", key: "nav.probingProtection", icon: Shield },
+      { to: "/fingerprint", key: "nav.fingerprint", icon: FingerprintIcon },
+      { to: "/doh", key: "nav.doh", icon: Wifi },
+    ],
+  },
+  {
+    label: "nav.section.system",
+    id: "system",
+    items: [
+      { to: "/admins", key: "nav.admins", icon: ShieldCheck },
+      { to: "/deep-links", key: "nav.deepLinks", icon: QrCode },
+      { to: "/audit", key: "nav.audit", icon: History },
+      { to: "/logs", key: "nav.logs", icon: ScrollText },
+      { to: "/settings", key: "nav.settings", icon: SettingsIcon },
+    ],
+  },
 ];
 
 function IconButton({ onClick, label, children, className }: { onClick: () => void; label: string; children: React.ReactNode; className?: string }) {
@@ -57,11 +126,26 @@ function IconButton({ onClick, label, children, className }: { onClick: () => vo
 export function Layout() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { resolved, toggle } = useTheme();
   const { t, lang, setLang } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  useLiveEvents(); // subscribe to the SSE event stream for live updates
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    // Auto-open the section containing the current route
+    const init: Record<string, boolean> = {};
+    navSections.forEach(s => {
+      init[s.id] = s.items.some(item => location.pathname.startsWith(item.to));
+    });
+    // Always open dashboard
+    init["dashboard"] = true;
+    return init;
+  });
+  useLiveEvents();
+
+  function toggleSection(id: string) {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
+  }
 
   const sidebarContent = (
     <>
@@ -77,27 +161,55 @@ export function Layout() {
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-2">
-        {nav.map((n) => {
-          const Icon = n.icon;
+      {/* Navigation — collapsible sections */}
+      <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
+        {navSections.map((section) => {
+          const isOpen = openSections[section.id] ?? false;
+          const hasActive = section.items.some(item => location.pathname.startsWith(item.to));
+
           return (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              title={collapsed ? t(n.key) : undefined}
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  "group relative flex items-center rounded-xl text-sm font-medium transition-all duration-200",
-                  collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
-                  isActive ? "nav-glow bg-primary/[0.08] text-primary" : "text-fg-muted hover:bg-surface-2/50 hover:text-fg",
-                )
-              }
-            >
-              <Icon size={18} strokeWidth={2} />
-              {!collapsed && <span>{t(n.key)}</span>}
-            </NavLink>
+            <div key={section.id}>
+              {/* Section header */}
+              {!collapsed && (
+                <button
+                  onClick={() => toggleSection(section.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition",
+                    hasActive ? "text-primary/80" : "text-fg-subtle hover:text-fg-muted",
+                  )}
+                >
+                  <span>{t(section.label as TKey)}</span>
+                  <ChevronDown size={12} className={cn("transition-transform duration-200", isOpen && "rotate-180")} />
+                </button>
+              )}
+
+              {/* Section items */}
+              {(collapsed || isOpen) && (
+                <div className={cn("space-y-0.5", !collapsed && "pb-2")}>
+                  {section.items.map((n) => {
+                    const Icon = n.icon;
+                    return (
+                      <NavLink
+                        key={n.to}
+                        to={n.to}
+                        title={collapsed ? t(n.key) : undefined}
+                        onClick={() => setMobileOpen(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            "group relative flex items-center rounded-xl text-sm font-medium transition-all duration-200",
+                            collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2",
+                            isActive ? "nav-glow bg-primary/[0.08] text-primary" : "text-fg-muted hover:bg-surface-2/50 hover:text-fg",
+                          )
+                        }
+                      >
+                        <Icon size={16} strokeWidth={2} />
+                        {!collapsed && <span className="truncate">{t(n.key)}</span>}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
