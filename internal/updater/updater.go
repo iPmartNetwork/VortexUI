@@ -151,12 +151,12 @@ func downloadReplace(ctx context.Context, client *http.Client, url, dst string) 
 	defer os.Remove(tmpName)
 
 	if _, err := io.Copy(tmp, resp.Body); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
-	tmp.Close()
+	_ = tmp.Close()
 
-	if err := os.Chmod(tmpName, 0o755); err != nil {
+	if err := os.Chmod(tmpName, 0o755); err != nil { //nolint:gosec // binary needs execute permission
 		return err
 	}
 	return os.Rename(tmpName, dst)

@@ -1,4 +1,51 @@
-# VortexUI API docs
+# VortexUI Documentation
+
+## Documentation site (MkDocs Material)
+
+**Live site:** [https://ipmartnetwork.github.io/VortexUI/](https://ipmartnetwork.github.io/VortexUI/)
+
+Four languages: **English · فارسی · العربية · Türkçe** — search, dark/light theme, sidebar navigation, Mermaid diagrams.
+
+### Local preview
+
+```bash
+pip install -r docs/requirements.txt
+mkdocs serve
+# open http://127.0.0.1:8000
+```
+
+Or:
+
+```bash
+make docs-serve
+```
+
+### Build
+
+```bash
+make docs
+# output in site/
+```
+
+### Deploy
+
+Push to `master` — GitHub Actions workflow [`.github/workflows/docs.yml`](../.github/workflows/docs.yml) builds and deploys to **GitHub Pages**.
+
+**One-time setup:** Repository **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+---
+
+## Wiki (Markdown source)
+
+Markdown files live in [`wiki/`](wiki/README.md) (FA / EN / AR / TR).
+
+**[📚 wiki/README.md](wiki/README.md)** · [فارسی](wiki/fa/README.md) · [English](wiki/en/README.md) · [العربية](wiki/ar/README.md) · [Türkçe](wiki/tr/README.md)
+
+Edit wiki Markdown → CI rebuilds the site automatically.
+
+---
+
+## API Reference
 
 [`openapi.yaml`](openapi.yaml) is the full OpenAPI 3.0 specification for the panel
 REST API — every endpoint, request/response shape, auth requirement, and RBAC

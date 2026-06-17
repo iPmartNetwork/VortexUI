@@ -215,7 +215,10 @@ make build && make certs && make run-panel
 
 | موضوع | لینک |
 |-------|------|
+| **سایت مستندات (MkDocs)** | **[ipmartnetwork.github.io/VortexUI](https://ipmartnetwork.github.io/VortexUI/)** — FA · EN · AR · TR |
+| **ویکی (منبع Markdown)** | [`docs/wiki/README.md`](docs/wiki/README.md) · [فارسی](docs/wiki/fa/README.md) · [English](docs/wiki/en/README.md) · [العربية](docs/wiki/ar/README.md) · [Türkçe](docs/wiki/tr/README.md) |
 | مرجع API (OpenAPI 3.0) | [`docs/openapi.yaml`](docs/openapi.yaml) |
+| پروتکل‌ها و مثال پیکربندی | [`docs/protocols.md`](docs/protocols.md) |
 | متغیرهای محیطی | [`.env.example`](.env.example) |
 | استقرار با Docker | [`deploy/`](deploy/) |
 | CI/CD | [`.github/workflows/`](.github/workflows/) |

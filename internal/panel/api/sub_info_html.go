@@ -129,7 +129,7 @@ function copy(t){navigator.clipboard.writeText(t).then(()=>{const e=document.get
 // Multi-language support (detect browser language)
 (function(){
   const labels={
-    fa:{usage:'مصرف ترافیک',used:'مصرف (GB)',limit:'سقف (GB)',days:'روز باقیمانده',devices:'دستگاه',sub:'لینک اشتراک',configs:'کانفیگ‌ها',qr:'QR Code',scan:'با اپ پروکسی اسکن کنید',traffic:'ترافیک (۷ روز اخیر)'},
+    fa:{usage:'مصرف ترافیک',used:'مصرف (GB)',limit:'سقف (GB)',days:'روز باقیمانده',devices:'دستگاه',sub:'لینک اشتراک',configs:'کانفیگها',qr:'QR Code',scan:'با اپ پروکسی اسکن کنید',traffic:'ترافیک (۷ روز اخیر)'},
     ar:{usage:'استخدام الحركة',used:'مستخدم (GB)',limit:'الحد (GB)',days:'أيام متبقية',devices:'أجهزة',sub:'رابط الاشتراك',configs:'الإعدادات',qr:'رمز QR',scan:'امسح بتطبيق البروكسي',traffic:'حركة المرور (٧ أيام)'},
     tr:{usage:'Trafik Kullanımı',used:'Kullanılan (GB)',limit:'Limit (GB)',days:'Kalan Gün',devices:'Cihaz',sub:'Abonelik Bağlantıları',configs:'Yapılandırmalar',qr:'QR Kod',scan:'Proxy uygulamanızla tarayın',traffic:'Trafik (son 7 gün)'},
     ru:{usage:'Использование трафика',used:'Использовано (ГБ)',limit:'Лимит (ГБ)',days:'Дней осталось',devices:'Устройства',sub:'Ссылки подписки',configs:'Конфигурации',qr:'QR-код',scan:'Сканируйте прокси-приложением',traffic:'Трафик (7 дней)'},

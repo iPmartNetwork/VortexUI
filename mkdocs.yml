@@ -1,0 +1,248 @@
+# MkDocs Material — multilingual VortexUI documentation
+# Local:  pip install -r docs/requirements.txt && mkdocs serve
+# Build:  mkdocs build
+# Deploy: mkdocs gh-deploy  (or GitHub Actions → gh-pages)
+
+site_name: VortexUI Docs
+site_url: https://ipmartnetwork.github.io/VortexUI/
+site_description: Next-generation proxy management panel — installation, features, API, operations
+site_author: iPmart Network
+
+repo_name: iPmartNetwork/VortexUI
+repo_url: https://github.com/iPmartNetwork/VortexUI
+edit_uri: edit/master/docs/wiki/
+
+copyright: Copyright &copy; 2026 iPmart Network — GPL-3.0
+
+docs_dir: docs/wiki
+site_dir: site
+
+hooks:
+  - docs/hooks/copy_assets.py
+
+theme:
+  name: material
+  language: en
+  logo: assets/Logo.svg
+  favicon: assets/Logo.svg
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+    - announce.dismiss
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/iPmartNetwork/VortexUI
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search:
+      lang:
+        - en
+        - fa
+        - ar
+        - tr
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: false
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+          site_name: VortexUI Docs
+          theme:
+            language: en
+          nav_translations:
+            Home: Home
+            Getting started: Getting started
+            Introduction: Introduction
+            Installation: Installation
+            First steps: First steps
+            Panel guide: Panel guide
+            Dashboard: Dashboard
+            User management: User management
+            Node management: Node management
+            Network policy: Network policy
+            Security: Security & admins
+            Plans & payments: Plans & payments
+            Notifications: Notifications
+            Settings & backup: Settings & backup
+            Technical reference: Technical reference
+            API reference: API reference
+            Protocols: Protocols & config
+            Operations: Operations
+            Troubleshooting: Troubleshooting & FAQ
+        - locale: fa
+          name: فارسی
+          build: true
+          site_name: مستندات VortexUI
+          theme:
+            language: fa
+          nav_translations:
+            Home: خانه
+            Getting started: شروع کار
+            Introduction: معرفی
+            Installation: نصب
+            First steps: اولین قدم‌ها
+            Panel guide: راهنمای پنل
+            Dashboard: داشبورد
+            User management: مدیریت کاربران
+            Node management: مدیریت نودها
+            Network policy: سیاست شبکه
+            Security: امنیت و ادمین‌ها
+            Plans & payments: پلن‌ها و پرداخت
+            Notifications: اعلان‌ها
+            Settings & backup: تنظیمات و پشتیبان
+            Technical reference: مرجع فنی
+            API reference: مرجع API
+            Protocols: پروتکل‌ها
+            Operations: عملیات
+            Troubleshooting: عیب‌یابی و FAQ
+        - locale: ar
+          name: العربية
+          build: true
+          site_name: وثائق VortexUI
+          theme:
+            language: ar
+          nav_translations:
+            Home: الرئيسية
+            Getting started: البدء
+            Introduction: المقدمة
+            Installation: التثبيت
+            First steps: الخطوات الأولى
+            Panel guide: دليل اللوحة
+            Dashboard: لوحة المعلومات
+            User management: إدارة المستخدمين
+            Node management: إدارة العقد
+            Network policy: سياسة الشبكة
+            Security: الأمان والمسؤولون
+            Plans & payments: الخطط والمدفوعات
+            Notifications: الإشعارات
+            Settings & backup: الإعدادات والنسخ الاحتياطي
+            Technical reference: مرجع تقني
+            API reference: مرجع API
+            Protocols: البروتوكولات
+            Operations: العمليات
+            Troubleshooting: استكشاف الأخطاء
+        - locale: tr
+          name: Türkçe
+          build: true
+          site_name: VortexUI Dokümantasyon
+          theme:
+            language: tr
+          nav_translations:
+            Home: Ana sayfa
+            Getting started: Başlangıç
+            Introduction: Giriş
+            Installation: Kurulum
+            First steps: İlk adımlar
+            Panel guide: Panel rehberi
+            Dashboard: Pano
+            User management: Kullanıcı yönetimi
+            Node management: Node yönetimi
+            Network policy: Ağ politikası
+            Security: Güvenlik ve yönetim
+            Plans & payments: Planlar ve ödeme
+            Notifications: Bildirimler
+            Settings & backup: Ayarlar ve yedekleme
+            Technical reference: Teknik referans
+            API reference: API referansı
+            Protocols: Protokoller
+            Operations: Operasyonlar
+            Troubleshooting: Sorun giderme
+
+nav:
+  - Home: README.md
+  - Getting started:
+      - Introduction: 01-introduction.md
+      - Installation: 02-installation.md
+      - First steps: 03-first-steps.md
+  - Panel guide:
+      - Dashboard: 04-dashboard.md
+      - User management: 05-user-management.md
+      - Node management: 06-node-management.md
+      - Network policy: 07-network-policy.md
+      - Security: 08-security-administration.md
+      - Plans & payments: 09-plans-payments.md
+      - Notifications: 10-notifications.md
+      - Settings & backup: 11-settings-backup.md
+  - Technical reference:
+      - API reference: 12-api-reference.md
+      - Protocols: 13-protocols-config.md
+      - Operations: 14-operations-maintenance.md
+      - Troubleshooting: 15-troubleshooting-faq.md
+
+# _enhance_wiki.py is a maintenance script, not published
