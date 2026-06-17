@@ -6,6 +6,32 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-17
+
+### Added
+- **Interactive Telegram Bot** — admin commands (/status, /users, /online, /nodes, /find, /limit, /unlimit) in addition to one-way event notifications.
+- **Expiry Warning** — automatic alert 3 days before user subscriptions expire (Telegram + Webhook).
+- **Admin Quota Enforcement** — non-sudo admins respect UserQuota and TrafficQuota limits on user creation.
+- **Bandwidth Limit field** — per-inbound `speed_limit` (bytes/sec) for throttling user download speed.
+- **Certificate Manager** — ACME-ready cert manager with domain-based issuance and caching (self-signed bootstrap, production ACME ready).
+- **Cloudflare DNS Automation** — auto-create/update A records when nodes are added (`VORTEX_CF_API_TOKEN` + `VORTEX_CF_ZONE_ID`).
+- **Subscription Info Page** — beautiful public HTML page at `/sub/{token}` (browser auto-detect) showing usage, QR, configs, traffic chart.
+- **Traffic Chart on Sub Page** — 7-day usage bar chart via `/sub/{token}/usage` public endpoint.
+- **Config Template Engine** — `ClashTemplate` and `SingboxTemplate` for customizing subscription output (DNS, routing rules, proxy groups).
+- **Docker GHCR Publish** workflow — multi-arch (amd64/arm64) images to GitHub Container Registry (manual trigger).
+- **Node Endpoint** field — custom tunnel/CDN/relay address per node; subscription links use it instead of real IP.
+
+### Fixed
+- **Resilient config builder** — misconfigured inbounds (missing REALITY keys, empty Shadowsocks password) are skipped instead of crashing the core.
+- **gRPC keepalive** — 20s client ping + 30s server ping prevents intermediate firewalls from killing idle node connections.
+- **TLS ServerName** — panel no longer requires node cert SAN to match the node name; CA-only validation for multi-node flexibility.
+- **Update script** — `vortexui update` uses `git fetch + reset --hard` instead of `git pull --ff-only` (works with force-push).
+- **Hysteria2/TUIC transport** — auto-lock to UDP + TLS in the frontend when these protocols are selected.
+
+### Changed
+- Reconnect backoff reduced (0.5s–15s, was 1s–30s) for faster node recovery.
+- Unsupported protocols in config builders now skip (continue) instead of failing the entire build.
+
 ## [1.0.0] - 2026-06-15
 
 First stable release.
@@ -49,5 +75,6 @@ First stable release.
 - React 18 + TypeScript + Tailwind; dark + light themes; responsive.
 - **8 languages** (EN/FA/TR/AR/RU/ZH/JA/ES) with full RTL for Persian and Arabic.
 
-[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/iPmartNetwork/VortexUI/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/iPmartNetwork/VortexUI/releases/tag/v1.0.0

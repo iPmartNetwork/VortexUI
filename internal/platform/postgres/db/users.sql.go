@@ -589,3 +589,49 @@ func (q *Queries) UsersToReset(ctx context.Context) ([]User, error) {
 	}
 	return items, nil
 }
+
+const usersExpiringSoon = `-- name: UsersExpiringSoon :many
+SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, created_at, updated_at FROM users
+WHERE status = 'active' AND expire_at IS NOT NULL AND expire_at <= $1 AND expire_at > now()
+`
+
+func (q *Queries) UsersExpiringSoon(ctx context.Context, before pgtype.Timestamptz) ([]User, error) {
+	rows, err := q.db.Query(ctx, usersExpiringSoon, before)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Status,
+			&i.Note,
+			&i.DataLimit,
+			&i.UsedTraffic,
+			&i.ExpireAt,
+			&i.OnHoldExpire,
+			&i.ResetStrategy,
+			&i.LastReset,
+			&i.DeviceLimit,
+			&i.AllowedHwids,
+			&i.VmessUuid,
+			&i.VlessUuid,
+			&i.TrojanPass,
+			&i.SsPassword,
+			&i.SsMethod,
+			&i.SubToken,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

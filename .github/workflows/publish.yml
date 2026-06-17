@@ -1,0 +1,76 @@
+name: Publish Docker Images
+
+# Builds and pushes multi-arch Docker images to GitHub Container Registry (GHCR)
+# on every version tag push. Images are available at:
+#   ghcr.io/ipmartnetwork/vortexui-panel:v1.0.1
+#   ghcr.io/ipmartnetwork/vortexui-node:v1.0.1
+#   ghcr.io/ipmartnetwork/vortexui-web:v1.0.1
+
+on:
+  workflow_dispatch: {} # manual trigger only — auto-publish after org packages are configured
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: panel
+            file: deploy/Dockerfile
+            target: panel-aio
+          - name: node
+            file: deploy/Dockerfile
+            target: node
+          - name: web
+            file: deploy/web.Dockerfile
+            target: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image prefix (lowercase)
+        id: prefix
+        run: echo "value=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/vortexui" >> "$GITHUB_OUTPUT"
+
+      - name: Read version
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME:-$(cat VERSION)}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.prefix.outputs.value }}-${{ matrix.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          target: ${{ matrix.target || '' }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: VERSION=${{ steps.ver.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -21,7 +21,7 @@ const UDP_PROTOCOLS = ["hysteria2", "tuic"];
 // non-conflicting port. The admin can still type any port.
 const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
 
-const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "" });
+const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", speedLimit: "" });
 const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {
@@ -60,7 +60,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     });
 
   function startEdit(ib: Inbound) {
-    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: "" });
+    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: "", speedLimit: "" });
   }
 
   async function toggleEnable(ib: Inbound) {
@@ -194,6 +194,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         </div>
         <Input placeholder="SNI (comma-separated, optional)" value={f.sni} onChange={set("sni")} />
         {f.security === "reality" && <RealityKeygenSection />}
+        <Input placeholder="Speed limit (bytes/sec, 0 = unlimited)" value={f.speedLimit ?? ""} onChange={(e) => setF(s => ({...s, speedLimit: e.target.value}))} inputMode="numeric" />
         <div className="flex justify-end">
           <Button type="submit" disabled={create.isPending || update.isPending}>
             {editing ? "Save changes" : "Add inbound"}

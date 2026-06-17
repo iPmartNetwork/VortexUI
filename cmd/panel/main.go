@@ -160,6 +160,12 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		tg := notify.NewTelegram(cfg.TelegramToken, cfg.TelegramChatID, log)
 		go tg.Run(ctx, bus.Subscribe(256))
 		log.Info("telegram notifier enabled")
+
+		// Interactive bot (long-polling) for admin commands.
+		botAdapter := service.NewBotAdapter(users, nodes)
+		bot := notify.NewTelegramBot(cfg.TelegramToken, notify.ParseChatID(cfg.TelegramChatID), botAdapter, log)
+		go bot.Run(ctx)
+		log.Info("telegram bot enabled (interactive commands)")
 	}
 
 	// 4. Services + 5. HTTP API.
@@ -173,6 +179,11 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	// users — the complement to enforcement.
 	resetter := service.NewResetter(users, h, time.Hour, log)
 	resetter.SetPublisher(bus)
+
+	// Expiry warning loop: alerts admins 3 days before user subscriptions expire.
+	expiryWarner := service.NewExpiryWarner(store.Users(), log)
+	expiryWarner.SetPublisher(bus)
+	go expiryWarner.Run(ctx)
 	go resetter.Run(ctx)
 
 	authSvc := service.NewAuthService(admins, issuer)

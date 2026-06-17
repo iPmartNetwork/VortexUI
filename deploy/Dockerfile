@@ -21,17 +21,19 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
 # ---- xray fetch (for the node image) ----
 FROM alpine:3.20 AS xray
 ARG XRAY_VERSION=v1.8.24
-ARG TARGETARCH=64
+ARG TARGETARCH
 RUN apk add --no-cache curl unzip && \
+    XARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64-v8a" || echo "64") && \
     curl -fsSL -o /tmp/xray.zip \
-      "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${TARGETARCH}.zip" && \
+      "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${XARCH}.zip" && \
     unzip /tmp/xray.zip -d /xray && chmod +x /xray/xray
 
 # ---- sing-box fetch (for the node image) ----
 FROM alpine:3.20 AS singbox
 ARG SINGBOX_VERSION=1.9.3
-ARG SB_ARCH=amd64
+ARG TARGETARCH
 RUN apk add --no-cache curl tar && \
+    SB_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") && \
     curl -fsSL -o /tmp/sb.tgz \
       "https://github.com/SagerNet/sing-box/releases/download/v${SINGBOX_VERSION}/sing-box-${SINGBOX_VERSION}-linux-${SB_ARCH}.tar.gz" && \
     tar -xzf /tmp/sb.tgz -C /tmp && \

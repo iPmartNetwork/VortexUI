@@ -105,12 +105,49 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
+  <!-- Traffic Chart (7-day) -->
+  <div class="card">
+    <div class="card-title">Traffic (last 7 days)</div>
+    <canvas id="trafficChart" height="120" style="width:100%"></canvas>
+  </div>
+
   <div class="footer">© 2026 iPmart Network. All rights reserved.</div>
 </div>
 
 <div class="toast" id="toast">Copied!</div>
 <script>
 function copy(t){navigator.clipboard.writeText(t).then(()=>{const e=document.getElementById('toast');e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1500)})}
+
+// Traffic chart
+fetch(window.location.pathname.replace('/info','/usage')).then(r=>r.json()).then(d=>{
+  const canvas=document.getElementById('trafficChart');
+  if(!canvas||!d.points||!d.points.length)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width=canvas.offsetWidth;
+  const H=canvas.height=120;
+  const pts=d.points;
+  const vals=pts.map(p=>(p.up||0)+(p.down||0));
+  const max=Math.max(...vals,1);
+  const barW=Math.floor((W-20)/vals.length)-2;
+  ctx.fillStyle='rgba(99,102,241,0.3)';
+  ctx.strokeStyle='rgba(99,102,241,0.8)';
+  ctx.lineWidth=1;
+  vals.forEach((v,i)=>{
+    const x=10+i*(barW+2);
+    const h=(v/max)*(H-30);
+    ctx.fillRect(x,H-20-h,barW,h);
+    ctx.strokeRect(x,H-20-h,barW,h);
+  });
+  ctx.fillStyle='rgba(148,163,184,0.7)';
+  ctx.font='9px sans-serif';
+  pts.forEach((p,i)=>{
+    if(i%2===0){
+      const x=10+i*(barW+2);
+      const day=new Date(p.time).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+      ctx.fillText(day,x,H-5);
+    }
+  });
+}).catch(()=>{});
 </script>
 </body>
 </html>`

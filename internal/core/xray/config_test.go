@@ -112,8 +112,15 @@ func TestBuilder_UnsupportedProtocol(t *testing.T) {
 	cfg := &core.GeneratedConfig{
 		Inbounds: []domain.Inbound{{Tag: "wg", Protocol: domain.ProtoWireGuard, Port: 51820}},
 	}
-	if _, err := (Builder{APIPort: 1}).Build(cfg); err == nil {
-		t.Fatal("expected error for unsupported protocol, got nil")
+	// Unsupported protocols are now skipped (not fatal) so one bad inbound
+	// doesn't crash the core. The config is still valid — it just won't contain
+	// the unsupported inbound.
+	raw, err := (Builder{APIPort: 1}).Build(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("expected non-empty config")
 	}
 }
 

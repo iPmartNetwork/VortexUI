@@ -40,6 +40,8 @@
 ### 👥 User Management
 - User-centric model (one identity → many protocols)
 - Subscription: auto-detect Clash/sing-box/base64
+- **User-facing subscription page** (usage, QR, traffic chart)
+- **Config templates** (custom Clash/sing-box routing)
 - QR codes + per-format URLs
 - Traffic accounting: delta-based, restart-safe
 - Quota enforcement + scheduled reset
@@ -65,19 +67,24 @@
 - Remote restart / stop core
 - One-click GeoIP/Geosite refresh (Iran rules)
 - Per-node logs streaming
+- **Custom endpoint** (tunnel/CDN/relay address)
+- **Cloudflare DNS automation**
+- **gRPC keepalive** (prevents idle connection drops)
 
 ### 🔔 Notifications
 - Event bus: user.limited, user.expired, node.down, ...
 - Webhook (HMAC-SHA256 signed)
-- Telegram bot notifications
+- **Interactive Telegram bot** (commands + notifications)
+- Expiry warning (3 days before)
 
 ### 🔐 Security
 - JWT + TOTP 2FA
 - API tokens (Personal Access Tokens)
-- RBAC with granular permissions
+- RBAC with granular permissions + reseller quotas
 - Login brute-force protection
 - Online IP enforcement (account-sharing guard)
 - Audit log (all admin mutations)
+- Bandwidth limit per inbound
 
 ### 🎨 Frontend
 - React 18 + TypeScript + Tailwind
@@ -325,6 +332,7 @@ the offender (reversible).
 - [x] Outbound/Routing/Balancer management
 - [x] REALITY key generation
 - [x] Webhook + Telegram notifications
+- [x] Interactive Telegram bot (admin commands)
 - [x] Backup/Restore (transactional)
 - [x] Audit log
 - [x] API tokens (PAT)
@@ -338,8 +346,16 @@ the offender (reversible).
 - [x] GeoIP/Geosite updater with Iran routing rules
 - [x] One-line installer + `vortexui` management console
 - [x] Hysteria2 + TUIC inbounds (sing-box)
+- [x] Custom node endpoint (tunnel/CDN/relay)
+- [x] Cloudflare DNS automation
+- [x] Bandwidth limit per inbound
+- [x] RBAC reseller quotas
+- [x] User expiry warning (3-day alert)
+- [x] Subscription info page with traffic chart
+- [x] Config template engine (Clash/sing-box)
+- [x] Certificate manager (ACME-ready)
+- [x] Docker multi-arch images (GHCR)
 - [ ] WireGuard protocol
-- [ ] DNS management
 - [ ] Evasion profiles (fragment, fingerprint presets)
 - [ ] Payment integration
 - [ ] Reseller sub-panels

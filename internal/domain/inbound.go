@@ -42,6 +42,11 @@ type Inbound struct {
 	Host      []string `json:"host,omitempty"`
 	Flow      string   `json:"flow,omitempty"`
 
+	// SpeedLimit sets per-user download speed in bytes/sec for this inbound.
+	// 0 means unlimited. Applied via Xray's policy.levels or sing-box's
+	// speed_limit field.
+	SpeedLimit int64 `json:"speed_limit,omitempty"`
+
 	// EvasionProfileID optionally links a reusable DPI-evasion policy (fragment,
 	// reality keys, fingerprint) so operators apply hardening with one click.
 	EvasionProfileID *uuid.UUID `json:"evasion_profile_id,omitempty"`
