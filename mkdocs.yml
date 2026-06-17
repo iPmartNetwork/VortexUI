@@ -147,7 +147,6 @@ plugins:
           theme:
             language: fa
             direction: rtl
-          edit_uri: edit/master/docs/wiki/fa/
           nav_translations:
             Home: خانه
             Getting started: شروع کار
@@ -175,7 +174,6 @@ plugins:
           theme:
             language: ar
             direction: rtl
-          edit_uri: edit/master/docs/wiki/ar/
           nav_translations:
             Home: الرئيسية
             Getting started: البدء
@@ -202,7 +200,6 @@ plugins:
           site_name: VortexUI Dokümantasyon
           theme:
             language: tr
-          edit_uri: edit/master/docs/wiki/tr/
           nav_translations:
             Home: Ana sayfa
             Getting started: Başlangıç
