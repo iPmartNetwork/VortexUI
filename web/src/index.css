@@ -260,3 +260,53 @@
   from { opacity: 0; transform: translateX(-100%); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-page-enter {
+  animation: page-enter 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+.animate-progress {
+  animation: progress linear forwards;
+}
+
+/* Smooth theme transition — all color properties morph */
+:root, .dark, .light {
+  transition: background-color 0.35s ease, border-color 0.3s ease, color 0.25s ease;
+}
+
+/* Mobile safe areas */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Bottom sheet slide-up animation */
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up-sheet 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* Large touch targets for mobile */
+@media (max-width: 768px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

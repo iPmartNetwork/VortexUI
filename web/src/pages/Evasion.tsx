@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Shield } from "lucide-react";
+import { api } from "@/api/client";
 import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
@@ -17,22 +19,22 @@ interface EvasionProfile {
   enabled: boolean;
 }
 
-// Prebuilt defaults for demo (real data comes from API)
-const DEFAULTS: EvasionProfile[] = [
-  { id: "1", name: "Iran (Fragment + Chrome)", description: "TLS fragment + Chrome fingerprint", fragment_enabled: true, fragment_length: "10-30", fragment_interval: "10-20", fingerprint: "chrome", mux_enabled: false, mux_protocol: "", enabled: true },
-  { id: "2", name: "China (Mux + Random)", description: "Multiplexed + randomized fingerprint", fragment_enabled: false, fragment_length: "", fragment_interval: "", fingerprint: "randomized", mux_enabled: true, mux_protocol: "h2mux", enabled: true },
-  { id: "3", name: "Russia (Fragment + Firefox)", description: "Fragment for TSPU bypass", fragment_enabled: true, fragment_length: "1-3", fragment_interval: "5-10", fingerprint: "firefox", mux_enabled: false, mux_protocol: "", enabled: true },
-];
-
 export function Evasion() {
-  const [profiles, setProfiles] = useState<EvasionProfile[]>(DEFAULTS);
+  const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const toast = useToast();
 
-  function remove(id: string) {
-    setProfiles(p => p.filter(x => x.id !== id));
-    toast.success("Profile removed");
-  }
+  const { data } = useQuery({
+    queryKey: ["tls-tricks"],
+    queryFn: () => api<{ profiles: EvasionProfile[] }>("/api/tls-tricks"),
+  });
+
+  const delMut = useMutation({
+    mutationFn: (id: string) => api<void>(`/api/tls-tricks/${id}`, { method: "DELETE" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tls-tricks"] }); toast.success("Profile removed"); },
+  });
+
+  const profiles = data?.profiles ?? [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -41,7 +43,15 @@ export function Evasion() {
         <Button onClick={() => setCreateOpen(true)}>New profile</Button>
       </div>
 
-      <p className="text-sm text-fg-muted">Anti-DPI presets. Link a profile to inbounds for one-click evasion hardening.</p>
+      <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
+        <p className="font-medium text-fg text-sm">DPI Evasion Profiles</p>
+        <p>These profiles configure anti-censorship techniques that help bypass Deep Packet Inspection (DPI). Assign a profile to inbounds to apply the settings automatically.</p>
+        <ul className="list-disc pl-4 space-y-1">
+          <li><strong>Fragment</strong> — Splits TLS ClientHello into small pieces. Effective against Iran/Russia DPI.</li>
+          <li><strong>Mux</strong> — Multiplexes multiple connections into one, making traffic harder to analyze.</li>
+          <li><strong>Fingerprint</strong> — Mimics a real browser's TLS signature (Chrome, Firefox, Safari).</li>
+        </ul>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {profiles.map((p) => (
@@ -60,18 +70,20 @@ export function Evasion() {
               {p.fingerprint && <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">FP: {p.fingerprint}</span>}
             </div>
             <div className="flex justify-end">
-              <Button variant="ghost" className="text-destructive text-xs" onClick={() => remove(p.id)}>Delete</Button>
+              <Button variant="ghost" className="text-destructive text-xs" onClick={() => delMut.mutate(p.id)}>Delete</Button>
             </div>
           </Card>
         ))}
       </div>
 
-      {createOpen && <CreateEvasionModal onClose={() => setCreateOpen(false)} onCreate={(p) => { setProfiles(prev => [...prev, p]); setCreateOpen(false); }} />}
+      {createOpen && <CreateEvasionModal onClose={() => setCreateOpen(false)} />}
     </div>
   );
 }
 
-function CreateEvasionModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p: EvasionProfile) => void }) {
+function CreateEvasionModal({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
   const [name, setName] = useState("");
   const [fp, setFp] = useState("chrome");
   const [frag, setFrag] = useState(true);
@@ -79,10 +91,15 @@ function CreateEvasionModal({ onClose, onCreate }: { onClose: () => void; onCrea
   const [mux, setMux] = useState(false);
   const [muxProto, setMuxProto] = useState("smux");
 
+  const create = useMutation({
+    mutationFn: (body: any) => api("/api/tls-tricks", { method: "POST", body }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tls-tricks"] }); onClose(); toast.success("Profile created"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    onCreate({
-      id: crypto.randomUUID(),
+    create.mutate({
       name, description: "",
       fragment_enabled: frag, fragment_length: fragLen, fragment_interval: "10-20",
       fingerprint: fp, mux_enabled: mux, mux_protocol: muxProto, enabled: true,

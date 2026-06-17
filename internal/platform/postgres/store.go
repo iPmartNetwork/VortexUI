@@ -67,3 +67,54 @@ func (s *Store) Admins() *AdminRepo { return &AdminRepo{q: s.q} }
 
 // Audit returns the audit-log repository.
 func (s *Store) Audit() *AuditRepo { return &AuditRepo{q: s.q} }
+
+// Migration returns the migration-event repository.
+func (s *Store) Migration() *MigrationRepo { return &MigrationRepo{pool: s.pool} }
+
+// Tickets returns the ticket repository.
+func (s *Store) Tickets() *TicketRepo { return &TicketRepo{pool: s.pool} }
+
+// Analytics returns the analytics repository.
+func (s *Store) Analytics() *AnalyticsRepo { return &AnalyticsRepo{pool: s.pool} }
+
+// QuotaPolicies returns the quota policy repository.
+func (s *Store) QuotaPolicies() *QuotaPolicyRepo { return &QuotaPolicyRepo{pool: s.pool} }
+
+// RelayChains returns the relay chain repository.
+func (s *Store) RelayChains() *RelayChainRepo { return &RelayChainRepo{pool: s.pool} }
+
+// DecoySites returns the decoy site repository.
+func (s *Store) DecoySites() *DecoySiteRepo { return &DecoySiteRepo{pool: s.pool} }
+
+// RealityScans returns the reality scan repository.
+func (s *Store) RealityScans() *RealityScanRepo { return &RealityScanRepo{pool: s.pool} }
+
+// Probing returns the probing repository.
+func (s *Store) Probing() *ProbingRepo { return &ProbingRepo{pool: s.pool} }
+
+// Families returns the family repository.
+func (s *Store) Families() *FamilyRepo { return &FamilyRepo{pool: s.pool} }
+
+// Referrals returns the referral repository.
+func (s *Store) Referrals() *ReferralRepo { return &ReferralRepo{pool: s.pool} }
+
+// DoH returns the DNS-over-HTTPS repository.
+func (s *Store) DoH() *DoHRepo { return &DoHRepo{pool: s.pool} }
+
+// SNIDomains returns the SNI domain repository.
+func (s *Store) SNIDomains() *SNIDomainRepo { return &SNIDomainRepo{pool: s.pool} }
+
+// TLSTricks returns the TLS tricks repository.
+func (s *Store) TLSTricks() *TLSTricksRepo { return &TLSTricksRepo{pool: s.pool} }
+
+// Fingerprints returns the fingerprint repository.
+func (s *Store) Fingerprints() *FingerprintRepo { return &FingerprintRepo{pool: s.pool} }
+
+// Federation returns the federation repository.
+func (s *Store) Federation() *FederationRepo { return &FederationRepo{pool: s.pool} }
+
+// DeepLinks returns the deep link repository.
+func (s *Store) DeepLinks() *DeepLinkRepo { return &DeepLinkRepo{pool: s.pool} }
+
+// QuotaNotify returns the quota notification repository.
+func (s *Store) QuotaNotify() *QuotaNotifyRepo { return &QuotaNotifyRepo{pool: s.pool} }

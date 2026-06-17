@@ -88,7 +88,7 @@ func (d *Deployer) Deploy(ctx context.Context, input NodeDeployInput) *DeployRes
 		result.Error = fmt.Sprintf("SSH connect failed: %v", err)
 		return result
 	}
-	defer client.Close()
+	defer client.Close() //nolint:errcheck // best-effort cleanup
 
 	// Steps:
 	steps := []struct {
@@ -132,10 +132,10 @@ EOF`, input.AgentPort, input.Core, input.Core)},
 	for _, step := range steps {
 		d.log.Info("deploy step", "step", step.name, "host", input.Host)
 		out, err := client.Run(ctx, step.cmd)
-		output.WriteString(fmt.Sprintf("=== %s ===\n%s\n", step.name, out))
+		fmt.Fprintf(&output, "=== %s ===\n%s\n", step.name, out)
 		if err != nil {
 			// Non-fatal: some steps may fail (e.g. go not installed)
-			output.WriteString(fmt.Sprintf("WARN: %v\n", err))
+			fmt.Fprintf(&output, "WARN: %v\n", err)
 		}
 	}
 

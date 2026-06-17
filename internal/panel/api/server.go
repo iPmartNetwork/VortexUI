@@ -13,12 +13,30 @@ import (
 
 // Deps are the dependencies needed to build the HTTP API.
 type Deps struct {
-	Handlers  *Handlers
-	APITokens *APITokenHandlers
-	Issuer    *auth.Issuer
-	Auth      *service.AuthService
-	Limiter   RateLimiter   // nil disables login rate limiting
-	Audit     AuditRecorder // nil disables audit logging
+	Handlers   *Handlers
+	APITokens  *APITokenHandlers
+	Portal     *PortalHandlers
+	Reality    *RealityHandlers
+	Quota      *QuotaHandlers
+	Relay      *RelayHandlers
+	Decoy      *DecoyHandlers
+	Analytics  *AnalyticsHandlers
+	Migration  *MigrationHandlers
+	Probing    *ProbingHandlers
+	Family     *FamilyHandlers
+	Referral   *ReferralHandlers
+	DoH        *DoHHandlers
+	SNI        *SNIHandlers
+	TLSTricks  *TLSTricksHandlers
+	Fingerprint *FingerprintHandlers
+	Federation *FederationHandlers
+	DeepLink   *DeepLinkHandlers
+	QuotaNotify *QuotaNotifyHandlers
+	Monitor    *MonitorHandlers
+	Issuer     *auth.Issuer
+	Auth       *service.AuthService
+	Limiter    RateLimiter   // nil disables login rate limiting
+	Audit      AuditRecorder // nil disables audit logging
 }
 
 // NewRouter builds the Echo instance with all routes and middleware mounted.
@@ -55,6 +73,9 @@ func NewRouter(d Deps) *echo.Echo {
 	authed.GET("/logs", d.Handlers.GetLogs, RequirePermission(d.Auth, domain.PermSystemRead))
 	// Live system info (process/memory).
 	authed.GET("/system", d.Handlers.GetSystem, RequirePermission(d.Auth, domain.PermSystemRead))
+
+	// Live connection monitor.
+	authed.GET("/monitor/connections", d.Monitor.GetLiveConnections, RequirePermission(d.Auth, domain.PermSystemRead))
 
 	users := authed.Group("/users")
 	users.GET("", d.Handlers.ListUsers, RequirePermission(d.Auth, domain.PermUserRead))
@@ -160,6 +181,145 @@ func NewRouter(d Deps) *echo.Echo {
 
 	// Update checker (admin)
 	authed.GET("/update/check", d.Handlers.CheckUpdate, RequirePermission(d.Auth, domain.PermAdminManage))
+
+	// --- Portal: end-user self-service ---
+	e.POST("/api/portal/login", d.Portal.PortalLogin)
+	portal := e.Group("/api/portal", RequirePortalAuth(d.Issuer))
+	portal.GET("/dashboard", d.Portal.PortalDashboard)
+	portal.GET("/plans", d.Portal.PortalListPlans)
+	portal.GET("/tickets", d.Portal.PortalListTickets)
+	portal.POST("/tickets", d.Portal.PortalCreateTicket)
+	portal.GET("/tickets/:id", d.Portal.PortalGetTicket)
+	portal.POST("/tickets/:id/reply", d.Portal.PortalReplyTicket)
+
+	// --- Admin ticket management ---
+	tickets := authed.Group("/tickets", RequirePermission(d.Auth, domain.PermUserWrite))
+	tickets.GET("", d.Portal.AdminListTickets)
+	tickets.POST("/:id/reply", d.Portal.AdminReplyTicket)
+	tickets.POST("/:id/close", d.Portal.AdminCloseTicket)
+
+	// --- Reality Scanner ---
+	reality := authed.Group("/reality")
+	reality.POST("/scan", d.Reality.ScanReality, RequirePermission(d.Auth, domain.PermInboundWrite))
+	reality.GET("/results", d.Reality.GetCachedScans, RequirePermission(d.Auth, domain.PermInboundRead))
+
+	// --- Smart Quota (Fair Use) ---
+	quota := authed.Group("/quota", RequirePermission(d.Auth, domain.PermAdminManage))
+	quota.GET("", d.Quota.ListQuotaPolicies)
+	quota.POST("", d.Quota.CreateQuotaPolicy)
+	quota.PUT("/:id", d.Quota.UpdateQuotaPolicy)
+	quota.DELETE("/:id", d.Quota.DeleteQuotaPolicy)
+
+	// --- CDN/Relay Chain Builder ---
+	relays := authed.Group("/relays", RequirePermission(d.Auth, domain.PermNodeWrite))
+	relays.GET("", d.Relay.ListChains)
+	relays.POST("", d.Relay.CreateChain)
+	relays.PUT("/:id", d.Relay.UpdateChain)
+	relays.DELETE("/:id", d.Relay.DeleteChain)
+
+	// --- Decoy Website ---
+	decoys := authed.Group("/decoys", RequirePermission(d.Auth, domain.PermNodeWrite))
+	decoys.GET("", d.Decoy.ListDecoys)
+	decoys.POST("", d.Decoy.CreateDecoy)
+	decoys.PUT("/:id", d.Decoy.UpdateDecoy)
+	decoys.DELETE("/:id", d.Decoy.DeleteDecoy)
+
+	// --- Advanced Analytics ---
+	authed.GET("/analytics", d.Analytics.GetAnalytics, RequirePermission(d.Auth, domain.PermSystemRead))
+	authed.GET("/analytics/export", d.Analytics.ExportAnalyticsCSV, RequirePermission(d.Auth, domain.PermSystemRead))
+
+	// --- Node Auto-Migration ---
+	migration := authed.Group("/migration", RequirePermission(d.Auth, domain.PermAdminManage))
+	migration.GET("/policy", d.Migration.GetMigrationPolicy)
+	migration.PUT("/policy", d.Migration.UpdateMigrationPolicy)
+	migration.GET("/events", d.Migration.ListMigrationEvents)
+
+	// --- Active Probing Protection ---
+	probing := authed.Group("/probing", RequirePermission(d.Auth, domain.PermAdminManage))
+	probing.GET("/policy", d.Probing.GetProbingPolicy)
+	probing.PUT("/policy", d.Probing.UpdateProbingPolicy)
+	probing.GET("/events", d.Probing.ListProbeEvents)
+	probing.GET("/blocked", d.Probing.ListBlockedIPs)
+	probing.POST("/unblock", d.Probing.UnblockIP)
+
+	// --- Family/Group Subscriptions ---
+	families := authed.Group("/families", RequirePermission(d.Auth, domain.PermUserWrite))
+	families.GET("", d.Family.ListGroups)
+	families.POST("", d.Family.CreateGroup)
+	families.GET("/:id", d.Family.GetGroup)
+	families.DELETE("/:id", d.Family.DeleteGroup)
+	families.POST("/:id/members", d.Family.AddMember)
+	families.DELETE("/:id/members/:uid", d.Family.RemoveMember)
+
+	// --- Invite/Referral System ---
+	referrals := authed.Group("/referrals", RequirePermission(d.Auth, domain.PermAdminManage))
+	referrals.GET("/config", d.Referral.GetReferralConfig)
+	referrals.PUT("/config", d.Referral.UpdateReferralConfig)
+	referrals.GET("/codes", d.Referral.ListReferralCodes)
+	referrals.GET("/events", d.Referral.ListReferralEvents)
+
+	// Portal referral endpoints (end-user)
+	portal.GET("/referral/code", d.Referral.GetMyCode)
+	portal.POST("/referral/apply", d.Referral.ApplyReferral)
+
+	// --- DNS-over-HTTPS ---
+	doh := authed.Group("/doh", RequirePermission(d.Auth, domain.PermAdminManage))
+	doh.GET("/config", d.DoH.GetDoHConfig)
+	doh.PUT("/config", d.DoH.UpdateDoHConfig)
+	doh.GET("/stats", d.DoH.GetDoHStats)
+	doh.GET("/logs", d.DoH.GetDoHLogs)
+
+	// --- Multi-Domain SNI Routing + SSL ---
+	sni := authed.Group("/sni", RequirePermission(d.Auth, domain.PermInboundWrite))
+	sni.GET("/domains", d.SNI.ListDomains)
+	sni.POST("/domains", d.SNI.AddDomain)
+	sni.DELETE("/domains/:id", d.SNI.DeleteDomain)
+	sni.GET("/certs", d.SNI.ListCerts)
+	sni.POST("/certs", d.SNI.IssueCert)
+	sni.POST("/certs/:id/renew", d.SNI.RenewCert)
+	sni.DELETE("/certs/:id", d.SNI.DeleteCert)
+	sni.GET("/routes", d.SNI.ListRoutes)
+	sni.POST("/routes", d.SNI.AddRoute)
+	sni.DELETE("/routes/:id", d.SNI.DeleteRoute)
+
+	// --- Fragment/TLS Tricks Manager ---
+	tricks := authed.Group("/tls-tricks", RequirePermission(d.Auth, domain.PermInboundWrite))
+	tricks.GET("", d.TLSTricks.ListProfiles)
+	tricks.GET("/presets", d.TLSTricks.GetPresets)
+	tricks.POST("", d.TLSTricks.CreateProfile)
+	tricks.POST("/preset", d.TLSTricks.CreateFromPreset)
+	tricks.PUT("/:id", d.TLSTricks.UpdateProfile)
+	tricks.DELETE("/:id", d.TLSTricks.DeleteProfile)
+
+	// --- Client Fingerprint Validator ---
+	fp := authed.Group("/fingerprint", RequirePermission(d.Auth, domain.PermAdminManage))
+	fp.GET("/policy", d.Fingerprint.GetPolicy)
+	fp.PUT("/policy", d.Fingerprint.UpdatePolicy)
+	fp.GET("/rules", d.Fingerprint.ListRules)
+	fp.POST("/rules", d.Fingerprint.CreateRule)
+	fp.DELETE("/rules/:id", d.Fingerprint.DeleteRule)
+	fp.GET("/events", d.Fingerprint.ListEvents)
+
+	// --- Multi-Panel Federation ---
+	fed := authed.Group("/federation", RequirePermission(d.Auth, domain.PermAdminManage))
+	fed.GET("/config", d.Federation.GetConfig)
+	fed.PUT("/config", d.Federation.UpdateConfig)
+	fed.GET("/peers", d.Federation.ListPeers)
+	fed.POST("/peers", d.Federation.AddPeer)
+	fed.DELETE("/peers/:id", d.Federation.DeletePeer)
+	fed.GET("/events", d.Federation.ListSyncEvents)
+
+	// --- Deep Link + QR ---
+	dl := authed.Group("/deeplink", RequirePermission(d.Auth, domain.PermAdminManage))
+	dl.GET("/config", d.DeepLink.GetConfig)
+	dl.PUT("/config", d.DeepLink.UpdateConfig)
+	dl.GET("/generate", d.DeepLink.GenerateLink)
+
+	// --- Smart Quota Notifications ---
+	qn := authed.Group("/quota-notify", RequirePermission(d.Auth, domain.PermAdminManage))
+	qn.GET("/config", d.QuotaNotify.GetConfig)
+	qn.PUT("/config", d.QuotaNotify.UpdateConfig)
+	qn.GET("/events", d.QuotaNotify.ListEvents)
 
 	return e
 }

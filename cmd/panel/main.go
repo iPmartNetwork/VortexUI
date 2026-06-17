@@ -32,7 +32,7 @@ import (
 
 // version is the panel build version. It defaults to the contents of the VERSION
 // file and is overridden at build time via -ldflags "-X main.version=...".
-var version = "1.0.0"
+var version = "1.2.0"
 
 func main() {
 	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)
@@ -212,7 +212,8 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 
 	// Wire failover migration into the hub now that its dependencies exist (the
 	// migration service provisions onto the target via the hub itself).
-	migration := service.NewMigrationService(store.Inbounds(), users, users, users, h, log)
+	migration := service.NewMigrationService(store.Inbounds(), nodes, users, h, log)
+	migration.SetRepo(store.Migration())
 	h.SetOnFailover(func(fctx context.Context, failed, target *domain.Node) {
 		bus.Publish(events.Event{Type: events.NodeDown, NodeID: failed.ID.String(), NodeName: failed.Name})
 		if err := migration.Migrate(fctx, failed, target); err != nil {
@@ -232,6 +233,25 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		}
 	})
 	tokenSvc := service.NewAPITokenService(store.APITokens())
+
+	// Construct all feature services.
+	portalSvc := service.NewPortalService(users, store.Tickets(), nil)
+	realitySvc := service.NewRealityScannerService(store.RealityScans(), nodes)
+	quotaSvc := service.NewQuotaService(store.QuotaPolicies())
+	relaySvc := service.NewRelayService(store.RelayChains(), nodes)
+	decoySvc := service.NewDecoyService(store.DecoySites())
+	analyticsSvc := service.NewAnalyticsService(store.Analytics())
+	probingSvc := service.NewProbingService(store.Probing(), log)
+	familySvc := service.NewFamilyService(store.Families(), users)
+	referralSvc := service.NewReferralService(store.Referrals(), users)
+	dohSvc := service.NewDoHService(store.DoH())
+	sniSvc := service.NewSNIService(store.SNIDomains())
+	tlsTricksSvc := service.NewTLSTricksService(store.TLSTricks())
+	fpSvc := service.NewFingerprintService(store.Fingerprints())
+	fedSvc := service.NewFederationService(store.Federation())
+	deepLinkSvc := service.NewDeepLinkService(store.DeepLinks())
+	quotaNotifySvc := service.NewQuotaNotifyService(store.QuotaNotify())
+
 	router := api.NewRouter(api.Deps{
 		Handlers: &api.Handlers{
 			Auth: authSvc, Users: userSvc, Sub: subSvc,
@@ -243,11 +263,29 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Throttle: api.NewLoginThrottle(5, 15*time.Minute),
 			Events:   bus,
 		},
-		APITokens: &api.APITokenHandlers{Svc: tokenSvc},
-		Issuer:    issuer,
-		Auth:      authSvc,
-		Limiter:   limiter,
-		Audit:     store.Audit(),
+		APITokens:   &api.APITokenHandlers{Svc: tokenSvc},
+		Portal:      &api.PortalHandlers{Portal: portalSvc, Issuer: issuer},
+		Reality:     &api.RealityHandlers{Scanner: realitySvc},
+		Quota:       &api.QuotaHandlers{Quota: quotaSvc},
+		Relay:       &api.RelayHandlers{Relay: relaySvc},
+		Decoy:       &api.DecoyHandlers{Decoy: decoySvc},
+		Analytics:   &api.AnalyticsHandlers{Analytics: analyticsSvc},
+		Migration:   &api.MigrationHandlers{Migration: migration},
+		Probing:     &api.ProbingHandlers{Probing: probingSvc},
+		Family:      &api.FamilyHandlers{Family: familySvc},
+		Referral:    &api.ReferralHandlers{Referral: referralSvc},
+		DoH:         &api.DoHHandlers{DoH: dohSvc},
+		SNI:         &api.SNIHandlers{SNI: sniSvc},
+		TLSTricks:   &api.TLSTricksHandlers{Tricks: tlsTricksSvc},
+		Fingerprint: &api.FingerprintHandlers{FP: fpSvc},
+		Federation:  &api.FederationHandlers{Fed: fedSvc},
+		DeepLink:    &api.DeepLinkHandlers{DeepLink: deepLinkSvc},
+		QuotaNotify: &api.QuotaNotifyHandlers{QN: quotaNotifySvc},
+		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes},
+		Issuer:      issuer,
+		Auth:        authSvc,
+		Limiter:     limiter,
+		Audit:       store.Audit(),
 	})
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: router, ReadHeaderTimeout: 10 * time.Second}

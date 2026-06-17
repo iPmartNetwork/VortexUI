@@ -21,7 +21,7 @@ function useLiveConnections() {
 }
 
 export function Monitor() {
-  const { data, isLoading } = useLiveConnections();
+  const { data, isLoading, isError } = useLiveConnections();
   const connections = data?.connections ?? [];
   const total = data?.total ?? 0;
 
@@ -69,7 +69,8 @@ export function Monitor() {
               </tr>
             ))}
             {isLoading && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">Loading...</td></tr>}
-            {!isLoading && connections.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">No active connections</td></tr>}
+            {isError && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">Unable to connect to monitor API</td></tr>}
+            {!isLoading && !isError && connections.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">No active connections</td></tr>}
           </tbody>
         </table>
       </Card>

@@ -1,22 +1,40 @@
-import { Component, type ReactNode } from "react";
+import { Component } from "react";
+import { Button } from "@/components/ui";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 
-interface Props { children: ReactNode; }
-interface State { error: Error | null; }
+interface Props {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null };
-  static getDerivedStateFromError(error: Error) { return { error }; }
+  state: State = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
   render() {
-    if (this.state.error) {
+    if (this.state.hasError) {
+      if (this.props.fallback) return this.props.fallback;
       return (
-        <div className="flex min-h-screen items-center justify-center p-8">
+        <div className="flex min-h-[400px] items-center justify-center p-8 animate-fade-in">
           <div className="card max-w-md p-8 text-center space-y-4">
-            <div className="text-4xl">⚠️</div>
-            <h1 className="text-lg font-bold text-fg">Something went wrong</h1>
-            <p className="text-sm text-fg-muted">{this.state.error.message}</p>
-            <button onClick={() => window.location.reload()} className="grad-bg rounded-xl px-5 py-2.5 text-sm font-medium text-white shadow-lg">
-              Reload
-            </button>
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-danger/10 text-danger">
+              <AlertTriangle size={28} />
+            </div>
+            <h2 className="text-lg font-bold text-fg">Something went wrong</h2>
+            <p className="text-sm text-fg-muted">
+              {this.state.error?.message || "An unexpected error occurred."}
+            </p>
+            <Button onClick={() => this.setState({ hasError: false, error: null })}>
+              <RotateCcw size={14} /> Try Again
+            </Button>
           </div>
         </div>
       );

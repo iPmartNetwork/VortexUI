@@ -17,6 +17,28 @@ import { Plans } from "@/pages/Plans";
 import { Orders } from "@/pages/Orders";
 import { Evasion } from "@/pages/Evasion";
 import { Monitor } from "@/pages/Monitor";
+import { RealityScanner } from "@/pages/RealityScanner";
+import { SmartQuota } from "@/pages/SmartQuota";
+import { RelayChains } from "@/pages/RelayChains";
+import { DecoyWebsite } from "@/pages/DecoyWebsite";
+import { Analytics } from "@/pages/Analytics";
+import { Tickets } from "@/pages/Tickets";
+import { Migration } from "@/pages/Migration";
+import { ProbingProtection } from "@/pages/ProbingProtection";
+import { FamilyGroups } from "@/pages/FamilyGroups";
+import { Referrals } from "@/pages/Referrals";
+import { DoHSettings } from "@/pages/DoHSettings";
+import { SNIManager } from "@/pages/SNIManager";
+import { TLSTricks } from "@/pages/TLSTricks";
+import { Fingerprint } from "@/pages/Fingerprint";
+import { Federation } from "@/pages/Federation";
+import { DeepLinks } from "@/pages/DeepLinks";
+import { QuotaNotifications } from "@/pages/QuotaNotifications";
+import { PortalLogin } from "@/pages/portal/PortalLogin";
+import { PortalLayout } from "@/pages/portal/PortalLayout";
+import { PortalDashboard } from "@/pages/portal/PortalDashboard";
+import { PortalPlans } from "@/pages/portal/PortalPlans";
+import { PortalTickets } from "@/pages/portal/PortalTickets";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -46,11 +68,35 @@ export function App() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/evasion" element={<Evasion />} />
         <Route path="/monitor" element={<Monitor />} />
+        <Route path="/reality-scanner" element={<RealityScanner />} />
+        <Route path="/smart-quota" element={<SmartQuota />} />
+        <Route path="/relay-chains" element={<RelayChains />} />
+        <Route path="/decoy-website" element={<DecoyWebsite />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/tickets" element={<Tickets />} />
+        <Route path="/migration" element={<Migration />} />
+        <Route path="/probing-protection" element={<ProbingProtection />} />
+        <Route path="/family-groups" element={<FamilyGroups />} />
+        <Route path="/referrals" element={<Referrals />} />
+        <Route path="/doh" element={<DoHSettings />} />
+        <Route path="/sni-manager" element={<SNIManager />} />
+        <Route path="/tls-tricks" element={<TLSTricks />} />
+        <Route path="/fingerprint" element={<Fingerprint />} />
+        <Route path="/federation" element={<Federation />} />
+        <Route path="/deep-links" element={<DeepLinks />} />
+        <Route path="/quota-notifications" element={<QuotaNotifications />} />
         <Route path="/audit" element={<Audit />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<NotFound />} />
+      {/* Portal (end-user self-service) */}
+      <Route path="/portal/login" element={<PortalLogin />} />
+      <Route element={<PortalLayout />}>
+        <Route path="/portal/dashboard" element={<PortalDashboard />} />
+        <Route path="/portal/plans" element={<PortalPlans />} />
+        <Route path="/portal/tickets" element={<PortalTickets />} />
+      </Route>
     </Routes>
   );
 }
