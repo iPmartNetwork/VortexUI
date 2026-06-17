@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/15-troubleshooting-faq.md) · [EN](../en/15-troubleshooting-faq.md) · [TR](../tr/15-troubleshooting-faq.md)
-
-</div>
-
-<div dir="rtl">
-
 # ١٥. استكشاف الأخطاء والأسئلة الشائعة
 
-[← العمليات](./14-operations-maintenance.md) · [الفهرس](./README.md)
-
-> [!TIP]
-> ابدأ بـ **`vortexui logs`** و**`/api/health`** — أغلب المشاكل JWT أو DB أو firewall.
+!!! tip
+    ابدأ بـ **`vortexui logs`** و**`/api/health`** — أغلب المشاكل JWT أو DB أو firewall.
 
 ---
 
@@ -154,5 +140,3 @@ GPL-3.0 — المشتقات يجب أن تكون مفتوحة المصدر.
 - ⭐ Star on GitHub
 - [Contributing](../../../CONTRIBUTING.md)
 - [Changelog](../../../CHANGELOG.md)
-
-</div>

@@ -73,13 +73,10 @@ markdown_extensions:
   - attr_list
   - def_list
   - footnotes
-  - md_in_html
   - tables
   - toc:
       permalink: true
       toc_depth: 3
-  - pymdownx.arithmatex:
-      generic: true
   - pymdownx.betterem
   - pymdownx.caret
   - pymdownx.details

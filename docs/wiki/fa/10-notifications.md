@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/10-notifications.md) · [AR](../ar/10-notifications.md) · [TR](../tr/10-notifications.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۱۰. اعلان‌ها
 
-[← پلن‌ها](./09-plans-payments.md) · [فهرست](./README.md) · [بعدی: تنظیمات →](./11-settings-backup.md)
-
-> [!TIP]
-> Webhook با `X-Vortex-Signature: sha256=...` امضا می‌شود — secret را در env تنظیم کنید.
+!!! tip
+    Webhook با `X-Vortex-Signature: sha256=...` امضا می‌شود — secret را در env تنظیم کنید.
 
 ---
 
@@ -117,5 +103,3 @@ VORTEX_TELEGRAM_CHAT_ID=-1001234567890
 ## SSE (UI)
 
 علاوه بر webhook، UI از همان bus با SSE subscribe می‌کند — toast و refresh خودکار.
-
-</div>

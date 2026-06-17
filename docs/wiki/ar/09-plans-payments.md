@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/09-plans-payments.md) · [EN](../en/09-plans-payments.md) · [TR](../tr/09-plans-payments.md)
-
-</div>
-
-<div dir="rtl">
-
 # ٩. الخطط والمدفوعات
 
-[← الأمان](./08-security-administration.md) · [الفهرس](./README.md) · [التالي: الإشعارات →](./10-notifications.md)
-
-> [!NOTE]
-> بعد الدفع الناجح يُنشأ/يُجدّد المستخدم تلقائياً بمعاملات الخطة.
+!!! note
+    بعد الدفع الناجح يُنشأ/يُجدّد المستخدم تلقائياً بمعاملات الخطة.
 
 ---
 
@@ -94,5 +80,3 @@ POST /api/payment/ipn/nowpayments
 ## الموزّع + الخطط
 
 يمكن للموزّع بيع خطط ضمن حصته — المستخدمون مسجلون تحت `admin_id` الخاص به.
-
-</div>

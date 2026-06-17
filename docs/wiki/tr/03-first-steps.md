@@ -1,31 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/03-first-steps.md) · [EN](../en/03-first-steps.md) · [AR](../ar/03-first-steps.md)
-
-</div>
-
-<div>
-
 # 3. İlk Adımlar
 
-[← Kurulum](./02-installation.md) · [Dizin](./README.md) · [Sonraki: Gösterge paneli →](./04-dashboard.md)
-
-> [!TIP]
-> Bu akışı **5 dakikada** tamamlayın: node → inbound → kullanıcı → abonelik → test.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![Panel genel görünüm — açık tema](../assets/panel/overview_light.png) | ![Panel genel görünüm — açık tema](../assets/panel/overview_dark.png) |
-
-*Panel genel görünüm — açık tema*
-
-</div>
+!!! tip
+    Bu akışı **5 dakikada** tamamlayın: node → inbound → kullanıcı → abonelik → test.
 
 ---
 
@@ -155,5 +131,3 @@ Kullanıcılar UUID ve kota ile taşınır; inbound'lar ayrı eşleştirilmelidi
 | Kullanıcı ara | Users → arama kutusu |
 | Node logları | Nodes → Logs |
 | Canlı olaylar | Otomatik — köşede toast |
-
-</div>

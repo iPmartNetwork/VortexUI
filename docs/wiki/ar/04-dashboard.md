@@ -1,31 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/04-dashboard.md) · [EN](../en/04-dashboard.md) · [TR](../tr/04-dashboard.md)
-
-</div>
-
-<div dir="rtl">
-
 # ٤. لوحة المعلومات (Overview)
 
-[← الخطوات الأولى](./03-first-steps.md) · [الفهرس](./README.md) · [التالي: المستخدمون →](./05-user-management.md)
-
-> [!NOTE]
-> لوحة المعلومات تتحدّث عبر **SSE** دون refresh — لا حاجة لـ polling.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![لوحة Overview — إحصائيات مباشرة ومخطط الحركة](../assets/panel/overview_light.png) | ![لوحة Overview — إحصائيات مباشرة ومخطط الحركة](../assets/panel/overview_dark.png) |
-
-*لوحة Overview — إحصائيات مباشرة ومخطط الحركة*
-
-</div>
+!!! note
+    لوحة المعلومات تتحدّث عبر **SSE** دون refresh — لا حاجة لـ polling.
 
 ---
 
@@ -78,5 +54,3 @@ GET /api/events/stream?access_token=<JWT>
 ## Prometheus / Grafana
 
 المقاييس متاحة على endpoint Prometheus (للمراقبة الخارجية). التفاصيل: [الفصل 14 — العمليات](./14-operations-maintenance.md).
-
-</div>

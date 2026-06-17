@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/01-introduction.md) · [EN](../en/01-introduction.md) · [AR](../ar/01-introduction.md)
-
-</div>
-
-<div>
-
 # 1. Giriş ve Temel Kavramlar
 
-[← Dizine dön](./README.md) · [Sonraki: Kurulum →](./02-installation.md)
-
-> [!NOTE]
-> VortexUI **kullanıcı merkezlidir** — tek abonelik tüm atanmış inbound'ları kapsar.
+!!! note
+    VortexUI **kullanıcı merkezlidir** — tek abonelik tüm atanmış inbound'ları kapsar.
 
 ---
 
@@ -145,5 +131,3 @@ Aktif geliştirmedeki öğeler:
 - React Native mobil uygulama
 - Çok dilli dokümantasyon (bu wiki ilk adımdır)
 - Proxy üzerinde kullanıcı başına hız sınırlama
-
-</div>

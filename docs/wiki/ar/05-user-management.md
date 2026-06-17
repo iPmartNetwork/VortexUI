@@ -1,31 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/05-user-management.md) · [EN](../en/05-user-management.md) · [TR](../tr/05-user-management.md)
-
-</div>
-
-<div dir="rtl">
-
 # ٥. إدارة المستخدمين
 
-[← لوحة المعلومات](./04-dashboard.md) · [الفهرس](./README.md) · [التالي: العقد →](./06-node-management.md)
-
-> [!WARNING]
-> **Revoke Sub** يُبطل الرابط السابق — استخدمه فقط عند تسريب الرمز.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![صفحة Users — إدارة المستخدمين والاشتراك](../assets/panel/User_light.png) | ![صفحة Users — إدارة المستخدمين والاشتراك](../assets/panel/User_dark.png) |
-
-*صفحة Users — إدارة المستخدمين والاشتراك*
-
-</div>
+!!! warning
+    **Revoke Sub** يُبطل الرابط السابق — استخدمه فقط عند تسريب الرمز.
 
 ---
 
@@ -119,5 +95,3 @@
 
 - **بوت Telegram للمستخدم**: المستخدم يسجل الدخول بالرمز — `/usage`، `/renew`
 - **تحذير الانتهاء**: 3 أيام قبل — حدث `user.expiry_warning`
-
-</div>

@@ -1,31 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/06-node-management.md) · [EN](../en/06-node-management.md) · [AR](../ar/06-node-management.md)
-
-</div>
-
-<div>
-
 # 6. Node Yönetimi
 
-[← Kullanıcılar](./05-user-management.md) · [Dizin](./README.md) · [Sonraki: Ağ politikası →](./07-network-policy.md)
-
-> [!TIP]
-> İran yönlendirme kuralları için **Nodes → Update Geo** kullanın.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![Nodes sayfası — CPU/RAM izleme ve node işlemleri](../assets/panel/Node_light.png) | ![Nodes sayfası — CPU/RAM izleme ve node işlemleri](../assets/panel/Node_dark.png) |
-
-*Nodes sayfası — CPU/RAM izleme ve node işlemleri*
-
-</div>
+!!! tip
+    İran yönlendirme kuralları için **Nodes → Update Geo** kullanın.
 
 ---
 
@@ -154,5 +130,3 @@ Her node **xray** ve **sing-box** arasında geçiş yapabilir (Hysteria2/TUIC ya
 ## gRPC Keepalive
 
 Boşta panel↔node bağlantıları keepalive ile canlı tutulur — düşmez.
-
-</div>

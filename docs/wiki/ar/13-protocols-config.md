@@ -1,23 +1,9 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/13-protocols-config.md) · [EN](../en/13-protocols-config.md) · [TR](../tr/13-protocols-config.md)
-
-</div>
-
-<div dir="rtl">
-
 # ١٣. البروتوكولات والتكوين
-
-[← API](./12-api-reference.md) · [الفهرس](./README.md) · [التالي: العمليات →](./14-operations-maintenance.md)
 
 > أمثلة JSON كاملة بالإنجليزية: [`docs/protocols.md`](../../protocols.md)
 
-> [!TIP]
-> تحت رقابة شديدة: **VLESS + REALITY + Vision** — أنشئ المفاتيح من الواجهة.
+!!! tip
+    تحت رقابة شديدة: **VLESS + REALITY + Vision** — أنشئ المفاتيح من الواجهة.
 
 ---
 
@@ -166,5 +152,3 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 | UDP blocked | TCP-based protocols |
 | High speed | REALITY or XTLS-Vision |
 | Mobile in Iran | Fragment evasion profile |
-
-</div>

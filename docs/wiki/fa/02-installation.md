@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/02-installation.md) · [AR](../ar/02-installation.md) · [TR](../tr/02-installation.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۲. نصب و راه‌اندازی
 
-[← معرفی](./01-introduction.md) · [فهرست](./README.md) · [بعدی: اولین قدم‌ها →](./03-first-steps.md)
-
-> [!IMPORTANT]
-> قبل نصب، پورت‌های **80 و 443** (برای HTTPS) و DNS دامنه را آماده کنید.
+!!! important
+    قبل نصب، پورت‌های **80 و 443** (برای HTTPS) و DNS دامنه را آماده کنید.
 
 ---
 
@@ -202,5 +188,3 @@ cd /opt/vortexui && git pull && docker compose -f deploy/compose.yml up -d --bui
 ```
 
 نصب مجدد اسکript **ایمن** است — secretها و داده DB حفظ می‌شوند.
-
-</div>

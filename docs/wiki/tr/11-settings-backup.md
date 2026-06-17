@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/11-settings-backup.md) · [EN](../en/11-settings-backup.md) · [AR](../ar/11-settings-backup.md)
-
-</div>
-
-<div>
-
 # 11. Ayarlar ve Yedekleme
 
-[← Bildirimler](./10-notifications.md) · [Dizin](./README.md) · [Sonraki: API →](./12-api-reference.md)
-
-> [!TIP]
-> **Restore** öncesinde mutlaka güncel yedek alın.
+!!! tip
+    **Restore** öncesinde mutlaka güncel yedek alın.
 
 ---
 
@@ -122,5 +108,3 @@ Panel bir **Progressive Web App**'tir — mobil tarayıcıdan uygulama benzeri d
 - Gerçek zamanlı tail
 
 Çekirdek logları için: **Nodes → Logs**
-
-</div>

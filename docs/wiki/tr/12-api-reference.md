@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/12-api-reference.md) · [EN](../en/12-api-reference.md) · [AR](../ar/12-api-reference.md)
-
-</div>
-
-<div>
-
 # 12. API Referansı
 
-[← Ayarlar](./11-settings-backup.md) · [Dizin](./README.md) · [Sonraki: Protokoller →](./13-protocols-config.md)
-
-> [!NOTE]
-> Tam şema: [`docs/openapi.yaml`](../../openapi.yaml) — tüm endpoint'ler ve RBAC.
+!!! note
+    Tam şema: [`docs/openapi.yaml`](../../openapi.yaml) — tüm endpoint'ler ve RBAC.
 
 ---
 
@@ -179,5 +165,3 @@ curl -X POST https://panel.example.com/api/users \
 ```bash
 npx openapi-typescript docs/openapi.yaml -o web/src/api/types.ts
 ```
-
-</div>

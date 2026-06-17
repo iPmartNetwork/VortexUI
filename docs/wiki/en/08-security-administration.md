@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/08-security-administration.md) · [AR](../ar/08-security-administration.md) · [TR](../tr/08-security-administration.md)
-
-</div>
-
-<div>
-
 # 8. Security & Administration
 
-[← Network policy](./07-network-policy.md) · [Index](./README.md) · [Next: Plans →](./09-plans-payments.md)
-
-> [!IMPORTANT]
-> Enable **2FA** and a strong JWT secret (≥32 bytes) for the primary admin.
+!!! important
+    Enable **2FA** and a strong JWT secret (≥32 bytes) for the primary admin.
 
 ---
 
@@ -133,5 +119,3 @@ Country/region restriction for connecting to a specific inbound.
 - [ ] Encrypted off-site backup
 - [ ] Webhook secret for HMAC
 - [ ] Panel port closed from public internet (Caddy 443 only)
-
-</div>

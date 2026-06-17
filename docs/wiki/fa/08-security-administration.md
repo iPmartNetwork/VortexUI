@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/08-security-administration.md) · [AR](../ar/08-security-administration.md) · [TR](../tr/08-security-administration.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۸. امنیت و مدیریت ادمین‌ها
 
-[← سیاست شبکه](./07-network-policy.md) · [فهرست](./README.md) · [بعدی: پلن‌ها →](./09-plans-payments.md)
-
-> [!IMPORTANT]
-> برای ادمین اصلی حتماً **2FA** و رمز JWT قوی (≥32 بایت) فعال کنید.
+!!! important
+    برای ادمین اصلی حتماً **2FA** و رمز JWT قوی (≥32 بایت) فعال کنید.
 
 ---
 
@@ -133,5 +119,3 @@ curl -H "Authorization: Bearer <PAT>" \
 - [ ] Backup رمزنگاری‌شده off-site
 - [ ] Webhook secret برای HMAC
 - [ ] پورت panel از اینترنت عمومی بسته (فقط Caddy 443)
-
-</div>

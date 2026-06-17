@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/14-operations-maintenance.md) · [EN](../en/14-operations-maintenance.md) · [AR](../ar/14-operations-maintenance.md)
-
-</div>
-
-<div>
-
 # 14. İşletim ve Bakım
 
-[← Protokoller](./13-protocols-config.md) · [Dizin](./README.md) · [Sonraki: Sorun giderme →](./15-troubleshooting-faq.md)
-
-> [!TIP]
-> Kurulumdan sonra `vortexui status` ve `curl .../api/health` ile kontrol edin.
+!!! tip
+    Kurulumdan sonra `vortexui status` ve `curl .../api/health` ile kontrol edin.
 
 ---
 
@@ -145,5 +131,3 @@ journalctl -u vortexui-panel -f
 - [ ] Disk >85% uyarısı
 - [ ] DB connection pool
 - [ ] Sertifika süresi (Caddy auto — port 80'i doğrula)
-
-</div>

@@ -1,31 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/04-dashboard.md) · [AR](../ar/04-dashboard.md) · [TR](../tr/04-dashboard.md)
-
-</div>
-
-<div>
-
 # 4. Dashboard (Overview)
 
-[← First steps](./03-first-steps.md) · [Index](./README.md) · [Next: Users →](./05-user-management.md)
-
-> [!NOTE]
-> The dashboard updates via **SSE** without refresh — no polling needed.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![Overview dashboard — live stats and traffic chart](../assets/panel/overview_light.png) | ![Overview dashboard — live stats and traffic chart](../assets/panel/overview_dark.png) |
-
-*Overview dashboard — live stats and traffic chart*
-
-</div>
+!!! note
+    The dashboard updates via **SSE** without refresh — no polling needed.
 
 ---
 
@@ -78,5 +54,3 @@ When an event occurs (node down, user limited, etc.) the UI updates without a pa
 ## Prometheus / Grafana
 
 Metrics are available on the Prometheus endpoint (for external monitoring). Details: [Chapter 14 — Operations](./14-operations-maintenance.md).
-
-</div>

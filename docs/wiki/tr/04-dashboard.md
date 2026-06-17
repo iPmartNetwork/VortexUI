@@ -1,31 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/04-dashboard.md) · [EN](../en/04-dashboard.md) · [AR](../ar/04-dashboard.md)
-
-</div>
-
-<div>
-
 # 4. Gösterge Paneli (Overview)
 
-[← İlk adımlar](./03-first-steps.md) · [Dizin](./README.md) · [Sonraki: Kullanıcılar →](./05-user-management.md)
-
-> [!NOTE]
-> Pano **SSE** ile yenilenir — polling gerekmez.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![Overview panosu — canlı istatistikler ve trafik grafiği](../assets/panel/overview_light.png) | ![Overview panosu — canlı istatistikler ve trafik grafiği](../assets/panel/overview_dark.png) |
-
-*Overview panosu — canlı istatistikler ve trafik grafiği*
-
-</div>
+!!! note
+    Pano **SSE** ile yenilenir — polling gerekmez.
 
 ---
 
@@ -78,5 +54,3 @@ Bir olay gerçekleştiğinde (node kapalı, kullanıcı sınırlı vb.) UI sayfa
 ## Prometheus / Grafana
 
 Metrikler Prometheus endpoint'inde mevcuttur (harici izleme için). Ayrıntılar: [Bölüm 14 — İşletim](./14-operations-maintenance.md).
-
-</div>

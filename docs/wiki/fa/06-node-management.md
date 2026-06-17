@@ -1,31 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/06-node-management.md) · [AR](../ar/06-node-management.md) · [TR](../tr/06-node-management.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۶. مدیریت نودها
 
-[← کاربران](./05-user-management.md) · [فهرست](./README.md) · [بعدی: سیاست شبکه →](./07-network-policy.md)
-
-> [!TIP]
-> برای مسیریابی ایران از **Nodes → Update Geo** استفاده کنید.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![صفحه Nodes — مانیتورینگ CPU/RAM و عملیات نود](../assets/panel/Node_light.png) | ![صفحه Nodes — مانیتورینگ CPU/RAM و عملیات نود](../assets/panel/Node_dark.png) |
-
-*صفحه Nodes — مانیتورینگ CPU/RAM و عملیات نود*
-
-</div>
+!!! tip
+    برای مسیریابی ایران از **Nodes → Update Geo** استفاده کنید.
 
 ---
 
@@ -154,5 +130,3 @@ VORTEX_CF_ZONE_ID=...
 ## gRPC Keepalive
 
 اتصال idle panel↔node با keepalive زنده نگه داشته می‌شود — drop نمی‌شود.
-
-</div>

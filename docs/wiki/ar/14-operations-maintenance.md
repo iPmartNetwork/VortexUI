@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/14-operations-maintenance.md) · [EN](../en/14-operations-maintenance.md) · [TR](../tr/14-operations-maintenance.md)
-
-</div>
-
-<div dir="rtl">
-
 # ١٤. العمليات والصيانة
 
-[← البروتوكولات](./13-protocols-config.md) · [الفهرس](./README.md) · [التالي: استكشاف الأخطاء →](./15-troubleshooting-faq.md)
-
-> [!TIP]
-> بعد التثبيت نفّذ `vortexui status` و`curl .../api/health` للتحقق السريع.
+!!! tip
+    بعد التثبيت نفّذ `vortexui status` و`curl .../api/health` للتحقق السريع.
 
 ---
 
@@ -145,5 +131,3 @@ journalctl -u vortexui-panel -f
 - [ ] تحذير Disk >85%
 - [ ] DB connection pool
 - [ ] انتهاء الشهادة (Caddy auto — تحقق من المنفذ 80)
-
-</div>

@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/10-notifications.md) · [EN](../en/10-notifications.md) · [AR](../ar/10-notifications.md)
-
-</div>
-
-<div>
-
 # 10. Bildirimler
 
-[← Planlar](./09-plans-payments.md) · [Dizin](./README.md) · [Sonraki: Ayarlar →](./11-settings-backup.md)
-
-> [!TIP]
-> Webhook'lar `X-Vortex-Signature: sha256=...` ile imzalanır — secret'ı env'de ayarlayın.
+!!! tip
+    Webhook'lar `X-Vortex-Signature: sha256=...` ile imzalanır — secret'ı env'de ayarlayın.
 
 ---
 
@@ -117,5 +103,3 @@ Son kullanıcılar abonelik token'ı ile kimlik doğrular:
 ## SSE (UI)
 
 Webhook'lara ek olarak UI aynı bus'a SSE ile abone olur — toast'lar ve otomatik yenileme.
-
-</div>

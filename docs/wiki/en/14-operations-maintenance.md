@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/14-operations-maintenance.md) · [AR](../ar/14-operations-maintenance.md) · [TR](../tr/14-operations-maintenance.md)
-
-</div>
-
-<div>
-
 # 14. Operations & Maintenance
 
-[← Protocols](./13-protocols-config.md) · [Index](./README.md) · [Next: Troubleshooting →](./15-troubleshooting-faq.md)
-
-> [!TIP]
-> After install run `vortexui status` and `curl .../api/health` as a sanity check.
+!!! tip
+    After install run `vortexui status` and `curl .../api/health` as a sanity check.
 
 ---
 
@@ -145,5 +131,3 @@ journalctl -u vortexui-panel -f
 - [ ] Disk >85% warning
 - [ ] DB connection pool
 - [ ] Certificate expiry (Caddy auto — verify port 80)
-
-</div>

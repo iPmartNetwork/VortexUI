@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/09-plans-payments.md) · [AR](../ar/09-plans-payments.md) · [TR](../tr/09-plans-payments.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۹. پلن‌ها و پرداخت
 
-[← امنیت](./08-security-administration.md) · [فهرست](./README.md) · [بعدی: اعلان‌ها →](./10-notifications.md)
-
-> [!NOTE]
-> پس از پرداخت موفق، user به‌صورت خودکار با پارامترهای plan ساخته/تمدید می‌شود.
+!!! note
+    پس از پرداخت موفق، user به‌صورت خودکار با پارامترهای plan ساخته/تمدید می‌شود.
 
 ---
 
@@ -94,5 +80,3 @@ POST /api/payment/ipn/nowpayments
 ## Reseller + Plan
 
 reseller می‌تواند با quota محدود plan بفروشد — user زیرمجموعه admin_id او ثبت می‌شود.
-
-</div>

@@ -1,23 +1,9 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/13-protocols-config.md) · [EN](../en/13-protocols-config.md) · [AR](../ar/13-protocols-config.md)
-
-</div>
-
-<div>
-
 # 13. Protokoller ve Yapılandırma
-
-[← API](./12-api-reference.md) · [Dizin](./README.md) · [Sonraki: İşletim →](./14-operations-maintenance.md)
 
 > Tam İngilizce JSON örnekleri: [`docs/protocols.md`](../../protocols.md)
 
-> [!TIP]
-> Ağır sansür altında: **VLESS + REALITY + Vision** — anahtarları UI'dan oluşturun.
+!!! tip
+    Ağır sansür altında: **VLESS + REALITY + Vision** — anahtarları UI'dan oluşturun.
 
 ---
 
@@ -166,5 +152,3 @@ Veya UI'dan: inbound formundaki **Generate** düğmesi.
 | UDP blocked | TCP-based protocols |
 | High speed | REALITY or XTLS-Vision |
 | Mobile in Iran | Fragment evasion profile |
-
-</div>

@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/10-notifications.md) · [AR](../ar/10-notifications.md) · [TR](../tr/10-notifications.md)
-
-</div>
-
-<div>
-
 # 10. Notifications
 
-[← Plans](./09-plans-payments.md) · [Index](./README.md) · [Next: Settings →](./11-settings-backup.md)
-
-> [!TIP]
-> Webhooks are signed with `X-Vortex-Signature: sha256=...` — set the secret in env.
+!!! tip
+    Webhooks are signed with `X-Vortex-Signature: sha256=...` — set the secret in env.
 
 ---
 
@@ -117,5 +103,3 @@ End users authenticate with subscription token:
 ## SSE (UI)
 
 In addition to webhooks, the UI subscribes to the same bus via SSE — toasts and automatic refresh.
-
-</div>

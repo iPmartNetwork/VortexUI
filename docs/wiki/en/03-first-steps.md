@@ -1,31 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/03-first-steps.md) · [AR](../ar/03-first-steps.md) · [TR](../tr/03-first-steps.md)
-
-</div>
-
-<div>
-
 # 3. First Steps
 
-[← Installation](./02-installation.md) · [Index](./README.md) · [Next: Dashboard →](./04-dashboard.md)
-
-> [!TIP]
-> Complete this workflow in **5 minutes**: node → inbound → user → subscription → test.
-
-<div align="center">
-
-| Light | Dark |
-|:-----:|:----:|
-| ![Panel overview — light mode](../assets/panel/overview_light.png) | ![Panel overview — light mode](../assets/panel/overview_dark.png) |
-
-*Panel overview — light mode*
-
-</div>
+!!! tip
+    Complete this workflow in **5 minutes**: node → inbound → user → subscription → test.
 
 ---
 
@@ -155,5 +131,3 @@ Users are migrated with UUID and quota; inbounds must be mapped separately.
 | Search users | Users → search box |
 | Node logs | Nodes → Logs |
 | Live events | Automatic — toast in corner |
-
-</div>

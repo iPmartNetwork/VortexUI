@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/08-security-administration.md) · [EN](../en/08-security-administration.md) · [AR](../ar/08-security-administration.md)
-
-</div>
-
-<div>
-
 # 8. Güvenlik ve Yönetim
 
-[← Ağ politikası](./07-network-policy.md) · [Dizin](./README.md) · [Sonraki: Planlar →](./09-plans-payments.md)
-
-> [!IMPORTANT]
-> Ana admin için **2FA** ve güçlü JWT secret (≥32 bayt) etkinleştirin.
+!!! important
+    Ana admin için **2FA** ve güçlü JWT secret (≥32 bayt) etkinleştirin.
 
 ---
 
@@ -133,5 +119,3 @@ Belirli bir inbound'a bağlanmak için ülke/bölge kısıtlaması.
 - [ ] Şifreli off-site yedekleme
 - [ ] HMAC için webhook secret
 - [ ] Panel portu genel internetten kapalı (yalnızca Caddy 443)
-
-</div>

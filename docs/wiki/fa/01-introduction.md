@@ -1,21 +1,7 @@
-<div align="center" dir="rtl">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [EN](../en/01-introduction.md) · [AR](../ar/01-introduction.md) · [TR](../tr/01-introduction.md)
-
-</div>
-
-<div dir="rtl">
-
 # ۱. معرفی و مفاهیم پایه
 
-[← بازگشت به فهرست](./README.md) · [بعدی: نصب →](./02-installation.md)
-
-> [!NOTE]
-> VortexUI مدل **کاربر‌محور** دارد — یک subscription برای همه inboundها.
+!!! note
+    VortexUI مدل **کاربر‌محور** دارد — یک subscription برای همه inboundها.
 
 ---
 
@@ -145,5 +131,3 @@ erDiagram
 - اپ موبایل React Native
 - مستندات چندزبانه (این ویکی گام اول است)
 - Rate limiting per user روی proxy
-
-</div>

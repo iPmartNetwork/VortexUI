@@ -1,21 +1,7 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/07-network-policy.md) · [EN](../en/07-network-policy.md) · [AR](../ar/07-network-policy.md)
-
-</div>
-
-<div>
-
 # 7. Ağ Politikası
 
-[← Node'lar](./06-node-management.md) · [Dizin](./README.md) · [Sonraki: Güvenlik →](./08-security-administration.md)
-
-> [!TIP]
-> Yaygın kalıp: `geosite:ir` ve `geoip:ir` → direct, geri kalan → proxy.
+!!! tip
+    Yaygın kalıp: `geosite:ir` ve `geoip:ir` → direct, geri kalan → proxy.
 
 ---
 
@@ -122,5 +108,3 @@ Cloudflare tünellemesi için WARP tipi outbound — bypass veya gizlilik katman
 
 - Clash/sing-box çıktısını özelleştir
 - Varsayılan kurallar, proxy-groups, DNS
-
-</div>

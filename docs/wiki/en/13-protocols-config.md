@@ -1,23 +1,9 @@
-<div align="center">
-
-<img src="../assets/Logo.svg" alt="VortexUI" width="120" />
-
-**VortexUI Wiki**
-
-[Wiki](./README.md) · [FA](../fa/13-protocols-config.md) · [AR](../ar/13-protocols-config.md) · [TR](../tr/13-protocols-config.md)
-
-</div>
-
-<div>
-
 # 13. Protocols & Configuration
-
-[← API](./12-api-reference.md) · [Index](./README.md) · [Next: Operations →](./14-operations-maintenance.md)
 
 > Full English JSON examples: [`docs/protocols.md`](../../protocols.md)
 
-> [!TIP]
-> Under heavy censorship: **VLESS + REALITY + Vision** — generate keys from the UI.
+!!! tip
+    Under heavy censorship: **VLESS + REALITY + Vision** — generate keys from the UI.
 
 ---
 
@@ -166,5 +152,3 @@ Or from the UI: **Generate** button in the inbound form.
 | UDP blocked | TCP-based protocols |
 | High speed | REALITY or XTLS-Vision |
 | Mobile in Iran | Fragment evasion profile |
-
-</div>
