@@ -26,10 +26,18 @@ func renderSingbox(proxies []Proxy, title string) ([]byte, error) {
 	selector := map[string]any{
 		"type":      "selector",
 		"tag":       title,
+		"outbounds": append([]string{"♻️ Auto"}, tags...),
+	}
+	autoTest := map[string]any{
+		"type":      "urltest",
+		"tag":       "♻️ Auto",
 		"outbounds": tags,
+		"url":       "https://www.gstatic.com/generate_204",
+		"interval":  "5m",
+		"tolerance": 50,
 	}
 	direct := map[string]any{"type": "direct", "tag": "direct"}
-	all := append([]map[string]any{selector}, outbounds...)
+	all := append([]map[string]any{selector, autoTest}, outbounds...)
 	all = append(all, direct)
 
 	return json.MarshalIndent(map[string]any{"outbounds": all}, "", "  ")

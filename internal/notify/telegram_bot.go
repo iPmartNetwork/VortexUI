@@ -40,6 +40,8 @@ type BotPanel interface {
 	SetUserStatus(ctx context.Context, username, status string) error
 	OnlineCount(ctx context.Context) (int, error)
 	NodesSummary(ctx context.Context) ([]BotNode, error)
+	ListPlans(ctx context.Context) ([]BotPlan, error)
+	PurchasePlan(ctx context.Context, planName, username string) (string, error)
 }
 
 // BotStatus is a snapshot for the /status command.
@@ -70,6 +72,15 @@ type BotNode struct {
 	CPU     float64
 	RAM     float64
 	Conns   int
+}
+
+// BotPlan is a plan summary for the /plans command.
+type BotPlan struct {
+	Name       string
+	DataGB     float64
+	Days       int
+	PriceToman int64
+	PriceUSD   float64
 }
 
 // NewTelegramBot creates a new interactive bot.
@@ -179,6 +190,18 @@ func (b *TelegramBot) handleUpdate(ctx context.Context, u tgUpdate) {
 		} else {
 			reply = b.cmdFind(ctx, parts[1])
 		}
+	case "/plans":
+		reply = b.cmdPlans(ctx)
+	case "/buy":
+		if len(parts) < 2 {
+			reply = "⚠️ Usage: /buy <plan_name> <username>"
+		} else {
+			username := ""
+			if len(parts) >= 3 {
+				username = parts[2]
+			}
+			reply = b.cmdBuy(ctx, parts[1], username)
+		}
 	case "/limit":
 		if len(parts) < 2 {
 			reply = "⚠️ Usage: /limit <username>"
@@ -209,7 +232,9 @@ func (b *TelegramBot) cmdHelp() string {
 /nodes — Node fleet health
 /find <user> — Lookup user info
 /limit <user> — Disable a user
-/unlimit <user> — Re-enable a user`
+/unlimit <user> — Re-enable a user
+/plans — List available plans
+/buy <plan> <user> — Purchase a plan for a user`
 }
 
 func (b *TelegramBot) cmdStatus(ctx context.Context) string {
@@ -292,6 +317,42 @@ func (b *TelegramBot) cmdSetStatus(ctx context.Context, username, status string)
 		action = "re-enabled"
 	}
 	return fmt.Sprintf("✅ User `%s` %s", username, action)
+}
+
+func (b *TelegramBot) cmdPlans(ctx context.Context) string {
+	plans, err := b.panel.ListPlans(ctx)
+	if err != nil {
+		return "❌ Failed to get plans"
+	}
+	if len(plans) == 0 {
+		return "No plans configured."
+	}
+	var sb strings.Builder
+	sb.WriteString("📦 *Available Plans*\n\n")
+	for i, p := range plans {
+		price := ""
+		if p.PriceToman > 0 {
+			price = fmt.Sprintf("%d تومان", p.PriceToman)
+		} else if p.PriceUSD > 0 {
+			price = fmt.Sprintf("$%.2f", p.PriceUSD)
+		} else {
+			price = "Free"
+		}
+		fmt.Fprintf(&sb, "%d. *%s* — %.0f GB / %d days — %s\n", i+1, p.Name, p.DataGB, p.Days, price)
+	}
+	sb.WriteString("\n💡 Use `/buy <plan_name> <username>` to purchase")
+	return sb.String()
+}
+
+func (b *TelegramBot) cmdBuy(ctx context.Context, planName, username string) string {
+	if username == "" {
+		return "⚠️ Usage: /buy <plan_name> <username>"
+	}
+	msg, err := b.panel.PurchasePlan(ctx, planName, username)
+	if err != nil {
+		return fmt.Sprintf("❌ Purchase failed: %v", err)
+	}
+	return fmt.Sprintf("✅ %s", msg)
 }
 
 func (b *TelegramBot) sendMessage(ctx context.Context, text string) {

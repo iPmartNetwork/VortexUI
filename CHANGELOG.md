@@ -6,6 +6,45 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-17
+
+### Added
+- **Reseller sub-panel** — non-sudo admins only see/manage their own users (`admin_id` FK + scoped API).
+- **Payment gateways** — ZarinPal (IRR) + NowPayments (crypto USDT/BTC/TON) with full purchase flow.
+- **Plan system** — define subscription plans (data/duration/price), user self-purchase, order tracking.
+- **Payment IPN webhook** — async verification so no payment is missed even if user doesn't redirect.
+- **Evasion Profiles** — reusable anti-DPI presets: TLS fragment, mux, uTLS fingerprint (one-click).
+- **WARP+ Integration** — Cloudflare WARP as outbound for clean IP / censorship bypass.
+- **IP Whitelist/Blacklist** — restrict panel access by IP/CIDR.
+- **WireGuard protocol** — inbound support with per-user keypairs + subscription config.
+- **Geo-blocking per-inbound** — allow/block countries by ISO code (e.g. only Iran can connect).
+- **Cluster Mode (HA)** — multiple panels share one DB; Redis-based leader election for singleton loops.
+- **Auto-update** — check for new releases + download panel/xray/sing-box binaries from GitHub.
+- **Grafana dashboard** — ready-to-import JSON template for Prometheus metrics visualization.
+- **Prometheus /metrics** — panel-wide counters (users, nodes, traffic, connections, uptime).
+- **Auto-backup to Telegram/S3** — scheduled daily export sent to Telegram chat or S3-compatible storage.
+- **User-facing Telegram bot** — subscribers authenticate with token, view usage/configs/plans.
+- **Per-user notifications** — Telegram alerts to users for expiry warning, limit reached, reset.
+- **Auto-select best node** — subscription includes `url-test`/`urltest` group for automatic failover.
+- **Self-service purchase** — "View Plans & Purchase" button on the subscription info page.
+- **Custom branding** — panel name, accent color, logo URL, footer text configurable from Settings.
+- **PWA manifest** — installable as mobile app from browser.
+- **Sub page multi-language** — auto-detects browser language (FA/AR/TR/RU/ZH) with RTL support.
+- **Evasion Profiles page** (frontend) — create/manage anti-DPI profiles with live preview.
+- **Plans page** (frontend) — CRUD plans with pricing.
+- **Orders page** (frontend) — payment status tracking table.
+- **Settings: IP Guard** — whitelist/blacklist IPs from the UI.
+- **Settings: Auto-backup** — configure Telegram/S3 backup destinations.
+- **Settings: Custom branding** — name/color/logo editor.
+- **Settings: Update checker** — check for new VortexUI releases from the UI.
+
+### Fixed
+- **Core version display** — health poll now reads and persists `core_version` from node agents, shown in Overview.
+
+### Changed
+- Subscription output now includes a `♻️ Auto` (url-test) proxy group for automatic best-node selection.
+- WireGuard added to inbound protocol dropdown (UDP-locked like Hysteria2/TUIC).
+
 ## [1.0.1] - 2026-06-17
 
 ### Added
@@ -75,6 +114,7 @@ First stable release.
 - React 18 + TypeScript + Tailwind; dark + light themes; responsive.
 - **8 languages** (EN/FA/TR/AR/RU/ZH/JA/ES) with full RTL for Persian and Arabic.
 
-[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/iPmartNetwork/VortexUI/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/iPmartNetwork/VortexUI/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/iPmartNetwork/VortexUI/releases/tag/v1.0.0

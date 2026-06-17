@@ -10,18 +10,18 @@ import { useToast } from "./toast";
 
 // xray supports vless/vmess/trojan/shadowsocks; hysteria2/tuic require a
 // sing-box node (switch the local node's core, or add a sing-box node).
-const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic"];
+const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "wireguard"];
 const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "h2", "quic", "udp"];
 const SECURITIES = ["none", "tls", "reality"];
 
 // Protocols that run over UDP (QUIC-based) — transport/security are fixed.
-const UDP_PROTOCOLS = ["hysteria2", "tuic"];
+const UDP_PROTOCOLS = ["hysteria2", "tuic", "wireguard"];
 
 // randomPort picks a high port (10000–60000) so new inbounds default to a free,
 // non-conflicting port. The admin can still type any port.
 const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
 
-const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", speedLimit: "" });
+const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", speedLimit: "", geoAllow: "" });
 const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {
@@ -60,7 +60,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     });
 
   function startEdit(ib: Inbound) {
-    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: "", speedLimit: "" });
+    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: "", speedLimit: "", geoAllow: "" });
   }
 
   async function toggleEnable(ib: Inbound) {
@@ -195,6 +195,10 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         <Input placeholder="SNI (comma-separated, optional)" value={f.sni} onChange={set("sni")} />
         {f.security === "reality" && <RealityKeygenSection />}
         <Input placeholder="Speed limit (bytes/sec, 0 = unlimited)" value={f.speedLimit ?? ""} onChange={(e) => setF(s => ({...s, speedLimit: e.target.value}))} inputMode="numeric" />
+        <div>
+          <p className="text-[10px] font-medium text-fg-muted mb-1">Geo-blocking (allowed countries, comma-separated ISO codes)</p>
+          <Input placeholder="e.g. IR,TR (empty = all allowed)" value={f.geoAllow ?? ""} onChange={(e) => setF(s => ({...s, geoAllow: e.target.value}))} />
+        </div>
         <div className="flex justify-end">
           <Button type="submit" disabled={create.isPending || update.isPending}>
             {editing ? "Save changes" : "Add inbound"}

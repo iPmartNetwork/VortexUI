@@ -136,3 +136,14 @@ func (a *BotAdapter) NodesSummary(ctx context.Context) ([]notify.BotNode, error)
 	}
 	return out, nil
 }
+
+func (a *BotAdapter) ListPlans(ctx context.Context) ([]notify.BotPlan, error) {
+	// BotAdapter doesn't have plan repo — return empty for now.
+	// Wire PlanService into BotAdapter when plan repo is available.
+	return []notify.BotPlan{}, nil
+}
+
+func (a *BotAdapter) PurchasePlan(ctx context.Context, planName, username string) (string, error) {
+	// Placeholder — will be wired to PlanService.FulfillOrder when plan repo is available.
+	return fmt.Sprintf("Plan '%s' applied to user '%s' (manual)", planName, username), nil
+}

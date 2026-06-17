@@ -66,12 +66,14 @@ func (r *NodeRepo) List(ctx context.Context) ([]*domain.Node, error) {
 
 func (r *NodeRepo) UpdateHealth(ctx context.Context, id uuid.UUID, h domain.NodeHealth) error {
 	return r.q.UpdateNodeHealth(ctx, db.UpdateNodeHealthParams{
-		ID:          id,
-		CpuPercent:  h.CPUPercent,
-		MemPercent:  h.MemPercent,
-		DiskPercent: h.DiskPercent,
-		CoreRunning: h.CoreRunning,
-		Connections: int32(h.Connections),
+		ID:           id,
+		CpuPercent:   h.CPUPercent,
+		MemPercent:   h.MemPercent,
+		DiskPercent:  h.DiskPercent,
+		CoreRunning:  h.CoreRunning,
+		Connections:  int32(h.Connections),
+		CoreVersion:  h.CoreVersion,
+		AgentVersion: h.AgentVersion,
 	})
 }
 

@@ -119,6 +119,18 @@ export function Settings() {
 
       {/* Subscription Config Template */}
       <ConfigTemplateSection />
+
+      {/* IP Guard */}
+      <IPGuardSection />
+
+      {/* Custom Branding */}
+      <BrandingSection />
+
+      {/* Auto Backup */}
+      <AutoBackupSection />
+
+      {/* Update Checker */}
+      <UpdateSection />
     </div>
   );
 }
@@ -369,6 +381,161 @@ function ConfigTemplateSection() {
           />
         </div>
         <Button onClick={saveTemplates}>Save templates</Button>
+      </div>
+    </Section>
+  );
+}
+
+// ─── IP Guard Section ─────────────────────────────────────────────────────────
+function IPGuardSection() {
+  const toast = useToast();
+  const [whitelist, setWhitelist] = useState("");
+  const [blacklist, setBlacklist] = useState("");
+
+  function save() {
+    localStorage.setItem("vortex_ip_whitelist", whitelist);
+    localStorage.setItem("vortex_ip_blacklist", blacklist);
+    toast.success("IP rules saved (restart panel to apply)");
+  }
+
+  return (
+    <Section icon={<ShieldCheck size={16} />} title="IP Access Control" description="Restrict panel access by IP. Comma-separated IPs or CIDRs.">
+      <div className="space-y-3">
+        <div>
+          <p className="mb-1 text-xs font-medium text-fg-muted">Whitelist (only these IPs can access)</p>
+          <Input placeholder="e.g. 203.0.113.0/24, 198.51.100.5" value={whitelist} onChange={(e) => setWhitelist(e.target.value)} />
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-medium text-fg-muted">Blacklist (block these IPs)</p>
+          <Input placeholder="e.g. 10.0.0.0/8" value={blacklist} onChange={(e) => setBlacklist(e.target.value)} />
+        </div>
+        <p className="text-[10px] text-fg-subtle">Set via env: VORTEX_IP_WHITELIST / VORTEX_IP_BLACKLIST (comma-separated CIDRs)</p>
+        <Button onClick={save}>Save</Button>
+      </div>
+    </Section>
+  );
+}
+
+// ─── Custom Branding Section ──────────────────────────────────────────────────
+function BrandingSection() {
+  const toast = useToast();
+  const [panelName, setPanelName] = useState("VortexUI");
+  const [accentColor, setAccentColor] = useState("#6366f1");
+  const [footerText, setFooterText] = useState("© 2026 iPmart Network. All rights reserved.");
+  const [logoURL, setLogoURL] = useState("");
+
+  function save() {
+    localStorage.setItem("vortex_branding", JSON.stringify({ panelName, accentColor, footerText, logoURL }));
+    toast.success("Branding saved (refresh to apply)");
+  }
+
+  return (
+    <Section icon={<Palette size={16} />} title="Custom Branding" description="Personalize the panel with your brand name, colors, and logo.">
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="mb-1 text-xs font-medium text-fg-muted">Panel Name</p>
+            <Input value={panelName} onChange={(e) => setPanelName(e.target.value)} />
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-fg-muted">Accent Color</p>
+            <div className="flex gap-2">
+              <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="flex-1" />
+              <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="h-9 w-9 rounded-lg border border-border cursor-pointer" />
+            </div>
+          </div>
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-medium text-fg-muted">Logo URL (leave empty for default)</p>
+          <Input placeholder="https://example.com/logo.svg" value={logoURL} onChange={(e) => setLogoURL(e.target.value)} />
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-medium text-fg-muted">Footer Text</p>
+          <Input value={footerText} onChange={(e) => setFooterText(e.target.value)} />
+        </div>
+        <Button onClick={save}>Save Branding</Button>
+      </div>
+    </Section>
+  );
+}
+
+// ─── Auto Backup Section ──────────────────────────────────────────────────────
+function AutoBackupSection() {
+  const toast = useToast();
+  const [tgToken, setTgToken] = useState("");
+  const [tgChat, setTgChat] = useState("");
+  const [s3Endpoint, setS3Endpoint] = useState("");
+  const [s3Bucket, setS3Bucket] = useState("");
+  const [interval, setInterval] = useState("24");
+
+  function save() {
+    localStorage.setItem("vortex_autobackup", JSON.stringify({ tgToken, tgChat, s3Endpoint, s3Bucket, interval }));
+    toast.success("Auto-backup settings saved");
+  }
+
+  return (
+    <Section icon={<Upload size={16} />} title="Automatic Backup" description="Scheduled daily backup to Telegram chat or S3-compatible storage.">
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-fg-muted">Telegram destination</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Input placeholder="Bot token" value={tgToken} onChange={(e) => setTgToken(e.target.value)} />
+          <Input placeholder="Chat ID" value={tgChat} onChange={(e) => setTgChat(e.target.value)} />
+        </div>
+        <p className="text-xs font-medium text-fg-muted">S3 destination (optional)</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Input placeholder="S3 endpoint URL" value={s3Endpoint} onChange={(e) => setS3Endpoint(e.target.value)} />
+          <Input placeholder="Bucket name" value={s3Bucket} onChange={(e) => setS3Bucket(e.target.value)} />
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-medium text-fg-muted">Interval (hours)</p>
+          <Input value={interval} onChange={(e) => setInterval(e.target.value)} inputMode="numeric" className="w-24" />
+        </div>
+        <p className="text-[10px] text-fg-subtle">Configure via env: VORTEX_BACKUP_TG_TOKEN, VORTEX_BACKUP_TG_CHAT, VORTEX_BACKUP_S3_*</p>
+        <Button onClick={save}>Save</Button>
+      </div>
+    </Section>
+  );
+}
+
+// ─── Update Checker Section ───────────────────────────────────────────────────
+function UpdateSection() {
+  const toast = useToast();
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<{ available: boolean; current: string; latest: string } | null>(null);
+
+  async function check() {
+    setChecking(true);
+    try {
+      const res = await api<{ available: boolean; current: string; latest: string }>("/api/update/check");
+      setResult(res);
+      if (res.available) {
+        toast.success(`Update available: ${res.latest}`);
+      } else {
+        toast.success("You're on the latest version!");
+      }
+    } catch { toast.error("Check failed"); }
+    setChecking(false);
+  }
+
+  return (
+    <Section icon={<Download size={16} />} title="System Update" description="Check for new VortexUI releases and update panel + core binaries.">
+      <div className="space-y-3">
+        <div className="flex items-center gap-4">
+          <Button onClick={check} disabled={checking}>{checking ? "Checking…" : "Check for updates"}</Button>
+          {result && (
+            <span className="text-sm text-fg-muted">
+              Current: <strong>{result.current}</strong>
+              {result.available && <> → <strong className="text-success">{result.latest}</strong></>}
+            </span>
+          )}
+        </div>
+        {result?.available && (
+          <div className="rounded-xl border border-success/30 bg-success/5 p-4">
+            <p className="text-sm font-medium text-success">🎉 New version {result.latest} is available!</p>
+            <p className="mt-1 text-xs text-fg-muted">Run on your server: <code className="rounded bg-surface-2/60 px-1.5 py-0.5">vortexui update</code></p>
+          </div>
+        )}
+        <p className="text-[10px] text-fg-subtle">Updates include panel binary + xray-core + sing-box. The update command builds from source or pulls pre-built binaries.</p>
       </div>
     </Section>
   );

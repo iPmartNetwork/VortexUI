@@ -36,6 +36,10 @@ type User struct {
 	Status   UserStatus `json:"status"`
 	Note     string     `json:"note,omitempty"`
 
+	// AdminID is the operator who created this user (reseller ownership). Nil
+	// means created by a sudo admin with no scoping.
+	AdminID *uuid.UUID `json:"admin_id,omitempty"`
+
 	// Traffic accounting (bytes). UsedTraffic is the aggregate across all nodes,
 	// updated from delta reports so it is restart-safe and never double counted.
 	DataLimit   int64 `json:"data_limit"`   // 0 = unlimited
@@ -50,6 +54,9 @@ type User struct {
 	// Access control
 	DeviceLimit  int      `json:"device_limit"` // 0 = unlimited; enforced via HWID/IP
 	AllowedHWIDs []string `json:"allowed_hwids,omitempty"`
+
+	// Notification: user's Telegram chat ID for personal alerts (expiry, limit).
+	TelegramChatID string `json:"telegram_chat_id,omitempty"`
 
 	// Shared credentials reused across every protocol this user is bound to.
 	Proxies UserCredentials `json:"proxies"`

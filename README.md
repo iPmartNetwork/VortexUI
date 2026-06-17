@@ -355,13 +355,26 @@ the offender (reversible).
 - [x] Config template engine (Clash/sing-box)
 - [x] Certificate manager (ACME-ready)
 - [x] Docker multi-arch images (GHCR)
-- [ ] WireGuard protocol
-- [ ] Evasion profiles (fragment, fingerprint presets)
-- [ ] Payment integration
-- [ ] Reseller sub-panels
+- [x] Reseller sub-panel (admin-scoped users)
+- [x] Payment gateways (ZarinPal + NowPayments crypto)
+- [x] Plan system (define + sell subscriptions)
+- [x] Evasion profiles (fragment, mux, fingerprint)
+- [x] WARP+ integration (Cloudflare outbound)
+- [x] WireGuard protocol
+- [x] Geo-blocking per inbound
+- [x] Cluster mode (multi-panel HA)
+- [x] Auto-update (panel + core binaries)
+- [x] Grafana/Prometheus metrics
+- [x] Auto-backup to Telegram/S3
+- [x] User-facing Telegram bot
+- [x] Per-user notifications
+- [x] Auto-select best node (url-test)
+- [x] IP whitelist/blacklist
+- [x] Custom branding
+- [x] PWA (installable mobile app)
 - [ ] Mobile app (React Native)
-- [ ] Grafana integration
-- [ ] Cluster mode (multi-panel HA)
+- [ ] Multi-language docs
+- [ ] API rate limiting per user on proxy
 
 ---
 

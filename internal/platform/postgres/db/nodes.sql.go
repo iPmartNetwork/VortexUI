@@ -151,17 +151,19 @@ func (q *Queries) UpdateNode(ctx context.Context, arg UpdateNodeParams) error {
 const updateNodeHealth = `-- name: UpdateNodeHealth :exec
 UPDATE nodes SET
     cpu_percent = $2, mem_percent = $3, disk_percent = $4,
-    core_running = $5, connections = $6, last_seen = now()
+    core_running = $5, connections = $6, core_version = $7, agent_version = $8, last_seen = now()
 WHERE id = $1
 `
 
 type UpdateNodeHealthParams struct {
-	ID          uuid.UUID
-	CpuPercent  float64
-	MemPercent  float64
-	DiskPercent float64
-	CoreRunning bool
-	Connections int32
+	ID           uuid.UUID
+	CpuPercent   float64
+	MemPercent   float64
+	DiskPercent  float64
+	CoreRunning  bool
+	Connections  int32
+	CoreVersion  string
+	AgentVersion string
 }
 
 // UpdateNodeHealth persists the latest heartbeat snapshot from the hub.
@@ -173,6 +175,8 @@ func (q *Queries) UpdateNodeHealth(ctx context.Context, arg UpdateNodeHealthPara
 		arg.DiskPercent,
 		arg.CoreRunning,
 		arg.Connections,
+		arg.CoreVersion,
+		arg.AgentVersion,
 	)
 	return err
 }

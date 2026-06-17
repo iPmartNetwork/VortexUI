@@ -111,12 +111,53 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <canvas id="trafficChart" height="120" style="width:100%"></canvas>
   </div>
 
+  <!-- Renew / Purchase -->
+  <div class="card">
+    <div class="card-title">Renew / Upgrade</div>
+    <div style="text-align:center;padding:10px 0">
+      <a href="/api/shop/plans" target="_blank" style="display:inline-block;padding:10px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:10px;text-decoration:none;font-size:.8rem;font-weight:600">View Plans & Purchase</a>
+    </div>
+  </div>
+
   <div class="footer">© 2026 iPmart Network. All rights reserved.</div>
 </div>
 
 <div class="toast" id="toast">Copied!</div>
 <script>
 function copy(t){navigator.clipboard.writeText(t).then(()=>{const e=document.getElementById('toast');e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1500)})}
+
+// Multi-language support (detect browser language)
+(function(){
+  const labels={
+    fa:{usage:'مصرف ترافیک',used:'مصرف (GB)',limit:'سقف (GB)',days:'روز باقیمانده',devices:'دستگاه',sub:'لینک اشتراک',configs:'کانفیگ‌ها',qr:'QR Code',scan:'با اپ پروکسی اسکن کنید',traffic:'ترافیک (۷ روز اخیر)'},
+    ar:{usage:'استخدام الحركة',used:'مستخدم (GB)',limit:'الحد (GB)',days:'أيام متبقية',devices:'أجهزة',sub:'رابط الاشتراك',configs:'الإعدادات',qr:'رمز QR',scan:'امسح بتطبيق البروكسي',traffic:'حركة المرور (٧ أيام)'},
+    tr:{usage:'Trafik Kullanımı',used:'Kullanılan (GB)',limit:'Limit (GB)',days:'Kalan Gün',devices:'Cihaz',sub:'Abonelik Bağlantıları',configs:'Yapılandırmalar',qr:'QR Kod',scan:'Proxy uygulamanızla tarayın',traffic:'Trafik (son 7 gün)'},
+    ru:{usage:'Использование трафика',used:'Использовано (ГБ)',limit:'Лимит (ГБ)',days:'Дней осталось',devices:'Устройства',sub:'Ссылки подписки',configs:'Конфигурации',qr:'QR-код',scan:'Сканируйте прокси-приложением',traffic:'Трафик (7 дней)'},
+    zh:{usage:'流量使用',used:'已用 (GB)',limit:'限制 (GB)',days:'剩余天数',devices:'设备',sub:'订阅链接',configs:'配置',qr:'二维码',scan:'用代理应用扫描',traffic:'流量（7天）'},
+  };
+  const lang=navigator.language?.slice(0,2)||'en';
+  if(labels[lang]){
+    document.documentElement.lang=lang;
+    if(lang==='fa'||lang==='ar')document.documentElement.dir='rtl';
+    const l=labels[lang];
+    document.querySelectorAll('.card-title').forEach(el=>{
+      const t=el.textContent.trim().toLowerCase();
+      if(t.includes('traffic usage'))el.textContent=l.usage;
+      else if(t.includes('subscription'))el.textContent=l.sub;
+      else if(t.includes('qr'))el.textContent=l.qr;
+      else if(t.includes('configs'))el.textContent=l.configs;
+      else if(t.includes('traffic'))el.textContent=l.traffic;
+    });
+    document.querySelectorAll('.stat-label').forEach(el=>{
+      const t=el.textContent.trim().toLowerCase();
+      if(t.includes('used'))el.textContent=l.used;
+      else if(t.includes('limit'))el.textContent=l.limit;
+      else if(t.includes('days'))el.textContent=l.days;
+      else if(t.includes('device'))el.textContent=l.devices;
+    });
+    document.querySelectorAll('.qr-label').forEach(el=>{el.textContent=l.scan});
+  }
+})();
 
 // Traffic chart
 fetch(window.location.pathname.replace('/info','/usage')).then(r=>r.json()).then(d=>{

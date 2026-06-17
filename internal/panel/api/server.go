@@ -143,5 +143,23 @@ func NewRouter(d Deps) *echo.Echo {
 	tokens.POST("", d.APITokens.CreateAPIToken)
 	tokens.DELETE("/:id", d.APITokens.DeleteAPIToken)
 
+	// Plans + Orders (admin)
+	plans := authed.Group("/plans")
+	plans.GET("", d.Handlers.ListPlans, RequirePermission(d.Auth, domain.PermAdminManage))
+	plans.POST("", d.Handlers.CreatePlan, RequirePermission(d.Auth, domain.PermAdminManage))
+	plans.DELETE("/:id", d.Handlers.DeletePlan, RequirePermission(d.Auth, domain.PermAdminManage))
+
+	orders := authed.Group("/orders")
+	orders.GET("", d.Handlers.ListOrders, RequirePermission(d.Auth, domain.PermAdminManage))
+
+	// Public payment endpoints (no auth — user self-purchase)
+	e.GET("/api/shop/plans", d.Handlers.PublicPlans)
+	e.POST("/api/shop/purchase", d.Handlers.InitPurchase)
+	e.GET("/api/payment/callback", d.Handlers.PaymentCallback)
+	e.POST("/api/payment/ipn/nowpayments", d.Handlers.NowPaymentsIPN)
+
+	// Update checker (admin)
+	authed.GET("/update/check", d.Handlers.CheckUpdate, RequirePermission(d.Auth, domain.PermAdminManage))
+
 	return e
 }

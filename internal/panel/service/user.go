@@ -169,6 +169,7 @@ type CreateUserInput struct {
 	ResetStrategy domain.ResetStrategy
 	InboundIDs    []uuid.UUID
 	OnHold        bool
+	AdminID       *uuid.UUID // creator (reseller ownership)
 }
 
 // Create persists a user, binds it to inbounds, and provisions it on the live
@@ -203,6 +204,7 @@ func (s *UserService) Create(ctx context.Context, in CreateUserInput) (*domain.U
 		Username:      in.Username,
 		Status:        status,
 		Note:          in.Note,
+		AdminID:       in.AdminID,
 		DataLimit:     in.DataLimit,
 		ExpireAt:      in.ExpireAt,
 		DeviceLimit:   in.DeviceLimit,

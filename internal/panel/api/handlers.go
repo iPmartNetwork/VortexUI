@@ -18,7 +18,9 @@ import (
 	"github.com/vortexui/vortexui/internal/logbuf"
 	"github.com/vortexui/vortexui/internal/panel/port"
 	"github.com/vortexui/vortexui/internal/panel/service"
+	"github.com/vortexui/vortexui/internal/payment"
 	"github.com/vortexui/vortexui/internal/subscription"
+	"github.com/vortexui/vortexui/internal/updater"
 )
 
 // Handlers bundles the service dependencies the HTTP routes need.
@@ -34,6 +36,10 @@ type Handlers struct {
 	Admins    *service.AdminService
 	Overview  *service.OverviewService
 	Backup    *service.BackupService
+	Plans     PlanServiceInterface          // optional; nil disables plan/order endpoints
+	ZarinPal  *payment.ZarinPal            // optional; nil disables ZarinPal payments
+	NowPayments *payment.NowPayments       // optional; nil disables crypto payments
+	Updater   *updater.Updater             // optional; nil disables update check
 	Devices   DeviceLimiter // optional; nil disables device-count enforcement
 	Online    DeviceCounter // optional; nil disables the online-devices endpoint
 	Logs      LogSource     // optional; nil disables the logs endpoint
@@ -122,6 +128,12 @@ func (h *Handlers) CreateUser(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
 	}
+	// Tag the user with the creating admin (reseller ownership).
+	var adminID *uuid.UUID
+	if claims := claimsFrom(c); claims != nil {
+		id := claims.AdminID
+		adminID = &id
+	}
 	u, err := h.Users.Create(c.Request().Context(), service.CreateUserInput{
 		Username:      req.Username,
 		Note:          req.Note,
@@ -131,6 +143,7 @@ func (h *Handlers) CreateUser(c echo.Context) error {
 		ResetStrategy: domain.ResetStrategy(req.ResetStrategy),
 		InboundIDs:    inboundIDs,
 		OnHold:        req.OnHold,
+		AdminID:       adminID,
 	})
 	if u == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
@@ -448,13 +461,19 @@ func (h *Handlers) UpdateUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// ListUsers returns a paginated, filterable list.
+// ListUsers returns a paginated, filterable list. Non-sudo admins only see
+// users they created (reseller scoping).
 func (h *Handlers) ListUsers(c echo.Context) error {
 	f := port.UserFilter{
 		Search: c.QueryParam("search"),
 		Status: domain.UserStatus(c.QueryParam("status")),
 		Limit:  atoiDefault(c.QueryParam("limit"), 50),
 		Offset: atoiDefault(c.QueryParam("offset"), 0),
+	}
+	// Reseller scoping: non-sudo admins only see their own users.
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		id := claims.AdminID
+		f.AdminID = &id
 	}
 	users, total, err := h.Repo.List(c.Request().Context(), f)
 	if err != nil {

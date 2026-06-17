@@ -36,10 +36,11 @@ type UserRepository interface {
 
 // UserFilter parameterizes paginated listing.
 type UserFilter struct {
-	Search string
-	Status domain.UserStatus
-	Limit  int
-	Offset int
+	Search  string
+	Status  domain.UserStatus
+	AdminID *uuid.UUID // non-nil scopes to users created by this admin (reseller)
+	Limit   int
+	Offset  int
 }
 
 // NodeRepository persists nodes and their live health.
