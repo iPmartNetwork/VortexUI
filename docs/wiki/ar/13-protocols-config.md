@@ -1,6 +1,6 @@
 # ١٣. البروتوكولات والتكوين
 
-> أمثلة JSON كاملة بالإنجليزية: [`docs/protocols.md`](../../protocols.md)
+> أمثلة JSON كاملة بالإنجليزية: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
 
 !!! tip
     تحت رقابة شديدة: **VLESS + REALITY + Vision** — أنشئ المفاتيح من الواجهة.

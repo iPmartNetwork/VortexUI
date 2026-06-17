@@ -164,7 +164,7 @@ VORTEX_CORE_BIN=/usr/local/bin/xray
 | `VORTEX_TELEGRAM_TOKEN` | — | توکن ربات تلگرام |
 | `VORTEX_CF_API_TOKEN` | — | Cloudflare DNS automation |
 
-لیست کامل: [`.env.example`](../../../.env.example)
+لیست کامل: [`.env.example`](https://github.com/iPmartNetwork/VortexUI/blob/master/.env.example)
 
 ---
 

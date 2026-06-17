@@ -1,6 +1,6 @@
 # 13. Protocols & Configuration
 
-> Full English JSON examples: [`docs/protocols.md`](../../protocols.md)
+> Full English JSON examples: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
 
 !!! tip
     Under heavy censorship: **VLESS + REALITY + Vision** — generate keys from the UI.

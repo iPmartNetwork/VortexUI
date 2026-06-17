@@ -131,12 +131,12 @@ GPL-3.0 — المشتقات يجب أن تكون مفتوحة المصدر.
 1. [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues)
 2. الإصدار: `vortexui settings` أو الشريط الجانبي
 3. السجلات: `vortexui logs` (بدون أسرار)
-4. [SECURITY.md](../../../SECURITY.md) للثغرات
+4. [SECURITY.md](https://github.com/iPmartNetwork/VortexUI/blob/master/SECURITY.md) للثغرات
 
 ---
 
 ## المجتمع
 
 - ⭐ Star on GitHub
-- [Contributing](../../../CONTRIBUTING.md)
-- [Changelog](../../../CHANGELOG.md)
+- [Contributing](https://github.com/iPmartNetwork/VortexUI/blob/master/CONTRIBUTING.md)
+- [Changelog](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md)

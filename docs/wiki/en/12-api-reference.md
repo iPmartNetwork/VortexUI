@@ -1,13 +1,13 @@
 # 12. API Reference
 
 !!! note
-    Full spec: [`docs/openapi.yaml`](../../openapi.yaml) — all endpoints and RBAC.
+    Full spec: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) — all endpoints and RBAC.
 
 ---
 
 ## OpenAPI
 
-Full specification: [`docs/openapi.yaml`](../../openapi.yaml)
+Full specification: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml)
 
 ### Interactive viewing
 

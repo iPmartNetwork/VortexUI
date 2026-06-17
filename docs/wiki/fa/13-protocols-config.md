@@ -1,6 +1,6 @@
 # ۱۳. پروتکل‌ها و پیکربندی
 
-> مثال‌های JSON کامل انگلیسی: [`docs/protocols.md`](../../protocols.md)
+> مثال‌های JSON کامل انگلیسی: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
 
 !!! tip
     برای سانسور شدید: **VLESS + REALITY + Vision** — کلیدها را از UI Generate کنید.

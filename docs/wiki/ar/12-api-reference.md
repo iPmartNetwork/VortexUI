@@ -1,13 +1,13 @@
 # ١٢. مرجع API
 
 !!! note
-    المواصفات الكاملة: [`docs/openapi.yaml`](../../openapi.yaml) — جميع endpoints وRBAC.
+    المواصفات الكاملة: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) — جميع endpoints وRBAC.
 
 ---
 
 ## OpenAPI
 
-المواصفات الكاملة: [`docs/openapi.yaml`](../../openapi.yaml)
+المواصفات الكاملة: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml)
 
 ### العرض التفاعلي
 
