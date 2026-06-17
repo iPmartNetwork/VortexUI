@@ -1,6 +1,6 @@
 # 11. Ayarlar ve Yedekleme
 
-!!! tip
+!!! tip "İpucu"
     **Restore** öncesinde mutlaka güncel yedek alın.
 
 ---

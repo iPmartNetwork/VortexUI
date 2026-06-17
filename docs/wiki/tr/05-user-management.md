@@ -1,6 +1,6 @@
 # 5. Kullanıcı Yönetimi
 
-!!! warning
+!!! warning "Uyarı"
     **Revoke Sub** eski bağlantıyı geçersiz kılar — yalnızca token sızdıysa kullanın.
 
 ---

@@ -8,6 +8,7 @@
   [![CI](https://img.shields.io/github/actions/workflow/status/iPmartNetwork/VortexUI/ci.yml?style=flat-square&label=CI)](https://github.com/iPmartNetwork/VortexUI/actions)
   [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat-square&logo=go)](https://go.dev)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
+  [![Telegram](https://img.shields.io/badge/Telegram-@vortex__ui-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/vortex_ui)
 
   <br />
 
@@ -216,6 +217,8 @@ make build && make certs && make run-panel
 | موضوع | لینک |
 |-------|------|
 | **سایت مستندات (MkDocs)** | **[ipmartnetwork.github.io/VortexUI](https://ipmartnetwork.github.io/VortexUI/)** — FA · EN · AR · TR |
+| **کانال تلگرام** | [**@vortex_ui**](https://t.me/vortex_ui) — اخبار، release، جامعه کاربران |
+| **GitHub Discussions** | [سؤال و پشتیبانی](https://github.com/iPmartNetwork/VortexUI/discussions) |
 | **ویکی (منبع Markdown)** | [`docs/WIKI-HUB.md`](docs/WIKI-HUB.md) · [فارسی](docs/wiki/fa/README.md) · [English](docs/wiki/en/README.md) · [العربية](docs/wiki/ar/README.md) · [Türkçe](docs/wiki/tr/README.md) |
 | مرجع API (OpenAPI 3.0) | [`docs/openapi.yaml`](docs/openapi.yaml) |
 | پروتکل‌ها و مثال پیکربندی | [`docs/protocols.md`](docs/protocols.md) |
@@ -254,6 +257,7 @@ make build && make certs && make run-panel
 - ⭐ به مخزن **ستاره** بده
 - 🍴 **Fork** کن و مشارکت کن
 - 📢 با دیگران **به اشتراک** بگذار
+- 💬 در **کانال تلگرام** عضو شو: [@vortex_ui](https://t.me/vortex_ui)
 - 💰 برای حمایت از توسعه، **کریپتو اهدا** کن
 
 | شبکه | آدرس |
@@ -298,6 +302,8 @@ make build && make certs && make run-panel
   <sub>© 2026 iPmart Network. All rights reserved.</sub>
   <br />
   <strong>ساخته‌شده با ❤️ توسط <a href="https://github.com/iPmartNetwork">iPmart Network</a></strong>
+  <br />
+  <a href="https://t.me/vortex_ui">تلگرام @vortex_ui</a> · <a href="https://ipmartnetwork.github.io/VortexUI/fa/">مستندات</a>
 </div>
 
 </div>

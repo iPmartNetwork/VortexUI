@@ -1,6 +1,6 @@
 # 4. Gösterge Paneli (Overview)
 
-!!! note
+!!! note "Not"
     Pano **SSE** ile yenilenir — polling gerekmez.
 
 ---

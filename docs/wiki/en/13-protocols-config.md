@@ -2,7 +2,7 @@
 
 > Full English JSON examples: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
 
-!!! tip
+!!! tip "Tip"
     Under heavy censorship: **VLESS + REALITY + Vision** — generate keys from the UI.
 
 ---

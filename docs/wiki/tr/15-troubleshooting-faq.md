@@ -1,6 +1,6 @@
 # 15. Sorun Giderme ve SSS
 
-!!! tip
+!!! tip "İpucu"
     Önce **`vortexui logs`** ve **`/api/health`** — çoğu sorun JWT, DB veya firewall.
 
 ---

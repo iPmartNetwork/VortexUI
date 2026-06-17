@@ -1,6 +1,6 @@
 # 8. Güvenlik ve Yönetim
 
-!!! important
+!!! important "Önemli"
     Ana admin için **2FA** ve güçlü JWT secret (≥32 bayt) etkinleştirin.
 
 ---

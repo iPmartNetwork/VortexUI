@@ -1,6 +1,6 @@
 # 3. First Steps
 
-!!! tip
+!!! tip "Tip"
     Complete this workflow in **5 minutes**: node → inbound → user → subscription → test.
 
 ---

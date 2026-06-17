@@ -1,6 +1,6 @@
 # 7. Ağ Politikası
 
-!!! tip
+!!! tip "İpucu"
     Yaygın kalıp: `geosite:ir` ve `geoip:ir` → direct, geri kalan → proxy.
 
 ---

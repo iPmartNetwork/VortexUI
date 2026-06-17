@@ -1,6 +1,6 @@
 # 6. Node Management
 
-!!! tip
+!!! tip "Tip"
     For Iran routing rules, use **Nodes → Update Geo**.
 
 ---

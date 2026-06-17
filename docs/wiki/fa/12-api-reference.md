@@ -1,6 +1,6 @@
 # ۱۲. مرجع API
 
-!!! note
+!!! note "نکته"
     مرجع کامل: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) — همه endpointها و RBAC.
 
 ---

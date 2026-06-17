@@ -15,6 +15,10 @@ def on_pre_build(config, **kwargs) -> None:
     logo = src / "Logo.svg"
     if logo.is_file():
         shutil.copy2(logo, dest / "Logo.svg")
+    else:
+        fallback = root / "web" / "public" / "favicon.svg"
+        if fallback.is_file():
+            shutil.copy2(fallback, dest / "Logo.svg")
 
     panel_src = src / "panel"
     panel_dest = dest / "panel"

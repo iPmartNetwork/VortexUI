@@ -1,6 +1,6 @@
 # 14. İşletim ve Bakım
 
-!!! tip
+!!! tip "İpucu"
     Kurulumdan sonra `vortexui status` ve `curl .../api/health` ile kontrol edin.
 
 ---

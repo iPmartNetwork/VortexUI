@@ -1,6 +1,6 @@
 # 1. Giriş ve Temel Kavramlar
 
-!!! note
+!!! note "Not"
     VortexUI **kullanıcı merkezlidir** — tek abonelik tüm atanmış inbound'ları kapsar.
 
 ---

@@ -1,6 +1,6 @@
 # ١٢. مرجع API
 
-!!! note
+!!! note "ملاحظة"
     المواصفات الكاملة: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) — جميع endpoints وRBAC.
 
 ---

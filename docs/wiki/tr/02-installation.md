@@ -1,6 +1,6 @@
 # 2. Kurulum
 
-!!! important
+!!! important "Önemli"
     Kurulumdan önce **80 ve 443 portlarını** (HTTPS) ve alan adı DNS'ini hazırlayın.
 
 ---

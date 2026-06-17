@@ -1,6 +1,6 @@
 # ۱۴. عملیات و نگهداری
 
-!!! tip
+!!! tip "راهنما"
     بعد از نصب `vortexui status` و `curl .../api/health` را برای sanity check اجرا کنید.
 
 ---

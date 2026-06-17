@@ -17,6 +17,109 @@ ALERT_MAP = {
     "IMPORTANT": "important",
 }
 
+ADMONITION_TITLES = {
+    "en": {"note": "Note", "tip": "Tip", "warning": "Warning", "important": "Important"},
+    "fa": {"note": "نکته", "tip": "راهنما", "warning": "هشدار", "important": "مهم"},
+    "ar": {"note": "ملاحظة", "tip": "نصيحة", "warning": "تحذير", "important": "مهم"},
+    "tr": {"note": "Not", "tip": "İpucu", "warning": "Uyarı", "important": "Önemli"},
+}
+
+HOME_COPY = {
+    "en": {
+        "title": "VortexUI Documentation",
+        "subtitle": "Welcome to the official VortexUI guide.",
+        "intro": "Install, configure, and operate the next-generation proxy panel (Xray + sing-box). Use the **language selector** in the header to switch between English, Persian, Arabic, and Turkish.",
+        "tip": "Quick install",
+        "map": "Documentation map",
+        "map_section": "Section",
+        "map_chapters": "Chapters",
+        "architecture": "Architecture",
+        "links": "Useful links",
+        "resource": "Resource",
+        "link": "Link",
+        "rows": [
+            ("Getting started", "[Introduction](01-introduction.md) · [Installation](02-installation.md) · [First steps](03-first-steps.md)"),
+            ("Panel guide", "[Dashboard](04-dashboard.md) · [Users](05-user-management.md) · [Nodes](06-node-management.md) · [Network](07-network-policy.md)"),
+            ("Administration", "[Security](08-security-administration.md) · [Plans](09-plans-payments.md) · [Notifications](10-notifications.md) · [Settings](11-settings-backup.md)"),
+            ("Technical reference", "[API](12-api-reference.md) · [Protocols](13-protocols-config.md) · [Operations](14-operations-maintenance.md) · [FAQ](15-troubleshooting-faq.md)"),
+        ],
+    },
+    "fa": {
+        "title": "مستندات VortexUI",
+        "subtitle": "به راهنمای رسمی VortexUI خوش آمدید.",
+        "intro": "نصب، پیکربندی و مدیریت پنل پروکسی نسل جدید (Xray + sing-box). از **انتخابگر زبان** در بالای صفحه برای جابه‌جایی بین ۴ زبان استفاده کنید.",
+        "tip": "نصب سریع",
+        "map": "نقشه مستندات",
+        "map_section": "بخش",
+        "map_chapters": "فصل‌ها",
+        "architecture": "معماری",
+        "links": "لینک‌های مفید",
+        "resource": "منبع",
+        "link": "لینک",
+        "rows": [
+            ("شروع کار", "[معرفی](01-introduction.md) · [نصب](02-installation.md) · [اولین قدم‌ها](03-first-steps.md)"),
+            ("راهنمای پنل", "[داشبورد](04-dashboard.md) · [کاربران](05-user-management.md) · [نودها](06-node-management.md) · [شبکه](07-network-policy.md)"),
+            ("مدیریت", "[امنیت](08-security-administration.md) · [پلن‌ها](09-plans-payments.md) · [اعلان‌ها](10-notifications.md) · [تنظیمات](11-settings-backup.md)"),
+            ("مرجع فنی", "[API](12-api-reference.md) · [پروتکل‌ها](13-protocols-config.md) · [عملیات](14-operations-maintenance.md) · [FAQ](15-troubleshooting-faq.md)"),
+        ],
+    },
+    "ar": {
+        "title": "وثائق VortexUI",
+        "subtitle": "مرحباً بكم في دليل VortexUI الرسمي.",
+        "intro": "ثبّت وأدر لوحة البروكسي (Xray + sing-box). استخدم **مبدّل اللغة** في الشريط العلوي للتنقل بين اللغات الأربع.",
+        "tip": "تثبيت سريع",
+        "map": "خريطة الوثائق",
+        "map_section": "القسم",
+        "map_chapters": "الفصول",
+        "architecture": "البنية",
+        "links": "روابط مفيدة",
+        "resource": "المورد",
+        "link": "الرابط",
+        "rows": [
+            ("البدء", "[المقدمة](01-introduction.md) · [التثبيت](02-installation.md) · [الخطوات الأولى](03-first-steps.md)"),
+            ("دليل اللوحة", "[لوحة المعلومات](04-dashboard.md) · [المستخدمون](05-user-management.md) · [العقد](06-node-management.md) · [الشبكة](07-network-policy.md)"),
+            ("الإدارة", "[الأمان](08-security-administration.md) · [الخطط](09-plans-payments.md) · [الإشعارات](10-notifications.md) · [الإعدادات](11-settings-backup.md)"),
+            ("مرجع تقني", "[API](12-api-reference.md) · [البروتوكولات](13-protocols-config.md) · [العمليات](14-operations-maintenance.md) · [FAQ](15-troubleshooting-faq.md)"),
+        ],
+    },
+    "tr": {
+        "title": "VortexUI Dokümantasyon",
+        "subtitle": "Resmi VortexUI kılavuzuna hoş geldiniz.",
+        "intro": "Yeni nesil proxy panelini kurun ve yönetin (Xray + sing-box). **Dil seçiciyi** üst menüden kullanın.",
+        "tip": "Hızlı kurulum",
+        "map": "Dokümantasyon haritası",
+        "map_section": "Bölüm",
+        "map_chapters": "Bölümler",
+        "architecture": "Mimari",
+        "links": "Faydalı bağlantılar",
+        "resource": "Kaynak",
+        "link": "Bağlantı",
+        "rows": [
+            ("Başlangıç", "[Giriş](01-introduction.md) · [Kurulum](02-installation.md) · [İlk adımlar](03-first-steps.md)"),
+            ("Panel rehberi", "[Pano](04-dashboard.md) · [Kullanıcılar](05-user-management.md) · [Node'lar](06-node-management.md) · [Ağ](07-network-policy.md)"),
+            ("Yönetim", "[Güvenlik](08-security-administration.md) · [Planlar](09-plans-payments.md) · [Bildirimler](10-notifications.md) · [Ayarlar](11-settings-backup.md)"),
+            ("Teknik referans", "[API](12-api-reference.md) · [Protokoller](13-protocols-config.md) · [Operasyonlar](14-operations-maintenance.md) · [SSS](15-troubleshooting-faq.md)"),
+        ],
+    },
+}
+
+
+def localize_admonitions(text: str, lang: str) -> str:
+    titles = ADMONITION_TITLES.get(lang, ADMONITION_TITLES["en"])
+
+    def repl(match: re.Match[str]) -> str:
+        kind = match.group(1).lower()
+        if match.group(2):
+            return match.group(0)
+        return f'!!! {kind} "{titles[kind]}"'
+
+    return re.sub(
+        r"^!!! (note|tip|warning|important)(\s+\"[^\"]+\")?\s*$",
+        repl,
+        text,
+        flags=re.MULTILINE | re.IGNORECASE,
+    )
+
 
 def strip_html_wrappers(text: str) -> str:
     # Remove centered logo / language header block
@@ -124,31 +227,26 @@ def ensure_table_spacing(text: str) -> str:
 
 def fix_readme_home(text: str, lang: str) -> str:
     """Produce a clean MkDocs home page."""
-    titles = {
-        "en": ("VortexUI Documentation", "Welcome to the official VortexUI guide."),
-        "fa": ("مستندات VortexUI", "به راهنمای رسمی VortexUI خوش آمدید."),
-        "ar": ("وثائق VortexUI", "مرحباً بكم في دليل VortexUI الرسمي."),
-        "tr": ("VortexUI Dokümantasyon", "Resmi VortexUI kılavuzuna hoş geldiniz."),
-    }
-    title, subtitle = titles.get(lang, titles["en"])
-    intro = {
-        "en": "Install, configure, and operate the next-generation proxy panel (Xray + sing-box). Use the **language selector** in the header to switch between English, Persian, Arabic, and Turkish.",
-        "fa": "نصب، پیکربندی و مدیریت پنل پروکسی نسل جدید (Xray + sing-box). از **انتخابگر زبان** در header برای جابه‌جایی بین ۴ زبان استفاده کنید.",
-        "ar": "ثبّت وأدر لوحة البروكسي (Xray + sing-box). استخدم **مبدّل اللغة** في الشريط العلوي.",
-        "tr": "Yeni nesil proxy panelini kurun ve yönetin (Xray + sing-box). **Dil seçiciyi** üst menüden kullanın.",
-    }[lang]
-    return f"""# {title}
+    c = HOME_COPY.get(lang, HOME_COPY["en"])
+    map_rows = "\n".join(f"| {section} | {chapters} |" for section, chapters in c["rows"])
+    return f"""# {c["title"]}
 
-{subtitle}
+{c["subtitle"]}
 
-{intro}
+{c["intro"]}
 
-!!! tip "Quick install"
+!!! tip "{c["tip"]}"
     ```bash
     bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
     ```
 
-## Architecture
+## {c["map"]}
+
+| {c["map_section"]} | {c["map_chapters"]} |
+|---------|----------|
+{map_rows}
+
+## {c["architecture"]}
 
 ```mermaid
 flowchart TB
@@ -178,21 +276,23 @@ flowchart TB
     API --> Remote
 ```
 
-## Useful links
+## {c["links"]}
 
-| Resource | Link |
+| {c["resource"]} | {c["link"]} |
 |----------|------|
 | OpenAPI | [openapi.yaml on GitHub](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) |
 | Protocol examples | [protocols.md](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md) |
 | Repository | [github.com/iPmartNetwork/VortexUI](https://github.com/iPmartNetwork/VortexUI) |
+| Telegram | [@vortex_ui](https://t.me/vortex_ui) |
 """
 
 
-def sanitize_chapter(path: Path) -> None:
+def sanitize_chapter(path: Path, lang: str) -> None:
     text = path.read_text(encoding="utf-8")
     text = strip_html_wrappers(text)
     text = github_alerts_to_material(text)
     text = fix_admonition_quotes(text)
+    text = localize_admonitions(text, lang)
     text = simplify_nav_line(text)
     text = fix_external_links(text)
     text = ensure_table_spacing(text)
@@ -208,7 +308,7 @@ def main() -> None:
     for lang in LANGS:
         d = ROOT / lang
         for f in sorted(d.glob("[0-9][0-9]-*.md")):
-            sanitize_chapter(f)
+            sanitize_chapter(f, lang)
             print("fixed", f.relative_to(ROOT))
         readme = d / "README.md"
         if readme.exists():

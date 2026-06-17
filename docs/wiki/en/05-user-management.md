@@ -1,6 +1,6 @@
 # 5. User Management
 
-!!! warning
+!!! warning "Warning"
     **Revoke Sub** invalidates the old link — use only if the token was leaked.
 
 ---

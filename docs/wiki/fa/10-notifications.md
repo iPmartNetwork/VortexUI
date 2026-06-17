@@ -1,6 +1,6 @@
 # ۱۰. اعلان‌ها
 
-!!! tip
+!!! tip "راهنما"
     Webhook با `X-Vortex-Signature: sha256=...` امضا می‌شود — secret را در env تنظیم کنید.
 
 ---

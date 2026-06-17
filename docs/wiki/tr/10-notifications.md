@@ -1,6 +1,6 @@
 # 10. Bildirimler
 
-!!! tip
+!!! tip "İpucu"
     Webhook'lar `X-Vortex-Signature: sha256=...` ile imzalanır — secret'ı env'de ayarlayın.
 
 ---

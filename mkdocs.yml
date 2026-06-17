@@ -10,7 +10,7 @@ site_author: iPmart Network
 
 repo_name: iPmartNetwork/VortexUI
 repo_url: https://github.com/iPmartNetwork/VortexUI
-edit_uri: edit/master/docs/wiki/
+edit_uri: edit/master/docs/wiki/en/
 
 copyright: Copyright &copy; 2026 iPmart Network — GPL-3.0
 
@@ -62,6 +62,8 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/iPmartNetwork/VortexUI
+    - icon: fontawesome/brands/telegram
+      link: https://t.me/vortex_ui
   generator: false
 
 extra_css:
@@ -70,6 +72,7 @@ extra_css:
 markdown_extensions:
   - abbr
   - admonition
+  - md_in_html
   - attr_list
   - def_list
   - footnotes
@@ -143,6 +146,8 @@ plugins:
           site_name: مستندات VortexUI
           theme:
             language: fa
+            direction: rtl
+          edit_uri: edit/master/docs/wiki/fa/
           nav_translations:
             Home: خانه
             Getting started: شروع کار
@@ -169,6 +174,8 @@ plugins:
           site_name: وثائق VortexUI
           theme:
             language: ar
+            direction: rtl
+          edit_uri: edit/master/docs/wiki/ar/
           nav_translations:
             Home: الرئيسية
             Getting started: البدء
@@ -195,6 +202,7 @@ plugins:
           site_name: VortexUI Dokümantasyon
           theme:
             language: tr
+          edit_uri: edit/master/docs/wiki/tr/
           nav_translations:
             Home: Ana sayfa
             Getting started: Başlangıç

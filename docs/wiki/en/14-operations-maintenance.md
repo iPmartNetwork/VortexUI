@@ -1,6 +1,6 @@
 # 14. Operations & Maintenance
 
-!!! tip
+!!! tip "Tip"
     After install run `vortexui status` and `curl .../api/health` as a sanity check.
 
 ---

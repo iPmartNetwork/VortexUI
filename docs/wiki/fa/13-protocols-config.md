@@ -2,7 +2,7 @@
 
 > مثال‌های JSON کامل انگلیسی: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
 
-!!! tip
+!!! tip "راهنما"
     برای سانسور شدید: **VLESS + REALITY + Vision** — کلیدها را از UI Generate کنید.
 
 ---

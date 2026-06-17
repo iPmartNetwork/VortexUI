@@ -1,6 +1,6 @@
 # 3. İlk Adımlar
 
-!!! tip
+!!! tip "İpucu"
     Bu akışı **5 dakikada** tamamlayın: node → inbound → kullanıcı → abonelik → test.
 
 ---
