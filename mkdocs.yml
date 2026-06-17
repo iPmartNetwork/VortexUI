@@ -146,7 +146,6 @@ plugins:
           site_name: مستندات VortexUI
           theme:
             language: fa
-            direction: rtl
           nav_translations:
             Home: خانه
             Getting started: شروع کار
