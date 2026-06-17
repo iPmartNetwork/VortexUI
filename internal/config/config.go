@@ -31,6 +31,10 @@ type Panel struct {
 	TelegramToken  string
 	TelegramChatID string
 
+	// Optional Cloudflare DNS automation (auto-create A records for nodes).
+	CloudflareToken  string
+	CloudflareZoneID string
+
 	// Optional in-process local node: run a proxy core on the panel host itself,
 	// managed in-process (no gRPC agent). Empty/false = disabled.
 	LocalNode     bool
@@ -97,6 +101,8 @@ func LoadPanel() (*Panel, error) {
 		WebhookSecret:  os.Getenv("VORTEX_WEBHOOK_SECRET"),
 		TelegramToken:  os.Getenv("VORTEX_TELEGRAM_TOKEN"),
 		TelegramChatID: os.Getenv("VORTEX_TELEGRAM_CHAT_ID"),
+		CloudflareToken:  os.Getenv("VORTEX_CF_API_TOKEN"),
+		CloudflareZoneID: os.Getenv("VORTEX_CF_ZONE_ID"),
 		LocalNode:      envBool("VORTEX_LOCAL_NODE", false),
 		LocalNodeName:  env("VORTEX_LOCAL_NODE_NAME", "local"),
 		LocalNodeHost:  env("VORTEX_LOCAL_NODE_HOST", "127.0.0.1"),

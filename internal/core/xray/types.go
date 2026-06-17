@@ -32,8 +32,11 @@ type policyConf struct {
 }
 
 type policyLevel struct {
-	StatsUserUplink   bool `json:"statsUserUplink"`
-	StatsUserDownlink bool `json:"statsUserDownlink"`
+	StatsUserUplink   bool  `json:"statsUserUplink"`
+	StatsUserDownlink bool  `json:"statsUserDownlink"`
+	BufferSize        int32 `json:"bufferSize,omitempty"`        // KB; controls throughput
+	Uplinkonly        int32 `json:"uplinkOnly,omitempty"`        // seconds
+	Downlinkonly      int32 `json:"downlinkOnly,omitempty"`      // seconds
 }
 
 type systemPolicy struct {

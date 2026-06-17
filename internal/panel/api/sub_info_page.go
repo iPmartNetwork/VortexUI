@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/panel/port"
 	"github.com/vortexui/vortexui/internal/subscription"
 )
 
@@ -103,3 +104,28 @@ type subInfoData struct {
 }
 
 var subInfoTmpl = template.Must(template.New("subinfo").Parse(subInfoHTML))
+
+// SubscriptionUsage returns the user's traffic time-series (last 7 days) as
+// JSON, authenticated solely by the subscription token. This powers the
+// traffic chart on the public subscription info page.
+func (h *Handlers) SubscriptionUsage(c echo.Context) error {
+	token := c.Param("token")
+	res, err := h.Sub.Build(c.Request().Context(), token)
+	if err != nil || res == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+	if h.Traffic == nil {
+		return c.JSON(http.StatusOK, echo.Map{"points": []any{}})
+	}
+	now := time.Now()
+	q := port.SeriesQuery{
+		FromUnix: now.Add(-7 * 24 * time.Hour).Unix(),
+		ToUnix:   now.Unix(),
+		Bucket:   "1d",
+	}
+	points, err := h.Traffic.UsageSeries(c.Request().Context(), res.User.ID, q)
+	if err != nil {
+		return c.JSON(http.StatusOK, echo.Map{"points": []any{}})
+	}
+	return c.JSON(http.StatusOK, echo.Map{"points": points})
+}

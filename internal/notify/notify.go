@@ -23,6 +23,9 @@ func describe(e events.Event) string {
 		return fmt.Sprintf("⏰ User expired: %s", e.Username)
 	case events.UserReset:
 		return fmt.Sprintf("🔄 User traffic reset: %s", e.Username)
+	case events.UserExpiryWarning:
+		days := e.Data["days_left"]
+		return fmt.Sprintf("⚠️ User expiring in %v days: %s", days, e.Username)
 	case events.UserIPLimit:
 		ips, limit := e.Data["online_ips"], e.Data["device_limit"]
 		if limited, _ := e.Data["limited"].(bool); limited {

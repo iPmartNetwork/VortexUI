@@ -65,8 +65,14 @@ func TestBuilderRendersValidSingboxConfig(t *testing.T) {
 
 func TestBuilderUnsupportedProtocol(t *testing.T) {
 	cfg := &core.GeneratedConfig{Inbounds: []domain.Inbound{{Tag: "wg", Protocol: domain.ProtoWireGuard, Port: 1}}}
-	if _, err := (Builder{APIPort: 1}).Build(cfg); err == nil {
-		t.Fatal("expected error for unsupported protocol")
+	// Unsupported protocols are now skipped (not fatal) so one bad inbound
+	// doesn't crash the core.
+	raw, err := (Builder{APIPort: 1}).Build(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("expected non-empty config")
 	}
 }
 

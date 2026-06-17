@@ -116,6 +116,9 @@ export function Settings() {
 
       {/* Backup */}
       <BackupSection />
+
+      {/* Subscription Config Template */}
+      <ConfigTemplateSection />
     </div>
   );
 }
@@ -324,6 +327,48 @@ function BackupSection() {
             <Upload size={15} className="text-fg-muted" /> Import & restore
           </span>
         </label>
+      </div>
+    </Section>
+  );
+}
+
+// ─── Config Template Section ──────────────────────────────────────────────────
+function ConfigTemplateSection() {
+  const toast = useToast();
+  const [clashRules, setClashRules] = useState("DOMAIN-SUFFIX,ir,DIRECT\nGEOIP,IR,DIRECT");
+  const [singboxDNS, setSingboxDNS] = useState('{"servers":[{"address":"https://dns.google/dns-query","tag":"google"}]}');
+
+  function saveTemplates() {
+    // TODO: persist to backend settings API
+    localStorage.setItem("vortex_clash_rules", clashRules);
+    localStorage.setItem("vortex_singbox_dns", singboxDNS);
+    toast.success("Templates saved (local)");
+  }
+
+  return (
+    <Section icon={<Cpu size={16} />} title="Subscription Templates" description="Customize Clash/sing-box configs delivered to users. Add routing rules, DNS, or proxy groups.">
+      <div className="space-y-4">
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-fg-muted">Clash — extra routing rules (one per line)</p>
+          <textarea
+            value={clashRules}
+            onChange={(e) => setClashRules(e.target.value)}
+            rows={4}
+            className="w-full rounded-xl border border-border bg-surface-2/30 px-3 py-2 font-mono text-xs text-fg placeholder:text-fg-subtle/50 outline-none focus:ring-1 focus:ring-primary/30"
+            placeholder="DOMAIN-SUFFIX,ir,DIRECT&#10;GEOIP,IR,DIRECT"
+          />
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-fg-muted">Sing-box — DNS config (JSON)</p>
+          <textarea
+            value={singboxDNS}
+            onChange={(e) => setSingboxDNS(e.target.value)}
+            rows={4}
+            className="w-full rounded-xl border border-border bg-surface-2/30 px-3 py-2 font-mono text-xs text-fg placeholder:text-fg-subtle/50 outline-none focus:ring-1 focus:ring-primary/30"
+            placeholder='{"servers":[{"address":"https://dns.google/dns-query","tag":"dns"}]}'
+          />
+        </div>
+        <Button onClick={saveTemplates}>Save templates</Button>
       </div>
     </Section>
   );

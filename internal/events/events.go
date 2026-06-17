@@ -23,8 +23,10 @@ const (
 	// UserIPLimit fires when a user is online from more distinct source IPs than
 	// its device limit allows — a strong signal of account sharing.
 	UserIPLimit Type = "user.ip_limit"
-	NodeDown    Type = "node.down" // became unhealthy/unreachable
-	NodeUp      Type = "node.up"   // (re)connected
+	// UserExpiryWarning fires N days before a user's subscription expires.
+	UserExpiryWarning Type = "user.expiry_warning"
+	NodeDown          Type = "node.down" // became unhealthy/unreachable
+	NodeUp            Type = "node.up"   // (re)connected
 )
 
 // Event is a single notification. Fields are flat and JSON-friendly so the

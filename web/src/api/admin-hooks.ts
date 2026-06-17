@@ -11,7 +11,7 @@ export function useAdmins() {
 export function useCreateAdmin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { username: string; password: string; sudo: boolean; role_id?: string | null }) =>
+    mutationFn: (input: { username: string; password: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number }) =>
       api<{ admin: Admin }>("/api/admins", { method: "POST", body: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admins"] }),
   });

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -194,6 +195,20 @@ func (r *UserRepo) UsersToLimit(ctx context.Context) ([]*domain.User, error) {
 // UsersToReset returns users whose periodic traffic reset is due. Concrete-only.
 func (r *UserRepo) UsersToReset(ctx context.Context) ([]*domain.User, error) {
 	rows, err := r.q.UsersToReset(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*domain.User, len(rows))
+	for i := range rows {
+		out[i] = userToDomain(rows[i])
+	}
+	return out, nil
+}
+
+// UsersExpiringSoon returns active users whose expire_at is before the given
+// cutoff time (i.e. expiring within N days). Used by the expiry warning loop.
+func (r *UserRepo) UsersExpiringSoon(ctx context.Context, before time.Time) ([]*domain.User, error) {
+	rows, err := r.q.UsersExpiringSoon(ctx, timeToTS(before))
 	if err != nil {
 		return nil, err
 	}
