@@ -9,6 +9,8 @@ const subInfoHTML = `<!DOCTYPE html>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0f1724;--surface:#1a2332;--surface2:#243044;--border:#2d3f55;--fg:#e8edf5;--fg2:#94a3b8;--accent:#6366f1;--accent2:#818cf8;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--radius:14px}
+@media(prefers-color-scheme:light){:root{--bg:#f8fafc;--surface:#ffffff;--surface2:#f1f5f9;--border:#e2e8f0;--fg:#1e293b;--fg2:#64748b;--accent:#6366f1;--accent2:#818cf8;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444}}
+.theme-toggle{position:fixed;top:12px;right:12px;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--fg2);display:grid;place-items:center;cursor:pointer;font-size:14px;z-index:9}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;padding:20px}
 .container{max-width:480px;margin:0 auto}
 .header{text-align:center;padding:28px 0 20px}
