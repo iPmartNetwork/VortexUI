@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 
@@ -119,6 +120,15 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 		Enabled:  in.Enabled,
 	}
 	provisionSecurity(inbound)
+	if inbound.Enabled {
+		tag, err := s.portConflict(ctx, inbound.NodeID, uuid.Nil, inbound.Port, inbound.Listen)
+		if err != nil {
+			return nil, err
+		}
+		if tag != "" {
+			return nil, fmt.Errorf("port %d is already used by inbound %q on this node", inbound.Port, tag)
+		}
+	}
 	if err := s.repo.Create(ctx, inbound); err != nil {
 		return nil, err
 	}
@@ -162,6 +172,15 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	existing.Raw = in.Raw
 	existing.Enabled = in.Enabled
 	provisionSecurity(existing)
+	if existing.Enabled {
+		tag, err := s.portConflict(ctx, existing.NodeID, existing.ID, existing.Port, existing.Listen)
+		if err != nil {
+			return nil, err
+		}
+		if tag != "" {
+			return nil, fmt.Errorf("port %d is already used by inbound %q on this node", existing.Port, tag)
+		}
+	}
 	if err := s.repo.Update(ctx, existing); err != nil {
 		return nil, err
 	}
@@ -200,4 +219,34 @@ func orSec(v, def domain.Security) domain.Security {
 		return def
 	}
 	return v
+}
+
+// portConflict reports the tag of an existing ENABLED inbound on the same node
+// that would collide with the given port/listen, or "" if there is no conflict.
+// Two inbounds clash when they share a port and their listen addresses overlap
+// (an empty or 0.0.0.0 listen binds every interface). excludeID skips the
+// inbound being updated.
+func (s *InboundService) portConflict(ctx context.Context, nodeID, excludeID uuid.UUID, port int, listen string) (string, error) {
+	existing, err := s.repo.ListByNode(ctx, nodeID)
+	if err != nil {
+		return "", err
+	}
+	for _, e := range existing {
+		if e.ID == excludeID || !e.Enabled || e.Port != port {
+			continue
+		}
+		if listenOverlap(listen, e.Listen) {
+			return e.Tag, nil
+		}
+	}
+	return "", nil
+}
+
+// listenOverlap reports whether two listen addresses bind overlapping interfaces.
+// An empty string or "0.0.0.0" means "all interfaces" and overlaps everything.
+func listenOverlap(a, b string) bool {
+	if a == "" || a == "0.0.0.0" || b == "" || b == "0.0.0.0" {
+		return true
+	}
+	return a == b
 }
