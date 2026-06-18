@@ -17,12 +17,12 @@ export function Modal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
         className={cn(
-          "card w-full max-w-md animate-scale-in p-6 relative",
+          "card w-full max-w-md animate-scale-in p-6 relative z-[101]",
           className,
         )}
         onClick={(e) => e.stopPropagation()}
