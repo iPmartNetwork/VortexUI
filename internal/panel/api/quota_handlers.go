@@ -40,7 +40,10 @@ func (h *QuotaHandlers) CreateQuotaPolicy(c echo.Context) error {
 func (h *QuotaHandlers) ListQuotaPolicies(c echo.Context) error {
 	policies, err := h.Quota.ListPolicies(c.Request().Context())
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+		return c.JSON(http.StatusOK, echo.Map{"policies": []any{}})
+	}
+	if policies == nil {
+		policies = []*domain.QuotaPolicy{}
 	}
 	return c.JSON(http.StatusOK, echo.Map{"policies": policies})
 }

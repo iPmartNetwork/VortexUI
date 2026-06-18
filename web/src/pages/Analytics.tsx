@@ -63,11 +63,8 @@ export function Analytics() {
 
       {isLoading && <div className="text-center text-fg-muted py-8">{t("common.loading")}</div>}
       {isError && <div className="text-center text-fg-muted py-8">{t("analytics.error")}</div>}
-      {!isLoading && !isError && data && !data.geo_breakdown?.length && !data.top_users?.length && (
-        <div className="text-center text-fg-muted py-8">{t("analytics.noData")}</div>
-      )}
 
-      {data && (
+      {data && (data.geo_breakdown?.length || data.top_users?.length || data.total_up || data.total_down) && (
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -154,6 +151,9 @@ export function Analytics() {
             </div>
           </Card>
         </>
+      )}
+      {!isLoading && !isError && data && !data.geo_breakdown?.length && !data.top_users?.length && !data.total_up && !data.total_down && (
+        <div className="text-center text-fg-muted py-8">{t("analytics.noData")}</div>
       )}
     </div>
   );
