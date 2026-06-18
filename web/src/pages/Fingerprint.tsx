@@ -31,14 +31,14 @@ export function Fingerprint() {
       <PageHeader title={t("fingerprint.title")} subtitle={t("fingerprint.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
-        <p className="font-medium text-fg text-sm">TLS Client Fingerprinting</p>
-        <p>Each TLS client (browser, app, bot) has a unique fingerprint based on its ClientHello packet. This feature validates incoming connections against known fingerprint patterns.</p>
+        <p className="font-medium text-fg text-sm">{t("fingerprint.infoTitle")}</p>
+        <p>{t("fingerprint.infoDesc")}</p>
         <ul className="list-disc pl-4 space-y-1">
-          <li><strong>Allow</strong> — Let connections with this fingerprint pass through.</li>
-          <li><strong>Block</strong> — Reject connections matching this pattern (e.g. known scanner tools).</li>
-          <li><strong>Log</strong> — Record the connection without blocking.</li>
+          <li><strong>Allow</strong> — {t("fingerprint.allow")}</li>
+          <li><strong>Block</strong> — {t("fingerprint.blockDesc")}</li>
+          <li><strong>Log</strong> — {t("fingerprint.logDesc")}</li>
         </ul>
-        <p>JA3 hash is a standard method to fingerprint TLS clients. Use it to identify specific tools or bots.</p>
+        <p>{t("fingerprint.ja3")}</p>
       </div>
       {policy && (
         <Card className="space-y-3">

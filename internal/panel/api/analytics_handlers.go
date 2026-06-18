@@ -33,8 +33,14 @@ func (h *AnalyticsHandlers) GetAnalytics(c echo.Context) error {
 	}
 
 	overview, err := h.Analytics.GetOverview(c.Request().Context(), from, to)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	if err != nil || overview == nil {
+		return c.JSON(http.StatusOK, echo.Map{
+			"geo_breakdown": []any{},
+			"top_users":     []any{},
+			"peak_hours":    []any{},
+			"total_up":      0,
+			"total_down":    0,
+		})
 	}
 	return c.JSON(http.StatusOK, overview)
 }

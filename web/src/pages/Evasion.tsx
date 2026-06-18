@@ -46,12 +46,12 @@ export function Evasion() {
       </div>
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
-        <p className="font-medium text-fg text-sm">DPI Evasion Profiles</p>
-        <p>These profiles configure anti-censorship techniques that help bypass Deep Packet Inspection (DPI). Assign a profile to inbounds to apply the settings automatically.</p>
+        <p className="font-medium text-fg text-sm">{t("evasion.infoTitle")}</p>
+        <p>{t("evasion.infoDesc")}</p>
         <ul className="list-disc pl-4 space-y-1">
-          <li><strong>Fragment</strong> — Splits TLS ClientHello into small pieces. Effective against Iran/Russia DPI.</li>
-          <li><strong>Mux</strong> — Multiplexes multiple connections into one, making traffic harder to analyze.</li>
-          <li><strong>Fingerprint</strong> — Mimics a real browser's TLS signature (Chrome, Firefox, Safari).</li>
+          <li><strong>Fragment</strong> — {t("evasion.fragment")}</li>
+          <li><strong>Mux</strong> — {t("evasion.mux")}</li>
+          <li><strong>Fingerprint</strong> — {t("evasion.fingerprint")}</li>
         </ul>
       </div>
 

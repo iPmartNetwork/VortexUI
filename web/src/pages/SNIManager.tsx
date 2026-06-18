@@ -31,12 +31,8 @@ export function SNIManager() {
       <PageHeader title={t("sni.title")} subtitle={t("sni.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
-        <p className="font-medium text-fg text-sm">Multi-Domain SNI Management</p>
-        <p>Manage multiple domains on your inbounds with automatic SSL certificate provisioning via Let's Encrypt or ZeroSSL.</p>
-        <ul className="list-disc pl-4 space-y-1">
-          <li><strong>Domains</strong> — Register domains pointing to your server. Auto-cert requests a free SSL certificate.</li>
-          <li><strong>Certificates</strong> — Manually issue or manage SSL certificates. Wildcards supported.</li>
-        </ul>
+        <p className="font-medium text-fg text-sm">{t("sni.infoTitle")}</p>
+        <p>{t("sni.infoDesc")}</p>
       </div>
 
       {/* Domains */}
