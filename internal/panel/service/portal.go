@@ -162,6 +162,20 @@ func (s *PortalService) ListAllTickets(ctx context.Context, status string, limit
 	return s.tickets.ListAll(ctx, status, limit, offset)
 }
 
+// AdminGetTicket returns a single ticket with its messages (no ownership check).
+func (s *PortalService) AdminGetTicket(ctx context.Context, ticketID uuid.UUID) (*domain.Ticket, error) {
+	t, err := s.tickets.GetByID(ctx, ticketID)
+	if err != nil {
+		return nil, err
+	}
+	msgs, err := s.tickets.Messages(ctx, ticketID)
+	if err != nil {
+		return nil, err
+	}
+	t.Messages = msgs
+	return t, nil
+}
+
 // AdminReply adds an admin response to a ticket.
 func (s *PortalService) AdminReply(ctx context.Context, ticketID, adminID uuid.UUID, body string) error {
 	t, err := s.tickets.GetByID(ctx, ticketID)

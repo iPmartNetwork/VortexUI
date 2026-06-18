@@ -195,6 +195,7 @@ func NewRouter(d Deps) *echo.Echo {
 	// --- Admin ticket management ---
 	tickets := authed.Group("/tickets", RequirePermission(d.Auth, domain.PermUserWrite))
 	tickets.GET("", d.Portal.AdminListTickets)
+	tickets.GET("/:id", d.Portal.AdminGetTicket)
 	tickets.POST("/:id/reply", d.Portal.AdminReplyTicket)
 	tickets.POST("/:id/close", d.Portal.AdminCloseTicket)
 

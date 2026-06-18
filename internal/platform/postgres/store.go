@@ -77,6 +77,9 @@ func (s *Store) Monitor() *MonitorRepo { return &MonitorRepo{pool: s.pool} }
 // Tickets returns the ticket repository.
 func (s *Store) Tickets() *TicketRepo { return &TicketRepo{pool: s.pool} }
 
+// Plans returns the plan/order repository.
+func (s *Store) Plans() *PlanRepo { return &PlanRepo{pool: s.pool} }
+
 // Analytics returns the analytics repository.
 func (s *Store) Analytics() *AnalyticsRepo { return &AnalyticsRepo{pool: s.pool} }
 

@@ -235,7 +235,8 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	tokenSvc := service.NewAPITokenService(store.APITokens())
 
 	// Construct all feature services.
-	portalSvc := service.NewPortalService(users, store.Tickets(), nil)
+	portalSvc := service.NewPortalService(users, store.Tickets(), store.Plans())
+	planSvc := service.NewPlanService(store.Plans(), userSvc)
 	realitySvc := service.NewRealityScannerService(store.RealityScans(), nodes)
 	quotaSvc := service.NewQuotaService(store.QuotaPolicies())
 	relaySvc := service.NewRelayService(store.RelayChains(), nodes)
@@ -258,6 +259,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Nodes: nodeSvc, Inbounds: inboundSvc, Admins: adminSvc, Devices: devices,
 			Outbounds: outboundSvc, Routing: routingSvc, Balancers: balancerSvc,
 			Overview: overviewSvc, Backup: backupSvc,
+			Plans:    planSvc,
 			Online: online, Logs: logBuf, Audit: store.Audit(),
 			Repo: users, Traffic: traffic,
 			Throttle: api.NewLoginThrottle(5, 15*time.Minute),
