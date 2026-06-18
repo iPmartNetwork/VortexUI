@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
@@ -15,14 +16,15 @@ export function Modal({
   className?: string;
 }) {
   if (!open) return null;
-  return (
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
         className={cn(
-          "card w-full max-w-md animate-scale-in p-6 relative z-[101]",
+          "w-full max-w-md animate-scale-in rounded-2xl bg-bg-elevated border border-border/60 shadow-2xl p-6 relative",
           className,
         )}
         onClick={(e) => e.stopPropagation()}
@@ -39,6 +41,7 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
