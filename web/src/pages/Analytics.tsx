@@ -63,7 +63,9 @@ export function Analytics() {
 
       {isLoading && <div className="text-center text-fg-muted py-8">{t("common.loading")}</div>}
       {isError && <div className="text-center text-fg-muted py-8">{t("analytics.error")}</div>}
-      {!isLoading && !isError && !data && <div className="text-center text-fg-muted py-8">{t("analytics.noData")}</div>}
+      {!isLoading && !isError && data && !data.geo_breakdown?.length && !data.top_users?.length && (
+        <div className="text-center text-fg-muted py-8">{t("analytics.noData")}</div>
+      )}
 
       {data && (
         <>

@@ -34,7 +34,11 @@ func (s *DoHService) UpdateConfig(ctx context.Context, c *domain.DoHConfig) erro
 
 // GetStats returns DNS resolution statistics.
 func (s *DoHService) GetStats(ctx context.Context) (*port.DoHStats, error) {
-	return s.repo.GetStats(ctx)
+	stats, err := s.repo.GetStats(ctx)
+	if err != nil || stats == nil {
+		return &port.DoHStats{}, nil
+	}
+	return stats, nil
 }
 
 // GetQueryLogs returns recent DNS query logs.
@@ -42,5 +46,9 @@ func (s *DoHService) GetQueryLogs(ctx context.Context, limit int) ([]domain.DoHQ
 	if limit <= 0 {
 		limit = 100
 	}
-	return s.repo.ListQueryLogs(ctx, limit)
+	logs, err := s.repo.ListQueryLogs(ctx, limit)
+	if err != nil {
+		return nil, nil
+	}
+	return logs, nil
 }

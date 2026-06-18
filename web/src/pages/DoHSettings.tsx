@@ -68,13 +68,13 @@ export function DoHSettings() {
       <PageHeader title={t("doh.title")} subtitle={t("doh.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
-        <p className="font-medium text-fg text-sm">Built-in DNS Privacy Server</p>
-        <p>Provides a DNS-over-HTTPS endpoint for users, preventing DNS leaks and enabling ad/malware blocking at the DNS level.</p>
+        <p className="font-medium text-fg text-sm">{t("doh.infoTitle")}</p>
+        <p>{t("doh.infoDesc")}</p>
         <ul className="list-disc pl-4 space-y-1">
-          <li><strong>Upstream DNS</strong> — Servers to forward queries to (e.g. 1.1.1.1, 8.8.8.8). One IP per line.</li>
-          <li><strong>Block ads/malware</strong> — Uses curated blocklists to filter known ad/malware domains.</li>
-          <li><strong>Custom blocklist</strong> — Your own domains to block. One domain per line.</li>
-          <li><strong>Cache TTL</strong> — How long resolved queries stay cached (seconds).</li>
+          <li><strong>Upstream DNS</strong> — {t("doh.upstream")}</li>
+          <li><strong>Block ads/malware</strong> — {t("doh.blockAds")}</li>
+          <li><strong>Custom blocklist</strong> — {t("doh.blocklist")}</li>
+          <li><strong>Cache TTL</strong> — {t("doh.cacheTTL")}</li>
         </ul>
       </div>
 

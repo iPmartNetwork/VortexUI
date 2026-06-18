@@ -72,12 +72,12 @@ export function ProbingProtection() {
       <PageHeader title={t("probing.title")} subtitle={t("probing.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
-        <p className="font-medium text-fg text-sm">What is Active Probing?</p>
-        <p>Censors (like GFW) send probe packets to suspected proxy servers. If the server responds in a way that reveals it's a proxy, it gets blocked. This feature detects and blocks such probes.</p>
+        <p className="font-medium text-fg text-sm">{t("probing.infoTitle")}</p>
+        <p>{t("probing.infoDesc")}</p>
         <ul className="list-disc pl-4 space-y-1">
-          <li><strong>Block</strong> — Drop connections from detected probers and ban the IP temporarily.</li>
-          <li><strong>Honeypot</strong> — Respond with a fake website (e.g. nginx default page) to fool probers.</li>
-          <li><strong>Log only</strong> — Record probing attempts without blocking (useful for monitoring).</li>
+          <li><strong>Block</strong> — {t("probing.block")}</li>
+          <li><strong>Honeypot</strong> — {t("probing.honeypot")}</li>
+          <li><strong>Log only</strong> — {t("probing.logOnly")}</li>
         </ul>
       </div>
 

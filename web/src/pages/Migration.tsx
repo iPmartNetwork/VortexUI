@@ -64,7 +64,7 @@ export function Migration() {
       <PageHeader title={t("migration.title")} subtitle={t("migration.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted">
-        <p>When a node becomes unhealthy (high CPU, memory, or packet loss beyond thresholds), users are automatically migrated to a healthy node. If "Migrate back" is enabled, users return when the original node recovers.</p>
+        <p>{t("migration.info")}</p>
       </div>
 
       {policy && (

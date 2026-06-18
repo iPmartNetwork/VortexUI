@@ -31,12 +31,12 @@ export function Federation() {
       <PageHeader title={t("federation.title")} subtitle={t("federation.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
-        <p className="font-medium text-fg text-sm">Multi-Panel Federation</p>
-        <p>Connect multiple VortexUI panels together to share users and nodes. Useful for large deployments where you want distributed management with centralized visibility.</p>
+        <p className="font-medium text-fg text-sm">{t("federation.infoTitle")}</p>
+        <p>{t("federation.infoDesc")}</p>
         <ul className="list-disc pl-4 space-y-1">
-          <li><strong>Sync users</strong> — Users created on one panel automatically appear on peers.</li>
-          <li><strong>Sync nodes</strong> — Node availability is shared across panels for failover.</li>
-          <li><strong>SSO</strong> — Admin single sign-on across federated panels.</li>
+          <li><strong>Sync users</strong> — {t("federation.syncUsers")}</li>
+          <li><strong>Sync nodes</strong> — {t("federation.syncNodes")}</li>
+          <li><strong>SSO</strong> — {t("federation.sso")}</li>
         </ul>
       </div>
       {cfg && (

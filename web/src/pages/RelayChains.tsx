@@ -60,12 +60,12 @@ export function RelayChains() {
         <Button onClick={() => setCreateOpen(true)}>{t("relay.newChain")}</Button>
       </div>
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
-        <p className="font-medium text-fg text-sm">How CDN/Relay Chains Work</p>
-        <p>A relay chain routes traffic through one or more intermediate servers before reaching the target node. This hides the real server IP from users and censors.</p>
+        <p className="font-medium text-fg text-sm">{t("relay.infoTitle")}</p>
+        <p>{t("relay.infoDesc")}</p>
         <ul className="list-disc pl-4 space-y-1">
-          <li><strong>CDN</strong> — Traffic goes through a CDN like Cloudflare (WebSocket required). Best for hiding IP while using free CDN.</li>
-          <li><strong>Relay</strong> — Traffic routes through a VPS relay server. Good when CDN is blocked or you need TCP support.</li>
-          <li><strong>Worker</strong> — Uses Cloudflare Workers as a relay endpoint. Serverless and cost-effective.</li>
+          <li><strong>CDN</strong> — {t("relay.cdn")}</li>
+          <li><strong>Relay</strong> — {t("relay.relay")}</li>
+          <li><strong>Worker</strong> — {t("relay.worker")}</li>
         </ul>
       </div>
       <CreateChainModal open={createOpen} onClose={() => setCreateOpen(false)} nodes={nodesData?.nodes ?? []} />

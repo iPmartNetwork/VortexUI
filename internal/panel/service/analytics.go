@@ -26,25 +26,12 @@ func (s *AnalyticsService) GetOverview(ctx context.Context, from, to time.Time) 
 		Bucket:   "1h",
 	}
 
-	geo, err := s.repo.GeoBreakdown(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-
-	top, err := s.repo.TopUsers(ctx, 20)
-	if err != nil {
-		return nil, err
-	}
-
-	peaks, err := s.repo.PeakHours(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-
-	totalUp, totalDown, err := s.repo.TotalTraffic(ctx, q)
-	if err != nil {
-		return nil, err
-	}
+	// Graceful: if any query fails, return empty data for that section
+	// rather than failing the entire endpoint.
+	geo, _ := s.repo.GeoBreakdown(ctx, q)
+	top, _ := s.repo.TopUsers(ctx, 20)
+	peaks, _ := s.repo.PeakHours(ctx, q)
+	totalUp, totalDown, _ := s.repo.TotalTraffic(ctx, q)
 
 	return &domain.AnalyticsOverview{
 		GeoBreakdown: geo,

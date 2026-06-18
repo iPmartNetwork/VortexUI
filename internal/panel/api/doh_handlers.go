@@ -59,8 +59,8 @@ func (h *DoHHandlers) UpdateDoHConfig(c echo.Context) error {
 // GetDoHStats returns DNS resolution statistics.
 func (h *DoHHandlers) GetDoHStats(c echo.Context) error {
 	stats, err := h.DoH.GetStats(c.Request().Context())
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	if err != nil || stats == nil {
+		return c.JSON(http.StatusOK, echo.Map{"stats": map[string]int{"total_queries": 0, "blocked_count": 0, "cache_hits": 0, "avg_latency_ms": 0}})
 	}
 	return c.JSON(http.StatusOK, echo.Map{"stats": stats})
 }
@@ -69,7 +69,7 @@ func (h *DoHHandlers) GetDoHStats(c echo.Context) error {
 func (h *DoHHandlers) GetDoHLogs(c echo.Context) error {
 	logs, err := h.DoH.GetQueryLogs(c.Request().Context(), 100)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return c.JSON(http.StatusOK, echo.Map{"logs": []any{}})
 	}
 	return c.JSON(http.StatusOK, echo.Map{"logs": logs})
 }
