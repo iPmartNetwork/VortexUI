@@ -479,16 +479,28 @@ func tlsBlock(in domain.Inbound) map[string]any {
 		return nil
 	}
 	tls := map[string]any{"enabled": true}
+	serverName := ""
 	if len(in.SNI) > 0 {
-		tls["server_name"] = in.SNI[0]
+		serverName = in.SNI[0]
 	}
 	if in.Security == domain.SecurityReality {
+		// sing-box REQUIRES tls.server_name for REALITY. The inbound SNI field is
+		// often left empty (provisionSecurity only fills Raw["reality"].server_names),
+		// so fall back to the reality profile's server name (xray parity) — otherwise
+		// the core rejects the config and never starts.
+		rp := reality.ParseParams(in.Raw["reality"])
+		if serverName == "" && len(rp.ServerNames) > 0 {
+			serverName = rp.ServerNames[0]
+		}
 		tls["reality"] = realityBlock(in)
 	} else if cert, key := tlsCertLines(in.Raw["tls"]); cert != nil {
 		// Inline the auto-generated (or operator-supplied) certificate so TLS
 		// inbounds — including the mandatory-TLS hysteria2/tuic — actually start.
 		tls["certificate"] = cert
 		tls["key"] = key
+	}
+	if serverName != "" {
+		tls["server_name"] = serverName
 	}
 	return tls
 }
