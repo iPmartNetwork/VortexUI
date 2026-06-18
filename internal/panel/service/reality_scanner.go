@@ -40,15 +40,8 @@ func (s *RealityScannerService) Scan(ctx context.Context, nodeID uuid.UUID, snis
 	if port <= 0 {
 		port = 443
 	}
-	node, err := s.nodes.GetByID(ctx, nodeID)
-	if err != nil {
+	if _, err := s.nodes.GetByID(ctx, nodeID); err != nil {
 		return nil, fmt.Errorf("node not found: %w", err)
-	}
-
-	// Extract host from node address for probing.
-	host := node.Address
-	if h, _, err := net.SplitHostPort(host); err == nil {
-		host = h
 	}
 
 	results := make([]ScanResult, len(snis))
