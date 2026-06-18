@@ -1,6 +1,7 @@
 package xray
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -62,9 +63,10 @@ type Driver struct {
 	proc    *proc.Supervisor
 	log     *slog.Logger
 
-	mu       sync.Mutex
-	api      xrayAPI
-	inbounds map[string]domain.Inbound // tag -> inbound, for runtime account building
+	mu         sync.Mutex
+	api        xrayAPI
+	inbounds   map[string]domain.Inbound // tag -> inbound, for runtime account building
+	lastConfig []byte                    // last config bytes actually written/applied; guards redundant restarts
 }
 
 var _ core.CoreDriver = (*Driver)(nil)
@@ -83,23 +85,38 @@ func New(opts Options) *Driver {
 func (d *Driver) Type() domain.CoreType { return domain.CoreXray }
 
 // Start renders the config, writes it, (re)starts the process, and connects the
-// runtime API. Idempotent: calling it on a running core hot-applies the new
-// config via a supervised restart.
+// runtime API. Idempotent: when the rendered config is byte-identical to what is
+// already applied and the core is running, the disruptive restart is skipped so a
+// redundant resync (e.g. from a health-reconnect) does not bounce live
+// connections. A real config change still triggers a supervised restart.
 func (d *Driver) Start(ctx context.Context, cfg *core.GeneratedConfig) error {
 	raw, err := d.builder.Build(cfg)
 	if err != nil {
 		return fmt.Errorf("build config: %w", err)
 	}
-	if err := os.WriteFile(d.opts.ConfigPath, raw, 0o600); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-	// Cache the inbound shapes so runtime AddUser can build the right account.
+
 	d.mu.Lock()
+	// Always refresh the inbound-shape cache so runtime AddUser stays correct.
 	d.inbounds = make(map[string]domain.Inbound, len(cfg.Inbounds))
 	for _, in := range cfg.Inbounds {
 		d.inbounds[in.Tag] = in
 	}
+	unchanged := d.proc.Running() && bytes.Equal(raw, d.lastConfig)
 	d.mu.Unlock()
+
+	if unchanged {
+		// Config matches the running core exactly — do not restart; just make
+		// sure the runtime API link is up.
+		return d.connectAPI()
+	}
+
+	if err := os.WriteFile(d.opts.ConfigPath, raw, 0o600); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	d.mu.Lock()
+	d.lastConfig = raw
+	d.mu.Unlock()
+
 	if d.proc.Running() {
 		if err := d.proc.Restart(ctx); err != nil {
 			return fmt.Errorf("restart: %w", err)
