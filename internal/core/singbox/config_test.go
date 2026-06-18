@@ -95,6 +95,7 @@ type routedConfig struct {
 			PortRange []string `json:"port_range"`
 			Network   string   `json:"network"`
 			Outbound  string   `json:"outbound"`
+			Action    string   `json:"action"`
 		} `json:"rules"`
 	} `json:"route"`
 }
@@ -112,8 +113,13 @@ func TestBuilderDefaultOutboundsWhenNoneConfigured(t *testing.T) {
 	for _, o := range c.Outbounds {
 		tags[o.Tag] = o.Type
 	}
-	if tags["direct"] != "direct" || tags["block"] != "block" {
-		t.Errorf("default outbounds missing: %v", tags)
+	// sing-box >= 1.12 removed the legacy `block`/`dns` outbounds; only `direct`
+	// is synthesized now. A blackhole/dns target becomes a rule action instead.
+	if tags["direct"] != "direct" {
+		t.Errorf("default direct outbound missing: %v", tags)
+	}
+	if _, ok := tags["block"]; ok {
+		t.Errorf("legacy block outbound must not be emitted: %v", tags)
 	}
 	// No routing rules -> no rules, but final must still be a safe default.
 	if len(c.Route.Rules) != 0 {
@@ -226,6 +232,51 @@ func TestBuilderPortRangeParsing(t *testing.T) {
 	}
 	if len(c.Route.Rules) != 1 || len(c.Route.Rules[0].PortRange) != 1 || c.Route.Rules[0].PortRange[0] != "1000:2000" {
 		t.Errorf("port_range not parsed: %+v", c.Route.Rules)
+	}
+}
+
+func TestBuilderRejectAndHijackDNSActions(t *testing.T) {
+	// A blackhole outbound and a dns outbound must NOT be emitted as outbounds;
+	// rules targeting them (or the well-known "block" tag) become modern rule
+	// actions: reject / hijack-dns.
+	cfg := &core.GeneratedConfig{
+		Outbounds: []domain.Outbound{
+			{Tag: "drop", Protocol: domain.OutBlackhole, Enabled: true},
+			{Tag: "dns-out", Protocol: domain.OutDNS, Enabled: true},
+		},
+		Routing: []domain.RoutingRule{
+			{Priority: 1, Domains: []string{"ads.example.com"}, OutboundTag: "drop", Enabled: true},
+			{Priority: 2, Port: "53", OutboundTag: "dns-out", Enabled: true},
+			{Priority: 3, IP: []string{"1.2.3.4/32"}, OutboundTag: "block", Enabled: true},
+		},
+	}
+	raw, err := Builder{APIPort: 9090}.Build(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var c routedConfig
+	if err := json.Unmarshal(raw, &c); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	for _, o := range c.Outbounds {
+		if o.Tag == "drop" || o.Tag == "dns-out" {
+			t.Errorf("blackhole/dns must not be emitted as an outbound, got %q (%s)", o.Tag, o.Type)
+		}
+		if o.Type == "block" || o.Type == "dns" {
+			t.Errorf("legacy outbound type %q must not be emitted", o.Type)
+		}
+	}
+	if len(c.Route.Rules) != 3 {
+		t.Fatalf("want 3 route rules, got %d", len(c.Route.Rules))
+	}
+	if c.Route.Rules[0].Action != "reject" || c.Route.Rules[0].Outbound != "" {
+		t.Errorf("rule[0] should be reject action with no outbound: %+v", c.Route.Rules[0])
+	}
+	if c.Route.Rules[1].Action != "hijack-dns" || c.Route.Rules[1].Outbound != "" {
+		t.Errorf("rule[1] should be hijack-dns action with no outbound: %+v", c.Route.Rules[1])
+	}
+	if c.Route.Rules[2].Action != "reject" || c.Route.Rules[2].Outbound != "" {
+		t.Errorf("rule[2] (block target) should be reject action with no outbound: %+v", c.Route.Rules[2])
 	}
 }
 

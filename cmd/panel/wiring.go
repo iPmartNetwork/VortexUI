@@ -70,7 +70,7 @@ func localAwareDialer(tls vgrpc.TLSFiles, localID uuid.UUID, localDriver core.Co
 func buildLocalDriver(cfg *config.Panel, log *slog.Logger) (core.CoreDriver, error) {
 	switch cfg.Core {
 	case "singbox":
-		return singbox.New(singbox.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.CoreAPIPort, Logger: log}), nil
+		return singbox.New(singbox.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.CoreAPIPort, OmitV2RayAPI: !cfg.SingboxV2RayAPI, Logger: log}), nil
 	case "xray", "":
 		return xray.New(xray.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.CoreAPIPort, Logger: log}), nil
 	default:
