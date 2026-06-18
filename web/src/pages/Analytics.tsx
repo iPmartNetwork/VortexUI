@@ -55,7 +55,7 @@ export function Analytics() {
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
           </Select>
-          <Button variant="outline" onClick={() => {
+          <Button onClick={() => {
             const token = localStorage.getItem("vortex.token") || "";
             window.open(`/api/analytics/export?from=${from}&to=${to}&access_token=${encodeURIComponent(token)}`, "_blank");
           }}>
