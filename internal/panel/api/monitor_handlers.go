@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/hub"
 	"github.com/vortexui/vortexui/internal/panel/port"
 )
@@ -26,6 +27,8 @@ type liveConnection struct {
 }
 
 // GetLiveConnections aggregates online stats from all managed nodes.
+// It tries hub.OnlineStats first (detailed per-user data from gRPC agents).
+// If that returns nothing, falls back to node health.connections count.
 func (h *MonitorHandlers) GetLiveConnections(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -35,27 +38,49 @@ func (h *MonitorHandlers) GetLiveConnections(c echo.Context) error {
 	}
 
 	var connections []liveConnection
+	var totalFromHealth int
+
 	for _, n := range nodes {
+		// Try detailed stats from the agent.
 		stats, err := h.Hub.OnlineStats(context.Background(), n.ID)
-		if err != nil {
+		if err == nil && len(stats) > 0 {
+			for userID, count := range stats {
+				for i := 0; i < count; i++ {
+					connections = append(connections, liveConnection{
+						UserID:   userID,
+						Username: userID,
+						NodeName: n.Name,
+					})
+				}
+			}
 			continue
 		}
-		for userID, count := range stats {
-			for i := 0; i < count; i++ {
-				connections = append(connections, liveConnection{
-					UserID:         userID,
-					Username:       userID, // hub returns user IDs; real usernames need a lookup
-					NodeName:       n.Name,
-					IP:             "",       // hub doesn't expose per-connection IPs in stats
-					Protocol:       "",       // protocol not available from OnlineStats
-					ConnectedSince: "",
-				})
-			}
+
+		// Fallback: use the node's health connections count from the hub.
+		status, health, err := h.Hub.Status(n.ID)
+		if err == nil && status == domain.NodeConnected && health.Connections > 0 {
+			totalFromHealth += health.Connections
+			// We don't have per-user detail, just show aggregate.
+			connections = append(connections, liveConnection{
+				UserID:   "",
+				Username: "(aggregated)",
+				NodeName: n.Name,
+				Protocol: string(n.Core),
+			})
 		}
+	}
+
+	total := len(connections)
+	if totalFromHealth > 0 && total == 0 {
+		total = totalFromHealth
+	}
+	// If we only have aggregated data, set total to health sum.
+	if totalFromHealth > 0 {
+		total = totalFromHealth
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"connections": connections,
-		"total":       len(connections),
+		"total":       total,
 	})
 }

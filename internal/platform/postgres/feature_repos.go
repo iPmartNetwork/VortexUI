@@ -44,23 +44,74 @@ func (r *AnalyticsRepo) GeoBreakdown(ctx context.Context, q port.SeriesQuery) ([
 }
 
 func (r *AnalyticsRepo) TopUsers(ctx context.Context, limit int) ([]domain.UserTrafficRank, error) {
-	return nil, nil
+	rows, err := r.pool.Query(ctx,
+		`SELECT u.id, u.username, u.used_traffic
+		 FROM users u
+		 WHERE u.used_traffic > 0
+		 ORDER BY u.used_traffic DESC
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, nil
+	}
+	defer rows.Close()
+	var results []domain.UserTrafficRank
+	for rows.Next() {
+		var r domain.UserTrafficRank
+		if err := rows.Scan(&r.UserID, &r.Username, &r.UsedTraffic); err != nil {
+			return nil, nil
+		}
+		results = append(results, r)
+	}
+	return results, nil
 }
 
 func (r *AnalyticsRepo) PeakHours(ctx context.Context, q port.SeriesQuery) ([]domain.PeakHour, error) {
-	return nil, nil
+	from := time.Unix(q.FromUnix, 0)
+	to := time.Unix(q.ToUnix, 0)
+	rows, err := r.pool.Query(ctx,
+		`SELECT EXTRACT(HOUR FROM time)::int AS hour,
+		        COUNT(*)::int AS connections,
+		        COALESCE(SUM(up + down), 0) AS bytes_total
+		 FROM traffic_points
+		 WHERE time >= $1 AND time <= $2
+		 GROUP BY hour
+		 ORDER BY hour`, from, to)
+	if err != nil {
+		return nil, nil
+	}
+	defer rows.Close()
+	var results []domain.PeakHour
+	for rows.Next() {
+		var p domain.PeakHour
+		if err := rows.Scan(&p.Hour, &p.Connections, &p.BytesTotal); err != nil {
+			return nil, nil
+		}
+		results = append(results, p)
+	}
+	return results, nil
 }
 
 func (r *AnalyticsRepo) TotalTraffic(ctx context.Context, q port.SeriesQuery) (int64, int64, error) {
 	from := time.Unix(q.FromUnix, 0)
 	to := time.Unix(q.ToUnix, 0)
 	var up, down int64
+
+	// Try traffic_geo first (aggregated geo data).
 	err := r.pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(bytes_up), 0), COALESCE(SUM(bytes_down), 0)
 		 FROM traffic_geo
 		 WHERE time >= $1 AND time <= $2`, from, to).Scan(&up, &down)
+	if err == nil && (up > 0 || down > 0) {
+		return up, down, nil
+	}
+
+	// Fallback: read from traffic_points (always populated by stats aggregator).
+	err = r.pool.QueryRow(ctx,
+		`SELECT COALESCE(SUM(up), 0), COALESCE(SUM(down), 0)
+		 FROM traffic_points
+		 WHERE time >= $1 AND time <= $2`, from, to).Scan(&up, &down)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil
 	}
 	return up, down, nil
 }
