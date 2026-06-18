@@ -180,6 +180,20 @@ install_cores() {
     rm -rf /tmp/sing-box-* /tmp/sb.tgz
     ok "sing-box installed."
   else warn "sing-box already present — skipping."; fi
+
+  # GeoIP country database for the "Traffic by Country" analytics. Best-effort:
+  # a download failure must not abort the install — the feature simply stays
+  # empty until an mmdb is present at /etc/vortex/GeoLite2-Country.mmdb.
+  if [ ! -f /etc/vortex/GeoLite2-Country.mmdb ]; then
+    info "downloading GeoLite2-Country database…"
+    if curl -fsSL -o /etc/vortex/GeoLite2-Country.mmdb \
+        "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"; then
+      ok "GeoLite2-Country database installed."
+    else
+      rm -f /etc/vortex/GeoLite2-Country.mmdb
+      warn "could not download GeoLite2-Country.mmdb — Traffic by Country will stay empty until you place it at /etc/vortex/GeoLite2-Country.mmdb"
+    fi
+  else warn "GeoLite2-Country.mmdb already present — skipping."; fi
 }
 
 deploy_native() {
@@ -221,6 +235,7 @@ VORTEX_CORE_BIN=/usr/local/bin/xray
 VORTEX_CORE_CONFIG=/etc/vortex/local-core.json
 VORTEX_CORE_API_PORT=10085
 XRAY_LOCATION_ASSET=/etc/vortex/assets
+VORTEX_GEOIP_DB=/etc/vortex/GeoLite2-Country.mmdb
 EOF
   chmod 600 /etc/vortexui/panel.env
 
