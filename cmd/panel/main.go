@@ -252,6 +252,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	fedSvc := service.NewFederationService(store.Federation())
 	deepLinkSvc := service.NewDeepLinkService(store.DeepLinks())
 	quotaNotifySvc := service.NewQuotaNotifyService(store.QuotaNotify())
+	subSettingsSvc := service.NewSubSettingsService(store.SubSettings())
 
 	router := api.NewRouter(api.Deps{
 		Handlers: &api.Handlers{
@@ -264,6 +265,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Repo: users, Traffic: traffic,
 			Throttle: api.NewLoginThrottle(5, 15*time.Minute),
 			Events:   bus,
+			SubSettings: subSettingsSvc,
 		},
 		APITokens:   &api.APITokenHandlers{Svc: tokenSvc},
 		Portal:      &api.PortalHandlers{Portal: portalSvc, Issuer: issuer},
@@ -283,6 +285,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Federation:  &api.FederationHandlers{Fed: fedSvc},
 		DeepLink:    &api.DeepLinkHandlers{DeepLink: deepLinkSvc},
 		QuotaNotify: &api.QuotaNotifyHandlers{QN: quotaNotifySvc},
+		SubSettings: &api.SubSettingsHandlers{Svc: subSettingsSvc},
 		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Monitor: monitorAdapter{store.Monitor()}},
 		Issuer:      issuer,
 		Auth:        authSvc,

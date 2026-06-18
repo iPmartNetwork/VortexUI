@@ -28,6 +28,7 @@ type Handlers struct {
 	Auth      *service.AuthService
 	Users     *service.UserService
 	Sub       *service.SubscriptionService
+	SubSettings SubUpdateIntervalSource // optional; nil -> hardcoded 12h interval
 	Nodes     *service.NodeService
 	Inbounds  *service.InboundService
 	Outbounds *service.OutboundService

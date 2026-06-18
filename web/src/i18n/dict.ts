@@ -241,6 +241,9 @@ const en = {
   "settings.password": "Change password",
   "settings.twoFactor": "Two-factor authentication",
   "settings.backup": "Backup / Restore",
+  "settings.subUpdate": "Subscription Auto-Update",
+  "settings.subUpdateDesc": "How often subscription clients re-fetch their config. Clients pick up node, domain, and endpoint changes automatically on the next refresh.",
+  "settings.subUpdateHours": "Update interval (hours)",
 
   "theme.label": "Theme",
   "theme.dark": "Dark",
@@ -488,6 +491,9 @@ const fa: Record<string, string> = {
   "settings.password": "تغییر رمز عبور",
   "settings.twoFactor": "احراز هویت دومرحله‌ای",
   "settings.backup": "پشتیبان‌گیری / بازیابی",
+  "settings.subUpdate": "به‌روزرسانی خودکار اشتراک",
+  "settings.subUpdateDesc": "هر چند وقت یک‌بار کلاینت‌های اشتراک پیکربندی خود را دوباره دریافت کنند. تغییرات نود، دامنه و اندپوینت در دریافت بعدی به‌صورت خودکار اعمال می‌شوند.",
+  "settings.subUpdateHours": "بازه به‌روزرسانی (ساعت)",
 
   "theme.label": "تم",
   "theme.dark": "تیره",
@@ -735,6 +741,9 @@ const tr: Record<string, string> = {
   "settings.password": "Şifre değiştir",
   "settings.twoFactor": "İki adımlı doğrulama",
   "settings.backup": "Yedekle / Geri yükle",
+  "settings.subUpdate": "Subscription Auto-Update",
+  "settings.subUpdateDesc": "How often subscription clients re-fetch their config. Clients pick up node, domain, and endpoint changes automatically on the next refresh.",
+  "settings.subUpdateHours": "Update interval (hours)",
 
   "theme.label": "Tema",
   "theme.dark": "Koyu",
@@ -982,6 +991,9 @@ const ar: Record<string, string> = {
   "settings.password": "تغيير كلمة المرور",
   "settings.twoFactor": "المصادقة الثنائية",
   "settings.backup": "نسخ احتياطي / استعادة",
+  "settings.subUpdate": "Subscription Auto-Update",
+  "settings.subUpdateDesc": "How often subscription clients re-fetch their config. Clients pick up node, domain, and endpoint changes automatically on the next refresh.",
+  "settings.subUpdateHours": "Update interval (hours)",
 
   "theme.label": "السمة",
   "theme.dark": "داكن",
@@ -1229,6 +1241,9 @@ const ru: Record<string, string> = {
   "settings.password": "Сменить пароль",
   "settings.twoFactor": "Двухфакторная аутентификация",
   "settings.backup": "Резервная копия / Восстановление",
+  "settings.subUpdate": "Subscription Auto-Update",
+  "settings.subUpdateDesc": "How often subscription clients re-fetch their config. Clients pick up node, domain, and endpoint changes automatically on the next refresh.",
+  "settings.subUpdateHours": "Update interval (hours)",
 
   "theme.label": "Тема",
   "theme.dark": "Тёмная",
@@ -1476,6 +1491,9 @@ const zh: Record<string, string> = {
   "settings.password": "修改密码",
   "settings.twoFactor": "两步验证",
   "settings.backup": "备份 / 恢复",
+  "settings.subUpdate": "Subscription Auto-Update",
+  "settings.subUpdateDesc": "How often subscription clients re-fetch their config. Clients pick up node, domain, and endpoint changes automatically on the next refresh.",
+  "settings.subUpdateHours": "Update interval (hours)",
 
   "theme.label": "主题",
   "theme.dark": "深色",
@@ -1723,6 +1741,9 @@ const ja: Record<string, string> = {
   "settings.password": "パスワード変更",
   "settings.twoFactor": "二段階認証",
   "settings.backup": "バックアップ / 復元",
+  "settings.subUpdate": "Subscription Auto-Update",
+  "settings.subUpdateDesc": "How often subscription clients re-fetch their config. Clients pick up node, domain, and endpoint changes automatically on the next refresh.",
+  "settings.subUpdateHours": "Update interval (hours)",
 
   "theme.label": "テーマ",
   "theme.dark": "ダーク",
@@ -1970,6 +1991,9 @@ const es: Record<string, string> = {
   "settings.password": "Cambiar contraseña",
   "settings.twoFactor": "Autenticación de dos factores",
   "settings.backup": "Copia de seguridad / Restaurar",
+  "settings.subUpdate": "Subscription Auto-Update",
+  "settings.subUpdateDesc": "How often subscription clients re-fetch their config. Clients pick up node, domain, and endpoint changes automatically on the next refresh.",
+  "settings.subUpdateHours": "Update interval (hours)",
 
   "theme.label": "Tema",
   "theme.dark": "Oscuro",
