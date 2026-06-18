@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { Button, Card, Input, PageHeader, Badge } from "@/components/ui";
 import { useToast } from "@/components/toast";
+import { useI18n } from "@/i18n/i18n";
 
 interface MigrationPolicy {
   enabled: boolean;
@@ -27,6 +28,7 @@ interface MigrationEvent {
 }
 
 export function Migration() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -59,7 +61,7 @@ export function Migration() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="Auto-Migration" subtitle="Automatically migrate users from unhealthy nodes" />
+      <PageHeader title={t("migration.title")} subtitle={t("migration.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted">
         <p>When a node becomes unhealthy (high CPU, memory, or packet loss beyond thresholds), users are automatically migrated to a healthy node. If "Migrate back" is enabled, users return when the original node recovers.</p>
@@ -68,7 +70,7 @@ export function Migration() {
       {policy && (
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-fg">Migration Policy</h3>
+            <h3 className="text-sm font-bold text-fg">{t("migration.policy")}</h3>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={policy.enabled} onChange={(e) => update("enabled", e.target.checked)} className="rounded" />
               Enabled
@@ -76,29 +78,29 @@ export function Migration() {
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <div>
-              <label className="text-xs text-fg-subtle">Health check interval (s)</label>
+              <label className="text-xs text-fg-subtle">{t("migration.healthInterval")}</label>
               <Input value={policy.health_check_interval} onChange={(e) => update("health_check_interval", Number(e.target.value))} inputMode="numeric" />
             </div>
             <div>
-              <label className="text-xs text-fg-subtle">Unhealthy threshold</label>
+              <label className="text-xs text-fg-subtle">{t("migration.threshold")}</label>
               <Input value={policy.unhealthy_threshold} onChange={(e) => update("unhealthy_threshold", Number(e.target.value))} inputMode="numeric" />
             </div>
             <div>
-              <label className="text-xs text-fg-subtle">CPU threshold (%)</label>
+              <label className="text-xs text-fg-subtle">{t("migration.cpuThreshold")}</label>
               <Input value={policy.cpu_threshold} onChange={(e) => update("cpu_threshold", Number(e.target.value))} inputMode="numeric" />
             </div>
             <div>
-              <label className="text-xs text-fg-subtle">Memory threshold (%)</label>
+              <label className="text-xs text-fg-subtle">{t("migration.memThreshold")}</label>
               <Input value={policy.mem_threshold} onChange={(e) => update("mem_threshold", Number(e.target.value))} inputMode="numeric" />
             </div>
             <div>
-              <label className="text-xs text-fg-subtle">Packet loss max (%)</label>
+              <label className="text-xs text-fg-subtle">{t("migration.packetLoss")}</label>
               <Input value={policy.packet_loss_max} onChange={(e) => update("packet_loss_max", Number(e.target.value))} inputMode="numeric" />
             </div>
             <div className="flex items-end">
               <label className="flex items-center gap-2 text-sm pb-2">
                 <input type="checkbox" checked={policy.migrate_back} onChange={(e) => update("migrate_back", e.target.checked)} className="rounded" />
-                Migrate back on recovery
+                {t("migration.migrateBack")}
               </label>
             </div>
           </div>
@@ -109,7 +111,7 @@ export function Migration() {
       )}
 
       <Card>
-        <h3 className="text-sm font-bold text-fg mb-3">Migration Events</h3>
+        <h3 className="text-sm font-bold text-fg mb-3">{t("migration.events")}</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -132,7 +134,7 @@ export function Migration() {
                 </tr>
               ))}
               {(!eventsData?.events || eventsData.events.length === 0) && (
-                <tr><td colSpan={4} className="py-6 text-center text-fg-muted text-xs">No migrations yet.</td></tr>
+                <tr><td colSpan={4} className="py-6 text-center text-fg-muted text-xs">{t("migration.noEvents")}</td></tr>
               )}
             </tbody>
           </table>

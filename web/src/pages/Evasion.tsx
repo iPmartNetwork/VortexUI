@@ -5,6 +5,7 @@ import { api } from "@/api/client";
 import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
+import { useI18n } from "@/i18n/i18n";
 
 interface EvasionProfile {
   id: string;
@@ -20,6 +21,7 @@ interface EvasionProfile {
 }
 
 export function Evasion() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const toast = useToast();
@@ -39,8 +41,8 @@ export function Evasion() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <PageHeader title="Evasion Profiles" />
-        <Button onClick={() => setCreateOpen(true)}>New profile</Button>
+        <PageHeader title={t("evasion.title")} />
+        <Button onClick={() => setCreateOpen(true)}>{t("evasion.newProfile")}</Button>
       </div>
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">

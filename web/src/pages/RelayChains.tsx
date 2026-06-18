@@ -5,6 +5,7 @@ import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
+import { useI18n } from "@/i18n/i18n";
 
 interface RelayHop {
   type: string;
@@ -29,6 +30,7 @@ interface RelayChain {
 interface Node { id: string; name: string; }
 
 export function RelayChains() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
@@ -54,8 +56,8 @@ export function RelayChains() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <PageHeader title="CDN/Relay Chains" subtitle="Define multi-hop relay paths for traffic obfuscation" />
-        <Button onClick={() => setCreateOpen(true)}>New Chain</Button>
+        <PageHeader title={t("relay.title")} subtitle={t("relay.subtitle")} />
+        <Button onClick={() => setCreateOpen(true)}>{t("relay.newChain")}</Button>
       </div>
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
         <p className="font-medium text-fg text-sm">How CDN/Relay Chains Work</p>
@@ -92,7 +94,7 @@ export function RelayChains() {
           </Card>
         ))}
         {(!data?.chains || data.chains.length === 0) && (
-          <p className="col-span-full text-center text-sm text-fg-muted py-8">No relay chains defined.</p>
+          <p className="col-span-full text-center text-sm text-fg-muted py-8">{t("relay.noChains")}</p>
         )}
       </div>
     </div>
