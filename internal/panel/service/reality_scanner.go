@@ -62,7 +62,10 @@ func (s *RealityScannerService) Scan(ctx context.Context, nodeID uuid.UUID, snis
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			r := probeSNI(host, port, serverName)
+			// Probe the SNI domain directly (not through the node) to check
+			// if it supports TLS 1.3 and measure latency. This tells us if
+			// the domain is suitable as a REALITY camouflage target.
+			r := probeSNI(serverName, port, serverName)
 			results[idx] = r
 		}(i, sni)
 	}
