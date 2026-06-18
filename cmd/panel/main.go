@@ -281,7 +281,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Federation:  &api.FederationHandlers{Fed: fedSvc},
 		DeepLink:    &api.DeepLinkHandlers{DeepLink: deepLinkSvc},
 		QuotaNotify: &api.QuotaNotifyHandlers{QN: quotaNotifySvc},
-		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes},
+		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Monitor: monitorAdapter{store.Monitor()}},
 		Issuer:      issuer,
 		Auth:        authSvc,
 		Limiter:     limiter,
@@ -301,4 +301,19 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	shutCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutCtx)
+}
+
+// monitorAdapter adapts postgres.MonitorRepo to api.MonitorSource.
+type monitorAdapter struct{ repo *postgres.MonitorRepo }
+
+func (m monitorAdapter) RecentActive(ctx context.Context, window time.Duration) ([]api.MonitorLiveUser, error) {
+	users, err := m.repo.RecentActive(ctx, window)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]api.MonitorLiveUser, len(users))
+	for i, u := range users {
+		out[i] = api.MonitorLiveUser{UserID: u.UserID, Username: u.Username, NodeID: u.NodeID, LastSeen: u.LastSeen}
+	}
+	return out, nil
 }
