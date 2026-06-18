@@ -44,6 +44,10 @@ type Panel struct {
 	CoreBin       string // path to the core binary
 	CoreConfig    string // where the rendered core config is written
 	CoreAPIPort   int    // loopback port for the core's stats/control API
+	// SingboxV2RayAPI controls whether the sing-box config emits the
+	// experimental.v2ray_api block (per-user stats). Default true; set false for
+	// sing-box binaries built without the with_v2ray_api tag, which reject it.
+	SingboxV2RayAPI bool
 	// ShareAutoLimit, when true, makes the account-sharing guard actually limit
 	// (deprovision) users caught online from more IPs than their device limit.
 	// Default false: detection only emits an alert event.
@@ -110,6 +114,7 @@ func LoadPanel() (*Panel, error) {
 		CoreBin:        os.Getenv("VORTEX_CORE_BIN"),
 		CoreConfig:     env("VORTEX_CORE_CONFIG", "/etc/vortex/local-core.json"),
 		CoreAPIPort:    envInt("VORTEX_CORE_API_PORT", 10085),
+		SingboxV2RayAPI: envBool("VORTEX_SINGBOX_V2RAY_API", true),
 		ShareAutoLimit: envBool("VORTEX_SHARE_AUTOLIMIT", false),
 	}
 	if c.CoreBin == "" {

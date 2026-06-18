@@ -19,7 +19,8 @@ import (
 // Builder renders core.GeneratedConfig into sing-box native JSON. APIPort is the
 // loopback port for sing-box's V2Ray API, which exposes per-user traffic stats.
 type Builder struct {
-	APIPort int
+	APIPort      int
+	OmitV2RayAPI bool // skip experimental.v2ray_api (for binaries built without with_v2ray_api)
 }
 
 // Build implements core.Builder.
@@ -49,7 +50,7 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 		emails = append(emails, e)
 	}
 
-	outbounds, outboundTags, err := buildOutbounds(cfg.Outbounds, cfg.Balancers)
+	outbounds, outboundTags, actions, err := buildOutbounds(cfg.Outbounds, cfg.Balancers)
 	if err != nil {
 		return nil, err
 	}
@@ -58,29 +59,34 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 		"log":       map[string]any{"level": level},
 		"inbounds":  inbounds,
 		"outbounds": outbounds,
-		// V2Ray API exposes per-user up/down counters; stats.users must list the
+	}
+	if !b.OmitV2RayAPI {
+		// V2Ray API exposes per-user up/down counters; stats.users lists the
 		// users to track, which is why adding a user requires a config rebuild.
-		"experimental": map[string]any{
+		// Requires a sing-box binary built with the with_v2ray_api tag.
+		conf["experimental"] = map[string]any{
 			"v2ray_api": map[string]any{
 				"listen": fmt.Sprintf("127.0.0.1:%d", b.APIPort),
 				"stats":  map[string]any{"enabled": true, "users": emails},
 			},
-		},
+		}
 	}
-	conf["route"] = buildRoute(cfg.Routing, outboundTags)
+	conf["route"] = buildRoute(cfg.Routing, outboundTags, actions)
 	return json.MarshalIndent(conf, "", "  ")
 }
 
-// buildOutbounds renders egress handlers plus the balancer outbound-groups
-// (sing-box has no routing balancer; the analog is a urltest/selector group).
-// It always guarantees a "direct" and "block" outbound exist so route targets
-// and the implicit final route resolve. It returns the rendered outbounds and
-// the set of all outbound/group tags, used to expand balancer selector prefixes
-// and to choose the route's final outbound.
-func buildOutbounds(outs []domain.Outbound, balancers []domain.Balancer) ([]map[string]any, []string, error) {
+// buildOutbounds renders egress handlers plus balancer outbound-groups. sing-box
+// >= 1.12 removed the legacy `block` and `dns` outbounds, so blackhole/dns
+// targets are not emitted as outbounds; instead the returned `actions` map tells
+// buildRoute to translate any rule pointing at them into a modern rule action
+// (`reject` / `hijack-dns`). A `direct` outbound is always guaranteed so route
+// targets and the implicit final route resolve.
+func buildOutbounds(outs []domain.Outbound, balancers []domain.Balancer) ([]map[string]any, []string, map[string]string, error) {
 	var result []map[string]any
 	var tags []string
 	seen := map[string]bool{}
+	// Route targets that map to a modern rule action instead of an outbound.
+	actions := map[string]string{"block": "reject", "blocked": "reject"}
 	add := func(m map[string]any, tag string) {
 		result = append(result, m)
 		tags = append(tags, tag)
@@ -92,22 +98,27 @@ func buildOutbounds(outs []domain.Outbound, balancers []domain.Balancer) ([]map[
 			continue
 		}
 		if err := o.Validate(); err != nil {
-			return nil, nil, fmt.Errorf("outbound %q: %w", o.Tag, err)
+			return nil, nil, nil, fmt.Errorf("outbound %q: %w", o.Tag, err)
+		}
+		// Legacy special outbounds no longer exist in sing-box -> rule actions.
+		switch o.Protocol {
+		case domain.OutBlackhole:
+			actions[o.Tag] = "reject"
+			continue
+		case domain.OutDNS:
+			actions[o.Tag] = "hijack-dns"
+			continue
 		}
 		built, err := buildOutbound(o)
 		if err != nil {
-			return nil, nil, fmt.Errorf("outbound %q: %w", o.Tag, err)
+			return nil, nil, nil, fmt.Errorf("outbound %q: %w", o.Tag, err)
 		}
 		add(built, o.Tag)
 	}
 	if !seen["direct"] {
 		add(map[string]any{"type": "direct", "tag": "direct"}, "direct")
 	}
-	if !seen["block"] {
-		add(map[string]any{"type": "block", "tag": "block"}, "block")
-	}
-	// Balancer groups reference concrete member tags, so build them after the
-	// plain outbounds. Members are the outbounds whose tag has a selector prefix.
+	// Balancer groups reference concrete member tags, so build them last.
 	memberTags := append([]string(nil), tags...)
 	for i := range balancers {
 		bl := balancers[i]
@@ -115,15 +126,15 @@ func buildOutbounds(outs []domain.Outbound, balancers []domain.Balancer) ([]map[
 			continue
 		}
 		if err := bl.Validate(); err != nil {
-			return nil, nil, fmt.Errorf("balancer %q: %w", bl.Tag, err)
+			return nil, nil, nil, fmt.Errorf("balancer %q: %w", bl.Tag, err)
 		}
 		members := matchByPrefix(memberTags, bl.Selectors)
 		if len(members) == 0 {
-			return nil, nil, fmt.Errorf("balancer %q: no outbound matches its selectors", bl.Tag)
+			return nil, nil, nil, fmt.Errorf("balancer %q: no outbound matches its selectors", bl.Tag)
 		}
 		add(buildBalancerGroup(bl, members), bl.Tag)
 	}
-	return result, tags, nil
+	return result, tags, actions, nil
 }
 
 // matchByPrefix returns every tag that starts with one of the given prefixes,
@@ -267,12 +278,12 @@ func outboundTransport(o domain.Outbound) map[string]any {
 	}
 }
 
-// buildRoute renders the sing-box route block from neutral routing rules. Rules
-// are emitted in ascending priority; "final" points at "direct" so unmatched
-// traffic egresses directly (the deterministic default, independent of outbound
-// order). A route block is always emitted — even with no rules — so the default
-// egress never falls back to whichever outbound happens to be first.
-func buildRoute(rules []domain.RoutingRule, tags []string) map[string]any {
+// buildRoute renders the sing-box route block. Rules are emitted in ascending
+// priority. A target listed in `actions` (a legacy block/dns outbound) becomes a
+// modern rule action (reject/hijack-dns); every other target is a normal route
+// to that outbound. `final` points at `direct` so unmatched traffic egresses
+// directly regardless of outbound order.
+func buildRoute(rules []domain.RoutingRule, tags []string, actions map[string]string) map[string]any {
 	ordered := append([]domain.RoutingRule(nil), rules...)
 	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].Priority < ordered[j].Priority })
 
@@ -298,13 +309,18 @@ func buildRoute(rules []domain.RoutingRule, tags []string) map[string]any {
 			rule["network"] = n
 		}
 		applyPort(rule, r.Port)
-		// In sing-box the balancer group is itself an outbound, so both targets
-		// collapse to a single "outbound" field.
 		target := r.OutboundTag
 		if target == "" {
 			target = r.BalancerTag
 		}
-		rule["outbound"] = target
+		switch {
+		case actions[target] != "":
+			rule["action"] = actions[target]
+		case target != "":
+			rule["outbound"] = target
+		default:
+			continue // no target -> skip rather than emit an invalid rule
+		}
 		routeRules = append(routeRules, rule)
 	}
 	final := "direct"

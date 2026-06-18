@@ -22,6 +22,7 @@ type Options struct {
 	BinPath       string
 	ConfigPath    string
 	APIPort       int
+	OmitV2RayAPI  bool
 	StatsInterval time.Duration
 	StatsDialer   func(addr string) (statsClient, error) // injected for tests
 	Logger        *slog.Logger
@@ -73,7 +74,7 @@ func New(opts Options) *Driver {
 	opts.withDefaults()
 	return &Driver{
 		opts:     opts,
-		builder:  Builder{APIPort: opts.APIPort},
+		builder:  Builder{APIPort: opts.APIPort, OmitV2RayAPI: opts.OmitV2RayAPI},
 		run:      newFileRunner(opts.BinPath, opts.ConfigPath, opts.Logger),
 		log:      opts.Logger,
 		inbounds: map[string]domain.Inbound{},
