@@ -151,6 +151,9 @@ func (d *Driver) applyLocked(ctx context.Context) error {
 }
 
 func (d *Driver) connectStats() error {
+	if d.opts.OmitV2RayAPI {
+		return nil // v2ray_api disabled: there is no stats endpoint to connect to
+	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if d.stats != nil {
@@ -181,7 +184,19 @@ func (d *Driver) Stop(_ context.Context) error {
 func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta, error) {
 	d.mu.Lock()
 	sc := d.stats
+	omit := d.opts.OmitV2RayAPI
 	d.mu.Unlock()
+	if omit {
+		// Stats disabled (binary without with_v2ray_api, or VORTEX_SINGBOX_V2RAY_API=false).
+		// Return an idle stream that ends only on ctx cancel so the hub's traffic
+		// loop blocks quietly instead of reconnecting on a refused stats endpoint.
+		out := make(chan domain.TrafficDelta)
+		go func() {
+			<-ctx.Done()
+			close(out)
+		}()
+		return out, nil
+	}
 	if sc == nil {
 		return nil, fmt.Errorf("singbox stats not connected")
 	}
