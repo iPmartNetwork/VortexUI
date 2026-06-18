@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { Button, Card, Input, PageHeader, Badge, Select } from "@/components/ui";
 import { useToast } from "@/components/toast";
+import { useI18n } from "@/i18n/i18n";
 
 interface ProbingPolicy {
   enabled: boolean;
@@ -32,6 +33,7 @@ interface BlockedIP {
 }
 
 export function ProbingProtection() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState<ProbingPolicy | null>(null);
@@ -67,7 +69,7 @@ export function ProbingProtection() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="Probing Protection" subtitle="Detect and block active probing attempts" />
+      <PageHeader title={t("probing.title")} subtitle={t("probing.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
         <p className="font-medium text-fg text-sm">What is Active Probing?</p>
@@ -82,7 +84,7 @@ export function ProbingProtection() {
       {policy && (
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-fg">Protection Policy</h3>
+            <h3 className="text-sm font-bold text-fg">{t("probing.policy")}</h3>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={policy.enabled} onChange={(e) => update("enabled", e.target.checked)} className="rounded" />
               Enabled
@@ -90,7 +92,7 @@ export function ProbingProtection() {
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <div>
-              <label className="text-xs text-fg-subtle">Action</label>
+              <label className="text-xs text-fg-subtle">{t("probing.action")}</label>
               <Select value={policy.action} onChange={(e) => update("action", e.target.value)}>
                 <option value="block">Block</option>
                 <option value="honeypot">Honeypot</option>
@@ -98,16 +100,16 @@ export function ProbingProtection() {
               </Select>
             </div>
             <div>
-              <label className="text-xs text-fg-subtle">Block duration (s)</label>
+              <label className="text-xs text-fg-subtle">{t("probing.blockDuration")}</label>
               <Input value={policy.block_duration} onChange={(e) => update("block_duration", Number(e.target.value))} inputMode="numeric" />
             </div>
             <div>
-              <label className="text-xs text-fg-subtle">Max probes/min</label>
+              <label className="text-xs text-fg-subtle">{t("probing.maxProbes")}</label>
               <Input value={policy.max_probe_per_min} onChange={(e) => update("max_probe_per_min", Number(e.target.value))} inputMode="numeric" />
             </div>
           </div>
           <div>
-            <label className="text-xs text-fg-subtle">Whitelisted IPs (one per line)</label>
+            <label className="text-xs text-fg-subtle">{t("probing.whitelist")}</label>
             <textarea
               className="field min-h-[60px] resize-y font-mono text-xs"
               value={policy.whitelisted_ips?.join("\n") ?? ""}
@@ -116,7 +118,7 @@ export function ProbingProtection() {
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={policy.notify_telegram} onChange={(e) => update("notify_telegram", e.target.checked)} className="rounded" />
-            Notify via Telegram
+            {t("probing.notifyTg")}
           </label>
           <div className="flex justify-end">
             <Button onClick={() => policy && save.mutate(policy)} disabled={save.isPending}>Save</Button>
@@ -126,7 +128,7 @@ export function ProbingProtection() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <h3 className="text-sm font-bold text-fg mb-3">Blocked IPs ({blockedData?.blocked_ips?.length ?? 0})</h3>
+          <h3 className="text-sm font-bold text-fg mb-3">{t("probing.blockedIPs")} ({blockedData?.blocked_ips?.length ?? 0})</h3>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {blockedData?.blocked_ips?.map((b) => (
               <div key={b.ip} className="flex items-center justify-between rounded-lg bg-surface-2/40 px-3 py-2">
@@ -138,13 +140,13 @@ export function ProbingProtection() {
               </div>
             ))}
             {(!blockedData?.blocked_ips || blockedData.blocked_ips.length === 0) && (
-              <p className="text-xs text-fg-muted text-center py-4">No blocked IPs.</p>
+              <p className="text-xs text-fg-muted text-center py-4">{t("probing.noBlocked")}</p>
             )}
           </div>
         </Card>
 
         <Card>
-          <h3 className="text-sm font-bold text-fg mb-3">Recent Probes</h3>
+          <h3 className="text-sm font-bold text-fg mb-3">{t("probing.recentProbes")}</h3>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {eventsData?.events?.slice(0, 20).map((e) => (
               <div key={e.id} className="flex items-center justify-between rounded-lg bg-surface-2/40 px-3 py-2 text-xs">
@@ -156,7 +158,7 @@ export function ProbingProtection() {
               </div>
             ))}
             {(!eventsData?.events || eventsData.events.length === 0) && (
-              <p className="text-xs text-fg-muted text-center py-4">No probes detected.</p>
+              <p className="text-xs text-fg-muted text-center py-4">{t("probing.noProbes")}</p>
             )}
           </div>
         </Card>

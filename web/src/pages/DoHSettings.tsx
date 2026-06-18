@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { Button, Card, Input, PageHeader, Badge } from "@/components/ui";
 import { useToast } from "@/components/toast";
+import { useI18n } from "@/i18n/i18n";
 
 interface DoHConfig {
   enabled: boolean;
@@ -32,6 +33,7 @@ interface QueryLog {
 }
 
 export function DoHSettings() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState<DoHConfig | null>(null);
@@ -63,7 +65,7 @@ export function DoHSettings() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="DNS-over-HTTPS" subtitle="Built-in DoH/DoT server for user privacy" />
+      <PageHeader title={t("doh.title")} subtitle={t("doh.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
         <p className="font-medium text-fg text-sm">Built-in DNS Privacy Server</p>
@@ -79,19 +81,19 @@ export function DoHSettings() {
       {stats && (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Card className="space-y-1">
-            <div className="text-xs text-fg-subtle">Total Queries</div>
+            <div className="text-xs text-fg-subtle">{t("doh.totalQueries")}</div>
             <div className="text-lg font-bold text-fg">{stats.total_queries.toLocaleString()}</div>
           </Card>
           <Card className="space-y-1">
-            <div className="text-xs text-fg-subtle">Blocked</div>
+            <div className="text-xs text-fg-subtle">{t("doh.blocked")}</div>
             <div className="text-lg font-bold text-danger">{stats.blocked_count.toLocaleString()}</div>
           </Card>
           <Card className="space-y-1">
-            <div className="text-xs text-fg-subtle">Cache Hits</div>
+            <div className="text-xs text-fg-subtle">{t("doh.cacheHits")}</div>
             <div className="text-lg font-bold text-success">{stats.cache_hits.toLocaleString()}</div>
           </Card>
           <Card className="space-y-1">
-            <div className="text-xs text-fg-subtle">Avg Latency</div>
+            <div className="text-xs text-fg-subtle">{t("doh.avgLatency")}</div>
             <div className="text-lg font-bold text-fg">{stats.avg_latency_ms}ms</div>
           </Card>
         </div>
@@ -100,7 +102,7 @@ export function DoHSettings() {
       {config && (
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-fg">DoH Configuration</h3>
+            <h3 className="text-sm font-bold text-fg">{t("doh.config")}</h3>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={config.enabled} onChange={(e) => update("enabled", e.target.checked)} className="rounded" />
               Enabled
@@ -108,7 +110,7 @@ export function DoHSettings() {
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <div>
-              <label className="text-xs text-fg-subtle">Listen address</label>
+              <label className="text-xs text-fg-subtle">{t("doh.listenAddr")}</label>
               <Input value={config.listen_addr} onChange={(e) => update("listen_addr", e.target.value)} placeholder=":8053" />
             </div>
             <div>
@@ -137,7 +139,7 @@ export function DoHSettings() {
 
       {logsData?.logs && logsData.logs.length > 0 && (
         <Card>
-          <h3 className="text-sm font-bold text-fg mb-3">Recent Queries</h3>
+          <h3 className="text-sm font-bold text-fg mb-3">{t("doh.recentQueries")}</h3>
           <div className="overflow-x-auto max-h-[300px]">
             <table className="w-full text-xs">
               <thead>

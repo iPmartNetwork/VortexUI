@@ -5,12 +5,14 @@ import { Button, Card, Input, PageHeader, Badge, Select } from "@/components/ui"
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
+import { useI18n } from "@/i18n/i18n";
 
 interface SNIDomain { id: string; inbound_id: string; domain: string; auto_cert: boolean; cert_status: string; expires_at: string | null; }
 interface SSLCert { id: string; domain: string; wildcard: boolean; issuer: string; status: string; auto_renew: boolean; expires_at: string | null; }
 export interface SNIRoute { id: string; inbound_id: string; sni: string; action: string; target_tag: string; priority: number; enabled: boolean; }
 
 export function SNIManager() {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
@@ -26,7 +28,7 @@ export function SNIManager() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="SNI Routing & SSL" subtitle="Multi-domain management with automatic certificate provisioning" />
+      <PageHeader title={t("sni.title")} subtitle={t("sni.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
         <p className="font-medium text-fg text-sm">Multi-Domain SNI Management</p>
@@ -40,8 +42,8 @@ export function SNIManager() {
       {/* Domains */}
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-fg">Domains</h3>
-          <Button size="sm" onClick={() => setAddDomainOpen(true)}>Add Domain</Button>
+          <h3 className="text-sm font-bold text-fg">{t("sni.domains")}</h3>
+          <Button size="sm" onClick={() => setAddDomainOpen(true)}>{t("sni.addDomain")}</Button>
         </div>
         <AddDomainModal open={addDomainOpen} onClose={() => setAddDomainOpen(false)} />
         <div className="space-y-2">
@@ -55,15 +57,15 @@ export function SNIManager() {
               <Button variant="ghost" size="sm" className="text-destructive" onClick={async () => { if (await confirm({ title: "Delete domain?", destructive: true })) { delDomain.mutate(d.id); } }}>Delete</Button>
             </div>
           ))}
-          {(!domainsData?.domains || domainsData.domains.length === 0) && <p className="text-xs text-fg-muted text-center py-4">No domains configured.</p>}
+          {(!domainsData?.domains || domainsData.domains.length === 0) && <p className="text-xs text-fg-muted text-center py-4">{t("sni.noDomains")}</p>}
         </div>
       </Card>
 
       {/* Certificates */}
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-fg">SSL Certificates</h3>
-          <Button size="sm" onClick={() => setAddCertOpen(true)}>Issue Certificate</Button>
+          <h3 className="text-sm font-bold text-fg">{t("sni.certificates")}</h3>
+          <Button size="sm" onClick={() => setAddCertOpen(true)}>{t("sni.issueCert")}</Button>
         </div>
         <AddCertModal open={addCertOpen} onClose={() => setAddCertOpen(false)} />
         <div className="space-y-2">
@@ -81,7 +83,7 @@ export function SNIManager() {
               </div>
             </div>
           ))}
-          {(!certsData?.certificates || certsData.certificates.length === 0) && <p className="text-xs text-fg-muted text-center py-4">No certificates.</p>}
+          {(!certsData?.certificates || certsData.certificates.length === 0) && <p className="text-xs text-fg-muted text-center py-4">{t("sni.noCerts")}</p>}
         </div>
       </Card>
     </div>

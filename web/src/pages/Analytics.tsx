@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { Button, Card, PageHeader, Select } from "@/components/ui";
 import { formatBytes } from "@/lib/utils";
+import { useI18n } from "@/i18n/i18n";
 
 interface GeoPoint {
   country: string;
@@ -32,6 +33,7 @@ interface AnalyticsData {
 }
 
 export function Analytics() {
+  const { t } = useI18n();
   const [range, setRange] = useState("7d");
   const rangeMap: Record<string, number> = { "1d": 1, "7d": 7, "30d": 30 };
 
@@ -46,7 +48,7 @@ export function Analytics() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <PageHeader title="Analytics" subtitle="Traffic insights and geo breakdown" />
+        <PageHeader title={t("analytics.title")} subtitle={t("analytics.subtitle")} />
         <div className="flex gap-2">
           <Select value={range} onChange={(e) => setRange(e.target.value)}>
             <option value="1d">Last 24h</option>
@@ -54,36 +56,36 @@ export function Analytics() {
             <option value="30d">Last 30 days</option>
           </Select>
           <Button variant="outline" onClick={() => window.open(`/api/analytics/export?from=${from}&to=${to}`, "_blank")}>
-            Export CSV
+            {t("analytics.export")}
           </Button>
         </div>
       </div>
 
-      {isLoading && <div className="text-center text-fg-muted py-8">Loading analytics...</div>}
-      {isError && <div className="text-center text-fg-muted py-8">Unable to load analytics data. Make sure the analytics feature is configured.</div>}
-      {!isLoading && !isError && !data && <div className="text-center text-fg-muted py-8">No analytics data available for this time range.</div>}
+      {isLoading && <div className="text-center text-fg-muted py-8">{t("common.loading")}</div>}
+      {isError && <div className="text-center text-fg-muted py-8">{t("analytics.error")}</div>}
+      {!isLoading && !isError && !data && <div className="text-center text-fg-muted py-8">{t("analytics.noData")}</div>}
 
       {data && (
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card className="space-y-2">
-              <div className="text-xs text-fg-subtle uppercase">Total Upload</div>
+              <div className="text-xs text-fg-subtle uppercase">{t("analytics.totalUp")}</div>
               <div className="text-lg font-bold text-fg">{formatBytes(data.total_up, false)}</div>
             </Card>
             <Card className="space-y-2">
-              <div className="text-xs text-fg-subtle uppercase">Total Download</div>
+              <div className="text-xs text-fg-subtle uppercase">{t("analytics.totalDown")}</div>
               <div className="text-lg font-bold text-fg">{formatBytes(data.total_down, false)}</div>
             </Card>
             <Card className="space-y-2">
-              <div className="text-xs text-fg-subtle uppercase">Countries</div>
+              <div className="text-xs text-fg-subtle uppercase">{t("analytics.countries")}</div>
               <div className="text-lg font-bold text-fg">{data.geo_breakdown?.length ?? 0}</div>
             </Card>
           </div>
 
           {/* Geo breakdown table */}
           <Card>
-            <h3 className="text-sm font-bold text-fg mb-3">Traffic by Country</h3>
+            <h3 className="text-sm font-bold text-fg mb-3">{t("analytics.byCountry")}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -110,7 +112,7 @@ export function Analytics() {
 
           {/* Top users */}
           <Card>
-            <h3 className="text-sm font-bold text-fg mb-3">Top Users by Traffic</h3>
+            <h3 className="text-sm font-bold text-fg mb-3">{t("analytics.topUsers")}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -135,7 +137,7 @@ export function Analytics() {
 
           {/* Peak hours */}
           <Card>
-            <h3 className="text-sm font-bold text-fg mb-3">Peak Hours</h3>
+            <h3 className="text-sm font-bold text-fg mb-3">{t("analytics.peakHours")}</h3>
             <div className="flex items-end gap-1 h-32">
               {data.peak_hours?.map((p) => {
                 const maxBytes = Math.max(...(data.peak_hours?.map(h => h.bytes_total) ?? [1]));

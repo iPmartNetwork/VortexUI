@@ -4,12 +4,14 @@ import { api } from "@/api/client";
 import { Button, Card, Input, PageHeader, Badge } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
+import { useI18n } from "@/i18n/i18n";
 
 interface FedConfig { enabled: boolean; cluster_name: string; sso_enabled: boolean; sync_interval: number; }
 interface Peer { id: string; name: string; endpoint: string; status: string; sync_users: boolean; sync_nodes: boolean; last_sync: string | null; }
 interface SyncEvent { id: string; peer_name: string; direction: string; entity_type: string; count: number; status: string; created_at: string; }
 
 export function Federation() {
+  const { t } = useI18n();
   const qc = useQueryClient(); const toast = useToast();
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState<FedConfig | null>(null);
@@ -26,7 +28,7 @@ export function Federation() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="Panel Federation" subtitle="Connect multiple VortexUI panels together" />
+      <PageHeader title={t("federation.title")} subtitle={t("federation.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
         <p className="font-medium text-fg text-sm">Multi-Panel Federation</p>
@@ -50,7 +52,7 @@ export function Federation() {
       )}
 
       <Card>
-        <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold text-fg">Peers</h3><Button size="sm" onClick={() => setAddOpen(true)}>Add Peer</Button></div>
+        <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold text-fg">{t("federation.peers")}</h3><Button size="sm" onClick={() => setAddOpen(true)}>{t("federation.addPeer")}</Button></div>
         <AddPeerModal open={addOpen} onClose={() => setAddOpen(false)} />
         <div className="space-y-2">
           {peersData?.peers?.map(p => (
@@ -63,12 +65,12 @@ export function Federation() {
               <Button variant="ghost" size="sm" className="text-destructive" onClick={() => delPeer.mutate(p.id)}>Remove</Button>
             </div>
           ))}
-          {(!peersData?.peers || peersData.peers.length === 0) && <p className="text-xs text-fg-muted text-center py-4">No peers connected.</p>}
+          {(!peersData?.peers || peersData.peers.length === 0) && <p className="text-xs text-fg-muted text-center py-4">{t("federation.noPeers")}</p>}
         </div>
       </Card>
 
       <Card>
-        <h3 className="text-sm font-bold text-fg mb-3">Sync Events</h3>
+        <h3 className="text-sm font-bold text-fg mb-3">{t("federation.syncEvents")}</h3>
         <div className="space-y-2 max-h-[200px] overflow-y-auto">
           {eventsData?.events?.map(e => (
             <div key={e.id} className="flex items-center justify-between text-xs rounded-lg bg-surface-2/40 px-3 py-2">

@@ -4,12 +4,14 @@ import { api } from "@/api/client";
 import { Button, Card, Input, PageHeader, Badge, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
+import { useI18n } from "@/i18n/i18n";
 
 interface FPPolicy { enabled: boolean; default_action: string; log_unknown: boolean; }
 interface FPRule { id: string; name: string; fingerprint: string; ja3_hash: string; action: string; priority: number; enabled: boolean; }
 interface FPEvent { id: string; client_ip: string; fingerprint: string; user_agent: string; action: string; created_at: string; }
 
 export function Fingerprint() {
+  const { t } = useI18n();
   const qc = useQueryClient(); const toast = useToast();
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState<FPPolicy | null>(null);
@@ -26,7 +28,7 @@ export function Fingerprint() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="Client Fingerprint" subtitle="Validate TLS client fingerprints to block suspicious connections" />
+      <PageHeader title={t("fingerprint.title")} subtitle={t("fingerprint.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
         <p className="font-medium text-fg text-sm">TLS Client Fingerprinting</p>
@@ -41,7 +43,7 @@ export function Fingerprint() {
       {policy && (
         <Card className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-fg">Policy</h3>
+            <h3 className="text-sm font-bold text-fg">{t("fingerprint.policy")}</h3>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={policy.enabled} onChange={e => update("enabled", e.target.checked)} className="rounded" /> Enabled</label>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -52,7 +54,7 @@ export function Fingerprint() {
         </Card>
       )}
       <Card>
-        <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold text-fg">Rules</h3><Button size="sm" onClick={() => setAddOpen(true)}>Add Rule</Button></div>
+        <div className="flex items-center justify-between mb-3"><h3 className="text-sm font-bold text-fg">{t("fingerprint.rules")}</h3><Button size="sm" onClick={() => setAddOpen(true)}>{t("fingerprint.addRule")}</Button></div>
         <AddRuleModal open={addOpen} onClose={() => setAddOpen(false)} />
         <div className="space-y-2">
           {rulesData?.rules?.map(r => (
@@ -61,11 +63,11 @@ export function Fingerprint() {
               <Button variant="ghost" size="sm" className="text-destructive" onClick={() => delRule.mutate(r.id)}>Del</Button>
             </div>
           ))}
-          {(!rulesData?.rules || rulesData.rules.length === 0) && <p className="text-xs text-fg-muted text-center py-4">No rules.</p>}
+          {(!rulesData?.rules || rulesData.rules.length === 0) && <p className="text-xs text-fg-muted text-center py-4">{t("fingerprint.noRules")}</p>}
         </div>
       </Card>
       <Card>
-        <h3 className="text-sm font-bold text-fg mb-3">Recent Events</h3>
+        <h3 className="text-sm font-bold text-fg mb-3">{t("fingerprint.recentEvents")}</h3>
         <div className="space-y-2 max-h-[250px] overflow-y-auto">
           {eventsData?.events?.slice(0, 20).map(e => (
             <div key={e.id} className="flex items-center justify-between rounded-lg bg-surface-2/40 px-3 py-2 text-xs">

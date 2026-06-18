@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, Globe, Users, Wifi } from "lucide-react";
 import { api } from "@/api/client";
 import { Card, PageHeader } from "@/components/ui";
+import { useI18n } from "@/i18n/i18n";
 
 interface LiveConnection {
   user_id: string;
@@ -21,6 +22,7 @@ function useLiveConnections() {
 }
 
 export function Monitor() {
+  const { t } = useI18n();
   const { data, isLoading, isError } = useLiveConnections();
   const connections = data?.connections ?? [];
   const total = data?.total ?? 0;
@@ -28,22 +30,22 @@ export function Monitor() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <PageHeader title="Live Monitor" />
+        <PageHeader title={t("monitor.title")} />
         <div className="flex items-center gap-2 rounded-full bg-success/10 px-3 py-1.5 text-xs font-medium text-success">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60" />
             <span className="inline-flex h-2 w-2 rounded-full bg-success" />
           </span>
-          {total} live connections
+          {total} {t("monitor.connections")}
         </div>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard icon={<Users size={16} />} label="Users Online" value={new Set(connections.map(c => c.user_id)).size} />
-        <StatCard icon={<Wifi size={16} />} label="Connections" value={total} />
-        <StatCard icon={<Globe size={16} />} label="Unique IPs" value={new Set(connections.map(c => c.ip)).size} />
-        <StatCard icon={<Activity size={16} />} label="Nodes Active" value={new Set(connections.map(c => c.node_name)).size} />
+        <StatCard icon={<Users size={16} />} label={t("monitor.usersOnline")} value={new Set(connections.map(c => c.user_id)).size} />
+        <StatCard icon={<Wifi size={16} />} label={t("monitor.connections")} value={total} />
+        <StatCard icon={<Globe size={16} />} label={t("monitor.uniqueIPs")} value={new Set(connections.map(c => c.ip)).size} />
+        <StatCard icon={<Activity size={16} />} label={t("monitor.nodesActive")} value={new Set(connections.map(c => c.node_name)).size} />
       </div>
 
       {/* Connection table */}
@@ -69,8 +71,8 @@ export function Monitor() {
               </tr>
             ))}
             {isLoading && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">Loading...</td></tr>}
-            {isError && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">Unable to connect to monitor API</td></tr>}
-            {!isLoading && !isError && connections.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">No active connections</td></tr>}
+            {isError && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">{t("monitor.apiError")}</td></tr>}
+            {!isLoading && !isError && connections.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">{t("monitor.noActive")}</td></tr>}
           </tbody>
         </table>
       </Card>
