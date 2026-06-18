@@ -71,6 +71,9 @@ func (s *Store) Audit() *AuditRepo { return &AuditRepo{q: s.q} }
 // Migration returns the migration-event repository.
 func (s *Store) Migration() *MigrationRepo { return &MigrationRepo{pool: s.pool} }
 
+// Monitor returns the live-monitor repository (traffic-derived online users).
+func (s *Store) Monitor() *MonitorRepo { return &MonitorRepo{pool: s.pool} }
+
 // Tickets returns the ticket repository.
 func (s *Store) Tickets() *TicketRepo { return &TicketRepo{pool: s.pool} }
 
