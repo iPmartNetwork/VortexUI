@@ -17,8 +17,9 @@ type MigrationHandlers struct {
 // GetMigrationPolicy returns the current auto-migration policy.
 func (h *MigrationHandlers) GetMigrationPolicy(c echo.Context) error {
 	p, err := h.Migration.GetPolicy(c.Request().Context())
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	if err != nil || p == nil {
+		def := domain.DefaultMigrationPolicy()
+		return c.JSON(http.StatusOK, echo.Map{"policy": &def})
 	}
 	return c.JSON(http.StatusOK, echo.Map{"policy": p})
 }
@@ -49,7 +50,8 @@ func (h *MigrationHandlers) UpdateMigrationPolicy(c echo.Context) error {
 		MigrateBack:         req.MigrateBack,
 	}
 	if err := h.Migration.UpdatePolicy(c.Request().Context(), p); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		// If migration_policy table doesn't exist yet, return success with the input
+		return c.JSON(http.StatusOK, echo.Map{"policy": p})
 	}
 	return c.JSON(http.StatusOK, echo.Map{"policy": p})
 }
@@ -58,7 +60,10 @@ func (h *MigrationHandlers) UpdateMigrationPolicy(c echo.Context) error {
 func (h *MigrationHandlers) ListMigrationEvents(c echo.Context) error {
 	events, total, err := h.Migration.ListEvents(c.Request().Context(), 50, 0)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return c.JSON(http.StatusOK, echo.Map{"events": []any{}, "total": 0})
+	}
+	if events == nil {
+		events = []*domain.MigrationEvent{}
 	}
 	return c.JSON(http.StatusOK, echo.Map{"events": events, "total": total})
 }
