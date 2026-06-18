@@ -70,8 +70,8 @@ func (r *AnalyticsRepo) PeakHours(ctx context.Context, q port.SeriesQuery) ([]do
 	to := time.Unix(q.ToUnix, 0)
 	rows, err := r.pool.Query(ctx,
 		`SELECT EXTRACT(HOUR FROM time)::int AS hour,
-		        COUNT(*)::int AS connections,
-		        COALESCE(SUM(up + down), 0) AS bytes_total
+		        COUNT(*)::bigint AS connections,
+		        COALESCE(SUM(up + down), 0)::bigint AS bytes_total
 		 FROM traffic_points
 		 WHERE time >= $1 AND time <= $2
 		 GROUP BY hour
