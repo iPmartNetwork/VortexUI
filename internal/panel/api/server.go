@@ -32,6 +32,7 @@ type Deps struct {
 	Federation *FederationHandlers
 	DeepLink   *DeepLinkHandlers
 	QuotaNotify *QuotaNotifyHandlers
+	SubSettings *SubSettingsHandlers
 	Monitor    *MonitorHandlers
 	Issuer     *auth.Issuer
 	Auth       *service.AuthService
@@ -315,6 +316,11 @@ func NewRouter(d Deps) *echo.Echo {
 	dl.GET("/config", d.DeepLink.GetConfig)
 	dl.PUT("/config", d.DeepLink.UpdateConfig)
 	dl.GET("/generate", d.DeepLink.GenerateLink)
+
+	// --- Subscription auto-update settings ---
+	subset := authed.Group("/sub-settings", RequirePermission(d.Auth, domain.PermAdminManage))
+	subset.GET("", d.SubSettings.GetSubSettings)
+	subset.PUT("", d.SubSettings.UpdateSubSettings)
 
 	// --- Smart Quota Notifications ---
 	qn := authed.Group("/quota-notify", RequirePermission(d.Auth, domain.PermAdminManage))

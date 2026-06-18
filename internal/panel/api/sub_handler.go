@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,6 +17,12 @@ import (
 // deviceWindow is how long a device stays "active" (and occupies a slot) after
 // its last subscription fetch.
 const deviceWindow = 24 * time.Hour
+
+// SubUpdateIntervalSource provides the client subscription auto-update interval
+// in hours. *service.SubSettingsService satisfies it.
+type SubUpdateIntervalSource interface {
+	UpdateInterval(ctx context.Context) int
+}
 
 // Subscribe serves a user's subscription. It is public and authenticated solely
 // by the opaque token in the path, so it must never leak which tokens exist:
@@ -58,7 +65,13 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 	// to label and auto-refresh the profile.
 	c.Response().Header().Set("Subscription-Userinfo", userInfoHeader(res.User))
 	c.Response().Header().Set("Profile-Title", res.User.Username)
-	c.Response().Header().Set("Profile-Update-Interval", "12")
+	interval := 12
+	if h.SubSettings != nil {
+		if n := h.SubSettings.UpdateInterval(c.Request().Context()); n > 0 {
+			interval = n
+		}
+	}
+	c.Response().Header().Set("Profile-Update-Interval", fmt.Sprintf("%d", interval))
 	return c.Blob(http.StatusOK, format.ContentType(), body)
 }
 

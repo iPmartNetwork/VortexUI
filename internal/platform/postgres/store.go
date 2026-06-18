@@ -124,3 +124,6 @@ func (s *Store) DeepLinks() *DeepLinkRepo { return &DeepLinkRepo{pool: s.pool} }
 
 // QuotaNotify returns the quota notification repository.
 func (s *Store) QuotaNotify() *QuotaNotifyRepo { return &QuotaNotifyRepo{pool: s.pool} }
+
+// SubSettings returns the subscription-settings repository.
+func (s *Store) SubSettings() *SubSettingsRepo { return &SubSettingsRepo{pool: s.pool} }

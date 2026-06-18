@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
 import {
   Moon, Sun, Monitor, ShieldCheck, Download, Upload,
-  Palette, Lock, Cpu, Key, Copy, Trash2, Check,
+  Palette, Lock, Cpu, Key, Copy, Trash2, Check, RefreshCw,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { useConfirmTOTP, useDisableTOTP, useSetupTOTP } from "@/api/admin-hooks";
 import { useExportBackup, useRestoreBackup, useAPITokens, useCreateAPIToken, useDeleteAPIToken } from "@/api/policy-hooks";
@@ -119,6 +119,9 @@ export function Settings() {
 
       {/* Subscription Config Template */}
       <ConfigTemplateSection />
+
+      {/* Subscription Auto-Update */}
+      <SubUpdateSection />
 
       {/* IP Guard */}
       <IPGuardSection />
@@ -381,6 +384,58 @@ function ConfigTemplateSection() {
           />
         </div>
         <Button onClick={saveTemplates}>Save templates</Button>
+      </div>
+    </Section>
+  );
+}
+
+// ─── Subscription Auto-Update Section ─────────────────────────────────────────
+function SubUpdateSection() {
+  const { t } = useI18n();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [hours, setHours] = useState("");
+
+  const cfg = useQuery({
+    queryKey: ["sub-settings"],
+    queryFn: () => api<{ config: { update_interval: number } }>("/api/sub-settings"),
+  });
+
+  // Sync local state with the fetched value once it arrives.
+  const fetched = cfg.data?.config.update_interval;
+  if (fetched !== undefined && hours === "") {
+    setHours(String(fetched));
+  }
+
+  const save = useMutation({
+    mutationFn: (interval: number) =>
+      api("/api/sub-settings", { method: "PUT", body: { update_interval: interval } }),
+    onSuccess: () => {
+      toast.success(t("common.save"));
+      qc.invalidateQueries({ queryKey: ["sub-settings"] });
+    },
+    onError: () => toast.error("Save failed"),
+  });
+
+  return (
+    <Section icon={<RefreshCw size={16} />} title={t("settings.subUpdate")} description={t("settings.subUpdateDesc")}>
+      <div className="space-y-3">
+        <div>
+          <p className="mb-1 text-xs font-medium text-fg-muted">{t("settings.subUpdateHours")}</p>
+          <Input
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            inputMode="numeric"
+            className="w-32"
+            placeholder="12"
+          />
+        </div>
+        <Button
+          onClick={() => save.mutate(Number(hours) || 12)}
+          disabled={save.isPending || cfg.isLoading}
+        >
+          {t("common.save")}
+        </Button>
       </div>
     </Section>
   );

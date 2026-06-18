@@ -539,3 +539,12 @@ CREATE TABLE quota_notify_events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_quota_notify_time ON quota_notify_events (created_at DESC);
+
+-- v1.2.0: Subscription Auto-Update Settings (singleton)
+CREATE TABLE sub_settings (
+    id              INTEGER PRIMARY KEY DEFAULT 1,
+    update_interval INTEGER NOT NULL DEFAULT 12,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT sub_settings_singleton CHECK (id = 1)
+);
+INSERT INTO sub_settings (id, update_interval) VALUES (1, 12) ON CONFLICT (id) DO NOTHING;
