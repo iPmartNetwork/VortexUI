@@ -24,27 +24,34 @@ type UserTraffic struct {
 	Down  int64
 }
 
-// grpcStats talks to sing-box's V2Ray API. That API implements the same stats
-// gRPC service as Xray, so we reuse Xray's generated client and stat-name
-// convention ("user>>>EMAIL>>>traffic>>>uplink|downlink").
+// grpcStats talks to sing-box's V2Ray API. sing-box implements the V2Ray
+// stats service (`v2ray.core.app.stats.command.StatsService`), NOT Xray's
+// (`xray.app.stats.command.StatsService`). The request/response messages are
+// wire-identical (Xray forked the proto from V2Ray), so we reuse Xray's
+// generated message types but invoke the RPC against the V2Ray service path.
 type grpcStats struct {
-	conn  *grpc.ClientConn
-	stats scmd.StatsServiceClient
+	conn *grpc.ClientConn
 }
+
+// v2rayStatsQueryStats is the full gRPC method path that sing-box's V2Ray API
+// exposes. Using Xray's generated client would target the wrong service name
+// and fail with "unknown service xray.app.stats.command.StatsService".
+const v2rayStatsQueryStats = "/v2ray.core.app.stats.command.StatsService/QueryStats"
 
 func dialStats(addr string) (statsClient, error) {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
-	return &grpcStats{conn: conn, stats: scmd.NewStatsServiceClient(conn)}, nil
+	return &grpcStats{conn: conn}, nil
 }
 
 func (g *grpcStats) Close() error { return g.conn.Close() }
 
 func (g *grpcStats) QueryTraffic(ctx context.Context, reset bool) ([]UserTraffic, error) {
-	resp, err := g.stats.QueryStats(ctx, &scmd.QueryStatsRequest{Pattern: "user>>>", Reset_: reset})
-	if err != nil {
+	req := &scmd.QueryStatsRequest{Pattern: "user>>>", Reset_: reset}
+	resp := &scmd.QueryStatsResponse{}
+	if err := g.conn.Invoke(ctx, v2rayStatsQueryStats, req, resp); err != nil {
 		return nil, err
 	}
 	byEmail := map[string]*UserTraffic{}
