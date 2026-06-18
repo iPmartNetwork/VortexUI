@@ -162,6 +162,19 @@ func (h *PortalHandlers) AdminListTickets(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"tickets": tickets, "total": total})
 }
 
+// AdminGetTicket returns a single ticket with messages (admin view).
+func (h *PortalHandlers) AdminGetTicket(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	ticket, err := h.Portal.AdminGetTicket(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"ticket": ticket})
+}
+
 type adminReplyRequest struct {
 	Body string `json:"body"`
 }
