@@ -183,7 +183,6 @@ func (d *Driver) Stop(_ context.Context) error {
 // mirroring the Xray driver's accounting model.
 func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta, error) {
 	d.mu.Lock()
-	sc := d.stats
 	omit := d.opts.OmitV2RayAPI
 	d.mu.Unlock()
 	if omit {
@@ -197,6 +196,16 @@ func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta,
 		}()
 		return out, nil
 	}
+	// Lazily (idempotently) establish the stats client so the traffic loop does
+	// not churn when it starts before the first config Sync. grpc.NewClient is
+	// lazy; the ticker's QueryTraffic establishes the real connection and
+	// tolerates the core not being up yet by logging and retrying on its interval.
+	if err := d.connectStats(); err != nil {
+		return nil, err
+	}
+	d.mu.Lock()
+	sc := d.stats
+	d.mu.Unlock()
 	if sc == nil {
 		return nil, fmt.Errorf("singbox stats not connected")
 	}
