@@ -25,7 +25,9 @@ type Supervisor struct {
 	mu      sync.Mutex
 	cmd     *exec.Cmd
 	running bool
-	stopped bool // set by Stop; suppresses auto-restart
+	stopped bool          // set by Stop; suppresses auto-restart
+	gen     int           // bumped on every spawn; identifies the current process
+	done    chan struct{} // closed when the current process has been reaped
 
 	logs *lineRing // recent core stdout/stderr lines
 }
@@ -54,11 +56,17 @@ func (s *Supervisor) Start(ctx context.Context) error {
 }
 
 // Restart replaces the running process with a fresh one (used to apply a new
-// config for engines that cannot hot-reload).
+// config for engines that cannot hot-reload). The old process is killed and
+// fully reaped — releasing its listening sockets — before the replacement is
+// spawned, so a port freed by a config change is immediately reusable and the
+// new process never races the old one for the same bind.
 func (s *Supervisor) Restart(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.killLocked()
+	cmd, done := s.cmd, s.done
+	s.cmd = nil
+	s.running = false
+	s.killAndReap(cmd, done)
 	return s.spawnLocked(ctx)
 }
 
@@ -67,7 +75,10 @@ func (s *Supervisor) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.stopped = true
-	s.killLocked()
+	cmd, done := s.cmd, s.done
+	s.cmd = nil
+	s.running = false
+	s.killAndReap(cmd, done)
 }
 
 // Running reports whether the child is currently up.
@@ -75,6 +86,24 @@ func (s *Supervisor) Running() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.running
+}
+
+// killAndReap terminates cmd and waits (bounded) for its waiter goroutine to
+// reap it — which is when the kernel releases the process's listening sockets.
+// Safe to call while holding s.mu: the waiter closes done BEFORE it contends for
+// the lock, so this never deadlocks.
+func (s *Supervisor) killAndReap(cmd *exec.Cmd, done chan struct{}) {
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+	_ = cmd.Process.Kill()
+	if done == nil {
+		return
+	}
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+	}
 }
 
 func (s *Supervisor) spawnLocked(ctx context.Context) error {
@@ -95,30 +124,34 @@ func (s *Supervisor) spawnLocked(ctx context.Context) error {
 	}
 	s.cmd = cmd
 	s.running = true
+	s.gen++
+	gen := s.gen
+	done := make(chan struct{})
+	s.done = done
 	go s.pumpLogs(stdout)
 	go s.pumpLogs(stderr)
-	go s.waitAndMaybeRestart(ctx, cmd)
+	go s.waitAndMaybeRestart(ctx, cmd, gen, done)
 	return nil
 }
 
-func (s *Supervisor) killLocked() {
-	if s.cmd != nil && s.cmd.Process != nil {
-		_ = s.cmd.Process.Kill()
-	}
-	s.running = false
-}
-
-// waitAndMaybeRestart reaps the process and, unless Stop was called, restarts it
-// after a short backoff so a crashing core self-heals.
-func (s *Supervisor) waitAndMaybeRestart(ctx context.Context, cmd *exec.Cmd) {
+// waitAndMaybeRestart reaps the process and, unless it was intentionally
+// replaced (Restart) or stopped (Stop), restarts it after a short backoff so a
+// crashing core self-heals. A process whose generation no longer matches the
+// current one was intentionally replaced and must NOT spawn a duplicate.
+func (s *Supervisor) waitAndMaybeRestart(ctx context.Context, cmd *exec.Cmd, gen int, done chan struct{}) {
 	err := cmd.Wait()
+	close(done) // signal the process is fully reaped (sockets released)
 
 	s.mu.Lock()
-	s.running = false
+	current := gen == s.gen
 	stopped := s.stopped
+	if current {
+		s.running = false
+	}
 	s.mu.Unlock()
 
-	if stopped || ctx.Err() != nil {
+	// Only the current, non-stopped process self-heals; a replaced one exits.
+	if !current || stopped || ctx.Err() != nil {
 		return
 	}
 	s.log.Warn("core exited unexpectedly, restarting", "err", err)
@@ -130,7 +163,7 @@ func (s *Supervisor) waitAndMaybeRestart(ctx context.Context, cmd *exec.Cmd) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.stopped {
+	if s.stopped || gen != s.gen {
 		return
 	}
 	if err := s.spawnLocked(ctx); err != nil {
