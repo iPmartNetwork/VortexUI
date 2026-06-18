@@ -29,6 +29,7 @@ type Handlers struct {
 	Users     *service.UserService
 	Sub       *service.SubscriptionService
 	SubSettings SubUpdateIntervalSource // optional; nil -> hardcoded 12h interval
+	Geo       *service.GeoService // optional; nil disables per-user geo recording
 	Nodes     *service.NodeService
 	Inbounds  *service.InboundService
 	Outbounds *service.OutboundService

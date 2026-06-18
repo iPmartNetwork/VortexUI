@@ -61,6 +61,12 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "render failed")
 	}
 
+	// Best-effort: record the country this user fetched from, enabling the
+	// "Traffic by Country" analytics. A single fast upsert; never blocks.
+	if h.Geo != nil {
+		h.Geo.RecordUserIP(c.Request().Context(), res.User.ID, c.RealIP())
+	}
+
 	// Standard headers consumed by subscription clients to show quota/expiry and
 	// to label and auto-refresh the profile.
 	c.Response().Header().Set("Subscription-Userinfo", userInfoHeader(res.User))

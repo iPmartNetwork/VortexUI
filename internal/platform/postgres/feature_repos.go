@@ -23,21 +23,26 @@ func (r *AnalyticsRepo) GeoBreakdown(ctx context.Context, q port.SeriesQuery) ([
 	from := time.Unix(q.FromUnix, 0)
 	to := time.Unix(q.ToUnix, 0)
 	rows, err := r.pool.Query(ctx,
-		`SELECT time, country, connections, bytes_up, bytes_down
-		 FROM traffic_geo
-		 WHERE time >= $1 AND time <= $2
-		 ORDER BY time`, from, to)
+		`SELECT ug.country,
+		        COUNT(DISTINCT tp.user_id)::bigint AS connections,
+		        COALESCE(SUM(tp.up), 0)::bigint     AS bytes_up,
+		        COALESCE(SUM(tp.down), 0)::bigint   AS bytes_down
+		 FROM traffic_points tp
+		 JOIN user_geo ug ON ug.user_id = tp.user_id
+		 WHERE tp.time >= $1 AND tp.time <= $2 AND ug.country <> ''
+		 GROUP BY ug.country
+		 ORDER BY (SUM(tp.up) + SUM(tp.down)) DESC`, from, to)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
 	var results []domain.GeoTrafficPoint
 	for rows.Next() {
 		var p domain.GeoTrafficPoint
-		if err := rows.Scan(&p.Time, &p.Country, &p.Connections, &p.BytesUp, &p.BytesDown); err != nil {
+		if err := rows.Scan(&p.Country, &p.Connections, &p.BytesUp, &p.BytesDown); err != nil {
 			return nil, err
 		}
+		p.Time = to
 		results = append(results, p)
 	}
 	return results, rows.Err()
@@ -114,6 +119,20 @@ func (r *AnalyticsRepo) TotalTraffic(ctx context.Context, q port.SeriesQuery) (i
 		return 0, 0, nil
 	}
 	return up, down, nil
+}
+
+
+// --- UserGeoRepo ---
+
+type UserGeoRepo struct{ pool *pgxpool.Pool }
+
+func (r *UserGeoRepo) Upsert(ctx context.Context, userID uuid.UUID, country, ip string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO user_geo (user_id, country, ip, updated_at)
+		VALUES ($1, $2, $3, now())
+		ON CONFLICT (user_id) DO UPDATE SET country = EXCLUDED.country, ip = EXCLUDED.ip, updated_at = now()`,
+		userID, country, ip)
+	return err
 }
 
 

@@ -19,6 +19,7 @@ import (
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/events"
+	"github.com/vortexui/vortexui/internal/geoip"
 	"github.com/vortexui/vortexui/internal/logbuf"
 	"github.com/vortexui/vortexui/internal/notify"
 	"github.com/vortexui/vortexui/internal/panel/api"
@@ -254,6 +255,16 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	quotaNotifySvc := service.NewQuotaNotifyService(store.QuotaNotify())
 	subSettingsSvc := service.NewSubSettingsService(store.SubSettings())
 
+	// GeoIP resolver for the "Traffic by Country" analytics. Optional: an empty
+	// or unopenable DB path degrades gracefully to a disabled resolver.
+	geoResolver, gerr := geoip.Open(cfg.GeoIPDB)
+	if gerr != nil {
+		log.Warn("geoip database unavailable; Traffic by Country disabled", "path", cfg.GeoIPDB, "err", gerr)
+		geoResolver = geoip.Disabled()
+	}
+	defer func() { _ = geoResolver.Close() }()
+	geoSvc := service.NewGeoService(geoResolver, store.UserGeo())
+
 	router := api.NewRouter(api.Deps{
 		Handlers: &api.Handlers{
 			Auth: authSvc, Users: userSvc, Sub: subSvc,
@@ -266,6 +277,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Throttle: api.NewLoginThrottle(5, 15*time.Minute),
 			Events:   bus,
 			SubSettings: subSettingsSvc,
+			Geo:         geoSvc,
 		},
 		APITokens:   &api.APITokenHandlers{Svc: tokenSvc},
 		Portal:      &api.PortalHandlers{Portal: portalSvc, Issuer: issuer},
