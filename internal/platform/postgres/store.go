@@ -127,3 +127,6 @@ func (s *Store) QuotaNotify() *QuotaNotifyRepo { return &QuotaNotifyRepo{pool: s
 
 // SubSettings returns the subscription-settings repository.
 func (s *Store) SubSettings() *SubSettingsRepo { return &SubSettingsRepo{pool: s.pool} }
+
+// UserGeo returns the per-user geo (country) repository.
+func (s *Store) UserGeo() *UserGeoRepo { return &UserGeoRepo{pool: s.pool} }

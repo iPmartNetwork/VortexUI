@@ -254,6 +254,16 @@ CREATE TABLE traffic_geo (
     bytes_down BIGINT NOT NULL DEFAULT 0
 );
 
+-- v1.2.0: Per-user geo (country) resolved from subscription-fetch IPs, used to
+-- compute the "Traffic by Country" breakdown by joining with traffic_points.
+CREATE TABLE user_geo (
+    user_id    UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    country    TEXT NOT NULL DEFAULT '',
+    ip         TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_user_geo_country ON user_geo(country);
+
 -- v1.2.0: Node auto-migration
 CREATE TABLE migration_events (
     id           UUID PRIMARY KEY,

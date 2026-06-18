@@ -52,6 +52,11 @@ type Panel struct {
 	// (deprovision) users caught online from more IPs than their device limit.
 	// Default false: detection only emits an alert event.
 	ShareAutoLimit bool
+
+	// GeoIPDB is the path to a MaxMind GeoLite2-Country.mmdb database used to
+	// resolve subscription-fetch IPs to countries for the "Traffic by Country"
+	// analytics. Empty = feature disabled (degrades gracefully).
+	GeoIPDB string
 }
 
 // Node holds node-agent configuration. The agent is a gRPC *server* (the panel
@@ -116,6 +121,7 @@ func LoadPanel() (*Panel, error) {
 		CoreAPIPort:    envInt("VORTEX_CORE_API_PORT", 10085),
 		SingboxV2RayAPI: envBool("VORTEX_SINGBOX_V2RAY_API", true),
 		ShareAutoLimit: envBool("VORTEX_SHARE_AUTOLIMIT", false),
+		GeoIPDB:        env("VORTEX_GEOIP_DB", ""),
 	}
 	if c.CoreBin == "" {
 		c.CoreBin = c.Core // resolve from PATH by core name
