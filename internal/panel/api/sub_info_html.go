@@ -89,7 +89,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="card">
     <div class="card-title">QR Code</div>
     <div class="qr-section">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{.SubURL}}" alt="QR">
+      <img src="{{.SubQR}}" alt="QR">
       <div class="qr-label">Scan in your proxy client</div>
     </div>
   </div>

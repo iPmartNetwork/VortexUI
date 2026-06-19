@@ -1,20 +1,33 @@
 package api
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"html/template"
 	"math"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/port"
 	"github.com/vortexui/vortexui/internal/subscription"
 )
+
+// qrDataURI encodes content into a PNG QR code entirely on the server and
+// returns it as a base64 data URI. Generating QR codes locally avoids leaking
+// sensitive payloads (e.g. the WireGuard client private key inside a .conf) to
+// any third-party QR rendering service.
+func qrDataURI(content string, size int) string {
+	png, err := qrcode.Encode(content, qrcode.Medium, size)
+	if err != nil {
+		return ""
+	}
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+}
 
 // SubscriptionInfoPage renders a beautiful user-facing HTML page showing their
 // subscription status, traffic usage, devices, configs and QR codes.
@@ -70,15 +83,15 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 	// only when the user is bound to an enabled WireGuard inbound. Reuses the
 	// same helper that backs GET /sub/:token/wireguard.
 	var hasWG bool
-	var wgConf, wgURL, wgQRURL string
+	var wgConf, wgURL, wgQR string
 	if conf, ok, wgErr := h.wireGuardClientConfig(c.Request().Context(), u); wgErr == nil && ok {
 		hasWG = true
 		wgConf = conf
 		wgURL = subURL + "/wireguard"
-		// The QR must encode the .conf TEXT itself (so WireGuard apps can import
-		// it), not a URL. Reuse the same external QR image mechanism as the main
-		// QR, URL-encoding the multi-line conf into the data param.
-		wgQRURL = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + url.QueryEscape(conf)
+		// The QR encodes the .conf TEXT itself (so WireGuard apps can import it),
+		// generated server-side so the client private key inside the conf never
+		// leaves this server.
+		wgQR = qrDataURI(conf, 240)
 	}
 
 	data := subInfoData{
@@ -91,6 +104,7 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 		DeviceCount:   deviceCount,
 		DeviceLimit:   u.DeviceLimit,
 		SubURL:        subURL,
+		SubQR:         qrDataURI(subURL, 240),
 		ClashURL:      subURL + "?format=clash",
 		SingboxURL:    subURL + "?format=singbox",
 		Base64URL:     subURL + "?format=base64",
@@ -99,7 +113,7 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 		HasWireGuard:  hasWG,
 		WireGuardConf: wgConf,
 		WireGuardURL:  wgURL,
-		WireGuardQR:   wgQRURL,
+		WireGuardQR:   wgQR,
 	}
 
 	c.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -116,6 +130,7 @@ type subInfoData struct {
 	DeviceCount int
 	DeviceLimit int
 	SubURL      string
+	SubQR       string // server-generated QR (data URI) of the subscription URL
 	ClashURL    string
 	SingboxURL  string
 	Base64URL   string
@@ -126,7 +141,7 @@ type subInfoData struct {
 	HasWireGuard  bool
 	WireGuardConf string // raw client .conf text
 	WireGuardURL  string // download endpoint (<SubURL>/wireguard)
-	WireGuardQR   string // QR image URL encoding the .conf text
+	WireGuardQR   string // server-generated QR (data URI) encoding the .conf text
 }
 
 var subInfoTmpl = template.Must(template.New("subinfo").Parse(subInfoHTML))
