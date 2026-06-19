@@ -104,6 +104,24 @@ func singboxTransport(p Proxy) map[string]any {
 		return t
 	case "grpc":
 		return map[string]any{"type": "grpc", "service_name": p.Path}
+	case "httpupgrade":
+		t := map[string]any{"type": "httpupgrade"}
+		if p.Path != "" {
+			t["path"] = p.Path
+		}
+		if p.HostHeader != "" {
+			t["host"] = p.HostHeader
+		}
+		return t
+	case "http", "h2":
+		t := map[string]any{"type": "http"}
+		if p.Path != "" {
+			t["path"] = p.Path
+		}
+		if p.HostHeader != "" {
+			t["host"] = []string{p.HostHeader}
+		}
+		return t
 	default:
 		return nil
 	}
