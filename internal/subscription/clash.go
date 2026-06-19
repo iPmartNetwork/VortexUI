@@ -110,5 +110,16 @@ func applyNetwork(base map[string]any, p Proxy) {
 	case "grpc":
 		base["network"] = "grpc"
 		base["grpc-opts"] = map[string]any{"grpc-service-name": p.Path}
+	case "httpupgrade":
+		// mihomo expresses HTTPUpgrade as a ws transport with v2ray-http-upgrade.
+		base["network"] = "ws"
+		opts := map[string]any{"v2ray-http-upgrade": true}
+		if p.Path != "" {
+			opts["path"] = p.Path
+		}
+		if p.HostHeader != "" {
+			opts["headers"] = map[string]any{"Host": p.HostHeader}
+		}
+		base["ws-opts"] = opts
 	}
 }

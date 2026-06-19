@@ -194,3 +194,75 @@ func TestRealitySingboxCarriesRealityBlock(t *testing.T) {
 		t.Errorf("utls fingerprint missing: %v", tls["utls"])
 	}
 }
+
+func httpUpgradeProxy() Proxy {
+	return Proxy{
+		Name: "hu1", Protocol: domain.ProtoVLESS, Host: "1.2.3.4", Port: 443,
+		Network: "httpupgrade", Security: "tls", SNI: "ex.com", Path: "/hu", HostHeader: "ex.com",
+		UUID: "33333333-3333-3333-3333-333333333333",
+	}
+}
+
+func TestHTTPUpgradeClashRendersAsWSUpgrade(t *testing.T) {
+	body, err := Render(FormatClash, []Proxy{httpUpgradeProxy()}, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Proxies []map[string]any `yaml:"proxies"`
+	}
+	if err := yaml.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("invalid yaml: %v", err)
+	}
+	if len(parsed.Proxies) != 1 {
+		t.Fatalf("want 1 proxy, got %d", len(parsed.Proxies))
+	}
+	if parsed.Proxies[0]["network"] != "ws" {
+		t.Errorf("network = %v, want ws", parsed.Proxies[0]["network"])
+	}
+	opts, ok := parsed.Proxies[0]["ws-opts"].(map[string]any)
+	if !ok {
+		t.Fatalf("ws-opts missing: %v", parsed.Proxies[0]["ws-opts"])
+	}
+	if opts["v2ray-http-upgrade"] != true {
+		t.Errorf("v2ray-http-upgrade = %v, want true", opts["v2ray-http-upgrade"])
+	}
+	if opts["path"] != "/hu" {
+		t.Errorf("path = %v, want /hu", opts["path"])
+	}
+}
+
+func TestHTTPUpgradeSingboxRendersHTTPUpgradeTransport(t *testing.T) {
+	body, err := Render(FormatSingbox, []Proxy{httpUpgradeProxy()}, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Outbounds []map[string]any `json:"outbounds"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("invalid json: %v", err)
+	}
+	var vless map[string]any
+	for _, o := range parsed.Outbounds {
+		if o["type"] == "vless" {
+			vless = o
+		}
+	}
+	if vless == nil {
+		t.Fatal("vless outbound missing")
+	}
+	tr, ok := vless["transport"].(map[string]any)
+	if !ok {
+		t.Fatalf("transport missing: %v", vless["transport"])
+	}
+	if tr["type"] != "httpupgrade" {
+		t.Errorf("transport type = %v, want httpupgrade", tr["type"])
+	}
+	if tr["path"] != "/hu" {
+		t.Errorf("path = %v, want /hu", tr["path"])
+	}
+	if tr["host"] != "ex.com" {
+		t.Errorf("host = %v, want ex.com", tr["host"])
+	}
+}
