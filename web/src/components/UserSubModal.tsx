@@ -1,5 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
-import { RotateCcw, KeyRound, Wifi } from "lucide-react";
+import { useEffect, useState } from "react";
+import { RotateCcw, KeyRound, Wifi, Download, Copy } from "lucide-react";
 import { useResetUser, useRevokeSub, useUserSub, useUserOnline } from "@/api/policy-hooks";
 import type { User } from "@/api/types";
 import { Button } from "./ui";
@@ -15,9 +16,48 @@ export function UserSubModal({ user, onClose }: { user: User | null; onClose: ()
   const revoke = useRevokeSub();
   const confirm = useConfirm();
   const toast = useToast();
+
+  // WireGuard config text (null = none / not loaded). Fetched once per link from
+  // the public token-authed endpoint; a 404 means the user has no WG config and
+  // the section stays hidden.
+  const subUrl = sub.data?.subscription_url ?? null;
+  const [wgConf, setWgConf] = useState<string | null>(null);
+  useEffect(() => {
+    setWgConf(null);
+    if (!subUrl) return;
+    let cancelled = false;
+    fetch(`${subUrl}/wireguard`)
+      .then((r) => (r.ok ? r.text() : null))
+      .then((text) => {
+        if (!cancelled && text) setWgConf(text);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [subUrl]);
+
   if (!user) return null;
   const d = sub.data;
   const on = online.data;
+
+  function downloadWG() {
+    if (!wgConf) return;
+    const blob = new Blob([wgConf], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${user?.username ?? "wireguard"}.conf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+  async function copyWG() {
+    if (!wgConf) return;
+    await navigator.clipboard.writeText(wgConf);
+    toast.success("WireGuard config copied");
+  }
 
   async function doReset() {
     if (!user) return;
@@ -84,6 +124,25 @@ export function UserSubModal({ user, onClose }: { user: User | null; onClose: ()
                 {d.links.map((l, i) => (
                   <CopyField key={i} value={l} />
                 ))}
+              </div>
+            </div>
+          )}
+
+          {wgConf && (
+            <div>
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-fg-muted">
+                <Wifi size={14} /> WireGuard
+              </p>
+              <div className="flex justify-center rounded-xl bg-white p-4">
+                <QRCodeSVG value={wgConf} size={150} />
+              </div>
+              <div className="mt-2 flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={downloadWG}>
+                  <Download size={15} /> Download
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={copyWG}>
+                  <Copy size={15} /> Copy config
+                </Button>
               </div>
             </div>
           )}

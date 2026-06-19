@@ -99,9 +99,29 @@ func (h *Handlers) SubscribeWireGuard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "not found")
 	}
 
+	conf, ok, err := h.wireGuardClientConfig(ctx, user)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "wireguard config failed")
+	}
+	if !ok {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", user.Username+".conf"))
+	return c.Blob(http.StatusOK, "text/plain; charset=utf-8", []byte(conf))
+}
+
+// wireGuardClientConfig resolves the user's first enabled WireGuard inbound and
+// renders their client .conf. ok is false (with err nil) when the user has no
+// usable WireGuard inbound (WG not wired, no enabled WG inbound, or the hosting
+// node can't be resolved), so callers can render gracefully or return 404. A
+// non-nil err is reserved for a genuine render failure (maps to 500).
+func (h *Handlers) wireGuardClientConfig(ctx context.Context, user *domain.User) (string, bool, error) {
+	if h.WireGuard == nil || h.NodeRepo == nil {
+		return "", false, nil
+	}
 	inbounds, err := h.Repo.InboundsFor(ctx, user.ID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "not found")
+		return "", false, nil
 	}
 	var wgInbound *domain.Inbound
 	for i := range inbounds {
@@ -111,27 +131,26 @@ func (h *Handlers) SubscribeWireGuard(c echo.Context) error {
 		}
 	}
 	if wgInbound == nil {
-		return echo.NewHTTPError(http.StatusNotFound, "not found")
+		return "", false, nil
 	}
 
 	node, err := h.NodeRepo.GetByID(ctx, wgInbound.NodeID)
 	if err != nil || node == nil {
-		return echo.NewHTTPError(http.StatusNotFound, "not found")
+		return "", false, nil
 	}
 	host := node.Endpoint
 	if host == "" {
 		host = hostOf(node.Address)
 	}
 	if host == "" {
-		return echo.NewHTTPError(http.StatusNotFound, "not found")
+		return "", false, nil
 	}
 
 	conf, err := h.WireGuard.ClientConfig(ctx, *wgInbound, user, host)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "wireguard config failed")
+		return "", false, err
 	}
-	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", user.Username+".conf"))
-	return c.Blob(http.StatusOK, "text/plain; charset=utf-8", []byte(conf))
+	return conf, true, nil
 }
 
 // isBrowser returns true if the UA looks like a standard web browser (not a
