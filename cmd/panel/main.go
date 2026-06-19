@@ -199,8 +199,12 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	shareGuard.SetAutoLimit(cfg.ShareAutoLimit)
 	go shareGuard.Run(ctx)
 	subSvc := service.NewSubscriptionService(users, nodes)
+	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
-	syncSvc.SetWireGuard(service.NewWireGuardService(store.WireGuardPeers()))
+	syncSvc.SetWireGuard(wgSvc)
+	// Provisioning a user onto a node that hosts a WireGuard inbound requires a
+	// full resync (the only path that computes WG peers); wire it in.
+	userSvc.SetResyncer(syncSvc)
 	nodeSvc := service.NewNodeService(nodes, h)
 	nodeSvc.SetLogQuerier(h)
 	nodeSvc.SetCoreController(h)
@@ -275,6 +279,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Plans:    planSvc,
 			Online: online, Logs: logBuf, Audit: store.Audit(),
 			Repo: users, Traffic: traffic,
+			NodeRepo: nodes, WireGuard: wgSvc,
 			Throttle: api.NewLoginThrottle(5, 15*time.Minute),
 			Events:   bus,
 			SubSettings: subSettingsSvc,
