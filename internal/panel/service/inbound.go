@@ -94,19 +94,23 @@ func coreSupports(core domain.CoreType, proto domain.Protocol, network string) e
 	if proto == domain.ProtoWireGuard {
 		return fmt.Errorf("protocol %q is not supported as an inbound on any core", proto)
 	}
+	// hysteria2/tuic are QUIC/UDP-native and have no stream transport, so their
+	// network field is irrelevant — validate only the protocol for them.
+	udpNative := proto == domain.ProtoHysteria2 || proto == domain.ProtoTUIC
+
 	switch core {
 	case domain.CoreSingbox:
 		if !sbProtos[proto] {
 			return fmt.Errorf("protocol %q is not supported on the sing-box core", proto)
 		}
-		if !sbNets[network] {
+		if !udpNative && !sbNets[network] {
 			return fmt.Errorf("transport %q is not supported on the sing-box core", network)
 		}
 	default: // xray (and unspecified)
 		if !xrayProtos[proto] {
 			return fmt.Errorf("protocol %q is not supported on the xray core (use a sing-box node)", proto)
 		}
-		if !xrayNets[network] {
+		if !udpNative && !xrayNets[network] {
 			return fmt.Errorf("transport %q is not supported on the xray core", network)
 		}
 	}
