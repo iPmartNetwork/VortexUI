@@ -11,6 +11,7 @@ require (
 	github.com/pquerna/otp v1.5.0
 	github.com/pressly/goose/v3 v3.27.1
 	github.com/redis/go-redis/v9 v9.20.1
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/xtls/xray-core v1.260327.0
 	golang.org/x/crypto v0.50.0
 	google.golang.org/grpc v1.81.1
