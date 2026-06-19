@@ -94,6 +94,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
+  {{if .HasWireGuard}}
+  <!-- WireGuard -->
+  <div class="card">
+    <div class="card-title">WireGuard</div>
+    <div class="qr-section">
+      <img src="{{.WireGuardQR}}" alt="WireGuard QR">
+      <div class="qr-label">Scan with the WireGuard app to import</div>
+    </div>
+    <div style="text-align:center;margin-top:14px">
+      <a href="{{.WireGuardURL}}" download style="display:inline-block;padding:10px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:10px;text-decoration:none;font-size:.8rem;font-weight:600">Download .conf</a>
+      <button class="copy-btn" style="margin-left:8px;padding:10px 18px" onclick="copyWG()">Copy config</button>
+    </div>
+    <pre id="wgConf" style="margin-top:14px;padding:12px;background:var(--surface2);border-radius:10px;font-family:monospace;font-size:.7rem;color:var(--fg2);white-space:pre-wrap;word-break:break-all;overflow:auto;max-height:200px">{{.WireGuardConf}}</pre>
+  </div>
+  {{end}}
+
   <!-- Configs -->
   <div class="card">
     <div class="card-title">Configs ({{.ConfigCount}})</div>
@@ -127,6 +143,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="toast" id="toast">Copied!</div>
 <script>
 function copy(t){navigator.clipboard.writeText(t).then(()=>{const e=document.getElementById('toast');e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1500)})}
+function copyWG(){const p=document.getElementById('wgConf');if(p)copy(p.textContent)}
 
 // Multi-language support (detect browser language)
 (function(){

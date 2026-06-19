@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"math"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -65,21 +66,40 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 		}
 	}
 
+	// WireGuard: surface a downloadable client .conf + a QR of the conf text
+	// only when the user is bound to an enabled WireGuard inbound. Reuses the
+	// same helper that backs GET /sub/:token/wireguard.
+	var hasWG bool
+	var wgConf, wgURL, wgQRURL string
+	if conf, ok, wgErr := h.wireGuardClientConfig(c.Request().Context(), u); wgErr == nil && ok {
+		hasWG = true
+		wgConf = conf
+		wgURL = subURL + "/wireguard"
+		// The QR must encode the .conf TEXT itself (so WireGuard apps can import
+		// it), not a URL. Reuse the same external QR image mechanism as the main
+		// QR, URL-encoding the multi-line conf into the data param.
+		wgQRURL = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + url.QueryEscape(conf)
+	}
+
 	data := subInfoData{
-		Username:     u.Username,
-		Status:       string(u.Status),
-		UsedGB:       fmt.Sprintf("%.2f", usedGB),
-		LimitGB:      fmt.Sprintf("%.2f", limitGB),
-		UsedPercent:  fmt.Sprintf("%.0f", usedPercent),
-		DaysLeft:     daysLeft,
-		DeviceCount:  deviceCount,
-		DeviceLimit:  u.DeviceLimit,
-		SubURL:       subURL,
-		ClashURL:     subURL + "?format=clash",
-		SingboxURL:   subURL + "?format=singbox",
-		Base64URL:    subURL + "?format=base64",
-		Links:        links,
-		ConfigCount:  len(links),
+		Username:      u.Username,
+		Status:        string(u.Status),
+		UsedGB:        fmt.Sprintf("%.2f", usedGB),
+		LimitGB:       fmt.Sprintf("%.2f", limitGB),
+		UsedPercent:   fmt.Sprintf("%.0f", usedPercent),
+		DaysLeft:      daysLeft,
+		DeviceCount:   deviceCount,
+		DeviceLimit:   u.DeviceLimit,
+		SubURL:        subURL,
+		ClashURL:      subURL + "?format=clash",
+		SingboxURL:    subURL + "?format=singbox",
+		Base64URL:     subURL + "?format=base64",
+		Links:         links,
+		ConfigCount:   len(links),
+		HasWireGuard:  hasWG,
+		WireGuardConf: wgConf,
+		WireGuardURL:  wgURL,
+		WireGuardQR:   wgQRURL,
 	}
 
 	c.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -101,6 +121,12 @@ type subInfoData struct {
 	Base64URL   string
 	Links       []string
 	ConfigCount int
+
+	// WireGuard (optional): present only when the user has an enabled WG inbound.
+	HasWireGuard  bool
+	WireGuardConf string // raw client .conf text
+	WireGuardURL  string // download endpoint (<SubURL>/wireguard)
+	WireGuardQR   string // QR image URL encoding the .conf text
 }
 
 var subInfoTmpl = template.Must(template.New("subinfo").Parse(subInfoHTML))
