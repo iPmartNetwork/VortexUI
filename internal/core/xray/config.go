@@ -390,6 +390,25 @@ func streamSettings(in domain.Inbound) json.RawMessage {
 			hu["host"] = in.Host[0]
 		}
 		ss["httpupgradeSettings"] = hu
+	case "http", "h2":
+		ss["network"] = "http" // xray's HTTP/2 transport token
+		h := map[string]any{}
+		if in.Path != "" {
+			h["path"] = in.Path
+		}
+		if len(in.Host) > 0 {
+			h["host"] = in.Host
+		}
+		ss["httpSettings"] = h
+	case "xhttp":
+		x := map[string]any{"mode": "auto"}
+		if in.Path != "" {
+			x["path"] = in.Path
+		}
+		if len(in.Host) > 0 {
+			x["host"] = in.Host[0]
+		}
+		ss["xhttpSettings"] = x
 	}
 	return mustRaw(ss)
 }
