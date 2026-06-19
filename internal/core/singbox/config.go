@@ -7,6 +7,7 @@ package singbox
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,9 +32,19 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 	}
 
 	var inbounds []map[string]any
+	var endpoints []map[string]any
 	emailSet := map[string]struct{}{}
 	for _, in := range cfg.Inbounds {
 		users := cfg.UsersByInbound[in.Tag]
+		// sing-box >= 1.11 renders WireGuard as a top-level `endpoints` entry, not
+		// a regular inbound, so route it to the dedicated builder.
+		if in.Protocol == domain.ProtoWireGuard {
+			endpoints = append(endpoints, buildWireGuardEndpoint(in, cfg.WireGuardPeers[in.Tag]))
+			for _, u := range users {
+				emailSet[u.ID.String()] = struct{}{}
+			}
+			continue
+		}
 		built, err := buildInbound(in, users)
 		if err != nil {
 			// Skip misconfigured inbounds — one bad entry must not crash the core.
@@ -72,6 +83,9 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 		}
 	}
 	conf["route"] = buildRoute(cfg.Routing, outboundTags, actions)
+	if len(endpoints) > 0 {
+		conf["endpoints"] = endpoints
+	}
 	return json.MarshalIndent(conf, "", "  ")
 }
 
@@ -614,4 +628,58 @@ func orDefault(v, def string) string {
 		return def
 	}
 	return v
+}
+
+// buildWireGuardEndpoint renders a WireGuard server inbound as a sing-box
+// top-level `endpoints` entry (sing-box >= 1.11). Each bound user is a peer with
+// its assigned /32 tunnel IP; egress is handled by the route's `direct` final.
+func buildWireGuardEndpoint(in domain.Inbound, peers []domain.WireGuardPeer) map[string]any {
+	wg, _ := in.Raw["wireguard"].(map[string]any)
+	privateKey, _ := wg["private_key"].(string)
+	subnet, _ := wg["subnet"].(string)
+	if subnet == "" {
+		subnet = "10.7.0.0/24"
+	}
+	// server address = .1 of the subnet
+	serverAddr := serverAddress(subnet)
+	listenPort := in.Port
+	if lp, ok := wg["listen_port"].(int); ok && lp != 0 {
+		listenPort = lp
+	} else if lpf, ok := wg["listen_port"].(float64); ok && lpf != 0 {
+		listenPort = int(lpf)
+	}
+	ep := map[string]any{
+		"type":        "wireguard",
+		"tag":         in.Tag,
+		"system":      false,
+		"address":     []string{serverAddr},
+		"private_key": privateKey,
+		"listen_port": listenPort,
+	}
+	var ps []map[string]any
+	for _, p := range peers {
+		ps = append(ps, map[string]any{
+			"public_key":  p.PublicKey,
+			"allowed_ips": []string{p.Address + "/32"},
+		})
+	}
+	if len(ps) > 0 {
+		ep["peers"] = ps
+	}
+	return ep
+}
+
+// serverAddress returns the server's tunnel address (".1/24") for the subnet.
+func serverAddress(subnet string) string {
+	ip, ipnet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return "10.7.0.1/24"
+	}
+	base := ip.Mask(ipnet.Mask).To4()
+	if base == nil {
+		return "10.7.0.1/24"
+	}
+	base[3] = 1
+	ones, _ := ipnet.Mask.Size()
+	return fmt.Sprintf("%s/%d", base.String(), ones)
 }

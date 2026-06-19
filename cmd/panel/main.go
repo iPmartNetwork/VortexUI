@@ -200,6 +200,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	go shareGuard.Run(ctx)
 	subSvc := service.NewSubscriptionService(users, nodes)
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
+	syncSvc.SetWireGuard(service.NewWireGuardService(store.WireGuardPeers()))
 	nodeSvc := service.NewNodeService(nodes, h)
 	nodeSvc.SetLogQuerier(h)
 	nodeSvc.SetCoreController(h)

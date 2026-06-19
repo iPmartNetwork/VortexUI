@@ -130,3 +130,6 @@ func (s *Store) SubSettings() *SubSettingsRepo { return &SubSettingsRepo{pool: s
 
 // UserGeo returns the per-user geo (country) repository.
 func (s *Store) UserGeo() *UserGeoRepo { return &UserGeoRepo{pool: s.pool} }
+
+// WireGuardPeers returns the WireGuard per-user peer repository.
+func (s *Store) WireGuardPeers() *WireGuardPeerRepo { return &WireGuardPeerRepo{pool: s.pool} }

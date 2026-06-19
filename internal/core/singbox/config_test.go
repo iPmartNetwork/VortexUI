@@ -338,3 +338,68 @@ func TestBuilderRealityBlock(t *testing.T) {
 		t.Errorf("handshake = %+v", r.Handshake)
 	}
 }
+
+func TestBuilderWireGuardEndpoint(t *testing.T) {
+	u1 := uuid.New()
+	u2 := uuid.New()
+	inID := uuid.New()
+	in := domain.Inbound{
+		ID: inID, Tag: "wg0", Protocol: domain.ProtoWireGuard, Port: 51820,
+		Raw: map[string]any{"wireguard": map[string]any{
+			"private_key": "SRV_PRIV",
+			"public_key":  "SRV_PUB",
+			"listen_port": 51820,
+			"subnet":      "10.7.0.0/24",
+		}},
+	}
+	cfg := &core.GeneratedConfig{
+		Inbounds: []domain.Inbound{in},
+		WireGuardPeers: map[string][]domain.WireGuardPeer{
+			"wg0": {
+				{InboundID: inID, UserID: u1, PublicKey: "PEER1_PUB", Address: "10.7.0.2"},
+				{InboundID: inID, UserID: u2, PublicKey: "PEER2_PUB", Address: "10.7.0.3"},
+			},
+		},
+	}
+	raw, err := Builder{APIPort: 9090}.Build(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var p struct {
+		Inbounds  []map[string]any `json:"inbounds"`
+		Endpoints []struct {
+			Type       string   `json:"type"`
+			Tag        string   `json:"tag"`
+			Address    []string `json:"address"`
+			PrivateKey string   `json:"private_key"`
+			ListenPort int      `json:"listen_port"`
+			Peers      []struct {
+				PublicKey  string   `json:"public_key"`
+				AllowedIPs []string `json:"allowed_ips"`
+			} `json:"peers"`
+		} `json:"endpoints"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		t.Fatalf("generated config invalid JSON: %v\n%s", err, raw)
+	}
+	// WireGuard must NOT appear as a regular inbound.
+	if len(p.Inbounds) != 0 {
+		t.Errorf("wireguard must render as endpoint, not inbound: %+v", p.Inbounds)
+	}
+	if len(p.Endpoints) != 1 {
+		t.Fatalf("want 1 endpoint, got %d", len(p.Endpoints))
+	}
+	ep := p.Endpoints[0]
+	if ep.Type != "wireguard" || ep.Tag != "wg0" || ep.PrivateKey != "SRV_PRIV" || ep.ListenPort != 51820 {
+		t.Errorf("endpoint header wrong: %+v", ep)
+	}
+	if len(ep.Address) != 1 || ep.Address[0] != "10.7.0.1/24" {
+		t.Errorf("server address = %v, want [10.7.0.1/24]", ep.Address)
+	}
+	if len(ep.Peers) != 2 {
+		t.Fatalf("want 2 peers, got %d", len(ep.Peers))
+	}
+	if ep.Peers[0].PublicKey != "PEER1_PUB" || len(ep.Peers[0].AllowedIPs) != 1 || ep.Peers[0].AllowedIPs[0] != "10.7.0.2/32" {
+		t.Errorf("peer[0] wrong: %+v", ep.Peers[0])
+	}
+}

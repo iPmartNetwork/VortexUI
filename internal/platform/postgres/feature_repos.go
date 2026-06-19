@@ -1628,3 +1628,39 @@ func (r *SubSettingsRepo) Save(ctx context.Context, s *domain.SubSettings) error
 		s.UpdateInterval)
 	return err
 }
+
+
+// --- WireGuardPeerRepo ---
+
+type WireGuardPeerRepo struct{ pool *pgxpool.Pool }
+
+func (r *WireGuardPeerRepo) Get(ctx context.Context, inboundID, userID uuid.UUID) (*domain.WireGuardPeer, error) {
+	row := r.pool.QueryRow(ctx, `SELECT inbound_id, user_id, private_key, public_key, address FROM wireguard_peers WHERE inbound_id=$1 AND user_id=$2`, inboundID, userID)
+	var p domain.WireGuardPeer
+	if err := row.Scan(&p.InboundID, &p.UserID, &p.PrivateKey, &p.PublicKey, &p.Address); err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *WireGuardPeerRepo) Create(ctx context.Context, p *domain.WireGuardPeer) error {
+	_, err := r.pool.Exec(ctx, `INSERT INTO wireguard_peers (inbound_id, user_id, private_key, public_key, address) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (inbound_id,user_id) DO NOTHING`, p.InboundID, p.UserID, p.PrivateKey, p.PublicKey, p.Address)
+	return err
+}
+
+func (r *WireGuardPeerRepo) ListByInbound(ctx context.Context, inboundID uuid.UUID) ([]*domain.WireGuardPeer, error) {
+	rows, err := r.pool.Query(ctx, `SELECT inbound_id, user_id, private_key, public_key, address FROM wireguard_peers WHERE inbound_id=$1 ORDER BY address`, inboundID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*domain.WireGuardPeer
+	for rows.Next() {
+		var p domain.WireGuardPeer
+		if err := rows.Scan(&p.InboundID, &p.UserID, &p.PrivateKey, &p.PublicKey, &p.Address); err != nil {
+			return nil, err
+		}
+		out = append(out, &p)
+	}
+	return out, rows.Err()
+}
