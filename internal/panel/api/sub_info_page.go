@@ -83,7 +83,8 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 	// only when the user is bound to an enabled WireGuard inbound. Reuses the
 	// same helper that backs GET /sub/:token/wireguard.
 	var hasWG bool
-	var wgConf, wgURL, wgQR string
+	var wgConf, wgURL string
+	var wgQR template.URL
 	if conf, ok, wgErr := h.wireGuardClientConfig(c.Request().Context(), u); wgErr == nil && ok {
 		hasWG = true
 		wgConf = conf
@@ -91,7 +92,9 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 		// The QR encodes the .conf TEXT itself (so WireGuard apps can import it),
 		// generated server-side so the client private key inside the conf never
 		// leaves this server.
-		wgQR = qrDataURI(conf, 240)
+		// qrDataURI returns a fixed "data:image/png;base64,<base64 bytes>"
+		// string with no HTML, so the template.URL conversion is safe.
+		wgQR = template.URL(qrDataURI(conf, 240)) //nolint:gosec // G203: trusted server-generated data URI, not HTML
 	}
 
 	data := subInfoData{
@@ -104,7 +107,7 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 		DeviceCount:   deviceCount,
 		DeviceLimit:   u.DeviceLimit,
 		SubURL:        subURL,
-		SubQR:         qrDataURI(subURL, 240),
+		SubQR:         template.URL(qrDataURI(subURL, 240)), //nolint:gosec // G203: trusted server-generated data URI, not HTML
 		ClashURL:      subURL + "?format=clash",
 		SingboxURL:    subURL + "?format=singbox",
 		Base64URL:     subURL + "?format=base64",
@@ -130,7 +133,7 @@ type subInfoData struct {
 	DeviceCount int
 	DeviceLimit int
 	SubURL      string
-	SubQR       string // server-generated QR (data URI) of the subscription URL
+	SubQR       template.URL // server-generated QR (data URI) of the subscription URL
 	ClashURL    string
 	SingboxURL  string
 	Base64URL   string
@@ -140,8 +143,8 @@ type subInfoData struct {
 	// WireGuard (optional): present only when the user has an enabled WG inbound.
 	HasWireGuard  bool
 	WireGuardConf string // raw client .conf text
-	WireGuardURL  string // download endpoint (<SubURL>/wireguard)
-	WireGuardQR   string // server-generated QR (data URI) encoding the .conf text
+	WireGuardURL  string       // download endpoint (<SubURL>/wireguard)
+	WireGuardQR   template.URL // server-generated QR (data URI) encoding the .conf text
 }
 
 var subInfoTmpl = template.Must(template.New("subinfo").Parse(subInfoHTML))
