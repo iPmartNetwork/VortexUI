@@ -81,6 +81,9 @@ type GeneratedConfig struct {
 	Balancers []domain.Balancer
 	// LogLevel and other engine-wide knobs.
 	LogLevel string
+	// WireGuardPeers maps a WireGuard inbound's tag to its peers (one per bound
+	// user). Populated by the sync layer; consumed by the sing-box builder.
+	WireGuardPeers map[string][]domain.WireGuardPeer
 }
 
 // Builder renders engine-native configuration. Each engine ships its own Builder

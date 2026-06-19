@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/core/reality"
+	"github.com/vortexui/vortexui/internal/core/wireguard"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/port"
 	"github.com/vortexui/vortexui/internal/pki"
@@ -24,6 +25,29 @@ func provisionSecurity(in *domain.Inbound) {
 	}
 	if _, ok := in.Raw["streamSettings"]; ok {
 		return // full manual override
+	}
+	// WireGuard server inbounds need a server keypair + interface defaults so the
+	// sing-box endpoint config is valid. Mirrors the reality keypair provisioning.
+	if in.Protocol == domain.ProtoWireGuard {
+		if m, ok := in.Raw["wireguard"].(map[string]any); ok {
+			if pk, _ := m["private_key"].(string); pk != "" {
+				return
+			}
+		}
+		priv, pub, err := wireguard.GenerateKeypair()
+		if err != nil {
+			return
+		}
+		port := in.Port
+		in.Raw["wireguard"] = map[string]any{
+			"private_key": priv,
+			"public_key":  pub,
+			"listen_port": port,
+			"subnet":      "10.7.0.0/24",
+			"mtu":         1420,
+			"dns":         "1.1.1.1",
+		}
+		return
 	}
 	// Hysteria2 and TUIC mandate TLS; ensure they carry a certificate even if the
 	// admin left security unset.
@@ -87,16 +111,13 @@ func coreSupports(core domain.CoreType, proto domain.Protocol, network string) e
 		network = "tcp"
 	}
 	xrayProtos := map[domain.Protocol]bool{domain.ProtoVMess: true, domain.ProtoVLESS: true, domain.ProtoTrojan: true, domain.ProtoShadowsocks: true}
-	sbProtos := map[domain.Protocol]bool{domain.ProtoVMess: true, domain.ProtoVLESS: true, domain.ProtoTrojan: true, domain.ProtoShadowsocks: true, domain.ProtoHysteria2: true, domain.ProtoTUIC: true}
+	sbProtos := map[domain.Protocol]bool{domain.ProtoVMess: true, domain.ProtoVLESS: true, domain.ProtoTrojan: true, domain.ProtoShadowsocks: true, domain.ProtoHysteria2: true, domain.ProtoTUIC: true, domain.ProtoWireGuard: true}
 	xrayNets := map[string]bool{"tcp": true, "ws": true, "grpc": true, "httpupgrade": true, "http": true, "h2": true, "xhttp": true}
 	sbNets := map[string]bool{"tcp": true, "ws": true, "grpc": true, "httpupgrade": true, "http": true, "h2": true}
 
-	if proto == domain.ProtoWireGuard {
-		return fmt.Errorf("protocol %q is not supported as an inbound on any core", proto)
-	}
-	// hysteria2/tuic are QUIC/UDP-native and have no stream transport, so their
-	// network field is irrelevant — validate only the protocol for them.
-	udpNative := proto == domain.ProtoHysteria2 || proto == domain.ProtoTUIC
+	// hysteria2/tuic/wireguard are QUIC/UDP-native and have no stream transport,
+	// so their network field is irrelevant — validate only the protocol for them.
+	udpNative := proto == domain.ProtoHysteria2 || proto == domain.ProtoTUIC || proto == domain.ProtoWireGuard
 
 	switch core {
 	case domain.CoreSingbox:

@@ -1,41 +1,12 @@
-// Package wireguard provides WireGuard inbound configuration generation for
-// both Xray-core (native wireguard inbound) and sing-box. Each user gets a
-// unique keypair; the subscription delivers a standard WireGuard config file.
 package wireguard
 
+// This file holds the higher-level server/peer/client config types used by the
+// WireGuard subscription delivery (later stages). Key generation lives in
+// keys.go.
+
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-
-	"golang.org/x/crypto/curve25519"
 )
-
-// Keypair is a WireGuard key pair.
-type Keypair struct {
-	PrivateKey string `json:"private_key"`
-	PublicKey  string `json:"public_key"`
-}
-
-// GenerateKeypair produces a new WireGuard keypair.
-func GenerateKeypair() (*Keypair, error) {
-	var private [32]byte
-	if _, err := rand.Read(private[:]); err != nil {
-		return nil, err
-	}
-	// Clamp private key per WireGuard spec.
-	private[0] &= 248
-	private[31] &= 127
-	private[31] |= 64
-
-	var public [32]byte
-	curve25519.ScalarBaseMult(&public, &private)
-
-	return &Keypair{
-		PrivateKey: base64.StdEncoding.EncodeToString(private[:]),
-		PublicKey:  base64.StdEncoding.EncodeToString(public[:]),
-	}, nil
-}
 
 // ServerConfig holds the WireGuard server (inbound) configuration.
 type ServerConfig struct {

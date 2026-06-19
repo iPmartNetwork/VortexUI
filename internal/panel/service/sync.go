@@ -51,6 +51,7 @@ type SyncService struct {
 	routing   RoutingLister
 	balancers BalancerLister
 	syncer    Syncer
+	wireguard *WireGuardService
 }
 
 // NewSyncService wires the service. The outbound/routing/balancer listers are
@@ -66,6 +67,11 @@ func NewSyncService(inbounds InboundLister, users UsersByNoder, syncer Syncer, o
 		syncer:    syncer,
 	}
 }
+
+// SetWireGuard attaches the WireGuard service so the sync layer provisions a
+// per-user peer for each WireGuard inbound and feeds them to the builder. It is
+// optional: a nil WireGuardService leaves WireGuard peers unpopulated.
+func (s *SyncService) SetWireGuard(wg *WireGuardService) { s.wireguard = wg }
 
 // Resync assembles the node's enabled inbounds plus their bound users, and its
 // outbounds, routing rules, and balancers, into a core.GeneratedConfig and
@@ -89,6 +95,19 @@ func (s *SyncService) Resync(ctx context.Context, nodeID uuid.UUID) error {
 	for _, in := range inbounds {
 		if in.Enabled {
 			cfg.Inbounds = append(cfg.Inbounds, *in)
+		}
+	}
+
+	if s.wireguard != nil {
+		cfg.WireGuardPeers = map[string][]domain.WireGuardPeer{}
+		for _, in := range inbounds {
+			if in.Enabled && in.Protocol == domain.ProtoWireGuard {
+				peers, err := s.wireguard.EnsurePeers(ctx, *in, usersByInbound[in.Tag])
+				if err != nil {
+					return err
+				}
+				cfg.WireGuardPeers[in.Tag] = peers
+			}
 		}
 	}
 

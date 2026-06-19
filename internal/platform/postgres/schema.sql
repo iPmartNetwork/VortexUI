@@ -558,3 +558,14 @@ CREATE TABLE sub_settings (
     CONSTRAINT sub_settings_singleton CHECK (id = 1)
 );
 INSERT INTO sub_settings (id, update_interval) VALUES (1, 12) ON CONFLICT (id) DO NOTHING;
+
+-- Stage 1: WireGuard server inbound per-user peers (keypair + tunnel IP).
+CREATE TABLE wireguard_peers (
+    inbound_id  UUID NOT NULL REFERENCES inbounds(id) ON DELETE CASCADE,
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    private_key TEXT NOT NULL,
+    public_key  TEXT NOT NULL,
+    address     TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (inbound_id, user_id)
+);
