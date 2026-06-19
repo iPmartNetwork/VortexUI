@@ -121,5 +121,15 @@ func applyNetwork(base map[string]any, p Proxy) {
 			opts["headers"] = map[string]any{"Host": p.HostHeader}
 		}
 		base["ws-opts"] = opts
+	case "http", "h2":
+		base["network"] = "h2"
+		opts := map[string]any{}
+		if p.Path != "" {
+			opts["path"] = p.Path
+		}
+		if p.HostHeader != "" {
+			opts["host"] = []string{p.HostHeader}
+		}
+		base["h2-opts"] = opts
 	}
 }

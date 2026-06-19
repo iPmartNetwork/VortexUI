@@ -92,6 +92,21 @@ func transportQuery(p Proxy) url.Values {
 		if p.HostHeader != "" {
 			q.Set("host", p.HostHeader)
 		}
+	case "http", "h2":
+		if p.Path != "" {
+			q.Set("path", p.Path)
+		}
+		if p.HostHeader != "" {
+			q.Set("host", p.HostHeader)
+		}
+	case "xhttp":
+		if p.Path != "" {
+			q.Set("path", p.Path)
+		}
+		if p.HostHeader != "" {
+			q.Set("host", p.HostHeader)
+		}
+		q.Set("mode", "auto")
 	}
 	return q
 }

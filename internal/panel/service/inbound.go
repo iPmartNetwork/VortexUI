@@ -70,13 +70,47 @@ func provisionSecurity(in *domain.Inbound) {
 // InboundService manages inbounds and reconciles the owning node's live config
 // after every change via the SyncService.
 type InboundService struct {
-	repo port.InboundRepository
-	sync *SyncService
+	repo  port.InboundRepository
+	nodes port.NodeRepository
+	sync  *SyncService
 }
 
 // NewInboundService wires the service.
-func NewInboundService(repo port.InboundRepository, sync *SyncService) *InboundService {
-	return &InboundService{repo: repo, sync: sync}
+func NewInboundService(repo port.InboundRepository, nodes port.NodeRepository, sync *SyncService) *InboundService {
+	return &InboundService{repo: repo, nodes: nodes, sync: sync}
+}
+
+// coreSupports reports whether the given core can run this protocol+network,
+// returning a clear error describing the incompatibility (or nil if supported).
+func coreSupports(core domain.CoreType, proto domain.Protocol, network string) error {
+	if network == "" {
+		network = "tcp"
+	}
+	xrayProtos := map[domain.Protocol]bool{domain.ProtoVMess: true, domain.ProtoVLESS: true, domain.ProtoTrojan: true, domain.ProtoShadowsocks: true}
+	sbProtos := map[domain.Protocol]bool{domain.ProtoVMess: true, domain.ProtoVLESS: true, domain.ProtoTrojan: true, domain.ProtoShadowsocks: true, domain.ProtoHysteria2: true, domain.ProtoTUIC: true}
+	xrayNets := map[string]bool{"tcp": true, "ws": true, "grpc": true, "httpupgrade": true, "http": true, "h2": true, "xhttp": true}
+	sbNets := map[string]bool{"tcp": true, "ws": true, "grpc": true, "httpupgrade": true, "http": true, "h2": true}
+
+	if proto == domain.ProtoWireGuard {
+		return fmt.Errorf("protocol %q is not supported as an inbound on any core", proto)
+	}
+	switch core {
+	case domain.CoreSingbox:
+		if !sbProtos[proto] {
+			return fmt.Errorf("protocol %q is not supported on the sing-box core", proto)
+		}
+		if !sbNets[network] {
+			return fmt.Errorf("transport %q is not supported on the sing-box core", network)
+		}
+	default: // xray (and unspecified)
+		if !xrayProtos[proto] {
+			return fmt.Errorf("protocol %q is not supported on the xray core (use a sing-box node)", proto)
+		}
+		if !xrayNets[network] {
+			return fmt.Errorf("transport %q is not supported on the xray core", network)
+		}
+	}
+	return nil
 }
 
 // CreateInboundInput describes a new inbound.
@@ -102,6 +136,13 @@ type CreateInboundInput struct {
 func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*domain.Inbound, error) {
 	if in.Tag == "" || in.Port == 0 {
 		return nil, errors.New("tag and port are required")
+	}
+	node, err := s.nodes.GetByID(ctx, in.NodeID)
+	if err != nil {
+		return nil, errors.New("node not found")
+	}
+	if err := coreSupports(node.Core, in.Protocol, orStr(in.Network, "tcp")); err != nil {
+		return nil, err
 	}
 	inbound := &domain.Inbound{
 		ID:       uuid.New(),
@@ -159,6 +200,13 @@ type UpdateInboundInput struct {
 func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInboundInput) (*domain.Inbound, error) {
 	existing, err := s.repo.GetByID(ctx, id)
 	if err != nil {
+		return nil, err
+	}
+	node, err := s.nodes.GetByID(ctx, existing.NodeID)
+	if err != nil {
+		return nil, errors.New("node not found")
+	}
+	if err := coreSupports(node.Core, existing.Protocol, orStr(in.Network, "tcp")); err != nil {
 		return nil, err
 	}
 	existing.Listen = in.Listen
