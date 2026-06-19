@@ -10,12 +10,12 @@ import { useToast } from "./toast";
 
 // xray supports vless/vmess/trojan/shadowsocks; hysteria2/tuic require a
 // sing-box node (switch the local node's core, or add a sing-box node).
-const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "wireguard"];
-const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "h2", "quic", "udp"];
+const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic"];
+const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "http", "h2", "xhttp", "quic", "udp"];
 const SECURITIES = ["none", "tls", "reality"];
 
 // Protocols that run over UDP (QUIC-based) — transport/security are fixed.
-const UDP_PROTOCOLS = ["hysteria2", "tuic", "wireguard"];
+const UDP_PROTOCOLS = ["hysteria2", "tuic"];
 
 // randomPort picks a high port (10000–60000) so new inbounds default to a free,
 // non-conflicting port. The admin can still type any port.
