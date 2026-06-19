@@ -109,6 +109,55 @@ func TestDriverRebuildsConfigOnMembershipChange(t *testing.T) {
 	}
 }
 
+func TestDriverStartPropagatesWireGuardPeers(t *testing.T) {
+	d, fr := newTestDriver(t, &fakeStats{})
+	inID := uuid.New()
+	in := domain.Inbound{
+		ID: inID, Tag: "wg0", Protocol: domain.ProtoWireGuard, Port: 51820,
+		Raw: map[string]any{"wireguard": map[string]any{
+			"private_key": "SRV_PRIV",
+			"public_key":  "SRV_PUB",
+			"listen_port": 51820,
+			"subnet":      "10.7.0.0/24",
+		}},
+	}
+	cfg := &core.GeneratedConfig{
+		Inbounds: []domain.Inbound{in},
+		WireGuardPeers: map[string][]domain.WireGuardPeer{
+			"wg0": {{InboundID: inID, UserID: uuid.New(), PublicKey: "PEER1_PUB", Address: "10.7.0.2"}},
+		},
+	}
+	if err := d.Start(context.Background(), cfg); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+
+	// The driver must cache the peers from the full sync.
+	if got := len(d.wgPeers["wg0"]); got != 1 {
+		t.Fatalf("driver wgPeers want 1, got %d", got)
+	}
+
+	// And the applied (rendered) config must include the peer.
+	fr.mu.Lock()
+	defer fr.mu.Unlock()
+	if len(fr.applied) == 0 {
+		t.Fatal("no config applied")
+	}
+	var p struct {
+		Endpoints []struct {
+			Tag   string `json:"tag"`
+			Peers []struct {
+				PublicKey string `json:"public_key"`
+			} `json:"peers"`
+		} `json:"endpoints"`
+	}
+	if err := json.Unmarshal(fr.applied[len(fr.applied)-1], &p); err != nil {
+		t.Fatalf("applied config invalid: %v", err)
+	}
+	if len(p.Endpoints) != 1 || len(p.Endpoints[0].Peers) != 1 || p.Endpoints[0].Peers[0].PublicKey != "PEER1_PUB" {
+		t.Fatalf("rendered config missing wireguard peer: %+v", p.Endpoints)
+	}
+}
+
 func TestDriverStreamTrafficEmitsDeltas(t *testing.T) {
 	uid := uuid.New()
 	stats := &fakeStats{samples: []UserTraffic{{Email: uid.String(), Up: 7, Down: 8}}}

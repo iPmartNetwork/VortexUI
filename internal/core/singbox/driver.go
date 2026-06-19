@@ -64,6 +64,7 @@ type Driver struct {
 	mu       sync.Mutex
 	inbounds map[string]domain.Inbound          // tag -> inbound
 	users    map[string]map[string]*domain.User // tag -> email -> user
+	wgPeers  map[string][]domain.WireGuardPeer  // tag -> wireguard peers (from the last full sync)
 	stats    statsClient
 }
 
@@ -97,6 +98,7 @@ func (d *Driver) Start(ctx context.Context, cfg *core.GeneratedConfig) error {
 		}
 		d.users[in.Tag] = set
 	}
+	d.wgPeers = cfg.WireGuardPeers
 	err := d.applyLocked(ctx)
 	d.mu.Unlock()
 	if err != nil {
@@ -137,6 +139,7 @@ func (d *Driver) RemoveUser(ctx context.Context, inboundTag, email string) error
 // applyLocked rebuilds the config from current state and applies it. Caller holds d.mu.
 func (d *Driver) applyLocked(ctx context.Context) error {
 	cfg := &core.GeneratedConfig{UsersByInbound: map[string][]*domain.User{}}
+	cfg.WireGuardPeers = d.wgPeers
 	for tag, in := range d.inbounds {
 		cfg.Inbounds = append(cfg.Inbounds, in)
 		for _, u := range d.users[tag] {
