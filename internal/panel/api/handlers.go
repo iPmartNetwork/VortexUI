@@ -48,6 +48,8 @@ type Handlers struct {
 	Audit     AuditRecorder // optional; nil disables the audit log
 	Repo      port.UserRepository
 	Traffic   port.TrafficRepository
+	NodeRepo  port.NodeRepository           // optional; resolves node host for WireGuard .conf
+	WireGuard *service.WireGuardService     // optional; nil disables the WireGuard .conf endpoint
 	Throttle  *LoginThrottle // optional; nil disables login brute-force protection
 	Events    EventStream    // optional; nil disables the SSE live-events endpoint
 }

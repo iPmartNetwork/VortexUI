@@ -32,6 +32,14 @@ type OnlineQuerier interface {
 	OnlineIPs(ctx context.Context, nodeID uuid.UUID, userID string) (map[string]int64, error)
 }
 
+// Resyncer rebuilds a node's complete desired config (including WireGuard peers)
+// and pushes it to the live core. *SyncService satisfies it. It is wired
+// optionally so a nil resyncer leaves the lightweight AddUser/RemoveUser path in
+// place for nodes that do not host a WireGuard inbound.
+type Resyncer interface {
+	Resync(ctx context.Context, nodeID uuid.UUID) error
+}
+
 // UserService creates and manages service users, keeping the database and the
 // live cores in sync.
 type UserService struct {
@@ -40,6 +48,7 @@ type UserService struct {
 	now    func() time.Time
 	pub    events.Publisher
 	online OnlineQuerier
+	resync Resyncer
 }
 
 // NewUserService wires the user service.
@@ -60,6 +69,16 @@ func (s *UserService) SetPublisher(p events.Publisher) {
 func (s *UserService) SetOnlineQuerier(q OnlineQuerier) {
 	if q != nil {
 		s.online = q
+	}
+}
+
+// SetResyncer wires the full node-config resync path (the SyncService). It is
+// used to provision WireGuard peers, which are only computed during a full
+// Resync. A nil resyncer leaves the lightweight AddUser/RemoveUser path in place
+// for every node.
+func (s *UserService) SetResyncer(r Resyncer) {
+	if r != nil {
+		s.resync = r
 	}
 }
 
@@ -276,6 +295,10 @@ func (s *UserService) Update(ctx context.Context, id uuid.UUID, in UpdateUserInp
 		for _, ib := range old {
 			_ = s.nodes.RemoveUser(ctx, ib.NodeID, ib.Tag, u.ID)
 		}
+		// Rebuild WireGuard peers on any node that previously hosted a WG inbound
+		// for this user: bindings are now updated, so a resync drops the user from
+		// nodes they were unbound from. New WG nodes are handled by provision.
+		s.resyncWireGuardNodes(ctx, old)
 		if u.Status != domain.UserStatusDisabled {
 			_ = s.provision(ctx, u)
 		}
@@ -302,6 +325,9 @@ func (s *UserService) deprovision(ctx context.Context, u *domain.User) {
 	for _, in := range inbounds {
 		_ = s.nodes.RemoveUser(ctx, in.NodeID, in.Tag, u.ID)
 	}
+	// Rebuild WireGuard peers on affected nodes so the rendered server config
+	// reflects the change (the lightweight RemoveUser path does not touch peers).
+	s.resyncWireGuardNodes(ctx, inbounds)
 }
 
 // Delete removes a user from the live cores and then the database.
@@ -321,6 +347,9 @@ func (s *UserService) Delete(ctx context.Context, id uuid.UUID) error {
 	if err := s.users.Delete(ctx, id); err != nil {
 		return err
 	}
+	// After the user (and its bindings) are gone, rebuild WireGuard peers on any
+	// node that hosted a WG inbound for them so they drop out of the server config.
+	s.resyncWireGuardNodes(ctx, inbounds)
 	s.pub.Publish(events.Event{Type: events.UserDeleted, UserID: u.ID.String(), Username: u.Username})
 	return nil
 }
@@ -383,20 +412,77 @@ func (s *UserService) RevokeSubToken(ctx context.Context, id uuid.UUID) (*domain
 	return u, nil
 }
 
-// provision pushes the user to the live core on each inbound's node, collecting
-// per-node failures so one unreachable node does not hide the others.
+// provision pushes the user to the live core on each inbound's node. Nodes that
+// host a WireGuard inbound among the user's bindings are fully resynced (the
+// only path that computes WireGuard peers), while nodes without a WG inbound
+// keep the lightweight per-inbound AddUser hot-add path so xray hot-add is not
+// regressed. Per-node failures are collected so one unreachable node does not
+// hide the others.
 func (s *UserService) provision(ctx context.Context, u *domain.User) error {
 	inbounds, err := s.users.InboundsFor(ctx, u.ID)
 	if err != nil {
 		return err
 	}
+	byNode, order := groupInboundsByNode(inbounds)
 	var errs []error
-	for _, in := range inbounds {
-		if err := s.nodes.AddUser(ctx, in.NodeID, in.Tag, u); err != nil {
-			errs = append(errs, fmt.Errorf("node %s inbound %s: %w", in.NodeID, in.Tag, err))
+	for _, nodeID := range order {
+		ins := byNode[nodeID]
+		if s.resync != nil && nodeHasWireGuard(ins) {
+			// Full resync rebuilds the whole node config including WG peers (and
+			// re-applies every other inbound/user on the node).
+			if err := s.resync.Resync(ctx, nodeID); err != nil {
+				errs = append(errs, fmt.Errorf("node %s resync: %w", nodeID, err))
+			}
+			continue
+		}
+		for _, in := range ins {
+			if err := s.nodes.AddUser(ctx, in.NodeID, in.Tag, u); err != nil {
+				errs = append(errs, fmt.Errorf("node %s inbound %s: %w", in.NodeID, in.Tag, err))
+			}
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// groupInboundsByNode buckets inbounds by their node id, returning the buckets
+// plus the node ids in first-seen order for deterministic iteration.
+func groupInboundsByNode(inbounds []domain.Inbound) (map[uuid.UUID][]domain.Inbound, []uuid.UUID) {
+	byNode := map[uuid.UUID][]domain.Inbound{}
+	var order []uuid.UUID
+	for _, in := range inbounds {
+		if _, ok := byNode[in.NodeID]; !ok {
+			order = append(order, in.NodeID)
+		}
+		byNode[in.NodeID] = append(byNode[in.NodeID], in)
+	}
+	return byNode, order
+}
+
+// nodeHasWireGuard reports whether any inbound in the slice is a WireGuard one.
+func nodeHasWireGuard(inbounds []domain.Inbound) bool {
+	for _, in := range inbounds {
+		if in.Protocol == domain.ProtoWireGuard {
+			return true
+		}
+	}
+	return false
+}
+
+// resyncWireGuardNodes best-effort rebuilds the full config of every node that
+// hosts a WireGuard inbound among the given inbounds. Used after a binding change
+// so the WireGuard peer set (which is only computed during a full Resync) is
+// rebuilt — adding newly-bound users and dropping unbound ones. A nil resyncer
+// makes this a no-op.
+func (s *UserService) resyncWireGuardNodes(ctx context.Context, inbounds []domain.Inbound) {
+	if s.resync == nil {
+		return
+	}
+	byNode, order := groupInboundsByNode(inbounds)
+	for _, nodeID := range order {
+		if nodeHasWireGuard(byNode[nodeID]) {
+			_ = s.resync.Resync(ctx, nodeID)
+		}
+	}
 }
 
 // --- credential generation (server-side only) ---

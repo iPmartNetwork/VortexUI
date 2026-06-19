@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -81,6 +82,58 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 	return c.Blob(http.StatusOK, format.ContentType(), body)
 }
 
+// SubscribeWireGuard serves a user's WireGuard client .conf as a downloadable
+// text file. Like Subscribe it is public and authenticated solely by the opaque
+// token, so any failure returns 404 (no token-existence oracle). It picks the
+// first enabled WireGuard inbound the user is bound to and resolves the hosting
+// node's public host the same way the subscription service does.
+func (h *Handlers) SubscribeWireGuard(c echo.Context) error {
+	if h.WireGuard == nil || h.NodeRepo == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+	ctx := c.Request().Context()
+	token := c.Param("token")
+
+	user, err := h.Repo.GetBySubToken(ctx, token)
+	if err != nil || user == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+
+	inbounds, err := h.Repo.InboundsFor(ctx, user.ID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+	var wgInbound *domain.Inbound
+	for i := range inbounds {
+		if inbounds[i].Enabled && inbounds[i].Protocol == domain.ProtoWireGuard {
+			wgInbound = &inbounds[i]
+			break
+		}
+	}
+	if wgInbound == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+
+	node, err := h.NodeRepo.GetByID(ctx, wgInbound.NodeID)
+	if err != nil || node == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+	host := node.Endpoint
+	if host == "" {
+		host = hostOf(node.Address)
+	}
+	if host == "" {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+
+	conf, err := h.WireGuard.ClientConfig(ctx, *wgInbound, user, host)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "wireguard config failed")
+	}
+	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", user.Username+".conf"))
+	return c.Blob(http.StatusOK, "text/plain; charset=utf-8", []byte(conf))
+}
+
 // isBrowser returns true if the UA looks like a standard web browser (not a
 // proxy client like clash, sing-box, v2ray, etc.).
 func isBrowser(ua string) bool {
@@ -155,4 +208,13 @@ func userInfoHeader(u *domain.User) string {
 	// upload is always reported as 0; we account a single combined counter.
 	return fmt.Sprintf("upload=0; download=%d; total=%d; expire=%d",
 		u.UsedTraffic, u.DataLimit, expire)
+}
+
+// hostOf extracts the host from a "host:port" node address, tolerating a bare
+// host (mirrors the subscription service's resolver).
+func hostOf(addr string) string {
+	if h, _, err := net.SplitHostPort(addr); err == nil {
+		return h
+	}
+	return addr
 }
