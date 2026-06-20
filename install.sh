@@ -3,10 +3,9 @@
 # VortexUI installer. Provisions the panel + node + web UI + PostgreSQL/Timescale
 # + Redis. Choose at runtime between two methods:
 #
-#   1) Docker Compose (recommended) — everything in containers.
-#   2) Native (systemd)            — Go binaries as services; DB/Redis in Docker;
-#                                    web served by Caddy. For users who prefer
-#                                    host processes over containers.
+#   1) Native (systemd) (recommended) — Go binaries as services; DB/Redis in
+#                                       Docker; web served by Caddy.
+#   2) Docker Compose                 — everything in containers.
 #
 #   bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
 #
@@ -65,7 +64,10 @@ ask_access() {
   if [ "$mode" = "1" ]; then
     read -r -p "  domain/subdomain (e.g. panel.example.com): " DOMAIN
     [ -n "$DOMAIN" ] || die "a domain is required for HTTPS mode."
-    read -r -p "  email for Let's Encrypt (optional): " ACME_EMAIL
+    while [ -z "$ACME_EMAIL" ]; do
+      read -r -p "  email for Let's Encrypt (required): " ACME_EMAIL
+      [ -n "$ACME_EMAIL" ] || echo "  ${y}an email is required to obtain an SSL certificate${n}"
+    done
     SITE_ADDRESS="$DOMAIN"
     warn "point $DOMAIN's DNS A record to this server and open ports 80 + 443."
   else
@@ -438,12 +440,12 @@ fi
 if [ -z "$METHOD" ] && [ -z "${VORTEXUI_NONINTERACTIVE:-}" ]; then
   echo
   echo "  Choose how to run the panel:"
-  echo "   ${b}1)${n} Docker Compose   ${d}— recommended, everything in containers${n}"
-  echo "   ${b}2)${n} Native (systemd) ${d}— host binaries + Caddy, DB/Redis in Docker${n}"
+  echo "   ${b}1)${n} Native (systemd) ${d}— recommended; host binaries + Caddy, DB/Redis in Docker${n}"
+  echo "   ${b}2)${n} Docker Compose   ${d}— everything in containers${n}"
   read -r -p "  choose [1/2]: " m
-  case "$m" in 2) METHOD=native ;; *) METHOD=docker ;; esac
+  case "$m" in 2) METHOD=docker ;; *) METHOD=native ;; esac
 fi
-METHOD="${METHOD:-docker}"
+METHOD="${METHOD:-native}"
 
 case "$METHOD" in
   docker) deploy_docker ;;
