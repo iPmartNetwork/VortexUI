@@ -188,6 +188,20 @@ c_switch_core() {
   echo "${g}✓ local node now runs $newcore — give it a few seconds to start.${n}"
 }
 
+# Print a base64 mTLS enrollment bundle (ca.crt+node.crt+node.key) for a new node.
+c_node_bundle() {
+  if [ "$MODE" = node ]; then echo "  ${y}run this on the PANEL server, not on a node.${n}"; return 1; fi
+  local cdir="$DIR/deploy/certs" f
+  for f in ca.crt node.crt node.key; do
+    [ -f "$cdir/$f" ] || { echo "  ${r}missing $cdir/$f — generate certs first (re-run install).${n}"; return 1; }
+  done
+  echo
+  echo "  ${b}Node enrollment bundle${n} ${d}— copy the entire line below${n}"
+  echo "  ${d}On the new node: run the installer, choose Node, then paste it when prompted.${n}"
+  echo
+  tar -C "$cdir" -czf - ca.crt node.crt node.key | base64 -w0; echo
+}
+
 c_uninstall() {
   read -r -p "${r}Remove everything incl. volumes (data loss)?${n} [y/N] " a
   [ "$a" = "y" ] || [ "$a" = "Y" ] || { echo "aborted."; return 0; }
@@ -222,6 +236,7 @@ vortexui — manage the VortexUI stack (${MODE} install)
   vortexui logs [panel|caddy]  follow logs
   vortexui update              pull latest and rebuild
   vortexui admin ...           run 'panel admin' (e.g. admin create --username U --password P --sudo)
+  vortexui node-bundle         print an mTLS enrollment bundle for a new node
   vortexui settings            show URL / port / status
   vortexui uninstall           remove the stack (DELETES data)
 EOF
@@ -241,8 +256,8 @@ menu() {
     else
       echo "   ${b}7)${n} Create admin     ${b}8)${n} Change web port"
       echo "   ${b}9)${n} Domain / SSL     ${b}10)${n} Settings / URL"
-      echo "   ${b}12)${n} Switch core      ${b}11)${n} ${r}Uninstall${n}"
-      echo "   ${b}0)${n} Exit"
+      echo "   ${b}12)${n} Switch core      ${b}13)${n} Node enroll bundle"
+      echo "   ${b}11)${n} ${r}Uninstall${n}       ${b}0)${n} Exit"
     fi
     echo
     read -r -p "  choose: " choice
@@ -259,6 +274,7 @@ menu() {
       10) [ "$MODE" = node ] && c_status || show_settings ;;
       11) c_uninstall; exit 0 ;;
       12) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_switch_core ;;
+      13) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_node_bundle ;;
       0) exit 0 ;;
       *) echo "  ${y}invalid choice${n}" ;;
     esac
@@ -278,6 +294,7 @@ case "$cmd" in
   admin)              c_admin "$@" ;;
   settings)           show_settings ;;
   core)               c_switch_core ;;
+  node-bundle)        c_node_bundle ;;
   uninstall)          c_uninstall ;;
   menu)               menu ;;
   -h|--help|help)     usage ;;
