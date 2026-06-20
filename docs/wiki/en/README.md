@@ -143,7 +143,6 @@ flowchart TB
 | Telegram Channel | [@vortex_ui](https://t.me/vortex_ui) |
 | OpenAPI Spec | [openapi.yaml](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) |
 | Changelog | [CHANGELOG.md](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md) |
-| Container Registry | [ghcr.io/ipmartnetwork/vortexui-panel](https://github.com/iPmartNetwork/VortexUI/pkgs/container/vortexui-panel) |
 | Bug Reports | [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues) |
 | Discussions | [GitHub Discussions](https://github.com/iPmartNetwork/VortexUI/discussions) |
 
