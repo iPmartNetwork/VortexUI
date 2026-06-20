@@ -4,7 +4,6 @@
   <p>Core-agnostic · User-centric · Real-time · Anti-censorship</p>
 
   [![Release](https://img.shields.io/github/v/release/iPmartNetwork/VortexUI?style=flat-square&color=blue)](https://github.com/iPmartNetwork/VortexUI/releases)
-  [![Downloads](https://img.shields.io/github/downloads/iPmartNetwork/VortexUI/total?style=flat-square&color=green)](https://github.com/iPmartNetwork/VortexUI/releases)
   [![Stars](https://img.shields.io/github/stars/iPmartNetwork/VortexUI?style=flat-square&color=yellow)](https://github.com/iPmartNetwork/VortexUI/stargazers)
   [![License](https://img.shields.io/github/license/iPmartNetwork/VortexUI?style=flat-square)](LICENSE)
   [![CI](https://img.shields.io/github/actions/workflow/status/iPmartNetwork/VortexUI/ci.yml?style=flat-square&label=CI)](https://github.com/iPmartNetwork/VortexUI/actions)
