@@ -58,7 +58,11 @@ function NodeCard({
   onStart: () => void;
   onUpdateGeo: () => void;
 }) {
-  const online = n.health.core_running;
+  // Online = fresh heartbeat AND core running, matching the Overview's NODES
+  // ONLINE count. A node the panel has never reached (no last_seen) stays
+  // offline even if a stale health snapshot is present.
+  const lastSeenFresh = n.last_seen != null && Date.now() - new Date(n.last_seen).getTime() < 90_000;
+  const online = lastSeenFresh && n.health.core_running;
   return (
     <Card className="group relative overflow-hidden p-0 transition-all duration-300 hover:ring-1 hover:ring-primary/20 hover:shadow-lg">
       {/* Content area */}
