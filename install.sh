@@ -354,19 +354,21 @@ deploy_node() {
   CERTDIR=/etc/vortexui/certs
   echo
   echo "  ${b}This node needs mTLS certs from your panel${n} (ca.crt, node.crt, node.key)."
-  echo "   ${b}1)${n} Paste an enrollment bundle  ${d}— recommended; on the panel run: ${g}vortexui node-bundle${n}"
-  echo "   ${b}2)${n} I already copied the 3 cert files into a directory"
+  echo "   ${b}1)${n} I already uploaded the 3 cert files to a directory  ${d}— recommended${n}"
+  echo "   ${b}2)${n} Paste an enrollment bundle  ${d}— on the panel run: ${g}vortexui node-bundle${n}"
   read -r -p "  choose [1/2]: " cm
   if [ "$cm" = "2" ]; then
-    read -r -p "  directory with ca.crt/node.crt/node.key [/etc/vortexui/certs]: " d_in
-    CERTDIR="${d_in:-/etc/vortexui/certs}"
-  else
     echo "  ${d}Paste the bundle line from the panel, then press Enter:${n}"
     read -r BUNDLE
     [ -n "$BUNDLE" ] || die "no bundle pasted — run 'vortexui node-bundle' on the panel and paste the whole line."
     printf '%s' "$BUNDLE" | base64 -d 2>/dev/null | tar -xzf - -C /etc/vortexui/certs 2>/dev/null \
       || die "invalid bundle — re-run 'vortexui node-bundle' on the panel and paste the entire line."
     CERTDIR=/etc/vortexui/certs
+  else
+    echo "  ${d}On the panel server the files are in:${n} ${g}<install-dir>/deploy/certs/${n} ${d}(ca.crt, node.crt, node.key).${n}"
+    echo "  ${d}Upload those 3 files to this node (scp/SFTP), then enter the directory below.${n}"
+    read -r -p "  directory with ca.crt/node.crt/node.key [/etc/vortexui/certs]: " d_in
+    CERTDIR="${d_in:-/etc/vortexui/certs}"
   fi
   for f in ca.crt node.crt node.key; do
     [ -f "$CERTDIR/$f" ] || die "missing $CERTDIR/$f — paste a valid bundle (vortexui node-bundle) or copy the files and re-run."
