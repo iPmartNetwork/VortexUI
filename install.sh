@@ -141,10 +141,23 @@ ensure_go() {
   command -v go >/dev/null 2>&1 && return
   info "installing Go toolchain…"
   local arch; arch="$(uname -m)"; [ "$arch" = "x86_64" ] && arch=amd64; [ "$arch" = "aarch64" ] && arch=arm64
+
+  # Escape hatch for networks that block Google's download hosts: point
+  # VORTEXUI_GO_URL at a reachable Go tarball (a mirror, or a file you staged).
+  # curl also honors http_proxy/https_proxy automatically if you export them.
+  if [ -n "${VORTEXUI_GO_URL:-}" ]; then
+    info "downloading Go from VORTEXUI_GO_URL…"
+    curl -fsSL "$VORTEXUI_GO_URL" -o /tmp/go.tgz \
+      || die "failed to download Go from VORTEXUI_GO_URL ($VORTEXUI_GO_URL)."
+    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz
+    export PATH="$PATH:/usr/local/go/bin"
+    ok "Go toolchain installed (custom URL)."
+    return
+  fi
+
   # Resolve the current stable Go version dynamically (endpoint returns e.g.
-  # "go1.26.3"); strip stray whitespace. Then try the latest AND a known-good
-  # 1.26.x fallback, each across several download hosts, because go.dev/dl's
-  # redirect to Google storage 404s on some networks. The project needs Go 1.26,
+  # "go1.26.3"); strip stray whitespace. Try the latest AND a known-good 1.26.x
+  # fallback, each across the official download hosts. The project needs Go 1.26,
   # so the fallback stays on the 1.26 line.
   local latest; latest="$(curl -fsSL "https://go.dev/VERSION?m=text" 2>/dev/null | head -1 | tr -d '[:space:]')"
   case "$latest" in go*) ;; *) latest="" ;; esac
@@ -152,7 +165,7 @@ ensure_go() {
   for v in "$latest" go1.26.3; do
     [ -n "$v" ] || continue
     tgz="${v}.linux-${arch}.tar.gz"
-    for host in "https://go.dev/dl" "https://dl.google.com/go" "https://storage.googleapis.com/golang"; do
+    for host in "https://go.dev/dl" "https://dl.google.com/go"; do
       if curl -fsSL "${host}/${tgz}" -o /tmp/go.tgz; then
         rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz
         export PATH="$PATH:/usr/local/go/bin"
@@ -161,7 +174,7 @@ ensure_go() {
       fi
     done
   done
-  die "could not download the Go toolchain from go.dev / dl.google.com (possible network filtering). Install Go >= 1.26 manually (then re-run the installer): https://go.dev/dl/"
+  die "could not download the Go toolchain (go.dev / dl.google.com unreachable — likely network filtering). Options: (1) export https_proxy and re-run; (2) set VORTEXUI_GO_URL to a reachable Go tarball and re-run; (3) copy /usr/local/go from a working server (tar it, scp it, extract to /usr/local), then re-run. Go downloads: https://go.dev/dl/"
 }
 
 # Download the xray-core and sing-box engines to the host and stage geo data.
