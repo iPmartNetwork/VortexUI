@@ -154,6 +154,7 @@ export interface Inbound {
   port: number;
   network: string;
   security: string;
+  sni?: string[];
   enabled: boolean;
 }
 
