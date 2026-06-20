@@ -140,8 +140,14 @@ deploy_docker() {
 ensure_go() {
   command -v go >/dev/null 2>&1 && return
   info "installing Go toolchain…"
-  local ver=1.26.0 arch; arch="$(uname -m)"; [ "$arch" = "x86_64" ] && arch=amd64; [ "$arch" = "aarch64" ] && arch=arm64
-  curl -fsSL "https://go.dev/dl/go${ver}.linux-${arch}.tar.gz" -o /tmp/go.tgz
+  local arch; arch="$(uname -m)"; [ "$arch" = "x86_64" ] && arch=amd64; [ "$arch" = "aarch64" ] && arch=arm64
+  # Resolve the current stable Go version dynamically so a hardcoded version that
+  # no longer exists on go.dev cannot 404 the install. The endpoint returns a
+  # string like "go1.26.3"; fall back to a known-good release if it's unreachable.
+  local ver; ver="$(curl -fsSL "https://go.dev/VERSION?m=text" 2>/dev/null | head -1)"
+  case "$ver" in go*) ;; *) ver="go1.26.3" ;; esac
+  curl -fsSL "https://go.dev/dl/${ver}.linux-${arch}.tar.gz" -o /tmp/go.tgz \
+    || die "failed to download Go (${ver}.linux-${arch}) from go.dev — check connectivity and retry."
   rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz
   export PATH="$PATH:/usr/local/go/bin"
 }
