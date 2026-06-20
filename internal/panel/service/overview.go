@@ -74,7 +74,13 @@ func (s *OverviewService) Build(ctx context.Context) (*Overview, error) {
 	now := s.now()
 	summary := NodeSummary{Total: len(nodes), Items: make([]NodeSnapshot, 0, len(nodes))}
 	for _, n := range nodes {
-		online := n.Live(now, s.staleAfter)
+		// Online on the dashboard means: a fresh heartbeat AND the core is
+		// running — the same signal the Nodes page dot uses. We intentionally do
+		// NOT use Node.Live here, because Live gives a never-polled node
+		// (LastSeen==nil) the benefit of the doubt (correct for subscription
+		// pruning, wrong here — it would show a node the panel has never reached
+		// as "online").
+		online := n.LastSeen != nil && now.Sub(*n.LastSeen) <= s.staleAfter && n.Health.CoreRunning
 		if online {
 			summary.Online++
 		}
