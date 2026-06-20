@@ -141,15 +141,27 @@ ensure_go() {
   command -v go >/dev/null 2>&1 && return
   info "installing Go toolchain…"
   local arch; arch="$(uname -m)"; [ "$arch" = "x86_64" ] && arch=amd64; [ "$arch" = "aarch64" ] && arch=arm64
-  # Resolve the current stable Go version dynamically so a hardcoded version that
-  # no longer exists on go.dev cannot 404 the install. The endpoint returns a
-  # string like "go1.26.3"; fall back to a known-good release if it's unreachable.
-  local ver; ver="$(curl -fsSL "https://go.dev/VERSION?m=text" 2>/dev/null | head -1)"
-  case "$ver" in go*) ;; *) ver="go1.26.3" ;; esac
-  curl -fsSL "https://go.dev/dl/${ver}.linux-${arch}.tar.gz" -o /tmp/go.tgz \
-    || die "failed to download Go (${ver}.linux-${arch}) from go.dev — check connectivity and retry."
-  rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz
-  export PATH="$PATH:/usr/local/go/bin"
+  # Resolve the current stable Go version dynamically (endpoint returns e.g.
+  # "go1.26.3"); strip stray whitespace. Then try the latest AND a known-good
+  # 1.26.x fallback, each across several download hosts, because go.dev/dl's
+  # redirect to Google storage 404s on some networks. The project needs Go 1.26,
+  # so the fallback stays on the 1.26 line.
+  local latest; latest="$(curl -fsSL "https://go.dev/VERSION?m=text" 2>/dev/null | head -1 | tr -d '[:space:]')"
+  case "$latest" in go*) ;; *) latest="" ;; esac
+  local v host tgz
+  for v in "$latest" go1.26.3; do
+    [ -n "$v" ] || continue
+    tgz="${v}.linux-${arch}.tar.gz"
+    for host in "https://go.dev/dl" "https://dl.google.com/go" "https://storage.googleapis.com/golang"; do
+      if curl -fsSL "${host}/${tgz}" -o /tmp/go.tgz; then
+        rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz
+        export PATH="$PATH:/usr/local/go/bin"
+        ok "Go toolchain installed (${v})."
+        return
+      fi
+    done
+  done
+  die "could not download the Go toolchain from go.dev / dl.google.com (possible network filtering). Install Go >= 1.26 manually (then re-run the installer): https://go.dev/dl/"
 }
 
 # Download the xray-core and sing-box engines to the host and stage geo data.
