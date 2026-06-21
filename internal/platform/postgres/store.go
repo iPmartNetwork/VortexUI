@@ -104,6 +104,9 @@ func (s *Store) SubHosts() *SubHostRepo { return &SubHostRepo{pool: s.pool} }
 // RoutingPacks returns the routing rule pack repository.
 func (s *Store) RoutingPacks() *RoutingPackRepo { return &RoutingPackRepo{pool: s.pool} }
 
+// IPLimits returns the IP-limit enforcement policy/events repository.
+func (s *Store) IPLimits() *IPLimitRepo { return &IPLimitRepo{pool: s.pool} }
+
 // Probing returns the probing repository.
 func (s *Store) Probing() *ProbingRepo { return &ProbingRepo{pool: s.pool} }
 

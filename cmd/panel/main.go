@@ -197,6 +197,12 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	shareGuard := service.NewShareGuard(userSvc, users, h, 2*time.Minute, log)
 	shareGuard.SetPublisher(bus)
 	shareGuard.SetAutoLimit(cfg.ShareAutoLimit)
+	// Wire IP-limit enforcement: ShareGuard reads the policy each pass and, when
+	// enabled, branches on the configured action (warn/disable/kill), recording
+	// each action. With no enabled policy its legacy detection-only behavior is
+	// unchanged. The node repo supplies the per-node core kind (xray vs sing-box).
+	ipLimitSvc := service.NewIPLimitService(store.IPLimits())
+	shareGuard.SetIPLimit(store.IPLimits(), nodes)
 	go shareGuard.Run(ctx)
 	subSvc := service.NewSubscriptionService(users, nodes, store.SubHosts())
 	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
@@ -313,6 +319,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Federation:  &api.FederationHandlers{Fed: fedSvc},
 		DeepLink:    &api.DeepLinkHandlers{DeepLink: deepLinkSvc},
 		QuotaNotify: &api.QuotaNotifyHandlers{QN: quotaNotifySvc},
+		IPLimit:     &api.IPLimitHandlers{IPLimit: ipLimitSvc},
 		SubSettings: &api.SubSettingsHandlers{Svc: subSettingsSvc},
 		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Monitor: monitorAdapter{store.Monitor()}},
 		Issuer:      issuer,

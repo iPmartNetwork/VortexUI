@@ -35,6 +35,7 @@ type Deps struct {
 	Federation *FederationHandlers
 	DeepLink   *DeepLinkHandlers
 	QuotaNotify *QuotaNotifyHandlers
+	IPLimit    *IPLimitHandlers
 	SubSettings *SubSettingsHandlers
 	Monitor    *MonitorHandlers
 	Issuer     *auth.Issuer
@@ -359,6 +360,12 @@ func NewRouter(d Deps) *echo.Echo {
 	qn.GET("/config", d.QuotaNotify.GetConfig)
 	qn.PUT("/config", d.QuotaNotify.UpdateConfig)
 	qn.GET("/events", d.QuotaNotify.ListEvents)
+
+	// --- IP-limit enforcement ---
+	iplimit := authed.Group("/ip-limit", RequirePermission(d.Auth, domain.PermAdminManage))
+	iplimit.GET("/policy", d.IPLimit.GetPolicy)
+	iplimit.PUT("/policy", d.IPLimit.UpdatePolicy)
+	iplimit.GET("/events", d.IPLimit.ListEvents)
 
 	return e
 }
