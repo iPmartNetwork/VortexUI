@@ -46,9 +46,17 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   const del = useDeleteInbound();
   const toast = useToast();
   const [f, setF] = useState({ ...blank });
+  const [realityKeys, setRealityKeys] = useState<{ private_key: string; public_key: string; short_id: string } | null>(null);
   const [tab, setTab] = useState<"basics" | "json">("basics");
   const [jsonText, setJsonText] = useState("");
   const [jsonErr, setJsonErr] = useState("");
+
+  // resetForm clears the basics form back to a blank inbound, including any
+  // generated REALITY keys, so a previous edit/create can't leak into the next.
+  const resetForm = () => {
+    setF(newBlank());
+    setRealityKeys(null);
+  };
 
   // Per-core capability for the current node, with static fallbacks until the
   // matrix has been fetched.
@@ -99,6 +107,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     });
 
   function startEdit(ib: Inbound) {
+    setRealityKeys(null);
     setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", ") });
   }
 
@@ -118,15 +127,29 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     const host = f.host ? f.host.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const allowed = f.geoAllow ? f.geoAllow.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const geo_policy = allowed.length > 0 ? { allowed_countries: allowed } : null;
+    // When REALITY is selected and keys were generated in the form, send them in
+    // raw.reality so the saved inbound uses exactly these keys (the public_key we
+    // displayed). Without this the backend would auto-generate a different pair.
+    let raw: Record<string, unknown> | undefined;
+    if (f.security === "reality" && realityKeys) {
+      raw = {
+        reality: {
+          private_key: realityKeys.private_key,
+          public_key: realityKeys.public_key,
+          short_ids: [realityKeys.short_id],
+          ...(sni.length > 0 ? { server_names: sni, dest: `${sni[0]}:443` } : {}),
+        },
+      };
+    }
     try {
       if (editing) {
-        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network: f.network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true } });
+        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network: f.network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) } });
         toast.success(`Updated ${f.tag}`);
       } else {
-        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true });
+        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) });
         toast.success(`Added ${f.tag}`);
       }
-      setF(newBlank());
+      resetForm();
     } catch {
       toast.error("Save failed");
     }
@@ -214,7 +237,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">{editing ? `Edit ${f.tag}` : "Add inbound"}</p>
           {editing && (
-            <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setF(newBlank())}>
+            <button type="button" className="text-xs text-muted-foreground underline" onClick={resetForm}>
               cancel edit
             </button>
           )}
@@ -249,7 +272,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         {f.protocol === "vless" && (f.security === "tls" || f.security === "reality") && (
           <Input placeholder="Flow (e.g. xtls-rprx-vision, optional)" value={f.flow} onChange={set("flow")} />
         )}
-        {f.security === "reality" && <RealityKeygenSection />}
+        {f.security === "reality" && <RealityKeygenSection onKeys={setRealityKeys} />}
         <div>
           <p className="text-[10px] font-medium text-fg-muted mb-1">Geo-blocking (allowed countries, comma-separated ISO codes)</p>
           <Input placeholder="e.g. IR,TR (empty = all allowed)" value={f.geoAllow ?? ""} onChange={(e) => setF(s => ({...s, geoAllow: e.target.value}))} />
@@ -265,13 +288,14 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   );
 }
 
-function RealityKeygenSection() {
+function RealityKeygenSection({ onKeys }: { onKeys: (keys: { private_key: string; public_key: string; short_id: string } | null) => void }) {
   const reality = useReality();
   const [keys, setKeys] = useState<{ private_key: string; public_key: string; short_id: string } | null>(null);
 
   async function generate() {
     const r = await reality.mutateAsync();
     setKeys(r);
+    onKeys(r);
   }
 
   return (
