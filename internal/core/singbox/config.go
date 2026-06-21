@@ -431,6 +431,34 @@ func buildInbound(in domain.Inbound, users []*domain.User) (map[string]any, erro
 		m["type"] = "tuic"
 		m["users"] = tuicUsers(users)
 		m["congestion_control"] = "bbr"
+	case domain.ProtoHysteria:
+		// Hysteria v1: UDP-native, mandatory TLS. Bandwidth/obfs come from Raw
+		// since they are inbound-level knobs we do not model as columns.
+		m["type"] = "hysteria"
+		up, down := hysteriaBandwidth(in)
+		m["up_mbps"] = up
+		m["down_mbps"] = down
+		if obfs := hysteriaObfs(in); obfs != "" {
+			m["obfs"] = obfs
+		}
+		m["users"] = hysteriaUsers(users)
+	case domain.ProtoShadowTLS:
+		// ShadowTLS v3 fronts a real TLS handshake; it carries no tls block of
+		// its own. Version/handshake/strict_mode come from Raw["shadowtls"].
+		m["type"] = "shadowtls"
+		m["version"] = shadowTLSVersion(in)
+		if hs := shadowTLSHandshake(in); hs != nil {
+			m["handshake"] = hs
+		}
+		m["users"] = shadowTLSUsers(in, users)
+		m["strict_mode"] = shadowTLSStrict(in)
+	case domain.ProtoAnyTLS:
+		// AnyTLS: TCP-based, mandatory TLS (rendered below via tlsBlock).
+		m["type"] = "anytls"
+		m["users"] = anyTLSUsers(users)
+		if pad := anyTLSPadding(in); len(pad) > 0 {
+			m["padding_scheme"] = pad
+		}
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q for sing-box", in.Protocol)
 	}
@@ -517,6 +545,151 @@ func tuicUsers(users []*domain.User) []map[string]any {
 	return out
 }
 
+// hysteriaUsers renders the per-user list for Hysteria v1. sing-box expects each
+// user's authentication string in `auth_str`; we reuse the trojan password as
+// the shared per-user secret (same approach as hysteria2/tuic).
+func hysteriaUsers(users []*domain.User) []map[string]any {
+	out := make([]map[string]any, 0, len(users))
+	for _, u := range users {
+		out = append(out, map[string]any{"name": u.ID.String(), "auth_str": u.Proxies.TrojanPass})
+	}
+	return out
+}
+
+// hysteriaBandwidth reads the inbound up/down rate limits (Mbps) from
+// Raw["hysteria"], falling back to a sane non-zero default so the inbound is
+// valid even when the operator left them unset.
+func hysteriaBandwidth(in domain.Inbound) (up, down int) {
+	up, down = 100, 100
+	h, _ := in.Raw["hysteria"].(map[string]any)
+	if v, ok := rawInt(h["up_mbps"]); ok {
+		up = v
+	}
+	if v, ok := rawInt(h["down_mbps"]); ok {
+		down = v
+	}
+	return up, down
+}
+
+// hysteriaObfs returns the optional obfuscation password from Raw["hysteria"].
+func hysteriaObfs(in domain.Inbound) string {
+	h, _ := in.Raw["hysteria"].(map[string]any)
+	s, _ := h["obfs"].(string)
+	return s
+}
+
+// anyTLSUsers renders the per-user password list for AnyTLS, reusing the trojan
+// password as the per-user secret.
+func anyTLSUsers(users []*domain.User) []map[string]any {
+	out := make([]map[string]any, 0, len(users))
+	for _, u := range users {
+		out = append(out, map[string]any{"name": u.ID.String(), "password": u.Proxies.TrojanPass})
+	}
+	return out
+}
+
+// anyTLSPadding returns the optional padding_scheme lines from Raw["anytls"].
+func anyTLSPadding(in domain.Inbound) []string {
+	a, _ := in.Raw["anytls"].(map[string]any)
+	return rawStrings(a["padding_scheme"])
+}
+
+// shadowTLSUsers renders the ShadowTLS v3 user list (name+password), reusing the
+// trojan password. When no users are bound it falls back to the single
+// server-level password from Raw["shadowtls"] so a detour-only setup still works.
+func shadowTLSUsers(in domain.Inbound, users []*domain.User) []map[string]any {
+	out := make([]map[string]any, 0, len(users))
+	for _, u := range users {
+		out = append(out, map[string]any{"name": u.ID.String(), "password": u.Proxies.TrojanPass})
+	}
+	if len(out) == 0 {
+		s, _ := in.Raw["shadowtls"].(map[string]any)
+		if pw, _ := s["password"].(string); pw != "" {
+			out = append(out, map[string]any{"password": pw})
+		}
+	}
+	return out
+}
+
+// shadowTLSVersion returns the protocol version from Raw["shadowtls"], defaulting
+// to 3 (the only version with per-user authentication).
+func shadowTLSVersion(in domain.Inbound) int {
+	s, _ := in.Raw["shadowtls"].(map[string]any)
+	if v, ok := rawInt(s["version"]); ok && v > 0 {
+		return v
+	}
+	return 3
+}
+
+// shadowTLSStrict returns the strict_mode flag from Raw["shadowtls"].
+func shadowTLSStrict(in domain.Inbound) bool {
+	s, _ := in.Raw["shadowtls"].(map[string]any)
+	b, _ := s["strict_mode"].(bool)
+	return b
+}
+
+// shadowTLSHandshake builds the {server, server_port} handshake target ShadowTLS
+// fronts. Returns nil when no handshake server is configured (the inbound is
+// then skipped by inboundUsable). The server comes from Raw["shadowtls"], with
+// the inbound SNI as a fallback; the port defaults to 443.
+func shadowTLSHandshake(in domain.Inbound) map[string]any {
+	server := shadowTLSHandshakeServer(in)
+	if server == "" {
+		return nil
+	}
+	port := 443
+	s, _ := in.Raw["shadowtls"].(map[string]any)
+	if v, ok := rawInt(s["handshake_port"]); ok && v > 0 {
+		port = v
+	}
+	return map[string]any{"server": server, "server_port": port}
+}
+
+// shadowTLSHandshakeServer resolves the handshake server name, preferring the
+// explicit Raw value and falling back to the inbound's first SNI entry.
+func shadowTLSHandshakeServer(in domain.Inbound) string {
+	s, _ := in.Raw["shadowtls"].(map[string]any)
+	if server, _ := s["handshake_server"].(string); server != "" {
+		return server
+	}
+	if len(in.SNI) > 0 {
+		return in.SNI[0]
+	}
+	return ""
+}
+
+// rawInt coerces a JSON-decoded number (float64) or a native int into an int.
+func rawInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case float64:
+		return int(n), true
+	default:
+		return 0, false
+	}
+}
+
+// rawStrings coerces a JSON-decoded []any (or []string) of strings into []string.
+func rawStrings(v any) []string {
+	switch s := v.(type) {
+	case []string:
+		return s
+	case []any:
+		out := make([]string, 0, len(s))
+		for _, item := range s {
+			if str, ok := item.(string); ok {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
 func ssUsers(users []*domain.User) []map[string]any {
 	out := make([]map[string]any, 0, len(users))
 	for _, u := range users {
@@ -535,6 +708,11 @@ func ssMethod(users []*domain.User) string {
 }
 
 func tlsBlock(in domain.Inbound) map[string]any {
+	// ShadowTLS supplies its own TLS handshake via the handshake target; it must
+	// not carry a separate inbound tls block.
+	if in.Protocol == domain.ProtoShadowTLS {
+		return nil
+	}
 	if in.Security != domain.SecurityTLS && in.Security != domain.SecurityReality {
 		return nil
 	}
@@ -591,8 +769,17 @@ func inboundUsable(in domain.Inbound) bool {
 			return true
 		}
 	}
-	if in.Security == domain.SecurityReality {
-		return reality.ParseParams(in.Raw["reality"]).PrivateKey != ""
+	if in.Security == domain.SecurityReality && reality.ParseParams(in.Raw["reality"]).PrivateKey == "" {
+		return false
+	}
+	switch in.Protocol {
+	case domain.ProtoShadowTLS:
+		// ShadowTLS cannot start without a real TLS handshake target to front.
+		return shadowTLSHandshake(in) != nil
+	case domain.ProtoAnyTLS, domain.ProtoHysteria:
+		// Both mandate a TLS layer; without one sing-box rejects the inbound, so
+		// skip it rather than emit a broken block.
+		return in.Security == domain.SecurityTLS || in.Security == domain.SecurityReality
 	}
 	return true
 }

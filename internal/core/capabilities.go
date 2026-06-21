@@ -42,10 +42,10 @@ var capabilities = map[domain.CoreType]Capability{
 		UDPNative:  nil,
 	},
 	domain.CoreSingbox: {
-		Protocols:  []domain.Protocol{domain.ProtoVMess, domain.ProtoVLESS, domain.ProtoTrojan, domain.ProtoShadowsocks, domain.ProtoHysteria2, domain.ProtoTUIC, domain.ProtoWireGuard},
+		Protocols:  []domain.Protocol{domain.ProtoVMess, domain.ProtoVLESS, domain.ProtoTrojan, domain.ProtoShadowsocks, domain.ProtoHysteria2, domain.ProtoTUIC, domain.ProtoWireGuard, domain.ProtoHysteria, domain.ProtoShadowTLS, domain.ProtoAnyTLS},
 		Transports: []string{"tcp", "ws", "grpc", "httpupgrade", "http", "h2", "quic"},
 		Securities: []domain.Security{domain.SecurityNone, domain.SecurityTLS, domain.SecurityReality},
-		UDPNative:  []domain.Protocol{domain.ProtoHysteria2, domain.ProtoTUIC, domain.ProtoWireGuard},
+		UDPNative:  []domain.Protocol{domain.ProtoHysteria2, domain.ProtoTUIC, domain.ProtoWireGuard, domain.ProtoHysteria},
 	},
 }
 
