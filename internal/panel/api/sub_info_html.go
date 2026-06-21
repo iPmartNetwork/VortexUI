@@ -82,6 +82,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="sub-link"><span class="sub-link-label">Clash / Mihomo</span><button class="copy-btn" onclick="copy('{{.ClashURL}}')">Copy</button></div>
       <div class="sub-link"><span class="sub-link-label">Sing-Box</span><button class="copy-btn" onclick="copy('{{.SingboxURL}}')">Copy</button></div>
       <div class="sub-link"><span class="sub-link-label">Base64</span><button class="copy-btn" onclick="copy('{{.Base64URL}}')">Copy</button></div>
+      <div class="sub-link"><span class="sub-link-label">Xray / V2Ray (JSON)</span><button class="copy-btn" onclick="copy('{{.XrayURL}}')">Copy</button></div>
+      <div class="sub-link"><span class="sub-link-label">Outline (ss://)</span><button class="copy-btn" onclick="copy('{{.OutlineURL}}')">Copy</button></div>
+      <div class="sub-link"><span class="sub-link-label">V2rayN (plain links)</span><button class="copy-btn" onclick="copy('{{.LinksURL}}')">Copy</button></div>
     </div>
   </div>
 
