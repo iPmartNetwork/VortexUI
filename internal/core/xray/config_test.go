@@ -581,6 +581,32 @@ func TestBuilder_VLESSFlowOnlyForValidCombos(t *testing.T) {
 	if !present || flow != "xtls-rprx-vision" {
 		t.Errorf("vless+tcp+reality flow = %q (present=%v), want xtls-rprx-vision", flow, present)
 	}
+
+	// vless + tcp + reality with NO flow: must auto-default to xtls-rprx-vision
+	// (REALITY best practice).
+	autoFlow, autoPresent := flowOf(t, domain.Inbound{
+		Tag: "vless-reality-auto", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.microsoft.com"},
+		Raw: map[string]any{"reality": map[string]any{
+			"private_key": "PK", "dest": "www.microsoft.com:443",
+		}},
+	})
+	if !autoPresent || autoFlow != "xtls-rprx-vision" {
+		t.Errorf("vless+tcp+reality (blank flow) = %q (present=%v), want auto xtls-rprx-vision", autoFlow, autoPresent)
+	}
+
+	// An explicitly-set non-default flow on reality must be preserved as-is.
+	customFlow, customPresent := flowOf(t, domain.Inbound{
+		Tag: "vless-reality-custom", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.microsoft.com"},
+		Flow: "xtls-rprx-direct",
+		Raw: map[string]any{"reality": map[string]any{
+			"private_key": "PK", "dest": "www.microsoft.com:443",
+		}},
+	})
+	if !customPresent || customFlow != "xtls-rprx-direct" {
+		t.Errorf("explicit flow = %q (present=%v), want xtls-rprx-direct preserved", customFlow, customPresent)
+	}
 }
 
 // ssSettingsFor builds the config for a single SS inbound and returns its parsed
