@@ -245,6 +245,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	planSvc := service.NewPlanService(store.Plans(), userSvc)
 	realitySvc := service.NewRealityScannerService(store.RealityScans(), nodes)
 	subHostSvc := service.NewSubHostService(store.SubHosts())
+	routingPackSvc := service.NewRoutingPackService(store.RoutingPacks(), routingSvc, outboundSvc)
 	quotaSvc := service.NewQuotaService(store.QuotaPolicies())
 	relaySvc := service.NewRelayService(store.RelayChains(), nodes)
 	decoySvc := service.NewDecoyService(store.DecoySites())
@@ -290,6 +291,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Portal:      &api.PortalHandlers{Portal: portalSvc, Issuer: issuer},
 		Reality:     &api.RealityHandlers{Scanner: realitySvc},
 		SubHosts:    &api.SubHostHandlers{SubHosts: subHostSvc},
+		RoutingPacks: &api.RoutingPackHandlers{Packs: routingPackSvc},
 		Quota:       &api.QuotaHandlers{Quota: quotaSvc},
 		Relay:       &api.RelayHandlers{Relay: relaySvc},
 		Decoy:       &api.DecoyHandlers{Decoy: decoySvc},

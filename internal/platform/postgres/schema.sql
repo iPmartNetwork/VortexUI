@@ -81,6 +81,7 @@ CREATE TABLE users (
     ss_password    TEXT NOT NULL DEFAULT '',
     ss_method      TEXT NOT NULL DEFAULT 'aes-128-gcm',
     sub_token      TEXT NOT NULL UNIQUE,
+    routing_pack_id TEXT NOT NULL DEFAULT '',
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -235,6 +236,21 @@ CREATE TABLE sub_hosts (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_sub_hosts_inbound ON sub_hosts (inbound_id, priority);
+
+-- panel-feature-parity: Smart-routing rule packs (reusable routing rule sets)
+CREATE TABLE routing_packs (
+    id          UUID PRIMARY KEY,
+    name        TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    category    TEXT NOT NULL DEFAULT '',
+    rules       JSONB NOT NULL DEFAULT '[]',
+    outbounds   JSONB NOT NULL DEFAULT '[]',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE routing_pack_selection (
+    id      INTEGER PRIMARY KEY DEFAULT 1,
+    pack_id TEXT NOT NULL DEFAULT ''
+);
 
 -- v1.2.0: Smart Quota tiers
 CREATE TABLE quota_policies (

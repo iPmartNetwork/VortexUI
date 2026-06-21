@@ -18,6 +18,7 @@ type Deps struct {
 	Portal     *PortalHandlers
 	Reality    *RealityHandlers
 	SubHosts   *SubHostHandlers
+	RoutingPacks *RoutingPackHandlers
 	Quota      *QuotaHandlers
 	Relay      *RelayHandlers
 	Decoy      *DecoyHandlers
@@ -218,6 +219,15 @@ func NewRouter(d Deps) *echo.Echo {
 	hosts.PUT("/:id", d.SubHosts.UpdateSubHost, RequirePermission(d.Auth, domain.PermInboundWrite))
 	hosts.DELETE("/:id", d.SubHosts.DeleteSubHost, RequirePermission(d.Auth, domain.PermInboundWrite))
 	hosts.POST("/reorder", d.SubHosts.ReorderSubHosts, RequirePermission(d.Auth, domain.PermInboundWrite))
+
+	// --- Smart-routing rule packs (reusable routing rule sets) ---
+	packs := authed.Group("/routing-packs")
+	packs.GET("", d.RoutingPacks.ListPacks, RequirePermission(d.Auth, domain.PermInboundRead))
+	packs.POST("", d.RoutingPacks.CreatePack, RequirePermission(d.Auth, domain.PermInboundWrite))
+	packs.PUT("/:id", d.RoutingPacks.UpdatePack, RequirePermission(d.Auth, domain.PermInboundWrite))
+	packs.DELETE("/:id", d.RoutingPacks.DeletePack, RequirePermission(d.Auth, domain.PermInboundWrite))
+	packs.POST("/apply", d.RoutingPacks.ApplyToNode, RequirePermission(d.Auth, domain.PermInboundWrite))
+	packs.PUT("/default", d.RoutingPacks.SetDefault, RequirePermission(d.Auth, domain.PermInboundWrite))
 
 	// --- Smart Quota (Fair Use) ---
 	quota := authed.Group("/quota", RequirePermission(d.Auth, domain.PermAdminManage))

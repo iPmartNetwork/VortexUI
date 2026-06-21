@@ -98,6 +98,9 @@ func (s *Store) RealityScans() *RealityScanRepo { return &RealityScanRepo{pool: 
 // SubHosts returns the subscription host repository.
 func (s *Store) SubHosts() *SubHostRepo { return &SubHostRepo{pool: s.pool} }
 
+// RoutingPacks returns the routing rule pack repository.
+func (s *Store) RoutingPacks() *RoutingPackRepo { return &RoutingPackRepo{pool: s.pool} }
+
 // Probing returns the probing repository.
 func (s *Store) Probing() *ProbingRepo { return &ProbingRepo{pool: s.pool} }
 
