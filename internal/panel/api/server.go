@@ -106,6 +106,10 @@ func NewRouter(d Deps) *echo.Echo {
 	nodes.PUT("/:id", d.Handlers.UpdateNode, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.DELETE("/:id", d.Handlers.DeleteNode, RequirePermission(d.Auth, domain.PermNodeWrite))
 
+	// Per-core capability matrix (protocols/transports/securities/udp-native),
+	// consumed by the UI to filter inbound-form options to the node's core.
+	authed.GET("/capabilities", d.Handlers.GetCapabilities, RequirePermission(d.Auth, domain.PermInboundRead))
+
 	inbounds := authed.Group("/inbounds")
 	inbounds.GET("", d.Handlers.ListInbounds, RequirePermission(d.Auth, domain.PermInboundRead))
 	inbounds.POST("", d.Handlers.CreateInbound, RequirePermission(d.Auth, domain.PermInboundWrite))

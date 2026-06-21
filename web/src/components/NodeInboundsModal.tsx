@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useCreateInbound, useDeleteInbound, useNodeInbounds, useUpdateInbound, type Inbound } from "@/api/hooks";
+import { useEffect, useState } from "react";
+import { useCapabilities, useCreateInbound, useDeleteInbound, useNodeInbounds, useUpdateInbound, type Inbound } from "@/api/hooks";
 import { useReality } from "@/api/policy-hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button, Input, Select } from "./ui";
@@ -8,12 +8,15 @@ import { CopyField } from "./CopyField";
 import { JsonCodeEditor } from "./JsonCodeEditor";
 import { useToast } from "./toast";
 
-// xray supports vless/vmess/trojan/shadowsocks; hysteria2/tuic/wireguard require a sing-box node.
+// Static fallbacks used only until the per-core capability matrix
+// (GET /api/capabilities) loads, so the form still works before the fetch
+// resolves. Once `caps` is available the options are filtered per the node's core.
 const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "wireguard"];
 const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "http", "h2", "xhttp", "quic", "udp"];
 const SECURITIES = ["none", "tls", "reality"];
 
-// Protocols that run over UDP (QUIC-based) — transport/security are fixed.
+// UDP-native protocol fallback (used until caps load). Authoritative list comes
+// from cap.udp_native per core.
 const UDP_PROTOCOLS = ["hysteria2", "tuic", "wireguard"];
 
 // randomPort picks a high port (10000–60000) so new inbounds default to a free,
@@ -37,6 +40,7 @@ const DEFAULT_INBOUND_TEMPLATE = {
 
 export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClose: () => void }) {
   const list = useNodeInbounds(node?.id ?? null);
+  const caps = useCapabilities().data;
   const create = useCreateInbound();
   const update = useUpdateInbound();
   const del = useDeleteInbound();
@@ -46,14 +50,50 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   const [jsonText, setJsonText] = useState("");
   const [jsonErr, setJsonErr] = useState("");
 
+  // Per-core capability for the current node, with static fallbacks until the
+  // matrix has been fetched.
+  const cap = caps?.[node?.core === "singbox" ? "singbox" : "xray"];
+  const protocols = cap?.protocols ?? PROTOCOLS;
+  const networks = cap?.transports ?? NETWORKS;
+  const securities = cap?.securities ?? SECURITIES;
+  const udpNative = cap?.udp_native ?? UDP_PROTOCOLS;
+  const isUDP = udpNative.includes(f.protocol);
+
+  // When the capability matrix loads or the node's core changes, reconcile the
+  // form so it can never submit a protocol/network/security the core rejects.
+  useEffect(() => {
+    if (!cap) return;
+    setF((s) => {
+      let next = s;
+      if (!cap.protocols.includes(next.protocol)) {
+        next = { ...next, protocol: cap.protocols[0] ?? next.protocol };
+      }
+      if (cap.udp_native.includes(next.protocol)) {
+        // UDP-native protocols carry no stream transport; network is irrelevant.
+        if (next.network !== "") next = { ...next, network: "" };
+      } else if (!cap.transports.includes(next.network)) {
+        next = { ...next, network: cap.transports[0] ?? next.network };
+      }
+      if (!cap.securities.includes(next.security)) {
+        next = { ...next, security: cap.securities[0] ?? next.security };
+      }
+      return next === s ? s : next;
+    });
+  }, [cap]);
+
   if (!node) return null;
   const editing = f.editId !== "";
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((s) => {
       const val = e.target.value;
-      // When protocol changes to UDP-based (hysteria2/tuic), lock transport to udp + security to tls
-      if (k === "protocol" && UDP_PROTOCOLS.includes(val)) {
-        return { ...s, [k]: val, network: "udp", security: "tls" };
+      if (k === "protocol") {
+        // Switching to a UDP-native protocol clears the (irrelevant) network;
+        // switching back to a stream protocol restores a valid transport.
+        if (udpNative.includes(val)) {
+          return { ...s, protocol: val, network: "" };
+        }
+        const network = s.network && networks.includes(s.network) ? s.network : (networks[0] ?? "tcp");
+        return { ...s, protocol: val, network };
       }
       return { ...s, [k]: val };
     });
@@ -185,13 +225,15 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Select value={f.protocol} onChange={set("protocol")} disabled={editing}>
-            {PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
+            {protocols.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
-          <Select value={f.network} onChange={set("network")} disabled={UDP_PROTOCOLS.includes(f.protocol)}>
-            {NETWORKS.map((n) => <option key={n} value={n}>{n}</option>)}
-          </Select>
-          <Select value={f.security} onChange={set("security")} disabled={UDP_PROTOCOLS.includes(f.protocol)}>
-            {SECURITIES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {!isUDP && (
+            <Select value={f.network} onChange={set("network")}>
+              {networks.map((n) => <option key={n} value={n}>{n}</option>)}
+            </Select>
+          )}
+          <Select value={f.security} onChange={set("security")}>
+            {securities.map((s) => <option key={s} value={s}>{s}</option>)}
           </Select>
         </div>
         <Input placeholder="SNI (comma-separated, optional)" value={f.sni} onChange={set("sni")} />
