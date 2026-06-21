@@ -498,3 +498,87 @@ func TestBuilder_GeoBlockBlockedCountries(t *testing.T) {
 		t.Error("expected a rule sending geoip:CN traffic to blocked")
 	}
 }
+
+// TestBuilder_VLESSFlowOnlyForValidCombos verifies xtls-rprx-vision is emitted
+// only for VLESS over raw TCP with TLS or REALITY. On ws (or any non-TCP
+// transport) or with security=none the flow must be omitted entirely (not even
+// "flow":""), otherwise xray rejects the config.
+func TestBuilder_VLESSFlowOnlyForValidCombos(t *testing.T) {
+	flowOf := func(t *testing.T, in domain.Inbound) (string, bool) {
+		t.Helper()
+		u := &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{VLESSUUID: uuid.New()}}
+		raw, err := Builder{APIPort: 10085}.Build(&core.GeneratedConfig{
+			Inbounds:       []domain.Inbound{in},
+			UsersByInbound: map[string][]*domain.User{in.Tag: {u}},
+		})
+		if err != nil {
+			t.Fatalf("build: %v", err)
+		}
+		var parsed struct {
+			Inbounds []struct {
+				Tag      string          `json:"tag"`
+				Settings json.RawMessage `json:"settings"`
+			} `json:"inbounds"`
+		}
+		if err := json.Unmarshal(raw, &parsed); err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		for _, i := range parsed.Inbounds {
+			if i.Tag != in.Tag {
+				continue
+			}
+			var s struct {
+				Clients []map[string]any `json:"clients"`
+			}
+			if err := json.Unmarshal(i.Settings, &s); err != nil {
+				t.Fatalf("settings parse: %v", err)
+			}
+			if len(s.Clients) == 0 {
+				t.Fatalf("inbound %q has no clients", in.Tag)
+			}
+			flow, present := s.Clients[0]["flow"]
+			if !present {
+				return "", false
+			}
+			str, _ := flow.(string)
+			return str, true
+		}
+		t.Fatalf("inbound %q missing from output", in.Tag)
+		return "", false
+	}
+
+	tlsCert := map[string]any{"tls": map[string]any{
+		"certificate": "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----",
+		"key":         "-----BEGIN PRIVATE KEY-----\nMIIB\n-----END PRIVATE KEY-----",
+	}}
+
+	// ws transport: flow must be omitted even though Flow is set.
+	if flow, present := flowOf(t, domain.Inbound{
+		Tag: "vless-ws", Protocol: domain.ProtoVLESS, Port: 443, Network: "ws",
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"}, Flow: "xtls-rprx-vision",
+		Raw: tlsCert,
+	}); present {
+		t.Errorf("ws inbound emitted flow %q, want it omitted", flow)
+	}
+
+	// security=none on tcp: flow must be omitted.
+	if flow, present := flowOf(t, domain.Inbound{
+		Tag: "vless-tcp-none", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityNone, Flow: "xtls-rprx-vision",
+	}); present {
+		t.Errorf("tcp+none inbound emitted flow %q, want it omitted", flow)
+	}
+
+	// vless + tcp + reality WITH flow: must emit xtls-rprx-vision.
+	flow, present := flowOf(t, domain.Inbound{
+		Tag: "vless-reality", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.microsoft.com"},
+		Flow: "xtls-rprx-vision",
+		Raw: map[string]any{"reality": map[string]any{
+			"private_key": "PK", "dest": "www.microsoft.com:443",
+		}},
+	})
+	if !present || flow != "xtls-rprx-vision" {
+		t.Errorf("vless+tcp+reality flow = %q (present=%v), want xtls-rprx-vision", flow, present)
+	}
+}

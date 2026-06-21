@@ -493,3 +493,131 @@ func TestBuilderGeoBlockBlockedCountries(t *testing.T) {
 		t.Error("expected a reject rule matching geoip:CN")
 	}
 }
+
+// TestBuilderVLESSFlowOnlyForValidCombos verifies xtls-rprx-vision is emitted
+// only for VLESS over raw TCP with TLS or REALITY. On ws (or any non-TCP
+// transport) or with security=none the flow key must be omitted entirely,
+// otherwise sing-box rejects the config.
+func TestBuilderVLESSFlowOnlyForValidCombos(t *testing.T) {
+	flowOf := func(t *testing.T, in domain.Inbound) (string, bool) {
+		t.Helper()
+		u := &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{VLESSUUID: uuid.New()}}
+		raw, err := Builder{APIPort: 9090}.Build(&core.GeneratedConfig{
+			Inbounds:       []domain.Inbound{in},
+			UsersByInbound: map[string][]*domain.User{in.Tag: {u}},
+		})
+		if err != nil {
+			t.Fatalf("build: %v", err)
+		}
+		var p parsedConfig
+		if err := json.Unmarshal(raw, &p); err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		for _, i := range p.Inbounds {
+			if i.Tag != in.Tag {
+				continue
+			}
+			if len(i.Users) == 0 {
+				t.Fatalf("inbound %q has no users", in.Tag)
+			}
+			flow, present := i.Users[0]["flow"]
+			if !present {
+				return "", false
+			}
+			str, _ := flow.(string)
+			return str, true
+		}
+		t.Fatalf("inbound %q missing from output", in.Tag)
+		return "", false
+	}
+
+	// ws transport: flow must be omitted even though Flow is set.
+	if flow, present := flowOf(t, domain.Inbound{
+		Tag: "vless-ws", Protocol: domain.ProtoVLESS, Port: 443, Network: "ws",
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"}, Flow: "xtls-rprx-vision",
+	}); present {
+		t.Errorf("ws inbound emitted flow %q, want it omitted", flow)
+	}
+
+	// security=none on tcp: flow must be omitted.
+	if flow, present := flowOf(t, domain.Inbound{
+		Tag: "vless-tcp-none", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityNone, Flow: "xtls-rprx-vision",
+	}); present {
+		t.Errorf("tcp+none inbound emitted flow %q, want it omitted", flow)
+	}
+
+	// vless + tcp + reality WITH flow: must emit xtls-rprx-vision.
+	flow, present := flowOf(t, domain.Inbound{
+		Tag: "vless-reality", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.apple.com"},
+		Flow: "xtls-rprx-vision",
+		Raw: map[string]any{"reality": map[string]any{
+			"private_key": "PK", "dest": "www.apple.com:443",
+		}},
+	})
+	if !present || flow != "xtls-rprx-vision" {
+		t.Errorf("vless+tcp+reality flow = %q (present=%v), want xtls-rprx-vision", flow, present)
+	}
+}
+
+// TestBuilderSkipsRealityInboundWithoutPrivateKey verifies that a REALITY
+// inbound with no private key is dropped from the output entirely (sing-box
+// would reject reality.enabled:true with an empty private_key), while a sibling
+// inbound that has a private key still renders.
+func TestBuilderSkipsRealityInboundWithoutPrivateKey(t *testing.T) {
+	u := func() *domain.User {
+		return &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{VLESSUUID: uuid.New()}}
+	}
+	bad := domain.Inbound{
+		Tag: "reality-nokey", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.apple.com"},
+		Raw: map[string]any{"reality": map[string]any{
+			"private_key": "", "dest": "www.apple.com:443",
+		}},
+	}
+	good := domain.Inbound{
+		Tag: "reality-ok", Protocol: domain.ProtoVLESS, Port: 8443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.apple.com"},
+		Raw: map[string]any{"reality": map[string]any{
+			"private_key": "PK", "dest": "www.apple.com:443",
+		}},
+	}
+	raw, err := Builder{APIPort: 9090}.Build(&core.GeneratedConfig{
+		Inbounds: []domain.Inbound{bad, good},
+		UsersByInbound: map[string][]*domain.User{
+			"reality-nokey": {u()},
+			"reality-ok":    {u()},
+		},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var p struct {
+		Inbounds []struct {
+			Tag string `json:"tag"`
+			TLS struct {
+				Reality struct {
+					Enabled bool   `json:"enabled"`
+					PriKey  string `json:"private_key"`
+				} `json:"reality"`
+			} `json:"tls"`
+		} `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	tags := map[string]bool{}
+	for _, in := range p.Inbounds {
+		tags[in.Tag] = true
+		if in.TLS.Reality.Enabled && in.TLS.Reality.PriKey == "" {
+			t.Errorf("inbound %q emitted reality.enabled with empty private_key", in.Tag)
+		}
+	}
+	if tags["reality-nokey"] {
+		t.Error("reality inbound with empty private key must be skipped")
+	}
+	if !tags["reality-ok"] {
+		t.Error("reality inbound with a private key must render")
+	}
+}

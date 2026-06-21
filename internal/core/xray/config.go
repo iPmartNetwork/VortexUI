@@ -301,11 +301,19 @@ func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound,
 func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage, error) {
 	switch in.Protocol {
 	case domain.ProtoVLESS:
+		flow := effectiveFlow(in)
 		clients := make([]map[string]any, 0, len(users))
 		for _, u := range users {
-			clients = append(clients, map[string]any{
-				"id": u.Proxies.VLESSUUID.String(), "email": u.ID.String(), "flow": in.Flow,
-			})
+			client := map[string]any{
+				"id": u.Proxies.VLESSUUID.String(), "email": u.ID.String(),
+			}
+			// xtls-rprx-vision is only valid for VLESS over raw TCP with TLS or
+			// REALITY. Emitting it on ws/grpc/http or with security=none makes the
+			// core reject the config, so omit the key entirely when not applicable.
+			if flow != "" {
+				client["flow"] = flow
+			}
+			clients = append(clients, client)
 		}
 		return mustRaw(map[string]any{"clients": clients, "decryption": "none"}), nil
 
@@ -344,6 +352,23 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q for xray", in.Protocol)
 	}
+}
+
+// effectiveFlow returns the VLESS flow to emit for an inbound, or "" when the
+// flow must be omitted. The xtls-rprx-vision flow is only valid for VLESS over
+// raw TCP secured by TLS or REALITY; on any other transport (ws/grpc/http) or
+// with security=none it would make the core reject the whole config.
+func effectiveFlow(in domain.Inbound) string {
+	if in.Protocol != domain.ProtoVLESS || in.Flow == "" {
+		return ""
+	}
+	if in.Network != "tcp" && in.Network != "" {
+		return ""
+	}
+	if in.Security != domain.SecurityTLS && in.Security != domain.SecurityReality {
+		return ""
+	}
+	return in.Flow
 }
 
 // streamSettings renders transport + security. Operators can override the whole
