@@ -16,6 +16,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **mKCP transport** — added as an Xray transport option.
 - **TLS** — `alpn` configuration plus Xray `tcp` header (none/http) and `xhttp` mode
   rendering.
+- **Subscription Hosts** — per-inbound host overrides (Marzban-style) projected into
+  subscription share links: custom address/port/SNI/Host header/path/ALPN/fingerprint/
+  security/fragment/mux per host, enable/disable plus ordering, and template variables
+  (`{USERNAME}`, `{SERVER_IP}`, `{SERVER_IPV6}`, `{DATA_USAGE}`, `{DATA_LIMIT}`,
+  `{DATA_LEFT}`, `{DAYS_LEFT}`, `{EXPIRE_DATE}`, `{ADMIN_USERNAME}`) in remark/address.
+  New "Hosts" manager in the inbound UI.
+- **New subscription output formats** — raw Xray/V2Ray JSON (`?format=xray`), Outline
+  `ss://` (`?format=outline`), and plain non-base64 links for V2rayN (`?format=links`),
+  with User-Agent auto-detection; existing base64/Clash/sing-box output unchanged.
+- **Smart routing rule packs** — reusable named routing rule sets (built-in plus
+  custom): apply a pack's rules to a node's live routing (reusing the routing engine
+  plus resync) and/or embed them into Clash/sing-box subscription output; global
+  default plus per-user selection. New Routing Packs management page.
+- **Clean-IP scanner (Cloudflare)** — scan and score candidate CDN IPs by latency plus
+  packet loss (bounded concurrency, SSRF-guarded to public IPs only), cache best-first
+  results, and copy a clean IP into a subscription host. New scanner page.
+- **IP-limit enforcement** — turns account-sharing detection into enforcement: warn,
+  temporarily disable (auto-restore), or kill connections when a user exceeds its
+  device/IP limit; configurable cooldown plus restore, with an events log
+  (`kill_connections` applies to Xray nodes; sing-box degrades to temporary disable).
 
 ### Changed
 - Renderer tests are now matrix-driven, covering every protocol/transport combination
