@@ -36,6 +36,7 @@ import {
   QrCode,
   Bell,
   Unplug,
+  Ban,
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -100,6 +101,7 @@ const navSections: NavSection[] = [
       { to: "/clean-ip", key: "nav.cleanIpScanner", icon: Globe },
       { to: "/decoy-website", key: "nav.decoyWebsite", icon: EyeOff },
       { to: "/probing-protection", key: "nav.probingProtection", icon: Shield },
+      { to: "/ip-limit", key: "nav.ipLimit", icon: Ban },
       { to: "/fingerprint", key: "nav.fingerprint", icon: FingerprintIcon },
       { to: "/doh", key: "nav.doh", icon: Wifi },
     ],
