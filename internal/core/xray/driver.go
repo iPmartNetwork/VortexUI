@@ -187,6 +187,20 @@ func (d *Driver) connectAPI() error {
 
 func (d *Driver) currentAPI() (xrayAPI, error) {
 	d.mu.Lock()
+	if d.api != nil {
+		api := d.api
+		d.mu.Unlock()
+		return api, nil
+	}
+	d.mu.Unlock()
+	// Not connected yet. The xray API binds :APIPort a moment after the process
+	// launches, so the initial connectAPI in Start can lose the race. Retry here
+	// instead of failing forever — this lets the traffic loop and user mgmt
+	// self-heal rather than spamming "xray api not connected".
+	if err := d.connectAPI(); err != nil {
+		return nil, err
+	}
+	d.mu.Lock()
 	defer d.mu.Unlock()
 	if d.api == nil {
 		return nil, fmt.Errorf("xray api not connected")
