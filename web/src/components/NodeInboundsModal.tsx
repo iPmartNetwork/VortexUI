@@ -6,7 +6,9 @@ import { Badge, Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 import { CopyField } from "./CopyField";
 import { JsonCodeEditor } from "./JsonCodeEditor";
+import { SubHostsModal } from "./SubHostsModal";
 import { useToast } from "./toast";
+import { useI18n } from "@/i18n/i18n";
 
 // Static fallbacks used only until the per-core capability matrix
 // (GET /api/capabilities) loads, so the form still works before the fetch
@@ -50,7 +52,9 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   const update = useUpdateInbound();
   const del = useDeleteInbound();
   const toast = useToast();
+  const { t } = useI18n();
   const [f, setF] = useState({ ...blank });
+  const [hostsFor, setHostsFor] = useState<Inbound | null>(null);
   const [realityKeys, setRealityKeys] = useState<{ private_key: string; public_key: string; short_id: string } | null>(null);
   const [tab, setTab] = useState<"basics" | "json">("basics");
   const [jsonText, setJsonText] = useState("");
@@ -199,6 +203,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   }
 
   return (
+    <>
     <Modal open={!!node} onClose={onClose} title={`Inbounds · ${node.name}`} className="max-w-lg">
       <div className="space-y-2">
         {list.data?.inbounds?.map((ib) => (
@@ -214,6 +219,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
                 {ib.enabled ? "🟢" : "⏸"}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => startEdit(ib)}>Edit</Button>
+              <Button variant="ghost" size="sm" onClick={() => setHostsFor(ib)} title={t("hosts.title")}>{t("hosts.button")}</Button>
               <Button variant="ghost" size="sm" className="text-destructive" onClick={() => del.mutate(ib.id)}>Remove</Button>
             </div>
           </div>
@@ -296,6 +302,8 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
       </form>
       )}
     </Modal>
+    <SubHostsModal inbound={hostsFor} onClose={() => setHostsFor(null)} />
+    </>
   );
 }
 
