@@ -45,6 +45,12 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 			}
 			continue
 		}
+		// Skip inbounds whose security material is missing rather than emitting an
+		// unusable block (e.g. reality.enabled:true with an empty private_key),
+		// which would make sing-box reject the entire config. Mirrors xray.
+		if !inboundUsable(in) {
+			continue
+		}
 		built, err := buildInbound(in, users)
 		if err != nil {
 			// Skip misconfigured inbounds — one bad entry must not crash the core.
@@ -446,11 +452,35 @@ func buildInbound(in domain.Inbound, users []*domain.User) (map[string]any, erro
 }
 
 func vlessUsers(in domain.Inbound, users []*domain.User) []map[string]any {
+	flow := effectiveFlow(in)
 	out := make([]map[string]any, 0, len(users))
 	for _, u := range users {
-		out = append(out, map[string]any{"name": u.ID.String(), "uuid": u.Proxies.VLESSUUID.String(), "flow": in.Flow})
+		user := map[string]any{"name": u.ID.String(), "uuid": u.Proxies.VLESSUUID.String()}
+		// xtls-rprx-vision is only valid for VLESS over raw TCP with TLS or
+		// REALITY; omit the key entirely otherwise or sing-box rejects the config.
+		if flow != "" {
+			user["flow"] = flow
+		}
+		out = append(out, user)
 	}
 	return out
+}
+
+// effectiveFlow returns the VLESS flow to emit for an inbound, or "" when the
+// flow must be omitted. The xtls-rprx-vision flow is only valid for VLESS over
+// raw TCP secured by TLS or REALITY; on any other transport (ws/grpc/http) or
+// with security=none it would make the core reject the whole config.
+func effectiveFlow(in domain.Inbound) string {
+	if in.Protocol != domain.ProtoVLESS || in.Flow == "" {
+		return ""
+	}
+	if in.Network != "tcp" && in.Network != "" {
+		return ""
+	}
+	if in.Security != domain.SecurityTLS && in.Security != domain.SecurityReality {
+		return ""
+	}
+	return in.Flow
 }
 
 func vmessUsers(users []*domain.User) []map[string]any {
@@ -548,6 +578,23 @@ func tlsCertLines(v any) (cert, key []string) {
 		return nil, nil
 	}
 	return strings.Split(strings.TrimRight(c, "\n"), "\n"), strings.Split(strings.TrimRight(k, "\n"), "\n")
+}
+
+// inboundUsable reports whether an inbound has the security material sing-box
+// needs to accept it. A REALITY inbound without a private key would render
+// reality.enabled:true with an empty private_key, which makes sing-box reject
+// the whole config — so the builder skips that one inbound instead (xray
+// parity, see xray.inboundUsable). A full operator override is trusted as-is.
+func inboundUsable(in domain.Inbound) bool {
+	if in.Raw != nil {
+		if _, ok := in.Raw["singbox"].(map[string]any); ok {
+			return true
+		}
+	}
+	if in.Security == domain.SecurityReality {
+		return reality.ParseParams(in.Raw["reality"]).PrivateKey != ""
+	}
+	return true
 }
 
 // realityBlock renders the sing-box server REALITY config from the engine-neutral
