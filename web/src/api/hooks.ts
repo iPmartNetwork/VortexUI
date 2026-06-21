@@ -155,6 +155,9 @@ export interface Inbound {
   network: string;
   security: string;
   sni?: string[];
+  path?: string;
+  host?: string[];
+  flow?: string;
   enabled: boolean;
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
 }
@@ -168,6 +171,7 @@ export interface CreateInboundInput {
   security?: string;
   sni?: string[];
   path?: string;
+  host?: string[];
   flow?: string;
   raw?: Record<string, unknown>;
   enabled: boolean;
@@ -201,6 +205,7 @@ export interface UpdateInboundInput {
   security?: string;
   sni?: string[];
   path?: string;
+  host?: string[];
   flow?: string;
   enabled: boolean;
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;

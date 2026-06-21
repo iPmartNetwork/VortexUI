@@ -20,7 +20,7 @@ const UDP_PROTOCOLS = ["hysteria2", "tuic", "wireguard"];
 // non-conflicting port. The admin can still type any port.
 const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
 
-const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", geoAllow: "" });
+const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "" });
 const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {
@@ -59,7 +59,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     });
 
   function startEdit(ib: Inbound) {
-    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", ") });
+    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", ") });
   }
 
   async function toggleEnable(ib: Inbound) {
@@ -75,14 +75,15 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     e.preventDefault();
     if (!node) return;
     const sni = f.sni ? f.sni.split(",").map((s) => s.trim()) : [];
+    const host = f.host ? f.host.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const allowed = f.geoAllow ? f.geoAllow.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const geo_policy = allowed.length > 0 ? { allowed_countries: allowed } : null;
     try {
       if (editing) {
-        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network: f.network, security: f.security, sni, geo_policy, enabled: true } });
+        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network: f.network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true } });
         toast.success(`Updated ${f.tag}`);
       } else {
-        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, geo_policy, enabled: true });
+        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true });
         toast.success(`Added ${f.tag}`);
       }
       setF(newBlank());
@@ -194,6 +195,18 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
           </Select>
         </div>
         <Input placeholder="SNI (comma-separated, optional)" value={f.sni} onChange={set("sni")} />
+        {["ws", "httpupgrade", "http", "h2", "xhttp"].includes(f.network) && (
+          <Input placeholder="Path (e.g. /ws)" value={f.path} onChange={set("path")} />
+        )}
+        {f.network === "grpc" && (
+          <Input placeholder="gRPC serviceName" value={f.path} onChange={set("path")} />
+        )}
+        {["ws", "httpupgrade", "http", "h2"].includes(f.network) && (
+          <Input placeholder="Host (comma-separated, optional)" value={f.host} onChange={set("host")} />
+        )}
+        {f.protocol === "vless" && (f.security === "tls" || f.security === "reality") && (
+          <Input placeholder="Flow (e.g. xtls-rprx-vision, optional)" value={f.flow} onChange={set("flow")} />
+        )}
         {f.security === "reality" && <RealityKeygenSection />}
         <div>
           <p className="text-[10px] font-medium text-fg-muted mb-1">Geo-blocking (allowed countries, comma-separated ISO codes)</p>
