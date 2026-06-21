@@ -521,3 +521,53 @@ export function useScanCleanIP() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clean-ip-results"] }),
   });
 }
+
+// --- IP-limit enforcement ---
+
+// IPLimitAction is the enforcement action taken when a user exceeds its device
+// (online-IP) limit. "kill_connections" only works on Xray nodes; sing-box
+// nodes have no runtime connection API and degrade to "disable_temporarily".
+export type IPLimitAction = "warn" | "disable_temporarily" | "kill_connections";
+
+// IPLimitPolicy mirrors the backend domain.IPLimitPolicy singleton. When
+// enabled is false, ShareGuard keeps its prior detection-only behavior.
+export interface IPLimitPolicy {
+  enabled: boolean;
+  action: IPLimitAction;
+  alert_cooldown: number; // seconds; per-user alert/action dedup
+  restore_after: number; // seconds; auto-undo disable_temporarily
+}
+
+// IPLimitEvent is the audit record of a detected violation / enforcement action.
+export interface IPLimitEvent {
+  id: string;
+  user_id: string;
+  username: string;
+  online_ips: number;
+  limit: number;
+  action: string;
+  created_at: string;
+}
+
+export function useIPLimitPolicy() {
+  return useQuery({
+    queryKey: ["ip-limit-policy"],
+    queryFn: () => api<{ policy: IPLimitPolicy }>("/api/ip-limit/policy"),
+  });
+}
+
+export function useUpdateIPLimitPolicy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (policy: IPLimitPolicy) =>
+      api<{ policy: IPLimitPolicy }>("/api/ip-limit/policy", { method: "PUT", body: policy }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ip-limit-policy"] }),
+  });
+}
+
+export function useIPLimitEvents() {
+  return useQuery({
+    queryKey: ["ip-limit-events"],
+    queryFn: () => api<{ events: IPLimitEvent[] }>("/api/ip-limit/events"),
+  });
+}

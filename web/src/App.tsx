@@ -36,6 +36,7 @@ import { Fingerprint } from "@/pages/Fingerprint";
 import { Federation } from "@/pages/Federation";
 import { DeepLinks } from "@/pages/DeepLinks";
 import { QuotaNotifications } from "@/pages/QuotaNotifications";
+import { IPLimit } from "@/pages/IPLimit";
 import { PortalLogin } from "@/pages/portal/PortalLogin";
 import { PortalLayout } from "@/pages/portal/PortalLayout";
 import { PortalDashboard } from "@/pages/portal/PortalDashboard";
@@ -80,6 +81,7 @@ export function App() {
         <Route path="/tickets" element={<Tickets />} />
         <Route path="/migration" element={<Migration />} />
         <Route path="/probing-protection" element={<ProbingProtection />} />
+        <Route path="/ip-limit" element={<IPLimit />} />
         <Route path="/family-groups" element={<FamilyGroups />} />
         <Route path="/referrals" element={<Referrals />} />
         <Route path="/doh" element={<DoHSettings />} />
