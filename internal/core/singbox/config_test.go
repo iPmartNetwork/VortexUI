@@ -1023,3 +1023,83 @@ func TestBuilderTUICDefaultCongestion(t *testing.T) {
 		t.Error("auth_timeout must be omitted when unset")
 	}
 }
+
+// tlsBlockFor builds the config for a single inbound and returns its rendered
+// tls block, so the TLS-ALPN assertions stay terse.
+func tlsBlockFor(t *testing.T, in domain.Inbound, users []*domain.User) map[string]any {
+	t.Helper()
+	raw, err := Builder{APIPort: 9090}.Build(&core.GeneratedConfig{
+		Inbounds:       []domain.Inbound{in},
+		UsersByInbound: map[string][]*domain.User{in.Tag: users},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var p struct {
+		Inbounds []struct {
+			Tag string         `json:"tag"`
+			TLS map[string]any `json:"tls"`
+		} `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		t.Fatalf("generated config invalid JSON: %v\n%s", err, raw)
+	}
+	for _, i := range p.Inbounds {
+		if i.Tag == in.Tag {
+			return i.TLS
+		}
+	}
+	t.Fatalf("inbound %q missing from output", in.Tag)
+	return nil
+}
+
+// fakeTLSRaw returns a Raw["tls"] map with short fake PEM strings so a TLS
+// inbound passes inboundUsable (the renderer only splits the PEM into lines).
+func fakeTLSRaw(extra map[string]any) map[string]any {
+	tls := map[string]any{
+		"certificate": "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----",
+		"key":         "-----BEGIN PRIVATE KEY-----\nMIIB\n-----END PRIVATE KEY-----",
+	}
+	for k, v := range extra {
+		tls[k] = v
+	}
+	return map[string]any{"tls": tls}
+}
+
+// TestBuilderTLSALPN verifies a plain-TLS inbound with Raw["tls"].alpn renders
+// the list into tls.alpn.
+func TestBuilderTLSALPN(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "trojan-tls", Protocol: domain.ProtoTrojan, Port: 443,
+		Network: "tcp", Security: domain.SecurityTLS, SNI: []string{"ex.com"},
+		Raw: fakeTLSRaw(map[string]any{"alpn": []any{"h2", "http/1.1"}}),
+	}
+	tls := tlsBlockFor(t, in, []*domain.User{ssUser()})
+	if tls["enabled"] != true {
+		t.Fatalf("tls block not enabled: %v", tls)
+	}
+	alpn, ok := tls["alpn"].([]any)
+	if !ok || len(alpn) != 2 || alpn[0] != "h2" || alpn[1] != "http/1.1" {
+		t.Errorf("tls.alpn = %v, want [h2 http/1.1]", tls["alpn"])
+	}
+}
+
+// TestBuilderRealityNoALPN verifies a REALITY inbound does NOT get an alpn key
+// even when Raw["tls"].alpn is present (ALPN applies to plain TLS only).
+func TestBuilderRealityNoALPN(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-reality-alpn", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.apple.com"},
+		Raw: map[string]any{
+			"reality": map[string]any{"private_key": "PK", "dest": "www.apple.com:443"},
+			"tls":     map[string]any{"alpn": []any{"h2", "http/1.1"}},
+		},
+	}
+	tls := tlsBlockFor(t, in, []*domain.User{{ID: uuid.New(), Proxies: domain.UserCredentials{VLESSUUID: uuid.New()}}})
+	if _, ok := tls["alpn"]; ok {
+		t.Errorf("reality inbound must not carry alpn, got %v", tls["alpn"])
+	}
+	if _, ok := tls["reality"]; !ok {
+		t.Errorf("reality block missing: %v", tls)
+	}
+}
