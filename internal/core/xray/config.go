@@ -272,8 +272,17 @@ func buildObservatory(balancers []domain.Balancer) *observatoryConf {
 	}
 }
 
-func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound, error) {
-	// Skip reality inbounds that lack required key material — they would crash
+// xrayProtocolName maps a domain.Protocol to the protocol name xray expects in
+// the inbound "protocol" field. Almost all protocols use their value verbatim;
+// dokodemo is the exception — its xray wire name is "dokodemo-door".
+func xrayProtocolName(p domain.Protocol) string {
+	if p == domain.ProtoDokodemo {
+		return "dokodemo-door"
+	}
+	return string(p)
+}
+
+func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound, error) {	// Skip reality inbounds that lack required key material — they would crash
 	// xray on startup. The admin must generate keys before the inbound is usable.
 	if in.Security == domain.SecurityReality {
 		p := reality.ParseParams(in.Raw["reality"])
@@ -289,7 +298,7 @@ func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound,
 		Tag:      in.Tag,
 		Listen:   orDefault(in.Listen, "0.0.0.0"),
 		Port:     in.Port,
-		Protocol: string(in.Protocol),
+		Protocol: xrayProtocolName(in.Protocol),
 		Settings: settings,
 	}
 	// Protocols that carry no stream transport (socks/http utility proxies) get
@@ -338,6 +347,9 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 
 	case domain.ProtoShadowsocks:
 		return shadowsocksSettings(in, users), nil
+
+	case domain.ProtoDokodemo:
+		return dokodemoSettings(in), nil
 
 	case domain.ProtoSocks:
 		// SOCKS5 utility proxy. Per-user auth reuses the existing credentials
@@ -586,6 +598,8 @@ func streamSettings(in domain.Inbound) json.RawMessage {
 			x["host"] = in.Host[0]
 		}
 		ss["xhttpSettings"] = x
+	case "kcp":
+		ss["kcpSettings"] = kcpSettings(in)
 	}
 	return mustRaw(ss)
 }
@@ -697,8 +711,121 @@ func inboundUsable(in domain.Inbound) bool {
 	}
 }
 
-func mustRaw(v any) json.RawMessage {
-	b, err := json.Marshal(v)
+// dokodemoSettings renders the xray dokodemo-door "settings" block. dokodemo is
+// a transparent/redirect inbound with no per-user auth; its target and network
+// come from Inbound.Raw["dokodemo"]. Every field is optional and the renderer
+// picks sensible defaults so a bare dokodemo (no Raw) still produces a VALID
+// xray inbound:
+//
+//   - When no "address" is supplied we enable followRedirect (transparent-proxy
+//     mode), which xray accepts without a target address.
+//   - When an "address" IS supplied we emit address+port (port default 443) and
+//     do NOT force followRedirect.
+//   - "network" always defaults to "tcp,udp".
+//   - "timeout" / "userLevel" are passed through only when present.
+func dokodemoSettings(in domain.Inbound) json.RawMessage {
+	var raw map[string]any
+	if in.Raw != nil {
+		raw, _ = in.Raw["dokodemo"].(map[string]any)
+	}
+	settings := map[string]any{
+		"network": orDefault(rawString(raw["network"]), "tcp,udp"),
+	}
+	if address := rawString(raw["address"]); address != "" {
+		settings["address"] = address
+		port, ok := rawInt(raw["port"])
+		if !ok {
+			port = 443
+		}
+		settings["port"] = port
+		// followRedirect is honoured only if explicitly set; an address-targeted
+		// dokodemo forwards to that fixed destination.
+		if fr, ok := rawBool(raw["followRedirect"]); ok {
+			settings["followRedirect"] = fr
+		}
+	} else {
+		// No address: transparent mode. Default followRedirect on (xray accepts a
+		// dokodemo with no address only when redirecting), but honour an explicit
+		// override if the operator set one.
+		fr := true
+		if v, ok := rawBool(raw["followRedirect"]); ok {
+			fr = v
+		}
+		settings["followRedirect"] = fr
+	}
+	if timeout, ok := rawInt(raw["timeout"]); ok {
+		settings["timeout"] = timeout
+	}
+	if userLevel, ok := rawInt(raw["userLevel"]); ok {
+		settings["userLevel"] = userLevel
+	}
+	return mustRaw(settings)
+}
+
+// kcpSettings renders the mKCP "kcpSettings" block (network token "kcp"). Only
+// the header type and optional obfuscation seed are modelled here; richer mKCP
+// knobs (mtu/tti/...) can be supplied via the Raw["streamSettings"] override,
+// which short-circuits streamSettings entirely. The header type is passed
+// through verbatim (none/srtp/utp/wechat-video/dtls/wireguard), defaulting to
+// "none".
+func kcpSettings(in domain.Inbound) map[string]any {
+	var raw map[string]any
+	if in.Raw != nil {
+		raw, _ = in.Raw["kcp"].(map[string]any)
+	}
+	headerType := "none"
+	if h, ok := raw["header"].(map[string]any); ok {
+		if t := rawString(h["type"]); t != "" {
+			headerType = t
+		}
+	} else if t := rawString(raw["type"]); t != "" {
+		headerType = t
+	}
+	out := map[string]any{
+		"header": map[string]any{"type": headerType},
+	}
+	if seed := rawString(raw["seed"]); seed != "" {
+		out["seed"] = seed
+	}
+	return out
+}
+
+// rawString coerces a JSON-decoded value into a string, returning "" for any
+// non-string (including nil). Used for optional Raw fields the abstraction does
+// not model as typed columns.
+func rawString(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+// rawInt coerces a JSON-decoded numeric value into an int. JSON numbers decode
+// as float64, so that case is handled alongside the native int kinds. The bool
+// return reports whether a usable number was present.
+func rawInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case float64:
+		return int(n), true
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	default:
+		return 0, false
+	}
+}
+
+// rawBool coerces a JSON-decoded value into a bool, reporting whether a bool was
+// actually present (so callers can distinguish "unset" from "false").
+func rawBool(v any) (bool, bool) {
+	if b, ok := v.(bool); ok {
+		return b, true
+	}
+	return false, false
+}
+
+func mustRaw(v any) json.RawMessage {	b, err := json.Marshal(v)
 	if err != nil { // only unmarshalable types (chan/func) hit this; never with our inputs
 		panic(fmt.Sprintf("xray: marshal settings: %v", err))
 	}
