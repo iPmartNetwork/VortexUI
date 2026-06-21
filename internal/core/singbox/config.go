@@ -425,12 +425,17 @@ func buildInbound(in domain.Inbound, users []*domain.User) (map[string]any, erro
 		m["method"] = ssMethod(users)
 		m["users"] = ssUsers(users)
 	case domain.ProtoHysteria2:
+		// hysteria2: QUIC-native, mandatory TLS. Bandwidth/obfs/masquerade are
+		// inbound-level knobs sourced from Raw["hysteria2"] (no migration).
 		m["type"] = "hysteria2"
+		applyHysteria2Tuning(m, in)
 		m["users"] = hysteria2Users(users)
 	case domain.ProtoTUIC:
+		// tuic: QUIC-native, mandatory TLS. congestion_control defaults to bbr;
+		// zero_rtt_handshake/auth_timeout are optional knobs from Raw["tuic"].
 		m["type"] = "tuic"
+		applyTUICTuning(m, in)
 		m["users"] = tuicUsers(users)
-		m["congestion_control"] = "bbr"
 	case domain.ProtoHysteria:
 		// Hysteria v1: UDP-native, mandatory TLS. Bandwidth/obfs come from Raw
 		// since they are inbound-level knobs we do not model as columns.
@@ -498,14 +503,26 @@ func vlessUsers(in domain.Inbound, users []*domain.User) []map[string]any {
 // flow must be omitted. The xtls-rprx-vision flow is only valid for VLESS over
 // raw TCP secured by TLS or REALITY; on any other transport (ws/grpc/http) or
 // with security=none it would make the core reject the whole config.
+//
+// For VLESS over raw TCP with REALITY where the operator left Flow blank, this
+// defaults to xtls-rprx-vision (the REALITY best-practice flow). An explicitly
+// set Flow is always preserved; TLS keeps the emit-only-if-explicit behaviour.
 func effectiveFlow(in domain.Inbound) string {
-	if in.Protocol != domain.ProtoVLESS || in.Flow == "" {
+	if in.Protocol != domain.ProtoVLESS {
 		return ""
 	}
 	if in.Network != "tcp" && in.Network != "" {
 		return ""
 	}
 	if in.Security != domain.SecurityTLS && in.Security != domain.SecurityReality {
+		return ""
+	}
+	if in.Flow == "" {
+		// Auto-enable vision for REALITY (best practice); for plain TLS keep the
+		// historical behaviour of only emitting a flow when explicitly set.
+		if in.Security == domain.SecurityReality {
+			return "xtls-rprx-vision"
+		}
 		return ""
 	}
 	return in.Flow
@@ -525,6 +542,67 @@ func trojanUsers(users []*domain.User) []map[string]any {
 		out = append(out, map[string]any{"name": u.ID.String(), "password": u.Proxies.TrojanPass})
 	}
 	return out
+}
+
+// applyHysteria2Tuning sets the optional hysteria2 inbound knobs from
+// Raw["hysteria2"], matching sing-box's native JSON shape:
+//   - up_mbps / down_mbps (ints) — congestion-control bandwidth hints
+//   - obfs {type:"salamander", password:<pw>} — Salamander obfuscation; the Raw
+//     value may be the password string directly or an object carrying "password"
+//   - masquerade (string) — HTTP masquerade target
+//
+// Each field is emitted only when present so a bare hysteria2 inbound stays
+// minimal (just users + the mandatory TLS block added later).
+func applyHysteria2Tuning(m map[string]any, in domain.Inbound) {
+	h, _ := in.Raw["hysteria2"].(map[string]any)
+	if h == nil {
+		return
+	}
+	if v, ok := rawInt(h["up_mbps"]); ok {
+		m["up_mbps"] = v
+	}
+	if v, ok := rawInt(h["down_mbps"]); ok {
+		m["down_mbps"] = v
+	}
+	if pw := hysteria2ObfsPassword(h["obfs"]); pw != "" {
+		m["obfs"] = map[string]any{"type": "salamander", "password": pw}
+	}
+	if s, ok := rawString(h["masquerade"]); ok && s != "" {
+		m["masquerade"] = s
+	}
+}
+
+// hysteria2ObfsPassword extracts the Salamander obfs password from a Raw value
+// that may be either the password string directly or an object {password:<pw>}.
+func hysteria2ObfsPassword(v any) string {
+	switch o := v.(type) {
+	case string:
+		return o
+	case map[string]any:
+		s, _ := o["password"].(string)
+		return s
+	default:
+		return ""
+	}
+}
+
+// applyTUICTuning sets the tuic inbound knobs from Raw["tuic"]:
+//   - congestion_control (default "bbr")
+//   - zero_rtt_handshake (bool) — emitted only when explicitly set
+//   - auth_timeout (string) — emitted only when a non-empty string
+func applyTUICTuning(m map[string]any, in domain.Inbound) {
+	t, _ := in.Raw["tuic"].(map[string]any)
+	cc := "bbr"
+	if s, ok := rawString(t["congestion_control"]); ok && s != "" {
+		cc = s
+	}
+	m["congestion_control"] = cc
+	if b, ok := rawBool(t["zero_rtt_handshake"]); ok {
+		m["zero_rtt_handshake"] = b
+	}
+	if s, ok := rawString(t["auth_timeout"]); ok && s != "" {
+		m["auth_timeout"] = s
+	}
 }
 
 // hysteria2Users renders the per-user password list. Reuses the trojan password.
@@ -670,6 +748,18 @@ func rawInt(v any) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+// rawString coerces a value into a string. Returns ok=false when not a string.
+func rawString(v any) (string, bool) {
+	s, ok := v.(string)
+	return s, ok
+}
+
+// rawBool coerces a value into a bool. Returns ok=false when not a bool.
+func rawBool(v any) (bool, bool) {
+	b, ok := v.(bool)
+	return b, ok
 }
 
 // rawStrings coerces a JSON-decoded []any (or []string) of strings into []string.

@@ -559,6 +559,32 @@ func TestBuilderVLESSFlowOnlyForValidCombos(t *testing.T) {
 	if !present || flow != "xtls-rprx-vision" {
 		t.Errorf("vless+tcp+reality flow = %q (present=%v), want xtls-rprx-vision", flow, present)
 	}
+
+	// vless + tcp + reality with NO flow: must auto-default to xtls-rprx-vision
+	// (REALITY best practice).
+	autoFlow, autoPresent := flowOf(t, domain.Inbound{
+		Tag: "vless-reality-auto", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.apple.com"},
+		Raw: map[string]any{"reality": map[string]any{
+			"private_key": "PK", "dest": "www.apple.com:443",
+		}},
+	})
+	if !autoPresent || autoFlow != "xtls-rprx-vision" {
+		t.Errorf("vless+tcp+reality (blank flow) = %q (present=%v), want auto xtls-rprx-vision", autoFlow, autoPresent)
+	}
+
+	// An explicitly-set non-default flow on reality must be preserved as-is.
+	customFlow, customPresent := flowOf(t, domain.Inbound{
+		Tag: "vless-reality-custom", Protocol: domain.ProtoVLESS, Port: 443, Network: "tcp",
+		Security: domain.SecurityReality, SNI: []string{"www.apple.com"},
+		Flow: "xtls-rprx-direct",
+		Raw: map[string]any{"reality": map[string]any{
+			"private_key": "PK", "dest": "www.apple.com:443",
+		}},
+	})
+	if !customPresent || customFlow != "xtls-rprx-direct" {
+		t.Errorf("explicit flow = %q (present=%v), want xtls-rprx-direct preserved", customFlow, customPresent)
+	}
 }
 
 // TestBuilderSkipsRealityInboundWithoutPrivateKey verifies that a REALITY
@@ -820,5 +846,180 @@ func TestBuilderShadowTLSSkippedWithoutHandshake(t *testing.T) {
 	}
 	if got := buildInbounds(t, in, []*domain.User{ssUser()}); len(got) != 0 {
 		t.Errorf("shadowtls without handshake must be skipped, got %+v", got)
+	}
+}
+
+// TestBuilderHysteria2Tuning verifies a hysteria2 inbound renders the optional
+// bandwidth/obfs/masquerade knobs sourced from Raw["hysteria2"], matching
+// sing-box's native shape (up_mbps/down_mbps ints, obfs object with
+// type=salamander, masquerade string), alongside the existing per-user list.
+func TestBuilderHysteria2Tuning(t *testing.T) {
+	u := ssUser()
+	in := domain.Inbound{
+		Tag: "hy2", Protocol: domain.ProtoHysteria2, Port: 8443,
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"},
+		Raw: map[string]any{"hysteria2": map[string]any{
+			"up_mbps":    200,
+			"down_mbps":  300,
+			"obfs":       "obfspw",
+			"masquerade": "http://ex.com:80/",
+		}},
+	}
+	raw, err := Builder{APIPort: 9090}.Build(&core.GeneratedConfig{
+		Inbounds:       []domain.Inbound{in},
+		UsersByInbound: map[string][]*domain.User{in.Tag: {u}},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var p struct {
+		Inbounds []struct {
+			Type       string           `json:"type"`
+			UpMbps     int              `json:"up_mbps"`
+			DownMbps   int              `json:"down_mbps"`
+			Masquerade string           `json:"masquerade"`
+			Obfs       map[string]any   `json:"obfs"`
+			Users      []map[string]any `json:"users"`
+		} `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		t.Fatalf("generated config invalid JSON: %v\n%s", err, raw)
+	}
+	if len(p.Inbounds) != 1 {
+		t.Fatalf("want 1 inbound, got %d", len(p.Inbounds))
+	}
+	got := p.Inbounds[0]
+	if got.Type != "hysteria2" {
+		t.Fatalf("type = %q, want hysteria2", got.Type)
+	}
+	if got.UpMbps != 200 || got.DownMbps != 300 {
+		t.Errorf("bandwidth = up:%d down:%d, want 200/300", got.UpMbps, got.DownMbps)
+	}
+	if got.Obfs["type"] != "salamander" || got.Obfs["password"] != "obfspw" {
+		t.Errorf("obfs = %v, want {type:salamander password:obfspw}", got.Obfs)
+	}
+	if got.Masquerade != "http://ex.com:80/" {
+		t.Errorf("masquerade = %q, want http://ex.com:80/", got.Masquerade)
+	}
+	if len(got.Users) != 1 || got.Users[0]["password"] != "secretpw" {
+		t.Errorf("users wrong: %v", got.Users)
+	}
+}
+
+// TestBuilderHysteria2ObfsObject verifies the obfs Raw value may also be an
+// object carrying the password, still rendered as {type:salamander,password}.
+func TestBuilderHysteria2ObfsObject(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "hy2", Protocol: domain.ProtoHysteria2, Port: 8443,
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"},
+		Raw: map[string]any{"hysteria2": map[string]any{
+			"obfs": map[string]any{"type": "salamander", "password": "objpw"},
+		}},
+	}
+	raw, err := Builder{APIPort: 9090}.Build(&core.GeneratedConfig{
+		Inbounds:       []domain.Inbound{in},
+		UsersByInbound: map[string][]*domain.User{in.Tag: {ssUser()}},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var p struct {
+		Inbounds []struct {
+			Obfs map[string]any `json:"obfs"`
+		} `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(p.Inbounds) != 1 || p.Inbounds[0].Obfs["type"] != "salamander" || p.Inbounds[0].Obfs["password"] != "objpw" {
+		t.Errorf("obfs = %v, want {type:salamander password:objpw}", p.Inbounds)
+	}
+}
+
+// TestBuilderTUICTuning verifies a tuic inbound renders congestion_control plus
+// the optional zero_rtt_handshake/auth_timeout knobs from Raw["tuic"], keeping
+// the per-user list.
+func TestBuilderTUICTuning(t *testing.T) {
+	u := ssUser()
+	in := domain.Inbound{
+		Tag: "tuic", Protocol: domain.ProtoTUIC, Port: 8443,
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"},
+		Raw: map[string]any{"tuic": map[string]any{
+			"congestion_control": "cubic",
+			"zero_rtt_handshake": true,
+			"auth_timeout":       "3s",
+		}},
+	}
+	raw, err := Builder{APIPort: 9090}.Build(&core.GeneratedConfig{
+		Inbounds:       []domain.Inbound{in},
+		UsersByInbound: map[string][]*domain.User{in.Tag: {u}},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var p struct {
+		Inbounds []struct {
+			Type              string           `json:"type"`
+			CongestionControl string           `json:"congestion_control"`
+			ZeroRTT           bool             `json:"zero_rtt_handshake"`
+			AuthTimeout       string           `json:"auth_timeout"`
+			Users             []map[string]any `json:"users"`
+		} `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		t.Fatalf("generated config invalid JSON: %v\n%s", err, raw)
+	}
+	if len(p.Inbounds) != 1 {
+		t.Fatalf("want 1 inbound, got %d", len(p.Inbounds))
+	}
+	got := p.Inbounds[0]
+	if got.Type != "tuic" {
+		t.Fatalf("type = %q, want tuic", got.Type)
+	}
+	if got.CongestionControl != "cubic" {
+		t.Errorf("congestion_control = %q, want cubic", got.CongestionControl)
+	}
+	if !got.ZeroRTT {
+		t.Error("zero_rtt_handshake = false, want true")
+	}
+	if got.AuthTimeout != "3s" {
+		t.Errorf("auth_timeout = %q, want 3s", got.AuthTimeout)
+	}
+	if len(got.Users) != 1 {
+		t.Errorf("want 1 user, got %d", len(got.Users))
+	}
+}
+
+// TestBuilderTUICDefaultCongestion verifies congestion_control defaults to bbr
+// when Raw omits it, and the optional knobs are not emitted.
+func TestBuilderTUICDefaultCongestion(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "tuic", Protocol: domain.ProtoTUIC, Port: 8443,
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"},
+	}
+	raw, err := Builder{APIPort: 9090}.Build(&core.GeneratedConfig{
+		Inbounds:       []domain.Inbound{in},
+		UsersByInbound: map[string][]*domain.User{in.Tag: {ssUser()}},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var p struct {
+		Inbounds []map[string]any `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(p.Inbounds) != 1 {
+		t.Fatalf("want 1 inbound, got %d", len(p.Inbounds))
+	}
+	if p.Inbounds[0]["congestion_control"] != "bbr" {
+		t.Errorf("congestion_control = %v, want bbr", p.Inbounds[0]["congestion_control"])
+	}
+	if _, ok := p.Inbounds[0]["zero_rtt_handshake"]; ok {
+		t.Error("zero_rtt_handshake must be omitted when unset")
+	}
+	if _, ok := p.Inbounds[0]["auth_timeout"]; ok {
+		t.Error("auth_timeout must be omitted when unset")
 	}
 }

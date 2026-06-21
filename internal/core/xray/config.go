@@ -429,14 +429,26 @@ func ssServerPassword(in domain.Inbound) string {
 // flow must be omitted. The xtls-rprx-vision flow is only valid for VLESS over
 // raw TCP secured by TLS or REALITY; on any other transport (ws/grpc/http) or
 // with security=none it would make the core reject the whole config.
+//
+// For VLESS over raw TCP with REALITY where the operator left Flow blank, this
+// defaults to xtls-rprx-vision (the REALITY best-practice flow). An explicitly
+// set Flow is always preserved; TLS keeps the emit-only-if-explicit behaviour.
 func effectiveFlow(in domain.Inbound) string {
-	if in.Protocol != domain.ProtoVLESS || in.Flow == "" {
+	if in.Protocol != domain.ProtoVLESS {
 		return ""
 	}
 	if in.Network != "tcp" && in.Network != "" {
 		return ""
 	}
 	if in.Security != domain.SecurityTLS && in.Security != domain.SecurityReality {
+		return ""
+	}
+	if in.Flow == "" {
+		// Auto-enable vision for REALITY (best practice); for plain TLS keep the
+		// historical behaviour of only emitting a flow when explicitly set.
+		if in.Security == domain.SecurityReality {
+			return "xtls-rprx-vision"
+		}
 		return ""
 	}
 	return in.Flow
