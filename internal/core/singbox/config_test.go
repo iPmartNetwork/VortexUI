@@ -621,3 +621,204 @@ func TestBuilderSkipsRealityInboundWithoutPrivateKey(t *testing.T) {
 		t.Error("reality inbound with a private key must render")
 	}
 }
+
+// inboundRaw is a permissive view of a rendered sing-box inbound used by the
+// added-protocol tests below, exposing the protocol-specific fields each one
+// emits alongside the common header.
+type inboundRaw struct {
+	Type       string           `json:"type"`
+	Tag        string           `json:"tag"`
+	ListenPort int              `json:"listen_port"`
+	Version    int              `json:"version"`
+	UpMbps     int              `json:"up_mbps"`
+	DownMbps   int              `json:"down_mbps"`
+	Obfs       string           `json:"obfs"`
+	StrictMode bool             `json:"strict_mode"`
+	Padding    []string         `json:"padding_scheme"`
+	Users      []map[string]any `json:"users"`
+	TLS        map[string]any   `json:"tls"`
+	Handshake  struct {
+		Server     string `json:"server"`
+		ServerPort int    `json:"server_port"`
+	} `json:"handshake"`
+}
+
+func buildInbounds(t *testing.T, in domain.Inbound, users []*domain.User) []inboundRaw {
+	t.Helper()
+	raw, err := Builder{APIPort: 9090}.Build(&core.GeneratedConfig{
+		Inbounds:       []domain.Inbound{in},
+		UsersByInbound: map[string][]*domain.User{in.Tag: users},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var p struct {
+		Inbounds []inboundRaw `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		t.Fatalf("generated config invalid JSON: %v\n%s", err, raw)
+	}
+	return p.Inbounds
+}
+
+func ssUser() *domain.User {
+	return &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{TrojanPass: "secretpw"}}
+}
+
+// TestBuilderHysteriaV1 verifies a minimal Hysteria v1 inbound renders the
+// "hysteria" type with bandwidth, the per-user auth_str (from the trojan
+// password), the obfs password from Raw, and a TLS block (Hysteria mandates TLS).
+func TestBuilderHysteriaV1(t *testing.T) {
+	u1, u2 := ssUser(), ssUser()
+	in := domain.Inbound{
+		Tag: "hy1", Protocol: domain.ProtoHysteria, Port: 8443,
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"},
+		Raw: map[string]any{"hysteria": map[string]any{"up_mbps": 200, "down_mbps": 300, "obfs": "obfspw"}},
+	}
+	ins := buildInbounds(t, in, []*domain.User{u1, u2})
+	if len(ins) != 1 {
+		t.Fatalf("want 1 inbound, got %d", len(ins))
+	}
+	got := ins[0]
+	if got.Type != "hysteria" || got.ListenPort != 8443 {
+		t.Fatalf("hysteria header wrong: %+v", got)
+	}
+	if got.UpMbps != 200 || got.DownMbps != 300 {
+		t.Errorf("bandwidth = up:%d down:%d, want 200/300", got.UpMbps, got.DownMbps)
+	}
+	if got.Obfs != "obfspw" {
+		t.Errorf("obfs = %q, want obfspw", got.Obfs)
+	}
+	if got.TLS["enabled"] != true {
+		t.Errorf("hysteria must carry a TLS block: %v", got.TLS)
+	}
+	if len(got.Users) != 2 {
+		t.Fatalf("want 2 users, got %d", len(got.Users))
+	}
+	for i, want := range []string{u1.ID.String(), u2.ID.String()} {
+		if got.Users[i]["name"] != want {
+			t.Errorf("user[%d] name = %v, want %v", i, got.Users[i]["name"], want)
+		}
+		if got.Users[i]["auth_str"] != "secretpw" {
+			t.Errorf("user[%d] auth_str = %v, want secretpw", i, got.Users[i]["auth_str"])
+		}
+	}
+}
+
+// TestBuilderHysteriaV1DefaultBandwidth verifies up/down default to non-zero
+// when Raw omits them, so the inbound stays valid.
+func TestBuilderHysteriaV1DefaultBandwidth(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "hy1", Protocol: domain.ProtoHysteria, Port: 8443,
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"},
+	}
+	got := buildInbounds(t, in, []*domain.User{ssUser()})
+	if len(got) != 1 || got[0].UpMbps <= 0 || got[0].DownMbps <= 0 {
+		t.Fatalf("expected non-zero default bandwidth, got %+v", got)
+	}
+}
+
+// TestBuilderHysteriaV1SkippedWithoutTLS verifies a Hysteria inbound with
+// security=none is skipped (Hysteria mandates TLS) rather than emitting a
+// broken block.
+func TestBuilderHysteriaV1SkippedWithoutTLS(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "hy1", Protocol: domain.ProtoHysteria, Port: 8443,
+		Security: domain.SecurityNone,
+	}
+	if got := buildInbounds(t, in, []*domain.User{ssUser()}); len(got) != 0 {
+		t.Errorf("hysteria without TLS must be skipped, got %+v", got)
+	}
+}
+
+// TestBuilderAnyTLS verifies AnyTLS renders the "anytls" type with per-user
+// passwords (from the trojan password), an optional padding_scheme from Raw,
+// and a TLS block (AnyTLS mandates TLS).
+func TestBuilderAnyTLS(t *testing.T) {
+	u1, u2 := ssUser(), ssUser()
+	in := domain.Inbound{
+		Tag: "any1", Protocol: domain.ProtoAnyTLS, Port: 8443,
+		Security: domain.SecurityTLS, SNI: []string{"ex.com"},
+		Raw: map[string]any{"anytls": map[string]any{"padding_scheme": []any{"stop=8", "0=30-30"}}},
+	}
+	ins := buildInbounds(t, in, []*domain.User{u1, u2})
+	if len(ins) != 1 {
+		t.Fatalf("want 1 inbound, got %d", len(ins))
+	}
+	got := ins[0]
+	if got.Type != "anytls" || got.ListenPort != 8443 {
+		t.Fatalf("anytls header wrong: %+v", got)
+	}
+	if got.TLS["enabled"] != true {
+		t.Errorf("anytls must carry a TLS block: %v", got.TLS)
+	}
+	if len(got.Padding) != 2 || got.Padding[0] != "stop=8" {
+		t.Errorf("padding_scheme = %v, want [stop=8 0=30-30]", got.Padding)
+	}
+	if len(got.Users) != 2 {
+		t.Fatalf("want 2 users, got %d", len(got.Users))
+	}
+	if got.Users[0]["name"] != u1.ID.String() || got.Users[0]["password"] != "secretpw" {
+		t.Errorf("user[0] = %v", got.Users[0])
+	}
+}
+
+// TestBuilderAnyTLSSkippedWithoutTLS verifies AnyTLS with security=none is
+// skipped (it mandates TLS).
+func TestBuilderAnyTLSSkippedWithoutTLS(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "any1", Protocol: domain.ProtoAnyTLS, Port: 8443, Security: domain.SecurityNone,
+	}
+	if got := buildInbounds(t, in, []*domain.User{ssUser()}); len(got) != 0 {
+		t.Errorf("anytls without TLS must be skipped, got %+v", got)
+	}
+}
+
+// TestBuilderShadowTLS verifies ShadowTLS renders the "shadowtls" type at
+// version 3 with a handshake target (from Raw), per-user passwords (from the
+// trojan password), and NO separate tls block (it fronts its own handshake).
+func TestBuilderShadowTLS(t *testing.T) {
+	u1, u2 := ssUser(), ssUser()
+	in := domain.Inbound{
+		Tag: "stls", Protocol: domain.ProtoShadowTLS, Port: 443,
+		Security: domain.SecurityNone,
+		Raw: map[string]any{"shadowtls": map[string]any{
+			"handshake_server": "www.apple.com", "handshake_port": 443, "version": 3,
+		}},
+	}
+	ins := buildInbounds(t, in, []*domain.User{u1, u2})
+	if len(ins) != 1 {
+		t.Fatalf("want 1 inbound, got %d", len(ins))
+	}
+	got := ins[0]
+	if got.Type != "shadowtls" || got.ListenPort != 443 {
+		t.Fatalf("shadowtls header wrong: %+v", got)
+	}
+	if got.Version != 3 {
+		t.Errorf("version = %d, want 3", got.Version)
+	}
+	if got.Handshake.Server != "www.apple.com" || got.Handshake.ServerPort != 443 {
+		t.Errorf("handshake = %+v, want www.apple.com:443", got.Handshake)
+	}
+	if got.TLS != nil {
+		t.Errorf("shadowtls must not carry a separate tls block, got %v", got.TLS)
+	}
+	if len(got.Users) != 2 {
+		t.Fatalf("want 2 users, got %d", len(got.Users))
+	}
+	if got.Users[0]["name"] != u1.ID.String() || got.Users[0]["password"] != "secretpw" {
+		t.Errorf("user[0] = %v", got.Users[0])
+	}
+}
+
+// TestBuilderShadowTLSSkippedWithoutHandshake verifies a ShadowTLS inbound with
+// no handshake target (no Raw handshake_server and no SNI) is skipped, since
+// sing-box cannot front a handshake without one.
+func TestBuilderShadowTLSSkippedWithoutHandshake(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "stls", Protocol: domain.ProtoShadowTLS, Port: 443, Security: domain.SecurityNone,
+	}
+	if got := buildInbounds(t, in, []*domain.User{ssUser()}); len(got) != 0 {
+		t.Errorf("shadowtls without handshake must be skipped, got %+v", got)
+	}
+}

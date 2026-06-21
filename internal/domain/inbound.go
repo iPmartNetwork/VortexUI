@@ -13,6 +13,17 @@ const (
 	ProtoHysteria2   Protocol = "hysteria2"
 	ProtoTUIC        Protocol = "tuic"
 	ProtoWireGuard   Protocol = "wireguard"
+	// ProtoHysteria is the original Hysteria v1 protocol (sing-box "hysteria"),
+	// distinct from the newer ProtoHysteria2. Like hysteria2/tuic it is
+	// UDP-native (carries no stream transport).
+	ProtoHysteria Protocol = "hysteria"
+	// ProtoShadowTLS fronts a real TLS handshake to disguise the inbound
+	// (sing-box "shadowtls", v3). It is TCP-based and supplies its own TLS
+	// layer via the handshake target, so it carries no separate tls block.
+	ProtoShadowTLS Protocol = "shadowtls"
+	// ProtoAnyTLS is the AnyTLS protocol (sing-box "anytls"); TCP-based and
+	// requires a TLS layer.
+	ProtoAnyTLS Protocol = "anytls"
 )
 
 // Security is the TLS-layer obfuscation applied to an inbound.
