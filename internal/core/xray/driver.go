@@ -90,6 +90,11 @@ func (d *Driver) Type() domain.CoreType { return domain.CoreXray }
 // redundant resync (e.g. from a health-reconnect) does not bounce live
 // connections. A real config change still triggers a supervised restart.
 func (d *Driver) Start(ctx context.Context, cfg *core.GeneratedConfig) error {
+	if cfg == nil {
+		// RestartCore path: no new config is supplied, so restart the core with
+		// the last-applied config rather than rebuilding from a nil config.
+		return d.restartWithLastConfig(ctx)
+	}
 	raw, err := d.builder.Build(cfg)
 	if err != nil {
 		return fmt.Errorf("build config: %w", err)
@@ -131,6 +136,27 @@ func (d *Driver) Start(ctx context.Context, cfg *core.GeneratedConfig) error {
 // changes require a supervised restart.
 func (d *Driver) Reload(ctx context.Context, cfg *core.GeneratedConfig) error {
 	return d.Start(ctx, cfg)
+}
+
+// restartWithLastConfig restarts (or starts) the core using the configuration
+// already written to disk. Used by the RestartCore path, which carries no new
+// config. If nothing has been applied yet there is nothing to restart.
+func (d *Driver) restartWithLastConfig(ctx context.Context) error {
+	d.mu.Lock()
+	hasConfig := d.lastConfig != nil
+	running := d.proc.Running()
+	d.mu.Unlock()
+	if !hasConfig {
+		return d.connectAPI()
+	}
+	if running {
+		if err := d.proc.Restart(ctx); err != nil {
+			return fmt.Errorf("restart: %w", err)
+		}
+	} else if err := d.proc.Start(ctx); err != nil {
+		return fmt.Errorf("start: %w", err)
+	}
+	return d.connectAPI()
 }
 
 // Stop tears down the API connection and the process.
