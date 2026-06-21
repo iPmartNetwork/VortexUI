@@ -197,19 +197,21 @@ func (h *Handlers) StopNodeCore(c echo.Context) error {
 // --- inbounds ---
 
 type createInboundRequest struct {
-	NodeID   string         `json:"node_id"`
-	Tag      string         `json:"tag"`
-	Protocol string         `json:"protocol"`
-	Listen   string         `json:"listen"`
-	Port     int            `json:"port"`
-	Network  string         `json:"network"`
-	Security string         `json:"security"`
-	SNI      []string       `json:"sni"`
-	Path     string         `json:"path"`
-	Host     []string       `json:"host"`
-	Flow     string         `json:"flow"`
-	Raw      map[string]any `json:"raw"`
-	Enabled  bool           `json:"enabled"`
+	NodeID     string            `json:"node_id"`
+	Tag        string            `json:"tag"`
+	Protocol   string            `json:"protocol"`
+	Listen     string            `json:"listen"`
+	Port       int               `json:"port"`
+	Network    string            `json:"network"`
+	Security   string            `json:"security"`
+	SNI        []string          `json:"sni"`
+	Path       string            `json:"path"`
+	Host       []string          `json:"host"`
+	Flow       string            `json:"flow"`
+	Raw        map[string]any    `json:"raw"`
+	Enabled    bool              `json:"enabled"`
+	SpeedLimit int64             `json:"speed_limit"`
+	GeoPolicy  *domain.GeoPolicy `json:"geo_policy"`
 }
 
 // CreateInbound adds an inbound to a node and resyncs the node's core.
@@ -227,6 +229,7 @@ func (h *Handlers) CreateInbound(c echo.Context) error {
 		Listen: req.Listen, Port: req.Port, Network: req.Network,
 		Security: domain.Security(req.Security), SNI: req.SNI, Path: req.Path,
 		Host: req.Host, Flow: req.Flow, Raw: req.Raw, Enabled: req.Enabled,
+		SpeedLimit: req.SpeedLimit, GeoPolicy: req.GeoPolicy,
 	})
 	if in == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
@@ -252,16 +255,18 @@ func (h *Handlers) ListInbounds(c echo.Context) error {
 }
 
 type updateInboundRequest struct {
-	Listen   string         `json:"listen"`
-	Port     int            `json:"port"`
-	Network  string         `json:"network"`
-	Security string         `json:"security"`
-	SNI      []string       `json:"sni"`
-	Path     string         `json:"path"`
-	Host     []string       `json:"host"`
-	Flow     string         `json:"flow"`
-	Raw      map[string]any `json:"raw"`
-	Enabled  bool           `json:"enabled"`
+	Listen     string            `json:"listen"`
+	Port       int               `json:"port"`
+	Network    string            `json:"network"`
+	Security   string            `json:"security"`
+	SNI        []string          `json:"sni"`
+	Path       string            `json:"path"`
+	Host       []string          `json:"host"`
+	Flow       string            `json:"flow"`
+	Raw        map[string]any    `json:"raw"`
+	Enabled    bool              `json:"enabled"`
+	SpeedLimit int64             `json:"speed_limit"`
+	GeoPolicy  *domain.GeoPolicy `json:"geo_policy"`
 }
 
 // UpdateInbound edits an inbound and resyncs its node.
@@ -278,6 +283,7 @@ func (h *Handlers) UpdateInbound(c echo.Context) error {
 		Listen: req.Listen, Port: req.Port, Network: req.Network,
 		Security: domain.Security(req.Security), SNI: req.SNI, Path: req.Path,
 		Host: req.Host, Flow: req.Flow, Raw: req.Raw, Enabled: req.Enabled,
+		SpeedLimit: req.SpeedLimit, GeoPolicy: req.GeoPolicy,
 	})
 	if errors.Is(err, domain.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, "inbound not found")

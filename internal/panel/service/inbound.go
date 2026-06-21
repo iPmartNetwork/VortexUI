@@ -140,19 +140,21 @@ func coreSupports(core domain.CoreType, proto domain.Protocol, network string) e
 
 // CreateInboundInput describes a new inbound.
 type CreateInboundInput struct {
-	NodeID   uuid.UUID
-	Tag      string
-	Protocol domain.Protocol
-	Listen   string
-	Port     int
-	Network  string
-	Security domain.Security
-	SNI      []string
-	Path     string
-	Host     []string
-	Flow     string
-	Raw      map[string]any
-	Enabled  bool
+	NodeID     uuid.UUID
+	Tag        string
+	Protocol   domain.Protocol
+	Listen     string
+	Port       int
+	Network    string
+	Security   domain.Security
+	SNI        []string
+	Path       string
+	Host       []string
+	Flow       string
+	Raw        map[string]any
+	Enabled    bool
+	SpeedLimit int64
+	GeoPolicy  *domain.GeoPolicy
 }
 
 // Create persists an inbound then resyncs its node so the core starts listening.
@@ -170,20 +172,22 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 		return nil, err
 	}
 	inbound := &domain.Inbound{
-		ID:       uuid.New(),
-		NodeID:   in.NodeID,
-		Tag:      in.Tag,
-		Protocol: in.Protocol,
-		Listen:   in.Listen,
-		Port:     in.Port,
-		Network:  orStr(in.Network, "tcp"),
-		Security: orSec(in.Security, domain.SecurityNone),
-		SNI:      in.SNI,
-		Path:     in.Path,
-		Host:     in.Host,
-		Flow:     in.Flow,
-		Raw:      in.Raw,
-		Enabled:  in.Enabled,
+		ID:         uuid.New(),
+		NodeID:     in.NodeID,
+		Tag:        in.Tag,
+		Protocol:   in.Protocol,
+		Listen:     in.Listen,
+		Port:       in.Port,
+		Network:    orStr(in.Network, "tcp"),
+		Security:   orSec(in.Security, domain.SecurityNone),
+		SNI:        in.SNI,
+		Path:       in.Path,
+		Host:       in.Host,
+		Flow:       in.Flow,
+		Raw:        in.Raw,
+		Enabled:    in.Enabled,
+		SpeedLimit: in.SpeedLimit,
+		GeoPolicy:  in.GeoPolicy,
 	}
 	provisionSecurity(inbound)
 	if inbound.Enabled {
@@ -207,16 +211,18 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 // UpdateInboundInput is the mutable subset of an inbound. NodeID, ID and tag are
 // not changed here (moving an inbound between nodes is delete+create).
 type UpdateInboundInput struct {
-	Listen   string
-	Port     int
-	Network  string
-	Security domain.Security
-	SNI      []string
-	Path     string
-	Host     []string
-	Flow     string
-	Raw      map[string]any
-	Enabled  bool
+	Listen     string
+	Port       int
+	Network    string
+	Security   domain.Security
+	SNI        []string
+	Path       string
+	Host       []string
+	Flow       string
+	Raw        map[string]any
+	Enabled    bool
+	SpeedLimit int64
+	GeoPolicy  *domain.GeoPolicy
 }
 
 // Update applies changes to an inbound and resyncs its node so the live core
@@ -244,6 +250,8 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	existing.Flow = in.Flow
 	existing.Raw = in.Raw
 	existing.Enabled = in.Enabled
+	existing.SpeedLimit = in.SpeedLimit
+	existing.GeoPolicy = in.GeoPolicy
 	provisionSecurity(existing)
 	if existing.Enabled {
 		tag, err := s.portConflict(ctx, existing.NodeID, existing.ID, existing.Port, existing.Listen)
