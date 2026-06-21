@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/core/reality"
 	"github.com/vortexui/vortexui/internal/core/wireguard"
 	"github.com/vortexui/vortexui/internal/domain"
@@ -104,38 +105,13 @@ func NewInboundService(repo port.InboundRepository, nodes port.NodeRepository, s
 	return &InboundService{repo: repo, nodes: nodes, sync: sync}
 }
 
-// coreSupports reports whether the given core can run this protocol+network,
-// returning a clear error describing the incompatibility (or nil if supported).
-func coreSupports(core domain.CoreType, proto domain.Protocol, network string) error {
-	if network == "" {
-		network = "tcp"
-	}
-	xrayProtos := map[domain.Protocol]bool{domain.ProtoVMess: true, domain.ProtoVLESS: true, domain.ProtoTrojan: true, domain.ProtoShadowsocks: true}
-	sbProtos := map[domain.Protocol]bool{domain.ProtoVMess: true, domain.ProtoVLESS: true, domain.ProtoTrojan: true, domain.ProtoShadowsocks: true, domain.ProtoHysteria2: true, domain.ProtoTUIC: true, domain.ProtoWireGuard: true}
-	xrayNets := map[string]bool{"tcp": true, "ws": true, "grpc": true, "httpupgrade": true, "http": true, "h2": true, "xhttp": true}
-	sbNets := map[string]bool{"tcp": true, "ws": true, "grpc": true, "httpupgrade": true, "http": true, "h2": true}
-
-	// hysteria2/tuic/wireguard are QUIC/UDP-native and have no stream transport,
-	// so their network field is irrelevant — validate only the protocol for them.
-	udpNative := proto == domain.ProtoHysteria2 || proto == domain.ProtoTUIC || proto == domain.ProtoWireGuard
-
-	switch core {
-	case domain.CoreSingbox:
-		if !sbProtos[proto] {
-			return fmt.Errorf("protocol %q is not supported on the sing-box core", proto)
-		}
-		if !udpNative && !sbNets[network] {
-			return fmt.Errorf("transport %q is not supported on the sing-box core", network)
-		}
-	default: // xray (and unspecified)
-		if !xrayProtos[proto] {
-			return fmt.Errorf("protocol %q is not supported on the xray core (use a sing-box node)", proto)
-		}
-		if !udpNative && !xrayNets[network] {
-			return fmt.Errorf("transport %q is not supported on the xray core", network)
-		}
-	}
-	return nil
+// coreSupports reports whether the given core can run this protocol+network+
+// security combination, returning a clear error describing the incompatibility
+// (or nil if supported). It is a thin wrapper over the single per-core
+// capability matrix (core.Supports) so the guard never drifts from the matrix
+// the API and UI consume.
+func coreSupports(coreType domain.CoreType, proto domain.Protocol, network string, security domain.Security) error {
+	return core.Supports(coreType, proto, network, security)
 }
 
 // CreateInboundInput describes a new inbound.
@@ -168,7 +144,7 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 	if err != nil {
 		return nil, errors.New("node not found")
 	}
-	if err := coreSupports(node.Core, in.Protocol, orStr(in.Network, "tcp")); err != nil {
+	if err := coreSupports(node.Core, in.Protocol, orStr(in.Network, "tcp"), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
 	inbound := &domain.Inbound{
@@ -237,7 +213,7 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	if err != nil {
 		return nil, errors.New("node not found")
 	}
-	if err := coreSupports(node.Core, existing.Protocol, orStr(in.Network, "tcp")); err != nil {
+	if err := coreSupports(node.Core, existing.Protocol, orStr(in.Network, "tcp"), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
 	existing.Listen = in.Listen
