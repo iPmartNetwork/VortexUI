@@ -377,12 +377,19 @@ deploy_node() {
   read -r -p "  node listen port [50051]: " NPORT; NPORT="${NPORT:-50051}"
   read -r -p "  core engine (xray/singbox) [xray]: " NCORE; NCORE="${NCORE:-xray}"
   local cbin=/usr/local/bin/xray; [ "$NCORE" = singbox ] && cbin=/usr/local/bin/sing-box
+  # The official sing-box release is built WITHOUT the with_v2ray_api tag, so the
+  # experimental.v2ray_api block would make it exit with FATAL. Disable it by
+  # default for sing-box nodes so the core starts out of the box (trade-off: no
+  # per-user traffic stats). For stats, install a sing-box built with
+  # -tags with_v2ray_api and set VORTEX_SINGBOX_V2RAY_API=true.
+  local v2ray=true; [ "$NCORE" = singbox ] && v2ray=false
 
   cat > /etc/vortexui/node.env <<EOF
 VORTEX_NODE_LISTEN=:$NPORT
 VORTEX_CORE=$NCORE
 VORTEX_CORE_BIN=$cbin
 VORTEX_CORE_CONFIG=/etc/vortex/node-core.json
+VORTEX_SINGBOX_V2RAY_API=$v2ray
 VORTEX_TLS_CERT=$CERTDIR/node.crt
 VORTEX_TLS_KEY=$CERTDIR/node.key
 VORTEX_TLS_CA=$CERTDIR/ca.crt
