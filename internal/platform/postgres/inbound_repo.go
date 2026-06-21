@@ -32,6 +32,8 @@ func (r *InboundRepo) Create(ctx context.Context, in *domain.Inbound) error {
 		EvasionProfileID: ptrToUUID(in.EvasionProfileID),
 		Raw:              jsonbMap(in.Raw),
 		Enabled:          in.Enabled,
+		SpeedLimit:       in.SpeedLimit,
+		GeoPolicy:        geoPolicyToJSONB(in.GeoPolicy),
 	})
 }
 
@@ -60,6 +62,8 @@ func (r *InboundRepo) Update(ctx context.Context, in *domain.Inbound) error {
 		EvasionProfileID: ptrToUUID(in.EvasionProfileID),
 		Raw:              jsonbMap(in.Raw),
 		Enabled:          in.Enabled,
+		SpeedLimit:       in.SpeedLimit,
+		GeoPolicy:        geoPolicyToJSONB(in.GeoPolicy),
 	})
 }
 
@@ -97,5 +101,7 @@ func inboundToDomain(in db.Inbound) domain.Inbound {
 		EvasionProfileID: uuidToPtr(in.EvasionProfileID),
 		Raw:              mapFromJSONB(in.Raw),
 		Enabled:          in.Enabled,
+		SpeedLimit:       in.SpeedLimit,
+		GeoPolicy:        geoPolicyFromJSONB(in.GeoPolicy),
 	}
 }

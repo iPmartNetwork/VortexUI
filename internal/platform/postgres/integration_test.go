@@ -264,3 +264,61 @@ func TestIntegration_BackupRestoreReplacesConfig(t *testing.T) {
 		t.Errorf("restored binding wrong: %+v err=%v", bound, err)
 	}
 }
+
+func TestIntegration_InboundGeoPolicyAndSpeedLimitRoundTrip(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	nodes, inbounds := st.Nodes(), st.Inbounds()
+
+	node := &domain.Node{ID: uuid.New(), Name: "n1", Address: "1.2.3.4:50051", Core: domain.CoreXray, CreatedAt: time.Now()}
+	if err := nodes.Create(ctx, node); err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+
+	// Inbound carrying both a geo policy and a non-zero speed limit.
+	in := &domain.Inbound{
+		ID: uuid.New(), NodeID: node.ID, Tag: "vless-geo", Protocol: domain.ProtoVLESS,
+		Port: 443, Network: "ws", Security: domain.SecurityTLS,
+		SpeedLimit: 1 << 20,
+		GeoPolicy:  &domain.GeoPolicy{AllowedCountries: []string{"IR", "TR"}},
+		Enabled:    true,
+	}
+	if err := inbounds.Create(ctx, in); err != nil {
+		t.Fatalf("create inbound: %v", err)
+	}
+
+	got, err := inbounds.GetByID(ctx, in.ID)
+	if err != nil {
+		t.Fatalf("get inbound: %v", err)
+	}
+	if got.SpeedLimit != 1<<20 {
+		t.Errorf("speed_limit = %d, want %d", got.SpeedLimit, 1<<20)
+	}
+	if got.GeoPolicy == nil {
+		t.Fatalf("geo_policy = nil, want allowed [IR TR]")
+	}
+	if len(got.GeoPolicy.AllowedCountries) != 2 ||
+		got.GeoPolicy.AllowedCountries[0] != "IR" || got.GeoPolicy.AllowedCountries[1] != "TR" {
+		t.Errorf("geo_policy allowed = %v, want [IR TR]", got.GeoPolicy.AllowedCountries)
+	}
+	if len(got.GeoPolicy.BlockedCountries) != 0 {
+		t.Errorf("geo_policy blocked = %v, want empty", got.GeoPolicy.BlockedCountries)
+	}
+
+	// Update clearing the geo policy must persist as "no policy" (nil on read).
+	in.GeoPolicy = nil
+	in.SpeedLimit = 0
+	if err := inbounds.Update(ctx, in); err != nil {
+		t.Fatalf("update inbound: %v", err)
+	}
+	got2, err := inbounds.GetByID(ctx, in.ID)
+	if err != nil {
+		t.Fatalf("get inbound after update: %v", err)
+	}
+	if got2.GeoPolicy != nil {
+		t.Errorf("geo_policy after clear = %+v, want nil", got2.GeoPolicy)
+	}
+	if got2.SpeedLimit != 0 {
+		t.Errorf("speed_limit after clear = %d, want 0", got2.SpeedLimit)
+	}
+}
