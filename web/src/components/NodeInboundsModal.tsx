@@ -11,13 +11,18 @@ import { useToast } from "./toast";
 // Static fallbacks used only until the per-core capability matrix
 // (GET /api/capabilities) loads, so the form still works before the fetch
 // resolves. Once `caps` is available the options are filtered per the node's core.
-const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "wireguard"];
+const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "wireguard", "socks", "http", "naive"];
 const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "http", "h2", "xhttp", "quic", "udp"];
 const SECURITIES = ["none", "tls", "reality"];
 
 // UDP-native protocol fallback (used until caps load). Authoritative list comes
 // from cap.udp_native per core.
 const UDP_PROTOCOLS = ["hysteria2", "tuic", "wireguard"];
+
+// No-transport protocol fallback (used until caps load). These protocols carry
+// no stream transport, so the network select is hidden. Authoritative list comes
+// from cap.no_transport per core.
+const NO_TRANSPORT_PROTOCOLS = ["hysteria2", "tuic", "wireguard", "socks", "http", "naive"];
 
 // randomPort picks a high port (10000–60000) so new inbounds default to a free,
 // non-conflicting port. The admin can still type any port.
@@ -64,8 +69,9 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   const protocols = cap?.protocols ?? PROTOCOLS;
   const networks = cap?.transports ?? NETWORKS;
   const securities = cap?.securities ?? SECURITIES;
-  const udpNative = cap?.udp_native ?? UDP_PROTOCOLS;
-  const isUDP = udpNative.includes(f.protocol);
+  const noTransport = [...new Set([...(cap?.udp_native ?? UDP_PROTOCOLS), ...(cap?.no_transport ?? NO_TRANSPORT_PROTOCOLS)])];
+  const isNoTransport = noTransport.includes(f.protocol);
+  const securitiesFor = (proto: string) => cap?.protocol_securities?.[proto] ?? securities;
 
   // When the capability matrix loads or the node's core changes, reconcile the
   // form so it can never submit a protocol/network/security the core rejects.
@@ -76,14 +82,16 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
       if (!cap.protocols.includes(next.protocol)) {
         next = { ...next, protocol: cap.protocols[0] ?? next.protocol };
       }
-      if (cap.udp_native.includes(next.protocol)) {
-        // UDP-native protocols carry no stream transport; network is irrelevant.
+      const noTransportSet = new Set([...cap.udp_native, ...cap.no_transport]);
+      if (noTransportSet.has(next.protocol)) {
+        // No-transport protocols carry no stream transport; network is irrelevant.
         if (next.network !== "") next = { ...next, network: "" };
       } else if (!cap.transports.includes(next.network)) {
         next = { ...next, network: cap.transports[0] ?? next.network };
       }
-      if (!cap.securities.includes(next.security)) {
-        next = { ...next, security: cap.securities[0] ?? next.security };
+      const allowedSecurities = cap.protocol_securities?.[next.protocol] ?? cap.securities;
+      if (!allowedSecurities.includes(next.security)) {
+        next = { ...next, security: allowedSecurities[0] ?? next.security };
       }
       return next === s ? s : next;
     });
@@ -95,13 +103,16 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     setF((s) => {
       const val = e.target.value;
       if (k === "protocol") {
-        // Switching to a UDP-native protocol clears the (irrelevant) network;
+        // Switching to a no-transport protocol clears the (irrelevant) network;
         // switching back to a stream protocol restores a valid transport.
-        if (udpNative.includes(val)) {
-          return { ...s, protocol: val, network: "" };
+        // Also reset security if the current one isn't allowed for the new protocol.
+        const allowed = securitiesFor(val);
+        const security = allowed.includes(s.security) ? s.security : (allowed[0] ?? s.security);
+        if (noTransport.includes(val)) {
+          return { ...s, protocol: val, network: "", security };
         }
         const network = s.network && networks.includes(s.network) ? s.network : (networks[0] ?? "tcp");
-        return { ...s, protocol: val, network };
+        return { ...s, protocol: val, network, security };
       }
       return { ...s, [k]: val };
     });
@@ -250,13 +261,13 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
           <Select value={f.protocol} onChange={set("protocol")} disabled={editing}>
             {protocols.map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
-          {!isUDP && (
+          {!isNoTransport && (
             <Select value={f.network} onChange={set("network")}>
               {networks.map((n) => <option key={n} value={n}>{n}</option>)}
             </Select>
           )}
           <Select value={f.security} onChange={set("security")}>
-            {securities.map((s) => <option key={s} value={s}>{s}</option>)}
+            {securitiesFor(f.protocol).map((s) => <option key={s} value={s}>{s}</option>)}
           </Select>
         </div>
         <Input placeholder="SNI (comma-separated, optional)" value={f.sni} onChange={set("sni")} />
