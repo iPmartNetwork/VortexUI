@@ -69,6 +69,11 @@ type Node struct {
 	CoreConfig string // where the agent writes the rendered core config
 	APIPort    int    // loopback port for the core's stats/control API
 
+	// SingboxV2RayAPI controls whether the sing-box config emits the
+	// experimental.v2ray_api block (per-user stats). Default true; set false for
+	// sing-box binaries built without the with_v2ray_api tag, which reject it.
+	SingboxV2RayAPI bool
+
 	TLSCert string
 	TLSKey  string
 	TLSCA   string
@@ -78,14 +83,15 @@ type Node struct {
 func LoadNode() (*Node, error) {
 	core := env("VORTEX_CORE", "xray")
 	c := &Node{
-		ListenAddr: env("VORTEX_NODE_LISTEN", ":50051"),
-		Core:       core,
-		CoreBin:    env("VORTEX_CORE_BIN", core),
-		CoreConfig: env("VORTEX_CORE_CONFIG", "/etc/vortex/core.json"),
-		APIPort:    envInt("VORTEX_CORE_API_PORT", 10085),
-		TLSCert:    os.Getenv("VORTEX_TLS_CERT"),
-		TLSKey:     os.Getenv("VORTEX_TLS_KEY"),
-		TLSCA:      os.Getenv("VORTEX_TLS_CA"),
+		ListenAddr:      env("VORTEX_NODE_LISTEN", ":50051"),
+		Core:            core,
+		CoreBin:         env("VORTEX_CORE_BIN", core),
+		CoreConfig:      env("VORTEX_CORE_CONFIG", "/etc/vortex/core.json"),
+		APIPort:         envInt("VORTEX_CORE_API_PORT", 10085),
+		SingboxV2RayAPI: envBool("VORTEX_SINGBOX_V2RAY_API", true),
+		TLSCert:         os.Getenv("VORTEX_TLS_CERT"),
+		TLSKey:          os.Getenv("VORTEX_TLS_KEY"),
+		TLSCA:           os.Getenv("VORTEX_TLS_CA"),
 	}
 	var errs []error
 	if c.TLSCert == "" || c.TLSKey == "" || c.TLSCA == "" {
@@ -97,31 +103,31 @@ func LoadNode() (*Node, error) {
 // LoadPanel reads panel config from the environment, validating required keys.
 func LoadPanel() (*Panel, error) {
 	c := &Panel{
-		HTTPAddr:       env("VORTEX_HTTP_ADDR", ":8080"),
-		GRPCAddr:       env("VORTEX_GRPC_ADDR", ":50051"),
-		DatabaseURL:    os.Getenv("VORTEX_DATABASE_URL"),
-		RedisURL:       env("VORTEX_REDIS_URL", "redis://localhost:6379/0"),
-		JWTSecret:      os.Getenv("VORTEX_JWT_SECRET"),
-		JWTTTL:         envDur("VORTEX_JWT_TTL", time.Hour),
-		TLSCert:        os.Getenv("VORTEX_TLS_CERT"),
-		TLSKey:         os.Getenv("VORTEX_TLS_KEY"),
-		TLSCA:          os.Getenv("VORTEX_TLS_CA"),
-		WebhookURL:     os.Getenv("VORTEX_WEBHOOK_URL"),
-		WebhookSecret:  os.Getenv("VORTEX_WEBHOOK_SECRET"),
-		TelegramToken:  os.Getenv("VORTEX_TELEGRAM_TOKEN"),
-		TelegramChatID: os.Getenv("VORTEX_TELEGRAM_CHAT_ID"),
+		HTTPAddr:         env("VORTEX_HTTP_ADDR", ":8080"),
+		GRPCAddr:         env("VORTEX_GRPC_ADDR", ":50051"),
+		DatabaseURL:      os.Getenv("VORTEX_DATABASE_URL"),
+		RedisURL:         env("VORTEX_REDIS_URL", "redis://localhost:6379/0"),
+		JWTSecret:        os.Getenv("VORTEX_JWT_SECRET"),
+		JWTTTL:           envDur("VORTEX_JWT_TTL", time.Hour),
+		TLSCert:          os.Getenv("VORTEX_TLS_CERT"),
+		TLSKey:           os.Getenv("VORTEX_TLS_KEY"),
+		TLSCA:            os.Getenv("VORTEX_TLS_CA"),
+		WebhookURL:       os.Getenv("VORTEX_WEBHOOK_URL"),
+		WebhookSecret:    os.Getenv("VORTEX_WEBHOOK_SECRET"),
+		TelegramToken:    os.Getenv("VORTEX_TELEGRAM_TOKEN"),
+		TelegramChatID:   os.Getenv("VORTEX_TELEGRAM_CHAT_ID"),
 		CloudflareToken:  os.Getenv("VORTEX_CF_API_TOKEN"),
 		CloudflareZoneID: os.Getenv("VORTEX_CF_ZONE_ID"),
-		LocalNode:      envBool("VORTEX_LOCAL_NODE", false),
-		LocalNodeName:  env("VORTEX_LOCAL_NODE_NAME", "local"),
-		LocalNodeHost:  env("VORTEX_LOCAL_NODE_HOST", "127.0.0.1"),
-		Core:           env("VORTEX_CORE", "xray"),
-		CoreBin:        os.Getenv("VORTEX_CORE_BIN"),
-		CoreConfig:     env("VORTEX_CORE_CONFIG", "/etc/vortex/local-core.json"),
-		CoreAPIPort:    envInt("VORTEX_CORE_API_PORT", 10085),
-		SingboxV2RayAPI: envBool("VORTEX_SINGBOX_V2RAY_API", true),
-		ShareAutoLimit: envBool("VORTEX_SHARE_AUTOLIMIT", false),
-		GeoIPDB:        env("VORTEX_GEOIP_DB", ""),
+		LocalNode:        envBool("VORTEX_LOCAL_NODE", false),
+		LocalNodeName:    env("VORTEX_LOCAL_NODE_NAME", "local"),
+		LocalNodeHost:    env("VORTEX_LOCAL_NODE_HOST", "127.0.0.1"),
+		Core:             env("VORTEX_CORE", "xray"),
+		CoreBin:          os.Getenv("VORTEX_CORE_BIN"),
+		CoreConfig:       env("VORTEX_CORE_CONFIG", "/etc/vortex/local-core.json"),
+		CoreAPIPort:      envInt("VORTEX_CORE_API_PORT", 10085),
+		SingboxV2RayAPI:  envBool("VORTEX_SINGBOX_V2RAY_API", true),
+		ShareAutoLimit:   envBool("VORTEX_SHARE_AUTOLIMIT", false),
+		GeoIPDB:          env("VORTEX_GEOIP_DB", ""),
 	}
 	if c.CoreBin == "" {
 		c.CoreBin = c.Core // resolve from PATH by core name
