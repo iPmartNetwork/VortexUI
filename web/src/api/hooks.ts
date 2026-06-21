@@ -487,3 +487,37 @@ export function useSetUserRoutingPack(userId: string | null) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["user-routing-pack", userId] }),
   });
 }
+
+// --- clean-IP scanner (Cloudflare) ---
+
+// CleanIPScan mirrors the backend domain.CleanIPScan JSON shape. Results are
+// returned scored best-first (score DESC); lower loss_pct and latency_ms are
+// better, higher score is better.
+export interface CleanIPScan {
+  id: string;
+  ip: string;
+  latency_ms: number;
+  loss_pct: number;
+  score: number;
+  reachable: boolean;
+  scanned_at: string;
+}
+
+// useCleanIPResults reads the last scan's cached, scored results.
+export function useCleanIPResults() {
+  return useQuery({
+    queryKey: ["clean-ip-results"],
+    queryFn: () => api<{ results: CleanIPScan[] }>("/api/clean-ip/results"),
+  });
+}
+
+// useScanCleanIP probes a set of candidate IPs and replaces the cached results.
+// The backend caps the candidate list at 256 and rejects internal ranges.
+export function useScanCleanIP() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ips: string[]; port?: number }) =>
+      api<{ results: CleanIPScan[] }>("/api/clean-ip/scan", { method: "POST", body: input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clean-ip-results"] }),
+  });
+}

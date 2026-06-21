@@ -97,6 +97,7 @@ const navSections: NavSection[] = [
       { to: "/tls-tricks", key: "nav.tlsTricks", icon: Unplug },
       { to: "/sni-manager", key: "nav.sniManager", icon: Lock },
       { to: "/reality-scanner", key: "nav.realityScanner", icon: Scan },
+      { to: "/clean-ip", key: "nav.cleanIpScanner", icon: Globe },
       { to: "/decoy-website", key: "nav.decoyWebsite", icon: EyeOff },
       { to: "/probing-protection", key: "nav.probingProtection", icon: Shield },
       { to: "/fingerprint", key: "nav.fingerprint", icon: FingerprintIcon },
