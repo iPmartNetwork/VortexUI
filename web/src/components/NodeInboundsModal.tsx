@@ -11,8 +11,8 @@ import { useToast } from "./toast";
 // Static fallbacks used only until the per-core capability matrix
 // (GET /api/capabilities) loads, so the form still works before the fetch
 // resolves. Once `caps` is available the options are filtered per the node's core.
-const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "wireguard", "socks", "http", "naive"];
-const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "http", "h2", "xhttp", "quic", "udp"];
+const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "wireguard", "socks", "http", "naive", "dokodemo"];
+const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "http", "h2", "xhttp", "kcp", "quic", "udp"];
 const SECURITIES = ["none", "tls", "reality"];
 
 // UDP-native protocol fallback (used until caps load). Authoritative list comes
@@ -22,7 +22,7 @@ const UDP_PROTOCOLS = ["hysteria2", "tuic", "wireguard"];
 // No-transport protocol fallback (used until caps load). These protocols carry
 // no stream transport, so the network select is hidden. Authoritative list comes
 // from cap.no_transport per core.
-const NO_TRANSPORT_PROTOCOLS = ["hysteria2", "tuic", "wireguard", "socks", "http", "naive"];
+const NO_TRANSPORT_PROTOCOLS = ["hysteria2", "tuic", "wireguard", "socks", "http", "naive", "dokodemo"];
 
 // randomPort picks a high port (10000–60000) so new inbounds default to a free,
 // non-conflicting port. The admin can still type any port.
