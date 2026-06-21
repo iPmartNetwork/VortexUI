@@ -236,6 +236,7 @@ export interface UpdateInboundInput {
   path?: string;
   host?: string[];
   flow?: string;
+  raw?: Record<string, unknown>;
   enabled: boolean;
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
 }
