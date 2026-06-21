@@ -131,7 +131,13 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 		m.markUnhealthy(ctx)
 		return
 	}
-	h, err := conn.Health(ctx)
+	// Bound the health RPC. Without a deadline, a node whose connection is alive
+	// but whose Health handler is wedged would block this loop forever — no
+	// retry, no log — leaving the node stuck "disconnected" until the panel is
+	// restarted. With a timeout the call fails, we log + drop + redial next tick.
+	hctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	h, err := conn.Health(hctx)
+	cancel()
 	if err != nil {
 		m.hub.log.Warn("health check failed", "node", m.node.Name, "err", err)
 		m.dropConn()
@@ -152,7 +158,11 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 	m.mu.Unlock()
 
 	if m.hub.opts.Nodes != nil {
-		_ = m.hub.opts.Nodes.UpdateHealth(ctx, m.node.ID, h)
+		// Bound the DB write too: a stalled connection pool must not freeze the
+		// health loop.
+		uctx, ucancel := context.WithTimeout(ctx, 5*time.Second)
+		_ = m.hub.opts.Nodes.UpdateHealth(uctx, m.node.ID, h)
+		ucancel()
 	}
 	// Update version fields on the node struct so they're visible in the API.
 	if h.CoreVersion != "" {
@@ -162,9 +172,11 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 		m.node.AgentVer = h.AgentVersion
 	}
 	// Unreachable -> reachable edge: (re)push the node's full config so a freshly
-	// started or recovered agent is repopulated without manual intervention.
+	// started or recovered agent is repopulated without manual intervention. Run
+	// it asynchronously so a slow or blocked resync can never stall the health
+	// loop.
 	if !wasReachable {
-		m.hub.connectHook()(ctx, m.node)
+		go m.hub.connectHook()(ctx, m.node)
 	}
 	// Healthy -> unhealthy edge triggers failover exactly once per transition.
 	if wasHealthy && !nowHealthy {
