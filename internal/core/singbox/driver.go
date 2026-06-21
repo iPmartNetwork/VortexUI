@@ -85,20 +85,26 @@ func New(opts Options) *Driver {
 
 func (d *Driver) Type() domain.CoreType { return domain.CoreSingbox }
 
-// Start seeds the in-memory state from the config and applies it.
+// Start seeds the in-memory state from the config and applies it. A nil cfg is
+// the RestartCore path ("restart with the config I already have"): skip the
+// reseed and just re-render + re-apply the current in-memory state, instead of
+// dereferencing the nil config — which previously panicked and crash-looped the
+// node agent on sing-box nodes.
 func (d *Driver) Start(ctx context.Context, cfg *core.GeneratedConfig) error {
 	d.mu.Lock()
-	d.inbounds = make(map[string]domain.Inbound, len(cfg.Inbounds))
-	d.users = make(map[string]map[string]*domain.User, len(cfg.Inbounds))
-	for _, in := range cfg.Inbounds {
-		d.inbounds[in.Tag] = in
-		set := map[string]*domain.User{}
-		for _, u := range cfg.UsersByInbound[in.Tag] {
-			set[u.ID.String()] = u
+	if cfg != nil {
+		d.inbounds = make(map[string]domain.Inbound, len(cfg.Inbounds))
+		d.users = make(map[string]map[string]*domain.User, len(cfg.Inbounds))
+		for _, in := range cfg.Inbounds {
+			d.inbounds[in.Tag] = in
+			set := map[string]*domain.User{}
+			for _, u := range cfg.UsersByInbound[in.Tag] {
+				set[u.ID.String()] = u
+			}
+			d.users[in.Tag] = set
 		}
-		d.users[in.Tag] = set
+		d.wgPeers = cfg.WireGuardPeers
 	}
-	d.wgPeers = cfg.WireGuardPeers
 	err := d.applyLocked(ctx)
 	d.mu.Unlock()
 	if err != nil {
