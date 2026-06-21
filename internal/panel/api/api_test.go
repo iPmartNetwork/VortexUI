@@ -131,7 +131,7 @@ func newTestServer(t *testing.T) (http.Handler, *auth.Issuer, *domain.Admin) {
 	iss := auth.NewIssuer([]byte("0123456789abcdef0123456789abcdef"), time.Hour)
 	authSvc := service.NewAuthService(adminRepo, iss)
 	userSvc := service.NewUserService(userRepo, nopNodeOps{})
-	subSvc := service.NewSubscriptionService(userRepo, nodeRepo)
+	subSvc := service.NewSubscriptionService(userRepo, nodeRepo, nil)
 	adminSvc := service.NewAdminService(adminRepo)
 	trafficRepo := &fakeTrafficRepo{points: []domain.TrafficPoint{
 		{Time: time.Now().Add(-24 * time.Hour), Up: 100, Down: 200},
@@ -343,7 +343,7 @@ func subRouter(t *testing.T, user *domain.User, devices DeviceLimiter) http.Hand
 	iss := auth.NewIssuer([]byte("0123456789abcdef0123456789abcdef"), time.Hour)
 	authSvc := service.NewAuthService(&fakeAdminRepo{}, iss)
 	return NewRouter(Deps{
-		Handlers: &Handlers{Sub: service.NewSubscriptionService(userRepo, nodeRepo), Devices: devices},
+		Handlers: &Handlers{Sub: service.NewSubscriptionService(userRepo, nodeRepo, nil), Devices: devices},
 		Issuer:   iss,
 		Auth:     authSvc,
 	})

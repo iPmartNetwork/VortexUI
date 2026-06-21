@@ -198,7 +198,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	shareGuard.SetPublisher(bus)
 	shareGuard.SetAutoLimit(cfg.ShareAutoLimit)
 	go shareGuard.Run(ctx)
-	subSvc := service.NewSubscriptionService(users, nodes)
+	subSvc := service.NewSubscriptionService(users, nodes, store.SubHosts())
 	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	syncSvc.SetWireGuard(wgSvc)

@@ -57,6 +57,10 @@ func singboxOutbound(p Proxy) map[string]any {
 		if p.AllowInsecure {
 			tls["insecure"] = true
 		}
+		// Additive: only emit ALPN when the host override supplies it.
+		if len(p.ALPN) > 0 {
+			tls["alpn"] = p.ALPN
+		}
 		if p.Security == "reality" {
 			tls["reality"] = map[string]any{"enabled": true, "public_key": p.PublicKey, "short_id": p.ShortID}
 			tls["utls"] = map[string]any{"enabled": true, "fingerprint": orDefault(p.Fingerprint, "chrome")}
@@ -65,6 +69,10 @@ func singboxOutbound(p Proxy) map[string]any {
 	}
 	if tr := singboxTransport(p); tr != nil {
 		o["transport"] = tr
+	}
+	// Additive: client-side multiplexing only when the host enables it.
+	if p.Mux {
+		o["multiplex"] = map[string]any{"enabled": true, "protocol": "smux"}
 	}
 
 	switch p.Protocol {

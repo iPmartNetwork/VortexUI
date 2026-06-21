@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -264,5 +265,131 @@ func TestHTTPUpgradeSingboxRendersHTTPUpgradeTransport(t *testing.T) {
 	}
 	if tr["host"] != "ex.com" {
 		t.Errorf("host = %v, want ex.com", tr["host"])
+	}
+}
+
+// --- Task 1.4: template variables (FormatVars / Expand) ---
+
+func TestFormatVarsKnownTokens(t *testing.T) {
+	expire := time.Date(2026, 1, 11, 0, 0, 0, 0, time.UTC)
+	u := &domain.User{
+		Username:    "alice",
+		UsedTraffic: 1024 * 1024,      // 1.00 MB
+		DataLimit:   10 * 1024 * 1024, // 10.00 MB
+		ExpireAt:    &expire,
+	}
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) // 10 days before expiry
+	vars := formatVarsAt(u, "1.2.3.4", "2001:db8::1", now)
+
+	cases := map[string]string{
+		"{USERNAME}":       "alice",
+		"{SERVER_IP}":      "1.2.3.4",
+		"{SERVER_IPV6}":    "2001:db8::1",
+		"{DATA_USAGE}":     "1.00 MB",
+		"{DATA_LIMIT}":     "10.00 MB",
+		"{DATA_LEFT}":      "9.00 MB",
+		"{DAYS_LEFT}":      "10",
+		"{EXPIRE_DATE}":    "2026-01-11",
+		"{ADMIN_USERNAME}": "",
+	}
+	for token, want := range cases {
+		if got := vars[token]; got != want {
+			t.Errorf("FormatVars[%s] = %q, want %q", token, got, want)
+		}
+	}
+}
+
+func TestFormatVarsUnlimitedAndNoExpiry(t *testing.T) {
+	u := &domain.User{Username: "bob"} // DataLimit 0, ExpireAt nil
+	vars := formatVarsAt(u, "1.1.1.1", "", time.Now())
+	for _, token := range []string{"{DATA_LIMIT}", "{DATA_LEFT}", "{DAYS_LEFT}"} {
+		if vars[token] != unlimited {
+			t.Errorf("FormatVars[%s] = %q, want %q", token, vars[token], unlimited)
+		}
+	}
+	if vars["{EXPIRE_DATE}"] != "" {
+		t.Errorf("expire date for never-expiring user = %q, want empty", vars["{EXPIRE_DATE}"])
+	}
+}
+
+func TestExpandSubstitutesKnownTokens(t *testing.T) {
+	vars := map[string]string{"{USERNAME}": "alice", "{SERVER_IP}": "1.2.3.4"}
+	got := Expand("{USERNAME} @ {SERVER_IP}", vars)
+	if want := "alice @ 1.2.3.4"; got != want {
+		t.Errorf("Expand = %q, want %q", got, want)
+	}
+}
+
+func TestExpandLeavesUnknownTokensLiteral(t *testing.T) {
+	vars := map[string]string{"{USERNAME}": "alice"}
+	got := Expand("{USERNAME}-{MYSTERY}-{UNCLOSED", vars)
+	if want := "alice-{MYSTERY}-{UNCLOSED"; got != want {
+		t.Errorf("Expand = %q, want %q (unknown/unclosed tokens must stay literal)", got, want)
+	}
+}
+
+func TestExpandNoTokenUnchanged(t *testing.T) {
+	const s = "de-1 plain label"
+	if got := Expand(s, map[string]string{"{USERNAME}": "alice"}); got != s {
+		t.Errorf("Expand = %q, want unchanged %q", got, s)
+	}
+}
+
+// --- Task 1.4: additive new Proxy fields must not change zero-value output ---
+
+func TestNewProxyFieldsAreAdditive(t *testing.T) {
+	// A proxy with empty ALPN / Mux=false / empty Fragment must render exactly as
+	// it did before those fields existed, across every format and share link.
+	for _, p := range append(sampleProxies(), realityProxy(), httpUpgradeProxy()) {
+		if link := ShareLink(p); strings.Contains(link, "alpn=") || strings.Contains(link, "fragment=") {
+			t.Errorf("zero-value proxy leaked host fields into link: %s", link)
+		}
+	}
+
+	clash, err := Render(FormatClash, sampleProxies(), "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(clash); strings.Contains(s, "alpn") || strings.Contains(s, "smux") {
+		t.Errorf("zero-value proxies leaked alpn/smux into clash output:\n%s", s)
+	}
+
+	singbox, err := Render(FormatSingbox, sampleProxies(), "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(singbox); strings.Contains(s, "alpn") || strings.Contains(s, "multiplex") {
+		t.Errorf("zero-value proxies leaked alpn/multiplex into singbox output:\n%s", s)
+	}
+}
+
+func TestHostFieldsRenderWhenSet(t *testing.T) {
+	p := Proxy{
+		Name: "h1", Protocol: domain.ProtoVLESS, Host: "cdn.example.com", Port: 443,
+		Network: "ws", Security: "tls", SNI: "cdn.example.com", Path: "/v",
+		UUID: "44444444-4444-4444-4444-444444444444",
+		ALPN: []string{"h2", "http/1.1"}, Mux: true, Fragment: "100-200,10-20,tlshello",
+	}
+	link := ShareLink(p)
+	for _, want := range []string{"alpn=h2", "fragment="} {
+		if !strings.Contains(link, want) {
+			t.Errorf("vless link missing %q: %s", want, link)
+		}
+	}
+
+	clash, err := Render(FormatClash, []Proxy{p}, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(clash); !strings.Contains(s, "alpn") || !strings.Contains(s, "smux") {
+		t.Errorf("clash output missing alpn/smux:\n%s", s)
+	}
+
+	singbox, err := Render(FormatSingbox, []Proxy{p}, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(singbox); !strings.Contains(s, "alpn") || !strings.Contains(s, "multiplex") {
+		t.Errorf("singbox output missing alpn/multiplex:\n%s", s)
 	}
 }

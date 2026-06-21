@@ -271,7 +271,7 @@ func TestSubscriptionBuildForUserResolvesByID(t *testing.T) {
 	nodeRepo := &mapNodeRepo{nodes: map[uuid.UUID]*domain.Node{
 		nodeID: {ID: nodeID, Name: "n1", Address: "1.1.1.1:50051", LastSeen: &fresh, Health: domain.NodeHealth{CoreRunning: true}},
 	}}
-	svc := NewSubscriptionService(userRepo, nodeRepo)
+	svc := NewSubscriptionService(userRepo, nodeRepo, nil)
 	svc.now = func() time.Time { return now }
 
 	res, err := svc.BuildForUser(context.Background(), uid)
