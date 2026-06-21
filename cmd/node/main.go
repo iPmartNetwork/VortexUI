@@ -51,7 +51,7 @@ func run(ctx context.Context, log *slog.Logger) error {
 	var driver core.CoreDriver
 	switch cfg.Core {
 	case "singbox":
-		driver = singbox.New(singbox.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.APIPort, Logger: log})
+		driver = singbox.New(singbox.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.APIPort, OmitV2RayAPI: !cfg.SingboxV2RayAPI, Logger: log})
 	case "xray", "":
 		driver = xray.New(xray.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.APIPort, Logger: log})
 	default:
@@ -73,7 +73,7 @@ func run(ctx context.Context, log *slog.Logger) error {
 	// Serve in the background; stop gracefully when the signal context cancels.
 	errCh := make(chan error, 1)
 	go func() {
-		log.Info("node agent listening (mTLS)", "addr", cfg.ListenAddr, "core", "xray")
+		log.Info("node agent listening (mTLS)", "addr", cfg.ListenAddr, "core", cfg.Core)
 		errCh <- srv.Serve(lis,
 			grpc.Creds(creds),
 			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
