@@ -211,3 +211,149 @@ func TestSubscriptionProjectsEnabledHostsInPriorityOrder(t *testing.T) {
 		t.Errorf("proxy[1] security = %q, want inherited tls", p1.Security)
 	}
 }
+
+// fakePackResolver is a minimal PackResolver for embedding tests. userPack and
+// globalPack are the IDs returned for the two selection scopes; packs maps an ID
+// to the pack returned by GetPack.
+type fakePackResolver struct {
+	userPack   string
+	globalPack string
+	packs      map[string]*domain.RoutingPack
+	err        error
+}
+
+func (f *fakePackResolver) GetUserPack(context.Context, uuid.UUID) (string, error) {
+	return f.userPack, f.err
+}
+func (f *fakePackResolver) GetGlobalDefault(context.Context) (string, error) {
+	return f.globalPack, f.err
+}
+func (f *fakePackResolver) GetPack(_ context.Context, id string) (*domain.RoutingPack, error) {
+	if p, ok := f.packs[id]; ok {
+		return p, nil
+	}
+	return nil, domain.ErrNotFound
+}
+
+func subFixtures(t *testing.T) (*fakeUserRepo, *mapNodeRepo, time.Time) {
+	t.Helper()
+	now := time.Date(2026, 6, 14, 12, 0, 0, 0, time.UTC)
+	fresh := now.Add(-5 * time.Second)
+	// Fixed IDs so two independently-built fixtures yield byte-identical proxies
+	// (the no-regression comparisons below depend on this).
+	nodeID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	inID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+	user := &domain.User{ID: uuid.MustParse("33333333-3333-3333-3333-333333333333"), Username: "alice", SubToken: "tok",
+		Proxies: domain.UserCredentials{VLESSUUID: uuid.MustParse("44444444-4444-4444-4444-444444444444")}}
+	ur := &fakeUserRepo{
+		created:  user,
+		inbounds: []domain.Inbound{{ID: inID, NodeID: nodeID, Tag: "in", Protocol: domain.ProtoVLESS, Port: 443, Network: "ws", Security: domain.SecurityTLS, Enabled: true}},
+	}
+	nr := &mapNodeRepo{nodes: map[uuid.UUID]*domain.Node{
+		nodeID: {ID: nodeID, Name: "n1", Address: "1.1.1.1:50051", LastSeen: &fresh, Health: domain.NodeHealth{CoreRunning: true}},
+	}}
+	return ur, nr, now
+}
+
+// A user with a selected pack gets that pack's rules embedded in the result,
+// while the proxies stay exactly what the no-pack path produces (Req 3.3.1).
+func TestSubscriptionEmbedsSelectedPackRules(t *testing.T) {
+	wantRules := []domain.RoutingRule{
+		{Name: "iran-direct", Domains: []string{"geosite:category-ir"}, OutboundTag: "direct"},
+	}
+
+	// Baseline: no resolver wired → no rules.
+	ur0, nr0, now := subFixtures(t)
+	base := NewSubscriptionService(ur0, nr0, nil)
+	base.now = func() time.Time { return now }
+	baseRes, err := base.Build(context.Background(), "tok")
+	if err != nil {
+		t.Fatalf("base build: %v", err)
+	}
+	if baseRes.Rules != nil {
+		t.Errorf("no resolver should yield nil rules, got %v", baseRes.Rules)
+	}
+
+	// With a selected user pack → rules embedded, proxies unchanged.
+	ur1, nr1, _ := subFixtures(t)
+	svc := NewSubscriptionService(ur1, nr1, nil)
+	svc.now = func() time.Time { return now }
+	svc.SetRoutingPacks(&fakePackResolver{
+		userPack: "Iran Direct",
+		packs:    map[string]*domain.RoutingPack{"Iran Direct": {ID: "Iran Direct", Rules: wantRules}},
+	})
+	res, err := svc.Build(context.Background(), "tok")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if !reflect.DeepEqual(res.Rules, wantRules) {
+		t.Errorf("embedded rules = %v, want %v", res.Rules, wantRules)
+	}
+	if !reflect.DeepEqual(res.Proxies, baseRes.Proxies) {
+		t.Errorf("proxies changed when a pack is selected:\n got=%+v\nwant=%+v", res.Proxies, baseRes.Proxies)
+	}
+}
+
+// A user with no per-user pack falls back to the global default pack's rules.
+func TestSubscriptionFallsBackToGlobalDefaultPack(t *testing.T) {
+	wantRules := []domain.RoutingRule{
+		{Name: "block-ads", Domains: []string{"ads.example.com"}, OutboundTag: "blocked"},
+	}
+	ur, nr, now := subFixtures(t)
+	svc := NewSubscriptionService(ur, nr, nil)
+	svc.now = func() time.Time { return now }
+	svc.SetRoutingPacks(&fakePackResolver{
+		userPack:   "", // none per-user
+		globalPack: "Block Ads",
+		packs:      map[string]*domain.RoutingPack{"Block Ads": {ID: "Block Ads", Rules: wantRules}},
+	})
+	res, err := svc.Build(context.Background(), "tok")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if !reflect.DeepEqual(res.Rules, wantRules) {
+		t.Errorf("global default rules = %v, want %v", res.Rules, wantRules)
+	}
+}
+
+// With no pack selected (resolver present but empty selections) the result must
+// match the no-resolver path exactly: nil rules and identical proxies (Req 3.3.3).
+func TestSubscriptionNoPackMatchesUnchangedPath(t *testing.T) {
+	ur0, nr0, now := subFixtures(t)
+	base := NewSubscriptionService(ur0, nr0, nil)
+	base.now = func() time.Time { return now }
+	baseRes, err := base.Build(context.Background(), "tok")
+	if err != nil {
+		t.Fatalf("base build: %v", err)
+	}
+
+	ur1, nr1, _ := subFixtures(t)
+	svc := NewSubscriptionService(ur1, nr1, nil)
+	svc.now = func() time.Time { return now }
+	svc.SetRoutingPacks(&fakePackResolver{packs: map[string]*domain.RoutingPack{}})
+	res, err := svc.Build(context.Background(), "tok")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if res.Rules != nil {
+		t.Errorf("no selected pack should yield nil rules, got %v", res.Rules)
+	}
+	if !reflect.DeepEqual(res.Proxies, baseRes.Proxies) {
+		t.Errorf("proxies differ from unchanged path:\n got=%+v\nwant=%+v", res.Proxies, baseRes.Proxies)
+	}
+}
+
+// A pack-resolution error must be swallowed (fail-open): nil rules, valid result.
+func TestSubscriptionPackResolutionErrorFailsOpen(t *testing.T) {
+	ur, nr, now := subFixtures(t)
+	svc := NewSubscriptionService(ur, nr, nil)
+	svc.now = func() time.Time { return now }
+	svc.SetRoutingPacks(&fakePackResolver{userPack: "x", err: context.DeadlineExceeded})
+	res, err := svc.Build(context.Background(), "tok")
+	if err != nil {
+		t.Fatalf("build should not fail on pack error: %v", err)
+	}
+	if res.Rules != nil {
+		t.Errorf("pack error should yield nil rules, got %v", res.Rules)
+	}
+}

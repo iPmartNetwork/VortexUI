@@ -8,7 +8,11 @@ import (
 
 // renderSingbox builds a sing-box config fragment: one outbound per proxy plus a
 // selector that fronts them. Clients merge this with their own inbounds/route.
-func renderSingbox(proxies []Proxy, title string) ([]byte, error) {
+// When rules is empty no route section is emitted, so output stays byte-identical
+// to before; when a pack supplies rules they are translated into route.rules with
+// a route.final pointing at the selector, and a block outbound is appended only
+// if a rule rejects traffic.
+func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule) ([]byte, error) {
 	var outbounds []map[string]any
 	var tags []string
 	for _, p := range proxies {
@@ -40,7 +44,20 @@ func renderSingbox(proxies []Proxy, title string) ([]byte, error) {
 	all := append([]map[string]any{selector, autoTest}, outbounds...)
 	all = append(all, direct)
 
-	return json.MarshalIndent(map[string]any{"outbounds": all}, "", "  ")
+	cfg := map[string]any{"outbounds": all}
+	if len(rules) > 0 {
+		routeRules := singboxRules(rules, title)
+		if singboxNeedsBlock(rules) {
+			all = append(all, map[string]any{"type": "block", "tag": "block"})
+			cfg["outbounds"] = all
+		}
+		cfg["route"] = map[string]any{
+			"rules": routeRules,
+			"final": title,
+		}
+	}
+
+	return json.MarshalIndent(cfg, "", "  ")
 }
 
 func singboxOutbound(p Proxy) map[string]any {

@@ -7,8 +7,11 @@ import (
 )
 
 // renderClash builds a minimal but valid Clash.Meta config: every proxy, a
-// single selector group containing them all, and a default catch-all rule.
-func renderClash(proxies []Proxy, title string) ([]byte, error) {
+// single selector group containing them all, and a rules section. When rules is
+// empty the rules section is exactly the historical catch-all (`MATCH,<title>`)
+// so output stays byte-identical; when a pack supplies rules they are translated
+// to Clash rule strings followed by a MATCH fallback to the selector group.
+func renderClash(proxies []Proxy, title string, rules []domain.RoutingRule) ([]byte, error) {
 	var clashProxies []map[string]any
 	var names []string
 	for _, p := range proxies {
@@ -23,6 +26,11 @@ func renderClash(proxies []Proxy, title string) ([]byte, error) {
 		title = "VortexUI"
 	}
 
+	clashRuleStrings := []string{"MATCH," + title}
+	if len(rules) > 0 {
+		clashRuleStrings = append(clashRules(rules, title), "MATCH,"+title)
+	}
+
 	cfg := map[string]any{
 		"proxies": clashProxies,
 		"proxy-groups": []map[string]any{
@@ -32,15 +40,15 @@ func renderClash(proxies []Proxy, title string) ([]byte, error) {
 				"proxies": append([]string{"♻️ Auto", "DIRECT"}, names...),
 			},
 			{
-				"name":     "♻️ Auto",
-				"type":     "url-test",
-				"proxies":  names,
-				"url":      "https://www.gstatic.com/generate_204",
-				"interval": 300,
+				"name":      "♻️ Auto",
+				"type":      "url-test",
+				"proxies":   names,
+				"url":       "https://www.gstatic.com/generate_204",
+				"interval":  300,
 				"tolerance": 50,
 			},
 		},
-		"rules": []string{"MATCH," + title},
+		"rules": clashRuleStrings,
 	}
 	return yaml.Marshal(cfg)
 }
