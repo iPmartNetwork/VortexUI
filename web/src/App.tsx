@@ -19,6 +19,7 @@ import { Orders } from "@/pages/Orders";
 import { Evasion } from "@/pages/Evasion";
 import { Monitor } from "@/pages/Monitor";
 import { RealityScanner } from "@/pages/RealityScanner";
+import { CleanIPScanner } from "@/pages/CleanIPScanner";
 import { SmartQuota } from "@/pages/SmartQuota";
 import { RelayChains } from "@/pages/RelayChains";
 import { DecoyWebsite } from "@/pages/DecoyWebsite";
@@ -71,6 +72,7 @@ export function App() {
         <Route path="/evasion" element={<Evasion />} />
         <Route path="/monitor" element={<Monitor />} />
         <Route path="/reality-scanner" element={<RealityScanner />} />
+        <Route path="/clean-ip" element={<CleanIPScanner />} />
         <Route path="/smart-quota" element={<SmartQuota />} />
         <Route path="/relay-chains" element={<RelayChains />} />
         <Route path="/decoy-website" element={<DecoyWebsite />} />
