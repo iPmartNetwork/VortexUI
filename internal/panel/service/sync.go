@@ -95,6 +95,12 @@ func (s *SyncService) Resync(ctx context.Context, nodeID uuid.UUID) error {
 	for _, in := range inbounds {
 		if in.Enabled {
 			cfg.Inbounds = append(cfg.Inbounds, *in)
+			// Enforce the inbound's geo policy by appending its geo-blocking
+			// routing rules. GeoBlockRules returns nil when the inbound has no
+			// GeoPolicy, so this is a no-op for unrestricted inbounds. These rules
+			// land before the operator's own rules (added below), but renderers
+			// sort by Priority and geo rules use -1/0, so ordering is preserved.
+			cfg.Routing = append(cfg.Routing, core.GeoBlockRules(*in)...)
 		}
 	}
 

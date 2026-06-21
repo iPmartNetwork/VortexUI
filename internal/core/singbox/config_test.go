@@ -403,3 +403,93 @@ func TestBuilderWireGuardEndpoint(t *testing.T) {
 		t.Errorf("peer[0] wrong: %+v", ep.Peers[0])
 	}
 }
+
+// TestBuilderGeoBlockAllowedCountries verifies GeoBlockRules for an
+// AllowedCountries policy render into sing-box route rules such that (a) the
+// allowed-country traffic is routed to a real egress (not a reject action) and
+// (b) the rest of the inbound's traffic is rejected. sing-box maps the "blocked"
+// target to a reject action; the allow rule must keep a resolvable outbound or
+// buildRoute would drop it and reject everything.
+func TestBuilderGeoBlockAllowedCountries(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-geo", Protocol: domain.ProtoVLESS, Port: 443,
+		GeoPolicy: &domain.GeoPolicy{AllowedCountries: []string{"IR"}},
+	}
+	cfg := &core.GeneratedConfig{
+		Inbounds: []domain.Inbound{in},
+		Routing:  core.GeoBlockRules(in),
+	}
+	raw, err := Builder{APIPort: 9090}.Build(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var c routedConfig
+	if err := json.Unmarshal(raw, &c); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	var allow, blockRest *struct {
+		Inbound   []string `json:"inbound"`
+		Domain    []string `json:"domain"`
+		IPCIDR    []string `json:"ip_cidr"`
+		Port      []int    `json:"port"`
+		PortRange []string `json:"port_range"`
+		Network   string   `json:"network"`
+		Outbound  string   `json:"outbound"`
+		Action    string   `json:"action"`
+	}
+	for i := range c.Route.Rules {
+		rule := &c.Route.Rules[i]
+		switch {
+		case len(rule.IPCIDR) == 1 && rule.IPCIDR[0] == "geoip:IR":
+			allow = rule
+		case len(rule.IPCIDR) == 0 && rule.Action == "reject":
+			blockRest = rule
+		}
+	}
+
+	// (b) Non-IR traffic on the inbound must be rejected.
+	if blockRest == nil {
+		t.Fatal("missing catch-all reject rule for non-allowed traffic")
+	}
+	// (a) IR traffic must route to a real egress, not be rejected/dropped.
+	if allow == nil {
+		t.Fatal("allow rule for geoip:IR was dropped — allowed traffic would be rejected")
+	}
+	if allow.Action == "reject" {
+		t.Error("allow rule must not be a reject action")
+	}
+	if allow.Outbound == "" {
+		t.Error("allow rule has no outbound — sing-box would drop it and reject allowed traffic")
+	}
+}
+
+// TestBuilderGeoBlockBlockedCountries verifies a BlockedCountries policy renders
+// a reject rule matching the blocked country's source IPs.
+func TestBuilderGeoBlockBlockedCountries(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-geo", Protocol: domain.ProtoVLESS, Port: 443,
+		GeoPolicy: &domain.GeoPolicy{BlockedCountries: []string{"CN"}},
+	}
+	cfg := &core.GeneratedConfig{
+		Inbounds: []domain.Inbound{in},
+		Routing:  core.GeoBlockRules(in),
+	}
+	raw, err := Builder{APIPort: 9090}.Build(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var c routedConfig
+	if err := json.Unmarshal(raw, &c); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	var found bool
+	for _, rule := range c.Route.Rules {
+		if len(rule.IPCIDR) == 1 && rule.IPCIDR[0] == "geoip:CN" && rule.Action == "reject" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected a reject rule matching geoip:CN")
+	}
+}
