@@ -286,12 +286,17 @@ func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound,
 		return inbound{}, err
 	}
 	out := inbound{
-		Tag:            in.Tag,
-		Listen:         orDefault(in.Listen, "0.0.0.0"),
-		Port:           in.Port,
-		Protocol:       string(in.Protocol),
-		Settings:       settings,
-		StreamSettings: streamSettings(in),
+		Tag:      in.Tag,
+		Listen:   orDefault(in.Listen, "0.0.0.0"),
+		Port:     in.Port,
+		Protocol: string(in.Protocol),
+		Settings: settings,
+	}
+	// Protocols that carry no stream transport (socks/http utility proxies) get
+	// no streamSettings block at all — their only allowed security is none, so a
+	// plain proxy with no transport layer is correct.
+	if !core.SkipsTransport(domain.CoreXray, in.Protocol) {
+		out.StreamSettings = streamSettings(in)
 	}
 	return out, nil
 }
@@ -334,9 +339,54 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 	case domain.ProtoShadowsocks:
 		return shadowsocksSettings(in, users), nil
 
+	case domain.ProtoSocks:
+		// SOCKS5 utility proxy. Per-user auth reuses the existing credentials
+		// (username = User.Username, fallback to the user ID; password = the
+		// trojan password). With >=1 user we require password auth; with none we
+		// fall back to noauth so the inbound still starts.
+		accounts := socksHTTPAccounts(users)
+		if len(accounts) > 0 {
+			return mustRaw(map[string]any{"auth": "password", "accounts": accounts, "udp": true}), nil
+		}
+		return mustRaw(map[string]any{"auth": "noauth", "udp": true}), nil
+
+	case domain.ProtoHTTP:
+		// HTTP CONNECT utility proxy. accounts reuse the same shared credentials;
+		// when no users are bound we omit accounts entirely (open proxy).
+		accounts := socksHTTPAccounts(users)
+		settings := map[string]any{"allowTransparent": false}
+		if len(accounts) > 0 {
+			settings["accounts"] = accounts
+		}
+		return mustRaw(settings), nil
+
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q for xray", in.Protocol)
 	}
+}
+
+// socksHTTPAccounts renders the xray socks/http account list ({user, pass}),
+// one entry per bound user, reusing the existing credentials: the username is
+// User.Username (falling back to the user ID when empty) and the password is the
+// shared trojan password.
+func socksHTTPAccounts(users []*domain.User) []map[string]any {
+	accounts := make([]map[string]any, 0, len(users))
+	for _, u := range users {
+		accounts = append(accounts, map[string]any{
+			"user": proxyUsername(u),
+			"pass": u.Proxies.TrojanPass,
+		})
+	}
+	return accounts
+}
+
+// proxyUsername returns the per-user proxy username: User.Username when set,
+// otherwise the user ID string. Shared by the socks/http utility proxies.
+func proxyUsername(u *domain.User) string {
+	if u.Username != "" {
+		return u.Username
+	}
+	return u.ID.String()
 }
 
 // shadowsocksSettings renders the Shadowsocks "settings" block. xray models two

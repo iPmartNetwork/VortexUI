@@ -122,11 +122,11 @@ func TestBuilder_MatrixRendersEveryAcceptedCombo(t *testing.T) {
 
 	for _, proto := range caps.Protocols {
 		networks := caps.Transports
-		if core.IsUDPNative(coreType, proto) {
-			networks = []string{""} // UDP-native: transport is irrelevant
+		if core.SkipsTransport(coreType, proto) {
+			networks = []string{""} // no stream transport: network is irrelevant
 		}
 		for _, network := range networks {
-			for _, security := range caps.Securities {
+			for _, security := range core.AllowedSecurities(coreType, proto) {
 				proto, network, security := proto, network, security
 				name := fmt.Sprintf("%s_%s_%s", proto, networkLabel(network), security)
 				t.Run(name, func(t *testing.T) {

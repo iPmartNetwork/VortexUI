@@ -24,6 +24,21 @@ const (
 	// ProtoAnyTLS is the AnyTLS protocol (sing-box "anytls"); TCP-based and
 	// requires a TLS layer.
 	ProtoAnyTLS Protocol = "anytls"
+	// ProtoSocks is a SOCKS5 utility proxy inbound. It is a plain TCP proxy
+	// (security none) that carries NO stream transport — the network value is
+	// irrelevant for it. Per-user auth reuses the existing credentials.
+	ProtoSocks Protocol = "socks"
+	// ProtoHTTP is an HTTP CONNECT utility proxy inbound. Like socks it is a
+	// plain TCP proxy (security none) carrying NO stream transport.
+	//
+	// NOTE: the Protocol value "http" lives in a DIFFERENT namespace from the
+	// "http"/"h2" stream-transport token (which is keyed on Inbound.Network in
+	// streamSettings/transportBlock). Protocol is Inbound.Protocol; the transport
+	// is Inbound.Network — separate fields, so there is no collision.
+	ProtoHTTP Protocol = "http"
+	// ProtoNaive is a NaiveProxy inbound (sing-box "naive"). It MANDATES TLS and
+	// carries no stream transport of its own.
+	ProtoNaive Protocol = "naive"
 )
 
 // Security is the TLS-layer obfuscation applied to an inbound.
