@@ -1969,3 +1969,72 @@ func (r *RoutingPackRepo) SetUserPack(ctx context.Context, userID uuid.UUID, pac
 		`UPDATE users SET routing_pack_id = $2 WHERE id = $1`, userID, packID)
 	return err
 }
+
+
+// --- IPLimitRepo ---
+
+type IPLimitRepo struct{ pool *pgxpool.Pool }
+
+var _ port.IPLimitRepository = (*IPLimitRepo)(nil)
+
+// GetPolicy returns the singleton enforcement policy, upserting and returning
+// the conservative default when no row exists yet so callers always get a
+// usable policy.
+func (r *IPLimitRepo) GetPolicy(ctx context.Context) (*domain.IPLimitPolicy, error) {
+	var p domain.IPLimitPolicy
+	var action string
+	err := r.pool.QueryRow(ctx,
+		`SELECT enabled, action, alert_cooldown, restore_after
+		 FROM ip_limit_policy WHERE id = 1`).
+		Scan(&p.Enabled, &action, &p.AlertCooldown, &p.RestoreAfter)
+	if err == pgx.ErrNoRows {
+		def := domain.DefaultIPLimitPolicy()
+		return &def, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	p.Action = domain.IPLimitAction(action)
+	return &p, nil
+}
+
+func (r *IPLimitRepo) UpdatePolicy(ctx context.Context, p *domain.IPLimitPolicy) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO ip_limit_policy (id, enabled, action, alert_cooldown, restore_after)
+		 VALUES (1, $1, $2, $3, $4)
+		 ON CONFLICT (id) DO UPDATE SET
+		   enabled = EXCLUDED.enabled,
+		   action = EXCLUDED.action,
+		   alert_cooldown = EXCLUDED.alert_cooldown,
+		   restore_after = EXCLUDED.restore_after`,
+		p.Enabled, string(p.Action), p.AlertCooldown, p.RestoreAfter)
+	return err
+}
+
+func (r *IPLimitRepo) InsertEvent(ctx context.Context, e *domain.IPLimitEvent) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO ip_limit_events (id, user_id, username, online_ips, limit_val, action, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		e.ID, e.UserID, e.Username, e.OnlineIPs, e.Limit, e.Action, e.CreatedAt)
+	return err
+}
+
+func (r *IPLimitRepo) ListEvents(ctx context.Context, limit int) ([]*domain.IPLimitEvent, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, user_id, username, online_ips, limit_val, action, created_at
+		 FROM ip_limit_events ORDER BY created_at DESC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*domain.IPLimitEvent
+	for rows.Next() {
+		var e domain.IPLimitEvent
+		if err := rows.Scan(&e.ID, &e.UserID, &e.Username, &e.OnlineIPs, &e.Limit, &e.Action, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, &e)
+	}
+	return results, rows.Err()
+}

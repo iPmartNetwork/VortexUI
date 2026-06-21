@@ -609,3 +609,24 @@ CREATE TABLE wireguard_peers (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (inbound_id, user_id)
 );
+
+-- panel-feature-parity: IP-limit enforcement policy (singleton)
+CREATE TABLE ip_limit_policy (
+    id             INTEGER PRIMARY KEY DEFAULT 1,
+    enabled        BOOLEAN NOT NULL DEFAULT FALSE,
+    action         TEXT NOT NULL DEFAULT 'warn',
+    alert_cooldown INTEGER NOT NULL DEFAULT 900,
+    restore_after  INTEGER NOT NULL DEFAULT 900
+);
+
+-- panel-feature-parity: IP-limit enforcement events
+CREATE TABLE ip_limit_events (
+    id         UUID PRIMARY KEY,
+    user_id    UUID NOT NULL,
+    username   TEXT NOT NULL DEFAULT '',
+    online_ips INTEGER NOT NULL DEFAULT 0,
+    limit_val  INTEGER NOT NULL DEFAULT 0,
+    action     TEXT NOT NULL DEFAULT 'warn',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_ip_limit_events_time ON ip_limit_events (created_at DESC);
