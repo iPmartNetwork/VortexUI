@@ -4,6 +4,23 @@ All notable changes to VortexUI are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.2.3 (unreleased)
+
+### Added
+- **Per-protocol capability constraints** — a single source-of-truth capability matrix
+  now governs which protocols and transports each core (Xray / sing-box) supports;
+  the guard, renderers, and frontend option filtering all derive from it.
+- **New protocols** — `socks`, `http`, `naive` (sing-box), and `dokodemo` (xray)
+  inbounds.
+- **sing-box protocols** — `hysteria1`, `shadowtls`, and `anytls` support.
+- **mKCP transport** — added as an Xray transport option.
+- **TLS** — `alpn` configuration plus Xray `tcp` header (none/http) and `xhttp` mode
+  rendering.
+
+### Changed
+- Renderer tests are now matrix-driven, covering every protocol/transport combination
+  across both cores.
+
 ## [Unreleased]
 
 ## [1.2.0] - 2026-06-17
