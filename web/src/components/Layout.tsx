@@ -82,6 +82,7 @@ const navSections: NavSection[] = [
       { to: "/nodes", key: "nav.nodes", icon: Server },
       { to: "/outbounds", key: "nav.outbounds", icon: Network },
       { to: "/routing", key: "nav.routing", icon: RouteIcon },
+      { to: "/routing-packs", key: "nav.routingPacks", icon: RouteIcon },
       { to: "/balancers", key: "nav.balancers", icon: Scale },
       { to: "/relay-chains", key: "nav.relayChains", icon: Link2 },
       { to: "/migration", key: "nav.migration", icon: ArrowRightLeft },

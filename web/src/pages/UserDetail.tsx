@@ -2,10 +2,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, RotateCcw, KeyRound, Wifi, ShieldAlert, Globe } from "lucide-react";
 import { api } from "@/api/client";
-import { useUserUsage } from "@/api/hooks";
+import { useUserUsage, useRoutingPacks, useUserRoutingPack, useSetUserRoutingPack } from "@/api/hooks";
 import { useResetUser, useRevokeSub, useUserSub, useUserOnline, useUserOnlineIPs } from "@/api/policy-hooks";
 import type { User } from "@/api/types";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button, Card, Select } from "@/components/ui";
 import { UsageChart } from "@/components/UsageChart";
 import { CopyField } from "@/components/CopyField";
 import { useConfirm } from "@/components/confirm";
@@ -136,6 +136,9 @@ export function UserDetail() {
         </Card>
       )}
 
+      {/* Routing pack — per-subscription override */}
+      <RoutingPackSelector userId={id ?? null} />
+
       {/* Subscription */}
       {d && (
         <Card className="space-y-4">
@@ -164,5 +167,45 @@ export function UserDetail() {
         </Card>
       )}
     </div>
+  );
+}
+
+// RoutingPackSelector lets an admin pick a per-subscription routing pack for a
+// user (or "— none —" to fall back to the global default). The current value is
+// loaded from the API and updated optimistically via the query invalidation in
+// the mutation hook.
+function RoutingPackSelector({ userId }: { userId: string | null }) {
+  const packs = useRoutingPacks();
+  const current = useUserRoutingPack(userId);
+  const setPack = useSetUserRoutingPack(userId);
+  const toast = useToast();
+
+  const value = current.data?.pack_id ?? "";
+
+  async function change(packId: string) {
+    await setPack.mutateAsync(packId);
+    toast.success("Routing pack updated");
+  }
+
+  return (
+    <Card className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Routing pack</h3>
+      <p className="text-xs text-fg-muted">
+        Embeds the selected pack's rules into this user's Clash/sing-box subscription. Overrides the global default.
+      </p>
+      <Select
+        className="w-full sm:w-72"
+        value={value}
+        disabled={current.isLoading || setPack.isPending}
+        onChange={(e) => change(e.target.value)}
+      >
+        <option value="">— none —</option>
+        {(packs.data?.packs ?? []).map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}{p.builtin ? " (built-in)" : ""}
+          </option>
+        ))}
+      </Select>
+    </Card>
   );
 }

@@ -8,6 +8,7 @@ import { UserDetail } from "@/pages/UserDetail";
 import { Nodes } from "@/pages/Nodes";
 import { Outbounds } from "@/pages/Outbounds";
 import { Routing } from "@/pages/Routing";
+import { RoutingPacks } from "@/pages/RoutingPacks";
 import { Balancers } from "@/pages/Balancers";
 import { Admins } from "@/pages/Admins";
 import { Audit } from "@/pages/Audit";
@@ -62,6 +63,7 @@ export function App() {
         <Route path="/nodes" element={<Nodes />} />
         <Route path="/outbounds" element={<Outbounds />} />
         <Route path="/routing" element={<Routing />} />
+        <Route path="/routing-packs" element={<RoutingPacks />} />
         <Route path="/balancers" element={<Balancers />} />
         <Route path="/admins" element={<Admins />} />
         <Route path="/plans" element={<Plans />} />

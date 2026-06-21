@@ -228,6 +228,8 @@ func NewRouter(d Deps) *echo.Echo {
 	packs.DELETE("/:id", d.RoutingPacks.DeletePack, RequirePermission(d.Auth, domain.PermInboundWrite))
 	packs.POST("/apply", d.RoutingPacks.ApplyToNode, RequirePermission(d.Auth, domain.PermInboundWrite))
 	packs.PUT("/default", d.RoutingPacks.SetDefault, RequirePermission(d.Auth, domain.PermInboundWrite))
+	packs.GET("/user/:user_id", d.RoutingPacks.GetUserPack, RequirePermission(d.Auth, domain.PermUserRead))
+	packs.PUT("/user/:user_id", d.RoutingPacks.SetUserPack, RequirePermission(d.Auth, domain.PermUserWrite))
 
 	// --- Smart Quota (Fair Use) ---
 	quota := authed.Group("/quota", RequirePermission(d.Auth, domain.PermAdminManage))

@@ -127,6 +127,41 @@ func (h *RoutingPackHandlers) ApplyToNode(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"status": "applied"})
 }
 
+// userPackRequest is the body for setting a user's per-subscription pack.
+type userPackRequest struct {
+	PackID string `json:"pack_id"`
+}
+
+// SetUserPack persists a per-subscription pack selection for one user. An empty
+// pack_id clears the override so the user falls back to the global default.
+func (h *RoutingPackHandlers) SetUserPack(c echo.Context) error {
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid user_id")
+	}
+	var req userPackRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if err := h.Packs.SetUserPack(c.Request().Context(), userID, req.PackID); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"pack_id": req.PackID})
+}
+
+// GetUserPack returns a user's per-subscription pack ID ("" when none is set).
+func (h *RoutingPackHandlers) GetUserPack(c echo.Context) error {
+	userID, err := uuid.Parse(c.Param("user_id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid user_id")
+	}
+	packID, err := h.Packs.GetUserPack(c.Request().Context(), userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"pack_id": packID})
+}
+
 // setDefaultRequest is the body for setting the global default pack.
 type setDefaultRequest struct {
 	PackID string `json:"pack_id"`
