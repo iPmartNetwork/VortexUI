@@ -28,8 +28,18 @@ type SubscriptionService struct {
 	users      port.UserRepository
 	nodes      port.NodeRepository
 	subHosts   port.SubHostRepository
+	packs      PackResolver
 	staleAfter time.Duration
 	now        func() time.Time
+}
+
+// PackResolver resolves the routing pack a subscription should embed. It is the
+// subset of *RoutingPackService the subscription service needs, kept small so
+// the dependency is optional (nil-safe) and easy to fake in tests.
+type PackResolver interface {
+	GetUserPack(ctx context.Context, userID uuid.UUID) (string, error)
+	GetGlobalDefault(ctx context.Context) (string, error)
+	GetPack(ctx context.Context, id string) (*domain.RoutingPack, error)
 }
 
 // NewSubscriptionService wires the service. subHosts may be nil, in which case
@@ -39,11 +49,20 @@ func NewSubscriptionService(users port.UserRepository, nodes port.NodeRepository
 	return &SubscriptionService{users: users, nodes: nodes, subHosts: subHosts, staleAfter: defaultStaleAfter, now: time.Now}
 }
 
+// SetRoutingPacks injects the routing pack resolver used to embed a selected
+// pack's rules into Clash/sing-box output. It is optional: with no resolver (or
+// when no pack resolves) subscriptions render exactly as before (Req 3.3.3).
+func (s *SubscriptionService) SetRoutingPacks(packs PackResolver) {
+	s.packs = packs
+}
+
 // SubResult bundles the resolved proxies with the owning user so the handler can
-// render the body and emit usage headers.
+// render the body and emit usage headers. Rules carries the selected routing
+// pack's rules (nil when none is selected) for Clash/sing-box embedding.
 type SubResult struct {
 	User    *domain.User
 	Proxies []subscription.Proxy
+	Rules   []domain.RoutingRule
 }
 
 // Build looks up the user by token and assembles a Proxy per enabled inbound.
@@ -109,7 +128,33 @@ func (s *SubscriptionService) buildFor(ctx context.Context, user *domain.User) (
 			proxies = append(proxies, buildProxyWithHost(base, h, vars))
 		}
 	}
-	return &SubResult{User: user, Proxies: proxies}, nil
+	return &SubResult{User: user, Proxies: proxies, Rules: s.resolveRules(ctx, user.ID)}, nil
+}
+
+// resolveRules picks the routing rules to embed for a user: the user's selected
+// pack if set, otherwise the global default. It is fail-open — a missing
+// resolver, any resolution error, or an unresolved pack yields nil rules so the
+// subscription renders unchanged and a pack lookup never breaks a subscription
+// (Req 3.3.3).
+func (s *SubscriptionService) resolveRules(ctx context.Context, userID uuid.UUID) []domain.RoutingRule {
+	if s.packs == nil {
+		return nil
+	}
+	packID, err := s.packs.GetUserPack(ctx, userID)
+	if err != nil {
+		return nil
+	}
+	if packID == "" {
+		packID, err = s.packs.GetGlobalDefault(ctx)
+		if err != nil || packID == "" {
+			return nil
+		}
+	}
+	pack, err := s.packs.GetPack(ctx, packID)
+	if err != nil || pack == nil {
+		return nil
+	}
+	return pack.Rules
 }
 
 // hostsFor batch-loads the enabled SubHosts for the user's enabled inbounds in a

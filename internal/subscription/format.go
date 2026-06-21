@@ -50,13 +50,31 @@ func (f Format) ContentType() string {
 	}
 }
 
-// Render produces the subscription body for the chosen format.
+// RenderOpts carries optional, non-breaking inputs for rendering. Its zero value
+// (empty Title, nil Rules) reproduces the pre-options output byte-for-byte, so
+// Render can delegate to RenderWith without changing any existing behavior.
+type RenderOpts struct {
+	Title string               // profile/selector name; "" defaults per-renderer
+	Rules []domain.RoutingRule // client-side routing rules to embed (Clash/sing-box only)
+}
+
+// Render produces the subscription body for the chosen format. It is preserved
+// for existing callers and simply delegates to RenderWith with no rules, so its
+// output is unchanged.
 func Render(f Format, proxies []Proxy, title string) ([]byte, error) {
+	return RenderWith(f, proxies, RenderOpts{Title: title})
+}
+
+// RenderWith produces the subscription body, optionally embedding client-side
+// routing rules. Only Clash and sing-box consume opts.Rules; base64, links, xray
+// and outline have no client-routing concept and ignore them (Req 3.3.2). When
+// opts.Rules is empty the output is byte-identical to Render (Req 3.3.3).
+func RenderWith(f Format, proxies []Proxy, opts RenderOpts) ([]byte, error) {
 	switch f {
 	case FormatClash:
-		return renderClash(proxies, title)
+		return renderClash(proxies, opts.Title, opts.Rules)
 	case FormatSingbox:
-		return renderSingbox(proxies, title)
+		return renderSingbox(proxies, opts.Title, opts.Rules)
 	case FormatXray:
 		return renderXrayJSON(proxies)
 	case FormatOutline:

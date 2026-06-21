@@ -51,12 +51,12 @@ func TestShareLinks(t *testing.T) {
 
 func TestDetectFormat(t *testing.T) {
 	cases := map[string]Format{
-		"clash-verge/1.0":     FormatClash,
-		"mihomo":              FormatClash,
-		"sing-box 1.8":        FormatSingbox,
-		"HiddifyNext/2":       FormatSingbox,
-		"v2rayNG/1.8":         FormatLinks,
-		"":                    FormatBase64,
+		"clash-verge/1.0": FormatClash,
+		"mihomo":          FormatClash,
+		"sing-box 1.8":    FormatSingbox,
+		"HiddifyNext/2":   FormatSingbox,
+		"v2rayNG/1.8":     FormatLinks,
+		"":                FormatBase64,
 	}
 	for ua, want := range cases {
 		if got := Detect(ua); got != want {
@@ -127,7 +127,7 @@ func realityProxy() Proxy {
 	return Proxy{
 		Name: "reality1", Protocol: domain.ProtoVLESS, Host: "1.2.3.4", Port: 443,
 		Network: "tcp", Security: "reality", SNI: "www.microsoft.com", Flow: "xtls-rprx-vision",
-		UUID: "22222222-2222-2222-2222-222222222222",
+		UUID:      "22222222-2222-2222-2222-222222222222",
 		PublicKey: "PUBKEY123", ShortID: "abcd1234", Fingerprint: "chrome",
 	}
 }
@@ -563,7 +563,7 @@ func TestExistingFormatsUnchanged(t *testing.T) {
 		t.Errorf("FormatBase64 output diverged from renderBase64")
 	}
 
-	clashDirect, err := renderClash(ps, "VortexUI")
+	clashDirect, err := renderClash(ps, "VortexUI", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -575,7 +575,7 @@ func TestExistingFormatsUnchanged(t *testing.T) {
 		t.Errorf("FormatClash output diverged from renderClash")
 	}
 
-	sbDirect, err := renderSingbox(ps, "VortexUI")
+	sbDirect, err := renderSingbox(ps, "VortexUI", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -611,5 +611,128 @@ func TestNewFormatsConsumeProjectedProxiesUnchanged(t *testing.T) {
 	}
 	if n := strings.Count(strings.TrimSpace(string(links)), "\n") + 1; n != 2 {
 		t.Errorf("want 2 plain links, got %d:\n%s", n, links)
+	}
+}
+
+// --- Phase 3.3: routing-pack embedding into Clash / sing-box ---
+
+// samplePackRules is a 2-rule pack: Iran domains direct + ads blocked, covering
+// a direct target, a reject target, a geosite token and a plain domain.
+func samplePackRules() []domain.RoutingRule {
+	return []domain.RoutingRule{
+		{Name: "iran-direct", Domains: []string{"geosite:category-ir"}, OutboundTag: "direct", Priority: 1, Enabled: true},
+		{Name: "block-ads", Domains: []string{"ads.example.com"}, OutboundTag: "blocked", Priority: 2, Enabled: true},
+	}
+}
+
+// With no rules, RenderWith must produce byte-identical output to today's Render
+// for every format (Requirement 3.3.3 — no regression).
+func TestRenderWithEmptyRulesMatchesRender(t *testing.T) {
+	ps := append(sampleProxies(), realityProxy(), httpUpgradeProxy())
+	for _, f := range []Format{FormatBase64, FormatClash, FormatSingbox, FormatXray, FormatOutline, FormatLinks} {
+		legacy, err := Render(f, ps, "VortexUI")
+		if err != nil {
+			t.Fatalf("Render(%s): %v", f, err)
+		}
+		with, err := RenderWith(f, ps, RenderOpts{Title: "VortexUI"})
+		if err != nil {
+			t.Fatalf("RenderWith(%s): %v", f, err)
+		}
+		if string(legacy) != string(with) {
+			t.Errorf("format %s: RenderWith(empty rules) diverged from Render", f)
+		}
+	}
+}
+
+// Non-routing formats must ignore rules entirely (Requirement 3.3.2): output is
+// identical whether or not a pack is supplied.
+func TestRenderWithRulesIgnoredByNonRoutingFormats(t *testing.T) {
+	ps := sampleProxies()
+	for _, f := range []Format{FormatBase64, FormatLinks, FormatXray, FormatOutline} {
+		none, err := RenderWith(f, ps, RenderOpts{Title: "P"})
+		if err != nil {
+			t.Fatalf("RenderWith(%s, none): %v", f, err)
+		}
+		withRules, err := RenderWith(f, ps, RenderOpts{Title: "P", Rules: samplePackRules()})
+		if err != nil {
+			t.Fatalf("RenderWith(%s, rules): %v", f, err)
+		}
+		if string(none) != string(withRules) {
+			t.Errorf("format %s changed when rules supplied; non-routing formats must ignore rules", f)
+		}
+	}
+}
+
+// Clash output with a 2-rule pack embeds the mapped rules and ends with the
+// MATCH fallback to the selector group (Requirement 3.3.1).
+func TestRenderClashEmbedsPackRules(t *testing.T) {
+	body, err := RenderWith(FormatClash, sampleProxies(), RenderOpts{Title: "MyProfile", Rules: samplePackRules()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Rules []string `yaml:"rules"`
+	}
+	if err := yaml.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("invalid clash yaml: %v\n%s", err, body)
+	}
+	want := []string{
+		"GEOSITE,category-ir,DIRECT",
+		"DOMAIN-SUFFIX,ads.example.com,REJECT",
+		"MATCH,MyProfile",
+	}
+	if len(parsed.Rules) != len(want) {
+		t.Fatalf("clash rules = %v, want %v", parsed.Rules, want)
+	}
+	for i := range want {
+		if parsed.Rules[i] != want[i] {
+			t.Errorf("clash rule[%d] = %q, want %q", i, parsed.Rules[i], want[i])
+		}
+	}
+}
+
+// sing-box output with a 2-rule pack embeds route.rules + a route.final selector
+// and appends a block outbound the reject rule can reference (Requirement 3.3.1).
+func TestRenderSingboxEmbedsPackRules(t *testing.T) {
+	body, err := RenderWith(FormatSingbox, sampleProxies(), RenderOpts{Title: "MyProfile", Rules: samplePackRules()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Outbounds []map[string]any `json:"outbounds"`
+		Route     struct {
+			Rules []map[string]any `json:"rules"`
+			Final string           `json:"final"`
+		} `json:"route"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("invalid singbox json: %v\n%s", err, body)
+	}
+	if parsed.Route.Final != "MyProfile" {
+		t.Errorf("route.final = %q, want MyProfile", parsed.Route.Final)
+	}
+	if len(parsed.Route.Rules) != 2 {
+		t.Fatalf("want 2 route rules, got %d: %v", len(parsed.Route.Rules), parsed.Route.Rules)
+	}
+	// First rule: geosite → direct.
+	if parsed.Route.Rules[0]["outbound"] != "direct" {
+		t.Errorf("rule[0] outbound = %v, want direct", parsed.Route.Rules[0]["outbound"])
+	}
+	if _, ok := parsed.Route.Rules[0]["geosite"]; !ok {
+		t.Errorf("rule[0] missing geosite matcher: %v", parsed.Route.Rules[0])
+	}
+	// Second rule: domain_suffix → block.
+	if parsed.Route.Rules[1]["outbound"] != "block" {
+		t.Errorf("rule[1] outbound = %v, want block", parsed.Route.Rules[1]["outbound"])
+	}
+	// A block outbound must exist so the reject rule references a real outbound.
+	var hasBlock bool
+	for _, o := range parsed.Outbounds {
+		if o["type"] == "block" && o["tag"] == "block" {
+			hasBlock = true
+		}
+	}
+	if !hasBlock {
+		t.Errorf("block outbound missing; reject rule would dangle:\n%s", body)
 	}
 }

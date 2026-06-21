@@ -246,6 +246,10 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	realitySvc := service.NewRealityScannerService(store.RealityScans(), nodes)
 	subHostSvc := service.NewSubHostService(store.SubHosts())
 	routingPackSvc := service.NewRoutingPackService(store.RoutingPacks(), routingSvc, outboundSvc)
+	// Embed a selected routing pack's rules into Clash/sing-box subscriptions
+	// (per-user selection else global default). Nil-safe and fail-open: with no
+	// pack selected, subscription output is unchanged.
+	subSvc.SetRoutingPacks(routingPackSvc)
 	quotaSvc := service.NewQuotaService(store.QuotaPolicies())
 	relaySvc := service.NewRelayService(store.RelayChains(), nodes)
 	decoySvc := service.NewDecoyService(store.DecoySites())
