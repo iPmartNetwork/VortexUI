@@ -16,6 +16,7 @@ const en = {
   "outbounds.jsonNeedsTagProtocol": "JSON must include a tag and protocol",
   "outbounds.saveFailed": "Save failed",
   "nav.routing": "Routing",
+  "nav.routingPacks": "Routing Packs",
   "nav.balancers": "Balancers",
   "nav.admins": "Admins",
   "nav.logs": "Logs",

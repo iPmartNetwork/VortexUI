@@ -377,3 +377,113 @@ export function useReorderSubHosts(inboundId: string | null) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sub-hosts", inboundId] }),
   });
 }
+
+// --- routing rule packs (smart-routing) ---
+
+// PackRoutingRule mirrors the engine-neutral domain.RoutingRule subset a pack
+// carries. Node-specific fields (id/node_id) are unset on a pack; they are
+// assigned fresh when the pack is applied to a node.
+export interface PackRoutingRule {
+  priority: number;
+  name?: string;
+  inbound_tags?: string[];
+  domains?: string[];
+  ip?: string[];
+  port?: string;
+  protocols?: string[];
+  network?: string;
+  outbound_tag?: string;
+  balancer_tag?: string;
+}
+
+// RoutingPack mirrors the backend domain.RoutingPack. Built-in packs use their
+// name as id and are flagged builtin (not editable/deletable); custom packs use
+// a uuid id.
+export interface RoutingPack {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  builtin: boolean;
+  rules: PackRoutingRule[];
+  outbounds?: unknown[];
+}
+
+// RoutingPackBody is the create/update payload for a custom pack.
+export interface RoutingPackBody {
+  name: string;
+  description: string;
+  category: string;
+  rules: PackRoutingRule[];
+  outbounds?: unknown[];
+}
+
+export function useRoutingPacks() {
+  return useQuery({
+    queryKey: ["routing-packs"],
+    queryFn: () => api<{ packs: RoutingPack[] }>("/api/routing-packs"),
+  });
+}
+
+export function useCreateRoutingPack() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RoutingPackBody) =>
+      api<{ pack: RoutingPack }>("/api/routing-packs", { method: "POST", body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routing-packs"] }),
+  });
+}
+
+export function useUpdateRoutingPack() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: RoutingPackBody }) =>
+      api<{ pack: RoutingPack }>(`/api/routing-packs/${id}`, { method: "PUT", body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routing-packs"] }),
+  });
+}
+
+export function useDeleteRoutingPack() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/api/routing-packs/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routing-packs"] }),
+  });
+}
+
+// useApplyRoutingPack applies a pack to a node. The backend may respond with
+// { status: "saved", warning } when the rules persist but the node resync
+// failed; the caller surfaces that warning.
+export function useApplyRoutingPack() {
+  return useMutation({
+    mutationFn: (body: { node_id: string; pack_id: string }) =>
+      api<{ status: string; warning?: string }>("/api/routing-packs/apply", { method: "POST", body }),
+  });
+}
+
+export function useSetDefaultRoutingPack() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (packId: string) =>
+      api<{ pack_id: string }>("/api/routing-packs/default", { method: "PUT", body: { pack_id: packId } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routing-packs"] }),
+  });
+}
+
+// useUserRoutingPack reads a user's per-subscription pack selection ("" = none).
+export function useUserRoutingPack(userId: string | null) {
+  return useQuery({
+    queryKey: ["user-routing-pack", userId],
+    enabled: !!userId,
+    queryFn: () => api<{ pack_id: string }>(`/api/routing-packs/user/${userId}`),
+  });
+}
+
+export function useSetUserRoutingPack(userId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (packId: string) =>
+      api<{ pack_id: string }>(`/api/routing-packs/user/${userId}`, { method: "PUT", body: { pack_id: packId } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["user-routing-pack", userId] }),
+  });
+}
