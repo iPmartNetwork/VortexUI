@@ -38,4 +38,12 @@ type Proxy struct {
 	PublicKey   string
 	ShortID     string
 	Fingerprint string // uTLS fingerprint, e.g. "chrome"
+
+	// Optional Marzban-style host overrides projected from a SubHost. They are
+	// additive: a zero-value Proxy (empty ALPN, Mux=false, empty Fragment)
+	// renders byte-identically to before these fields existed, so inbounds with
+	// no enabled hosts see no change.
+	ALPN     []string // negotiated ALPN protocols, e.g. ["h2","http/1.1"]
+	Mux      bool     // enable client-side stream multiplexing (smux/multiplex)
+	Fragment string   // TLS-hello fragment setting "length,interval,packet"
 }

@@ -92,6 +92,14 @@ func clashProxy(p Proxy) map[string]any {
 		base["reality-opts"] = map[string]any{"public-key": p.PublicKey, "short-id": p.ShortID}
 		base["client-fingerprint"] = orDefault(p.Fingerprint, "chrome")
 	}
+	// Additive host overrides: only set when present so existing proxies render
+	// identically.
+	if len(p.ALPN) > 0 {
+		base["alpn"] = p.ALPN
+	}
+	if p.Mux {
+		base["smux"] = map[string]any{"enabled": true}
+	}
 	return base
 }
 

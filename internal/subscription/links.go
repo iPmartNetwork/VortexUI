@@ -73,6 +73,14 @@ func transportQuery(p Proxy) url.Values {
 	if p.AllowInsecure {
 		q.Set("allowInsecure", "1")
 	}
+	// Additive host overrides: only emitted when set, so proxies without a host
+	// projection produce the exact same query as before.
+	if len(p.ALPN) > 0 {
+		q.Set("alpn", strings.Join(p.ALPN, ","))
+	}
+	if p.Fragment != "" {
+		q.Set("fragment", p.Fragment)
+	}
 	switch p.Network {
 	case "ws":
 		if p.Path != "" {
@@ -154,6 +162,11 @@ func vmessLink(p Proxy) string {
 		"net": orDefault(p.Network, "tcp"), "type": "none",
 		"host": p.HostHeader, "path": p.Path,
 		"tls": tlsField(p.Security), "sni": p.SNI,
+	}
+	// Only add the alpn key when set — keeps the encoded JSON identical for
+	// proxies without a host override.
+	if len(p.ALPN) > 0 {
+		m["alpn"] = strings.Join(p.ALPN, ",")
 	}
 	raw, _ := json.Marshal(m)
 	return "vmess://" + base64.StdEncoding.EncodeToString(raw)

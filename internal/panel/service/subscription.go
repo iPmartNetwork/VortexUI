@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"net"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,13 +27,16 @@ const defaultStaleAfter = 90 * time.Second
 type SubscriptionService struct {
 	users      port.UserRepository
 	nodes      port.NodeRepository
+	subHosts   port.SubHostRepository
 	staleAfter time.Duration
 	now        func() time.Time
 }
 
-// NewSubscriptionService wires the service.
-func NewSubscriptionService(users port.UserRepository, nodes port.NodeRepository) *SubscriptionService {
-	return &SubscriptionService{users: users, nodes: nodes, staleAfter: defaultStaleAfter, now: time.Now}
+// NewSubscriptionService wires the service. subHosts may be nil, in which case
+// no Marzban-style host projection happens and every inbound emits its own
+// single link exactly as before host support existed.
+func NewSubscriptionService(users port.UserRepository, nodes port.NodeRepository, subHosts port.SubHostRepository) *SubscriptionService {
+	return &SubscriptionService{users: users, nodes: nodes, subHosts: subHosts, staleAfter: defaultStaleAfter, now: time.Now}
 }
 
 // SubResult bundles the resolved proxies with the owning user so the handler can
@@ -72,6 +77,7 @@ func (s *SubscriptionService) buildFor(ctx context.Context, user *domain.User) (
 
 	now := s.now()
 	cache := map[uuid.UUID]*nodeInfo{} // resolve each node once
+	hostsByInbound := s.hostsFor(ctx, inbounds)
 	var proxies []subscription.Proxy
 	for _, in := range inbounds {
 		if !in.Enabled {
@@ -89,9 +95,56 @@ func (s *SubscriptionService) buildFor(ctx context.Context, user *domain.User) (
 		if info == nil || info.host == "" {
 			continue
 		}
-		proxies = append(proxies, buildProxy(user, in, info.host, info.name))
+		base := buildProxy(user, in, info.host, info.name)
+		// No enabled hosts for this inbound: emit the inbound's own link exactly
+		// as before (no regression).
+		hosts := hostsByInbound[in.ID]
+		if len(hosts) == 0 {
+			proxies = append(proxies, base)
+			continue
+		}
+		// One Proxy per enabled host, in priority order, overlaying the base.
+		vars := subscription.FormatVars(user, info.host, "")
+		for _, h := range hosts {
+			proxies = append(proxies, buildProxyWithHost(base, h, vars))
+		}
 	}
 	return &SubResult{User: user, Proxies: proxies}, nil
+}
+
+// hostsFor batch-loads the enabled SubHosts for the user's enabled inbounds in a
+// single query (avoiding N+1), grouped by inbound id and sorted by priority. It
+// fails open: a nil repo or a query error yields no hosts, so the subscription
+// degrades to the pre-host behavior rather than breaking.
+func (s *SubscriptionService) hostsFor(ctx context.Context, inbounds []domain.Inbound) map[uuid.UUID][]*domain.SubHost {
+	if s.subHosts == nil {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(inbounds))
+	for _, in := range inbounds {
+		if in.Enabled {
+			ids = append(ids, in.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	hosts, err := s.subHosts.ListByInbounds(ctx, ids)
+	if err != nil {
+		return nil
+	}
+	byInbound := make(map[uuid.UUID][]*domain.SubHost, len(ids))
+	for _, h := range hosts {
+		if h == nil || !h.Enabled {
+			continue
+		}
+		byInbound[h.InboundID] = append(byInbound[h.InboundID], h)
+	}
+	for id := range byInbound {
+		group := byInbound[id]
+		sort.SliceStable(group, func(i, j int) bool { return group[i].Priority < group[j].Priority })
+	}
+	return byInbound
 }
 
 type nodeInfo struct {
@@ -166,6 +219,64 @@ func buildProxy(u *domain.User, in domain.Inbound, host, name string) subscripti
 		p.Fingerprint = "chrome"
 	}
 	return p
+}
+
+// buildProxyWithHost overlays a SubHost onto the inbound's base Proxy, producing
+// the Proxy a client receives for that (inbound × host) pairing. Fields the host
+// leaves empty (or at inbound_default) fall through to the inbound's own value,
+// so a host only customizes what it explicitly sets. Remark and Address run
+// through template-variable expansion against vars.
+func buildProxyWithHost(base subscription.Proxy, h *domain.SubHost, vars map[string]string) subscription.Proxy {
+	p := base // copy by value; base.ALPN is nil so there is no slice aliasing
+	if remark := subscription.Expand(h.Remark, vars); remark != "" {
+		p.Name = remark
+	}
+	if addr := subscription.Expand(h.Address, vars); addr != "" {
+		p.Host = addr
+	}
+	if h.Port != nil {
+		p.Port = *h.Port
+	}
+	if h.SNI != "" {
+		p.SNI = h.SNI
+	}
+	if h.HostHeader != "" {
+		p.HostHeader = h.HostHeader
+	}
+	if h.Path != "" {
+		p.Path = h.Path
+	}
+	if h.ALPN != "" {
+		p.ALPN = splitCSV(h.ALPN)
+	}
+	if h.Fingerprint != "" {
+		p.Fingerprint = h.Fingerprint
+	}
+	// Security override: only when the host forces a specific layer; otherwise
+	// inherit the inbound's security untouched.
+	if h.Security != domain.HostSecurityInboundDefault && h.Security != "" {
+		p.Security = string(h.Security)
+	}
+	if h.AllowInsecure {
+		p.AllowInsecure = true
+	}
+	p.Mux = h.MuxEnable
+	if h.Fragment != "" {
+		p.Fragment = h.Fragment
+	}
+	return p
+}
+
+// splitCSV splits a comma-separated list (e.g. an ALPN string "h2,http/1.1")
+// into trimmed, non-empty parts. It returns nil for an empty input.
+func splitCSV(s string) []string {
+	var out []string
+	for _, part := range strings.Split(s, ",") {
+		if v := strings.TrimSpace(part); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // hostOf extracts the host from a "host:port" node address, tolerating a bare host.
