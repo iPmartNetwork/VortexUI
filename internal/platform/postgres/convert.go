@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/vortexui/vortexui/internal/domain"
 )
 
 // This file is the single boundary between pgx wire types (pgtype.*) and plain
@@ -100,6 +102,36 @@ func mapFromJSONB(b []byte) map[string]any {
 	var out map[string]any
 	_ = json.Unmarshal(b, &out)
 	return out
+}
+
+// geoPolicyToJSONB marshals an optional geo policy for a JSONB column. A nil
+// policy becomes a nil slice so the column stays SQL NULL.
+func geoPolicyToJSONB(p *domain.GeoPolicy) []byte {
+	if p == nil {
+		return nil
+	}
+	b, err := json.Marshal(p)
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
+// geoPolicyFromJSONB decodes a geo policy from a JSONB column. Empty bytes,
+// decode errors, or a policy with no allowed/blocked countries all map to nil
+// (treated as "no policy").
+func geoPolicyFromJSONB(b []byte) *domain.GeoPolicy {
+	if len(b) == 0 {
+		return nil
+	}
+	var p domain.GeoPolicy
+	if err := json.Unmarshal(b, &p); err != nil {
+		return nil
+	}
+	if len(p.AllowedCountries) == 0 && len(p.BlockedCountries) == 0 {
+		return nil
+	}
+	return &p
 }
 
 // parseBucket turns a friendly bucket string ("1h", "30m", "1d", "7d") into a
