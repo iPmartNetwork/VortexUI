@@ -1771,3 +1771,147 @@ func (r *SubHostRepo) ListByInbounds(ctx context.Context, inboundIDs []uuid.UUID
 	}
 	return results, rows.Err()
 }
+
+
+// --- RoutingPackRepo ---
+
+type RoutingPackRepo struct{ pool *pgxpool.Pool }
+
+var _ port.RoutingPackRepository = (*RoutingPackRepo)(nil)
+
+func (r *RoutingPackRepo) Create(ctx context.Context, p *domain.RoutingPack) error {
+	id, err := uuid.Parse(p.ID)
+	if err != nil {
+		return err
+	}
+	rulesJSON, err := json.Marshal(p.Rules)
+	if err != nil {
+		return err
+	}
+	outboundsJSON, err := json.Marshal(p.Outbounds)
+	if err != nil {
+		return err
+	}
+	_, err = r.pool.Exec(ctx,
+		`INSERT INTO routing_packs (id, name, description, category, rules, outbounds)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		id, p.Name, p.Description, p.Category, rulesJSON, outboundsJSON)
+	return err
+}
+
+func (r *RoutingPackRepo) Update(ctx context.Context, p *domain.RoutingPack) error {
+	id, err := uuid.Parse(p.ID)
+	if err != nil {
+		return err
+	}
+	rulesJSON, err := json.Marshal(p.Rules)
+	if err != nil {
+		return err
+	}
+	outboundsJSON, err := json.Marshal(p.Outbounds)
+	if err != nil {
+		return err
+	}
+	_, err = r.pool.Exec(ctx,
+		`UPDATE routing_packs SET name = $2, description = $3, category = $4, rules = $5, outbounds = $6
+		 WHERE id = $1`,
+		id, p.Name, p.Description, p.Category, rulesJSON, outboundsJSON)
+	return err
+}
+
+func (r *RoutingPackRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM routing_packs WHERE id = $1`, id)
+	return err
+}
+
+func scanRoutingPack(row pgx.Row) (*domain.RoutingPack, error) {
+	var (
+		p             domain.RoutingPack
+		id            uuid.UUID
+		rulesJSON     []byte
+		outboundsJSON []byte
+	)
+	if err := row.Scan(&id, &p.Name, &p.Description, &p.Category, &rulesJSON, &outboundsJSON); err != nil {
+		return nil, err
+	}
+	p.ID = id.String()
+	if err := json.Unmarshal(rulesJSON, &p.Rules); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(outboundsJSON, &p.Outbounds); err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *RoutingPackRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.RoutingPack, error) {
+	p, err := scanRoutingPack(r.pool.QueryRow(ctx,
+		`SELECT id, name, description, category, rules, outbounds
+		 FROM routing_packs WHERE id = $1`, id))
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func (r *RoutingPackRepo) List(ctx context.Context) ([]*domain.RoutingPack, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, name, description, category, rules, outbounds
+		 FROM routing_packs ORDER BY created_at`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*domain.RoutingPack
+	for rows.Next() {
+		p, err := scanRoutingPack(rows)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, p)
+	}
+	return results, rows.Err()
+}
+
+func (r *RoutingPackRepo) GetGlobalDefault(ctx context.Context) (string, error) {
+	var packID string
+	err := r.pool.QueryRow(ctx,
+		`SELECT pack_id FROM routing_pack_selection WHERE id = 1`).Scan(&packID)
+	if err == pgx.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return packID, nil
+}
+
+func (r *RoutingPackRepo) SetGlobalDefault(ctx context.Context, packID string) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO routing_pack_selection (id, pack_id) VALUES (1, $1)
+		 ON CONFLICT (id) DO UPDATE SET pack_id = EXCLUDED.pack_id`, packID)
+	return err
+}
+
+func (r *RoutingPackRepo) GetUserPack(ctx context.Context, userID uuid.UUID) (string, error) {
+	var packID string
+	err := r.pool.QueryRow(ctx,
+		`SELECT routing_pack_id FROM users WHERE id = $1`, userID).Scan(&packID)
+	if err == pgx.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return packID, nil
+}
+
+func (r *RoutingPackRepo) SetUserPack(ctx context.Context, userID uuid.UUID, packID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE users SET routing_pack_id = $2 WHERE id = $1`, userID, packID)
+	return err
+}
