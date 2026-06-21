@@ -95,6 +95,9 @@ func (s *Store) DecoySites() *DecoySiteRepo { return &DecoySiteRepo{pool: s.pool
 // RealityScans returns the reality scan repository.
 func (s *Store) RealityScans() *RealityScanRepo { return &RealityScanRepo{pool: s.pool} }
 
+// SubHosts returns the subscription host repository.
+func (s *Store) SubHosts() *SubHostRepo { return &SubHostRepo{pool: s.pool} }
+
 // Probing returns the probing repository.
 func (s *Store) Probing() *ProbingRepo { return &ProbingRepo{pool: s.pool} }
 

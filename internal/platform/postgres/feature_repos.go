@@ -1664,3 +1664,110 @@ func (r *WireGuardPeerRepo) ListByInbound(ctx context.Context, inboundID uuid.UU
 	}
 	return out, rows.Err()
 }
+
+
+// --- SubHostRepo ---
+
+type SubHostRepo struct{ pool *pgxpool.Pool }
+
+var _ port.SubHostRepository = (*SubHostRepo)(nil)
+
+const subHostColumns = `id, inbound_id, remark, address, port, sni, host_header, path,
+	alpn, fingerprint, security, allow_insecure, mux_enable, fragment, priority, enabled, created_at`
+
+func scanSubHost(row pgx.Row) (*domain.SubHost, error) {
+	var h domain.SubHost
+	if err := row.Scan(
+		&h.ID, &h.InboundID, &h.Remark, &h.Address, &h.Port, &h.SNI, &h.HostHeader, &h.Path,
+		&h.ALPN, &h.Fingerprint, &h.Security, &h.AllowInsecure, &h.MuxEnable, &h.Fragment,
+		&h.Priority, &h.Enabled, &h.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+	return &h, nil
+}
+
+func (r *SubHostRepo) Create(ctx context.Context, h *domain.SubHost) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO sub_hosts (id, inbound_id, remark, address, port, sni, host_header, path,
+		   alpn, fingerprint, security, allow_insecure, mux_enable, fragment, priority, enabled, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+		h.ID, h.InboundID, h.Remark, h.Address, h.Port, h.SNI, h.HostHeader, h.Path,
+		h.ALPN, h.Fingerprint, h.Security, h.AllowInsecure, h.MuxEnable, h.Fragment,
+		h.Priority, h.Enabled, h.CreatedAt)
+	return err
+}
+
+func (r *SubHostRepo) Update(ctx context.Context, h *domain.SubHost) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE sub_hosts SET inbound_id = $2, remark = $3, address = $4, port = $5, sni = $6,
+		   host_header = $7, path = $8, alpn = $9, fingerprint = $10, security = $11,
+		   allow_insecure = $12, mux_enable = $13, fragment = $14, priority = $15, enabled = $16
+		 WHERE id = $1`,
+		h.ID, h.InboundID, h.Remark, h.Address, h.Port, h.SNI, h.HostHeader, h.Path,
+		h.ALPN, h.Fingerprint, h.Security, h.AllowInsecure, h.MuxEnable, h.Fragment,
+		h.Priority, h.Enabled)
+	return err
+}
+
+func (r *SubHostRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM sub_hosts WHERE id = $1`, id)
+	return err
+}
+
+func (r *SubHostRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.SubHost, error) {
+	h, err := scanSubHost(r.pool.QueryRow(ctx,
+		`SELECT `+subHostColumns+` FROM sub_hosts WHERE id = $1`, id))
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return h, nil
+}
+
+func (r *SubHostRepo) ListByInbound(ctx context.Context, inboundID uuid.UUID) ([]*domain.SubHost, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+subHostColumns+`
+		 FROM sub_hosts WHERE inbound_id = $1
+		 ORDER BY priority ASC, created_at ASC`, inboundID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*domain.SubHost
+	for rows.Next() {
+		h, err := scanSubHost(rows)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, h)
+	}
+	return results, rows.Err()
+}
+
+func (r *SubHostRepo) ListByInbounds(ctx context.Context, inboundIDs []uuid.UUID) ([]*domain.SubHost, error) {
+	if len(inboundIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+subHostColumns+`
+		 FROM sub_hosts WHERE inbound_id = ANY($1)
+		 ORDER BY inbound_id, priority ASC, created_at ASC`, inboundIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*domain.SubHost
+	for rows.Next() {
+		h, err := scanSubHost(rows)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, h)
+	}
+	return results, rows.Err()
+}

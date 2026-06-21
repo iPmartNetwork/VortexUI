@@ -214,6 +214,28 @@ CREATE TABLE reality_scans (
 
 CREATE INDEX idx_reality_scans_node ON reality_scans (node_id, score DESC);
 
+-- panel-feature-parity: Subscription Hosts (Marzban-style per-inbound overrides)
+CREATE TABLE sub_hosts (
+    id             UUID PRIMARY KEY,
+    inbound_id     UUID NOT NULL,
+    remark         TEXT NOT NULL DEFAULT '',
+    address        TEXT NOT NULL DEFAULT '',
+    port           INTEGER,
+    sni            TEXT NOT NULL DEFAULT '',
+    host_header    TEXT NOT NULL DEFAULT '',
+    path           TEXT NOT NULL DEFAULT '',
+    alpn           TEXT NOT NULL DEFAULT '',
+    fingerprint    TEXT NOT NULL DEFAULT '',
+    security       TEXT NOT NULL DEFAULT 'inbound_default',
+    allow_insecure BOOLEAN NOT NULL DEFAULT FALSE,
+    mux_enable     BOOLEAN NOT NULL DEFAULT FALSE,
+    fragment       TEXT NOT NULL DEFAULT '',
+    priority       INTEGER NOT NULL DEFAULT 0,
+    enabled        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_sub_hosts_inbound ON sub_hosts (inbound_id, priority);
+
 -- v1.2.0: Smart Quota tiers
 CREATE TABLE quota_policies (
     id              UUID PRIMARY KEY,
