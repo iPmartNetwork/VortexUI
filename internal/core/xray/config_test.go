@@ -582,3 +582,116 @@ func TestBuilder_VLESSFlowOnlyForValidCombos(t *testing.T) {
 		t.Errorf("vless+tcp+reality flow = %q (present=%v), want xtls-rprx-vision", flow, present)
 	}
 }
+
+// ssSettingsFor builds the config for a single SS inbound and returns its parsed
+// settings block, so SS-shape assertions stay terse.
+func ssSettingsFor(t *testing.T, in domain.Inbound, users []*domain.User) struct {
+	Method   string           `json:"method"`
+	Password string           `json:"password"`
+	Network  string           `json:"network"`
+	Clients  []map[string]any `json:"clients"`
+} {
+	t.Helper()
+	raw, err := Builder{APIPort: 10085}.Build(&core.GeneratedConfig{
+		Inbounds:       []domain.Inbound{in},
+		UsersByInbound: map[string][]*domain.User{in.Tag: users},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var parsed struct {
+		Inbounds []struct {
+			Tag      string          `json:"tag"`
+			Settings json.RawMessage `json:"settings"`
+		} `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	var settings struct {
+		Method   string           `json:"method"`
+		Password string           `json:"password"`
+		Network  string           `json:"network"`
+		Clients  []map[string]any `json:"clients"`
+	}
+	found := false
+	for _, i := range parsed.Inbounds {
+		if i.Tag == in.Tag {
+			if err := json.Unmarshal(i.Settings, &settings); err != nil {
+				t.Fatalf("settings parse: %v", err)
+			}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("inbound %q missing from output", in.Tag)
+	}
+	return settings
+}
+
+// TestBuilder_Shadowsocks2022MultiUser verifies that a Shadowsocks-2022 inbound
+// with two bound users renders a server-level method+password plus a per-user
+// clients array (length 2), each entry carrying that user's PSK and UUID email.
+// Regression guard: the old renderer silently dropped every user past users[0].
+func TestBuilder_Shadowsocks2022MultiUser(t *testing.T) {
+	u1 := &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{SSMethod: "2022-blake3-aes-256-gcm", ShadowsocksP: "psk-user-1"}}
+	u2 := &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{SSMethod: "2022-blake3-aes-256-gcm", ShadowsocksP: "psk-user-2"}}
+
+	in := domain.Inbound{
+		Tag: "ss-2022", Protocol: domain.ProtoShadowsocks, Port: 8388,
+		Network: "tcp", Security: domain.SecurityNone,
+		Raw: map[string]any{"ss": map[string]any{"password": "server-psk"}},
+	}
+	s := ssSettingsFor(t, in, []*domain.User{u1, u2})
+
+	if s.Method != "2022-blake3-aes-256-gcm" {
+		t.Errorf("method = %q, want 2022-blake3-aes-256-gcm", s.Method)
+	}
+	if s.Password != "server-psk" {
+		t.Errorf("server password = %q, want server-psk", s.Password)
+	}
+	if len(s.Clients) != 2 {
+		t.Fatalf("want 2 clients, got %d", len(s.Clients))
+	}
+	// Each client must carry its own PSK and UUID email so multiple users work
+	// and stats counters map back to users.
+	byEmail := map[string]string{}
+	for _, c := range s.Clients {
+		email, _ := c["email"].(string)
+		pw, _ := c["password"].(string)
+		byEmail[email] = pw
+	}
+	if byEmail[u1.ID.String()] != "psk-user-1" {
+		t.Errorf("client[%s] password = %q, want psk-user-1", u1.ID, byEmail[u1.ID.String()])
+	}
+	if byEmail[u2.ID.String()] != "psk-user-2" {
+		t.Errorf("client[%s] password = %q, want psk-user-2", u2.ID, byEmail[u2.ID.String()])
+	}
+}
+
+// TestBuilder_ShadowsocksLegacySingleCredential verifies that a legacy-cipher SS
+// inbound renders a single method+password and NO clients array (which xray
+// rejects on legacy ciphers), and does not crash when multiple users are bound.
+func TestBuilder_ShadowsocksLegacySingleCredential(t *testing.T) {
+	u1 := &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{SSMethod: "aes-256-gcm", ShadowsocksP: "shared-pass"}}
+	u2 := &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{SSMethod: "aes-256-gcm", ShadowsocksP: "other-pass"}}
+
+	in := domain.Inbound{
+		Tag: "ss-legacy", Protocol: domain.ProtoShadowsocks, Port: 8389,
+		Network: "tcp", Security: domain.SecurityNone,
+	}
+	s := ssSettingsFor(t, in, []*domain.User{u1, u2})
+
+	if s.Method != "aes-256-gcm" {
+		t.Errorf("method = %q, want aes-256-gcm", s.Method)
+	}
+	if s.Password != "shared-pass" {
+		t.Errorf("password = %q, want shared-pass (first user's credential)", s.Password)
+	}
+	if len(s.Clients) != 0 {
+		t.Errorf("legacy SS must not emit a clients array, got %d entries", len(s.Clients))
+	}
+	if s.Network != "tcp,udp" {
+		t.Errorf("network = %q, want tcp,udp", s.Network)
+	}
+}

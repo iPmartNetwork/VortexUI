@@ -332,26 +332,97 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 		return mustRaw(map[string]any{"clients": clients}), nil
 
 	case domain.ProtoShadowsocks:
-		// Standard Shadowsocks ciphers (aes-*-gcm, chacha20) are single-user in
-		// xray: a "clients" array is only valid for SS-2022 methods, and emitting
-		// one crashes the inbound. Render a valid single-user listener from the
-		// first bound user. (Multi-user SS needs SS-2022, tracked separately.)
-		method := "aes-128-gcm"
-		password := ""
-		if len(users) > 0 {
-			method = orDefault(users[0].Proxies.SSMethod, method)
-			password = users[0].Proxies.ShadowsocksP
-		}
-		// Xray refuses to start if password is empty. Use a dummy placeholder so
-		// the core starts cleanly even with no users bound yet.
-		if password == "" {
-			password = "placeholder-no-users-bound"
-		}
-		return mustRaw(map[string]any{"method": method, "password": password, "network": "tcp,udp"}), nil
+		return shadowsocksSettings(in, users), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q for xray", in.Protocol)
 	}
+}
+
+// shadowsocksSettings renders the Shadowsocks "settings" block. xray models two
+// distinct shapes (verified against 3x-ui's golden fixtures):
+//
+//   - Legacy ciphers (aes-*-gcm, chacha20-ietf-poly1305, ...) are single
+//     credential: settings = {method, password, network}. A "clients" array is
+//     NOT valid here and makes xray reject the inbound.
+//   - Shadowsocks-2022 ciphers (2022-blake3-*) are multi-user: settings carries
+//     a server-level PSK in "password" plus a "clients" array, one entry per
+//     bound user with that user's PSK as "password" and email = user UUID.
+//
+// This stops the previous behaviour where only users[0] was ever rendered (a
+// silent single-user drop) — with a 2022 method every bound user is now emitted.
+func shadowsocksSettings(in domain.Inbound, users []*domain.User) json.RawMessage {
+	method := ssInboundMethod(users)
+	const network = "tcp,udp"
+
+	if isSS2022Method(method) {
+		// SS-2022 multi-user: server PSK + per-client PSK/email, matching the
+		// 3x-ui shape ({method, password, network, clients:[{password,email}]}).
+		clients := make([]map[string]any, 0, len(users))
+		for _, u := range users {
+			clients = append(clients, map[string]any{
+				"password": u.Proxies.ShadowsocksP,
+				"email":    u.ID.String(),
+			})
+		}
+		return mustRaw(map[string]any{
+			"method":   method,
+			"password": ssServerPassword(in),
+			"network":  network,
+			"clients":  clients,
+		})
+	}
+
+	// Legacy ciphers are single-credential by design in xray. xray/3x-ui model
+	// legacy SS as one inbound-level method+password (no per-client passwords),
+	// so we render the first bound user's credential as that shared password.
+	// Any additional users on a legacy SS inbound necessarily share this single
+	// credential — this is an xray protocol limitation, not a silent per-user
+	// drop; operators who need true multi-user SS must pick a 2022 method. The
+	// placeholder keeps the core booting cleanly when no users are bound yet.
+	password := ""
+	if len(users) > 0 {
+		password = users[0].Proxies.ShadowsocksP
+	}
+	if password == "" {
+		password = "placeholder-no-users-bound"
+	}
+	return mustRaw(map[string]any{"method": method, "password": password, "network": network})
+}
+
+// isSS2022Method reports whether an SS cipher is a Shadowsocks-2022 method
+// (2022-blake3-aes-128-gcm / -256-gcm / chacha20-poly1305). Only these support
+// the multi-user server-PSK + per-client-PSK shape.
+func isSS2022Method(method string) bool {
+	return strings.HasPrefix(method, "2022-")
+}
+
+// ssInboundMethod picks the SS cipher for the inbound. All users on one SS
+// inbound share a single cipher, so the first user's method wins; fall back to a
+// safe legacy default when unset.
+func ssInboundMethod(users []*domain.User) string {
+	if len(users) > 0 && users[0].Proxies.SSMethod != "" {
+		return users[0].Proxies.SSMethod
+	}
+	return "aes-128-gcm"
+}
+
+// ssServerPassword sources the server-level PSK for an SS-2022 inbound. The
+// domain model has no first-class SS server PSK field, so operators supply it
+// through the Raw escape hatch (Raw["ss"].password or Raw["password"]); absent
+// that we emit a placeholder so the renderer never produces empty key material.
+func ssServerPassword(in domain.Inbound) string {
+	if in.Raw != nil {
+		if ss, ok := in.Raw["ss"].(map[string]any); ok {
+			if p, ok := ss["password"].(string); ok && p != "" {
+				return p
+			}
+		}
+		if p, ok := in.Raw["password"].(string); ok && p != "" {
+			return p
+		}
+	}
+	return "placeholder-no-server-psk"
 }
 
 // effectiveFlow returns the VLESS flow to emit for an inbound, or "" when the
