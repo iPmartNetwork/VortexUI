@@ -17,6 +17,7 @@ type Deps struct {
 	APITokens  *APITokenHandlers
 	Portal     *PortalHandlers
 	Reality    *RealityHandlers
+	SubHosts   *SubHostHandlers
 	Quota      *QuotaHandlers
 	Relay      *RelayHandlers
 	Decoy      *DecoyHandlers
@@ -209,6 +210,14 @@ func NewRouter(d Deps) *echo.Echo {
 	reality := authed.Group("/reality")
 	reality.POST("/scan", d.Reality.ScanReality, RequirePermission(d.Auth, domain.PermInboundWrite))
 	reality.GET("/results", d.Reality.GetCachedScans, RequirePermission(d.Auth, domain.PermInboundRead))
+
+	// --- Subscription Hosts (Marzban-style per-inbound overrides) ---
+	hosts := authed.Group("/sub-hosts")
+	hosts.GET("", d.SubHosts.ListSubHosts, RequirePermission(d.Auth, domain.PermInboundRead))
+	hosts.POST("", d.SubHosts.CreateSubHost, RequirePermission(d.Auth, domain.PermInboundWrite))
+	hosts.PUT("/:id", d.SubHosts.UpdateSubHost, RequirePermission(d.Auth, domain.PermInboundWrite))
+	hosts.DELETE("/:id", d.SubHosts.DeleteSubHost, RequirePermission(d.Auth, domain.PermInboundWrite))
+	hosts.POST("/reorder", d.SubHosts.ReorderSubHosts, RequirePermission(d.Auth, domain.PermInboundWrite))
 
 	// --- Smart Quota (Fair Use) ---
 	quota := authed.Group("/quota", RequirePermission(d.Auth, domain.PermAdminManage))

@@ -322,3 +322,82 @@ func TestIntegration_InboundGeoPolicyAndSpeedLimitRoundTrip(t *testing.T) {
 		t.Errorf("speed_limit after clear = %d, want 0", got2.SpeedLimit)
 	}
 }
+
+
+func TestIntegration_SubHostRoundTripAndPriorityOrder(t *testing.T) {
+	st := openTestStore(t)
+	ctx := context.Background()
+	nodes, inbounds, subHosts := st.Nodes(), st.Inbounds(), st.SubHosts()
+
+	node := &domain.Node{ID: uuid.New(), Name: "n1", Address: "1.2.3.4:50051", Core: domain.CoreXray, CreatedAt: time.Now()}
+	if err := nodes.Create(ctx, node); err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+	in := &domain.Inbound{ID: uuid.New(), NodeID: node.ID, Tag: "vless-ws", Protocol: domain.ProtoVLESS, Port: 443, Network: "ws", Security: domain.SecurityTLS, Enabled: true}
+	if err := inbounds.Create(ctx, in); err != nil {
+		t.Fatalf("create inbound: %v", err)
+	}
+
+	// Host with every field populated, including a non-nil port.
+	port := 8443
+	full := &domain.SubHost{
+		ID: uuid.New(), InboundID: in.ID, Remark: "CDN {USERNAME}", Address: "cdn.example.com",
+		Port: &port, SNI: "sni.example.com", HostHeader: "host.example.com", Path: "/ws",
+		ALPN: "h2,http/1.1", Fingerprint: "chrome", Security: domain.HostSecurityTLS,
+		AllowInsecure: true, MuxEnable: true, Fragment: "100-200,10-20,1", Priority: 2,
+		Enabled: true, CreatedAt: time.Now(),
+	}
+	if err := subHosts.Create(ctx, full); err != nil {
+		t.Fatalf("create full host: %v", err)
+	}
+
+	got, err := subHosts.GetByID(ctx, full.ID)
+	if err != nil || got == nil {
+		t.Fatalf("get host: %v", err)
+	}
+	if got.Remark != "CDN {USERNAME}" || got.Address != "cdn.example.com" || got.Port == nil || *got.Port != 8443 ||
+		got.SNI != "sni.example.com" || got.HostHeader != "host.example.com" || got.Path != "/ws" ||
+		got.ALPN != "h2,http/1.1" || got.Fingerprint != "chrome" || got.Security != domain.HostSecurityTLS ||
+		!got.AllowInsecure || !got.MuxEnable || got.Fragment != "100-200,10-20,1" || !got.Enabled {
+		t.Errorf("host round-trip mismatch: %+v", got)
+	}
+
+	// Host with a nil port (inherit inbound port) and lower priority.
+	low := &domain.SubHost{
+		ID: uuid.New(), InboundID: in.ID, Remark: "direct", Address: "", Port: nil,
+		Security: domain.HostSecurityInboundDefault, Priority: 0, Enabled: true, CreatedAt: time.Now(),
+	}
+	if err := subHosts.Create(ctx, low); err != nil {
+		t.Fatalf("create low host: %v", err)
+	}
+	gotLow, err := subHosts.GetByID(ctx, low.ID)
+	if err != nil || gotLow == nil {
+		t.Fatalf("get low host: %v", err)
+	}
+	if gotLow.Port != nil {
+		t.Errorf("nil port did not round-trip: %+v", gotLow.Port)
+	}
+
+	// ListByInbound must come back ordered by priority ASC.
+	list, err := subHosts.ListByInbound(ctx, in.ID)
+	if err != nil {
+		t.Fatalf("list by inbound: %v", err)
+	}
+	if len(list) != 2 || list[0].ID != low.ID || list[1].ID != full.ID {
+		t.Errorf("priority order wrong: %+v", list)
+	}
+
+	// ListByInbounds batch variant returns both for the inbound set.
+	batch, err := subHosts.ListByInbounds(ctx, []uuid.UUID{in.ID})
+	if err != nil || len(batch) != 2 {
+		t.Errorf("list by inbounds = %d hosts err=%v, want 2", len(batch), err)
+	}
+
+	// Delete removes it.
+	if err := subHosts.Delete(ctx, full.ID); err != nil {
+		t.Fatalf("delete host: %v", err)
+	}
+	if after, _ := subHosts.ListByInbound(ctx, in.ID); len(after) != 1 {
+		t.Errorf("after delete = %d hosts, want 1", len(after))
+	}
+}
