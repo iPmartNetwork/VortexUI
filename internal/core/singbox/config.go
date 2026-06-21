@@ -827,6 +827,15 @@ func tlsBlock(in domain.Inbound) map[string]any {
 		tls["certificate"] = cert
 		tls["key"] = key
 	}
+	// ALPN applies to plain TLS only (not REALITY, which negotiates its own).
+	// Operators supply it through Raw["tls"].alpn, e.g. ["h2","http/1.1"].
+	if in.Security == domain.SecurityTLS {
+		if t, ok := in.Raw["tls"].(map[string]any); ok {
+			if alpn := rawStrings(t["alpn"]); len(alpn) > 0 {
+				tls["alpn"] = alpn
+			}
+		}
+	}
 	if serverName != "" {
 		tls["server_name"] = serverName
 	}

@@ -721,3 +721,147 @@ func TestBuilder_ShadowsocksLegacySingleCredential(t *testing.T) {
 		t.Errorf("network = %q, want tcp,udp", s.Network)
 	}
 }
+
+// streamSettingsFor builds the config for a single inbound and returns its
+// parsed streamSettings as a generic map, so transport-shape assertions on the
+// new TLS-ALPN / tcp-header / xhttp-mode rendering stay terse.
+func streamSettingsFor(t *testing.T, in domain.Inbound, users []*domain.User) map[string]any {
+	t.Helper()
+	raw, err := Builder{APIPort: 10085}.Build(&core.GeneratedConfig{
+		Inbounds:       []domain.Inbound{in},
+		UsersByInbound: map[string][]*domain.User{in.Tag: users},
+	})
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var parsed struct {
+		Inbounds []struct {
+			Tag            string          `json:"tag"`
+			StreamSettings json.RawMessage `json:"streamSettings"`
+		} `json:"inbounds"`
+	}
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	for _, i := range parsed.Inbounds {
+		if i.Tag == in.Tag {
+			var ss map[string]any
+			if err := json.Unmarshal(i.StreamSettings, &ss); err != nil {
+				t.Fatalf("streamSettings parse: %v", err)
+			}
+			return ss
+		}
+	}
+	t.Fatalf("inbound %q missing from output", in.Tag)
+	return nil
+}
+
+func vlessUser() *domain.User {
+	return &domain.User{ID: uuid.New(), Proxies: domain.UserCredentials{VLESSUUID: uuid.New()}}
+}
+
+// TestBuilder_TLSALPN verifies a TLS inbound with Raw["tls"].alpn renders the
+// list into tlsSettings.alpn.
+func TestBuilder_TLSALPN(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-tls-alpn", Protocol: domain.ProtoVLESS, Port: 443,
+		Network: "ws", Security: domain.SecurityTLS, SNI: []string{"ex.com"}, Path: "/v",
+		Raw: map[string]any{"tls": map[string]any{
+			"certificate": "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----",
+			"key":         "-----BEGIN PRIVATE KEY-----\nMIIB\n-----END PRIVATE KEY-----",
+			"alpn":        []any{"h2", "http/1.1"},
+		}},
+	}
+	ss := streamSettingsFor(t, in, []*domain.User{vlessUser()})
+	tls, ok := ss["tlsSettings"].(map[string]any)
+	if !ok {
+		t.Fatalf("tlsSettings missing or wrong type: %v", ss["tlsSettings"])
+	}
+	alpn, ok := tls["alpn"].([]any)
+	if !ok || len(alpn) != 2 || alpn[0] != "h2" || alpn[1] != "http/1.1" {
+		t.Errorf("tlsSettings.alpn = %v, want [h2 http/1.1]", tls["alpn"])
+	}
+}
+
+// TestBuilder_TCPHeaderDefault verifies a plain tcp inbound renders
+// tcpSettings.header.type == "none".
+func TestBuilder_TCPHeaderDefault(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-tcp", Protocol: domain.ProtoVLESS, Port: 443,
+		Network: "tcp", Security: domain.SecurityNone,
+	}
+	ss := streamSettingsFor(t, in, []*domain.User{vlessUser()})
+	tcp, ok := ss["tcpSettings"].(map[string]any)
+	if !ok {
+		t.Fatalf("tcpSettings missing or wrong type: %v", ss["tcpSettings"])
+	}
+	header, ok := tcp["header"].(map[string]any)
+	if !ok || header["type"] != "none" {
+		t.Errorf("tcpSettings.header = %v, want {type:none}", tcp["header"])
+	}
+}
+
+// TestBuilder_TCPHeaderHTTPOverride verifies an operator-supplied tcp header
+// (Raw["tcp"].header) is rendered verbatim into tcpSettings.
+func TestBuilder_TCPHeaderHTTPOverride(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-tcp-http", Protocol: domain.ProtoVLESS, Port: 443,
+		Network: "tcp", Security: domain.SecurityNone,
+		Raw: map[string]any{"tcp": map[string]any{
+			"header": map[string]any{
+				"type":    "http",
+				"request": map[string]any{"path": []any{"/"}},
+			},
+		}},
+	}
+	ss := streamSettingsFor(t, in, []*domain.User{vlessUser()})
+	tcp, ok := ss["tcpSettings"].(map[string]any)
+	if !ok {
+		t.Fatalf("tcpSettings missing or wrong type: %v", ss["tcpSettings"])
+	}
+	header, ok := tcp["header"].(map[string]any)
+	if !ok || header["type"] != "http" {
+		t.Fatalf("tcpSettings.header = %v, want {type:http,...}", tcp["header"])
+	}
+	if _, ok := header["request"].(map[string]any); !ok {
+		t.Errorf("tcpSettings.header.request missing: %v", header)
+	}
+}
+
+// TestBuilder_XHTTPModeOverride verifies an xhttp inbound with Raw["xhttp"].mode
+// renders that mode (instead of the "auto" default).
+func TestBuilder_XHTTPModeOverride(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-xhttp", Protocol: domain.ProtoVLESS, Port: 443,
+		Network: "xhttp", Security: domain.SecurityNone, Path: "/x",
+		Raw: map[string]any{"xhttp": map[string]any{"mode": "packet-up"}},
+	}
+	ss := streamSettingsFor(t, in, []*domain.User{vlessUser()})
+	x, ok := ss["xhttpSettings"].(map[string]any)
+	if !ok {
+		t.Fatalf("xhttpSettings missing or wrong type: %v", ss["xhttpSettings"])
+	}
+	if x["mode"] != "packet-up" {
+		t.Errorf("xhttpSettings.mode = %v, want packet-up", x["mode"])
+	}
+	if x["path"] != "/x" {
+		t.Errorf("xhttpSettings.path = %v, want /x (existing path logic must be kept)", x["path"])
+	}
+}
+
+// TestBuilder_XHTTPModeDefault verifies an xhttp inbound with no Raw override
+// keeps the "auto" default mode.
+func TestBuilder_XHTTPModeDefault(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-xhttp-def", Protocol: domain.ProtoVLESS, Port: 443,
+		Network: "xhttp", Security: domain.SecurityNone,
+	}
+	ss := streamSettingsFor(t, in, []*domain.User{vlessUser()})
+	x, ok := ss["xhttpSettings"].(map[string]any)
+	if !ok {
+		t.Fatalf("xhttpSettings missing or wrong type: %v", ss["xhttpSettings"])
+	}
+	if x["mode"] != "auto" {
+		t.Errorf("xhttpSettings.mode = %v, want auto (default)", x["mode"])
+	}
+}

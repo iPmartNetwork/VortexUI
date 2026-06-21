@@ -473,11 +473,19 @@ func streamSettings(in domain.Inbound) json.RawMessage {
 		if cert := tlsCertificate(in.Raw["tls"]); cert != nil {
 			tls["certificates"] = []any{cert}
 		}
+		// Operator-supplied ALPN list (Raw["tls"].alpn) — e.g. ["h2","http/1.1"].
+		if t, ok := in.Raw["tls"].(map[string]any); ok {
+			if alpn := rawStringList(t["alpn"]); len(alpn) > 0 {
+				tls["alpn"] = alpn
+			}
+		}
 		ss["tlsSettings"] = tls
 	case domain.SecurityReality:
 		ss["realitySettings"] = realitySettings(in)
 	}
 	switch in.Network {
+	case "tcp":
+		ss["tcpSettings"] = tcpHeaderSettings(in)
 	case "ws":
 		ws := map[string]any{}
 		if in.Path != "" {
@@ -510,6 +518,17 @@ func streamSettings(in domain.Inbound) json.RawMessage {
 		ss["httpSettings"] = h
 	case "xhttp":
 		x := map[string]any{"mode": "auto"}
+		if xr, ok := in.Raw["xhttp"].(map[string]any); ok {
+			if mode, ok := xr["mode"].(string); ok && mode != "" {
+				x["mode"] = mode
+			}
+			// Operator escape hatch: merge arbitrary extra keys into xhttpSettings.
+			if extra, ok := xr["extra"].(map[string]any); ok {
+				for k, v := range extra {
+					x[k] = v
+				}
+			}
+		}
 		if in.Path != "" {
 			x["path"] = in.Path
 		}
@@ -555,6 +574,39 @@ func realitySettings(in domain.Inbound) map[string]any {
 		out["dest"] = dest
 	}
 	return out
+}
+
+// rawStringList coerces a JSON-decoded []any (or []string) of strings into a
+// []string, dropping non-string entries. Used for fields like TLS ALPN that the
+// abstraction does not model as typed columns.
+func rawStringList(v any) []string {
+	switch s := v.(type) {
+	case []string:
+		return s
+	case []any:
+		out := make([]string, 0, len(s))
+		for _, item := range s {
+			if str, ok := item.(string); ok {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+// tcpHeaderSettings renders the tcpSettings block for a raw-TCP inbound. By
+// default it emits {"header": {"type": "none"}}; operators can override the
+// header verbatim through Inbound.Raw["tcp"].header to enable HTTP camouflage
+// ({"type":"http","request":{...},"response":{...}}).
+func tcpHeaderSettings(in domain.Inbound) map[string]any {
+	if t, ok := in.Raw["tcp"].(map[string]any); ok {
+		if header, ok := t["header"].(map[string]any); ok {
+			return map[string]any{"header": header}
+		}
+	}
+	return map[string]any{"header": map[string]any{"type": "none"}}
 }
 
 // tlsCertificate renders an inline xray certificate object from the PEM strings
