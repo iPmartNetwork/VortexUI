@@ -143,6 +143,35 @@ export function useDeleteNode() {
   });
 }
 
+// --- capabilities (per-core option matrix) ---
+
+export interface CoreCapability {
+  protocols: string[];
+  transports: string[];
+  securities: string[];
+  udp_native: string[];
+}
+
+export interface Capabilities {
+  xray: CoreCapability;
+  singbox: CoreCapability;
+}
+
+// useCapabilities fetches the authoritative per-core capability matrix. The data
+// is effectively static (it only changes when the binary changes), so we cache
+// it indefinitely and never refetch within a session.
+export function useCapabilities() {
+  return useQuery({
+    queryKey: ["capabilities"],
+    queryFn: () => api<Capabilities>("/api/capabilities"),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  });
+}
+
 // --- inbounds (per node) ---
 
 export interface Inbound {
