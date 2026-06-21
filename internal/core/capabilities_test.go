@@ -35,6 +35,18 @@ func TestSupports(t *testing.T) {
 		{"xray vless quic unsupported transport", domain.CoreXray, domain.ProtoVLESS, "quic", domain.SecurityTLS, true},
 		{"singbox vless xhttp unsupported transport", domain.CoreSingbox, domain.ProtoVLESS, "xhttp", domain.SecurityTLS, true},
 		{"xray unknown security", domain.CoreXray, domain.ProtoVLESS, "tcp", domain.Security("bogus"), true},
+
+		// Per-protocol constraints: socks/http carry no transport and allow only
+		// security none; naive carries no transport and mandates tls.
+		{"xray socks no-transport none", domain.CoreXray, domain.ProtoSocks, "", domain.SecurityNone, false},
+		{"xray http no-transport none", domain.CoreXray, domain.ProtoHTTP, "", domain.SecurityNone, false},
+		{"xray socks ignores network", domain.CoreXray, domain.ProtoSocks, "quic", domain.SecurityNone, false},
+		{"xray socks rejects tls override", domain.CoreXray, domain.ProtoSocks, "", domain.SecurityTLS, true},
+		{"singbox socks no-transport none", domain.CoreSingbox, domain.ProtoSocks, "", domain.SecurityNone, false},
+		{"singbox http no-transport none", domain.CoreSingbox, domain.ProtoHTTP, "", domain.SecurityNone, false},
+		{"singbox naive mandates tls", domain.CoreSingbox, domain.ProtoNaive, "", domain.SecurityTLS, false},
+		{"singbox naive rejects none", domain.CoreSingbox, domain.ProtoNaive, "", domain.SecurityNone, true},
+		{"xray naive unsupported protocol", domain.CoreXray, domain.ProtoNaive, "", domain.SecurityTLS, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -72,5 +84,47 @@ func TestIsUDPNative(t *testing.T) {
 	}
 	if IsUDPNative(domain.CoreXray, domain.ProtoHysteria2) {
 		t.Fatal("xray has no UDP-native protocols")
+	}
+}
+
+// TestSkipsTransport verifies that both UDP-native protocols and NoTransport
+// utility proxies (socks/http/naive) skip the stream-transport check, while
+// regular protocols do not.
+func TestSkipsTransport(t *testing.T) {
+	cases := []struct {
+		core  domain.CoreType
+		proto domain.Protocol
+		want  bool
+	}{
+		{domain.CoreSingbox, domain.ProtoHysteria2, true}, // UDP-native
+		{domain.CoreSingbox, domain.ProtoSocks, true},     // NoTransport
+		{domain.CoreSingbox, domain.ProtoHTTP, true},      // NoTransport
+		{domain.CoreSingbox, domain.ProtoNaive, true},     // NoTransport
+		{domain.CoreSingbox, domain.ProtoVLESS, false},
+		{domain.CoreXray, domain.ProtoSocks, true},
+		{domain.CoreXray, domain.ProtoHTTP, true},
+		{domain.CoreXray, domain.ProtoVLESS, false},
+	}
+	for _, tc := range cases {
+		if got := SkipsTransport(tc.core, tc.proto); got != tc.want {
+			t.Errorf("SkipsTransport(%v, %v) = %v, want %v", tc.core, tc.proto, got, tc.want)
+		}
+	}
+}
+
+// TestAllowedSecurities verifies the per-protocol security override falls back
+// to the core-wide list when no constraint applies, and returns the narrowed set
+// when one does.
+func TestAllowedSecurities(t *testing.T) {
+	// Constrained protocols return their override only.
+	if got := AllowedSecurities(domain.CoreSingbox, domain.ProtoSocks); len(got) != 1 || got[0] != domain.SecurityNone {
+		t.Errorf("socks AllowedSecurities = %v, want [none]", got)
+	}
+	if got := AllowedSecurities(domain.CoreSingbox, domain.ProtoNaive); len(got) != 1 || got[0] != domain.SecurityTLS {
+		t.Errorf("naive AllowedSecurities = %v, want [tls]", got)
+	}
+	// Unconstrained protocols fall back to the core-wide list.
+	if got := AllowedSecurities(domain.CoreSingbox, domain.ProtoVLESS); len(got) != len(Capabilities(domain.CoreSingbox).Securities) {
+		t.Errorf("vless AllowedSecurities = %v, want core-wide list", got)
 	}
 }

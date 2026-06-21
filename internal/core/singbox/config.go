@@ -464,6 +464,20 @@ func buildInbound(in domain.Inbound, users []*domain.User) (map[string]any, erro
 		if pad := anyTLSPadding(in); len(pad) > 0 {
 			m["padding_scheme"] = pad
 		}
+	case domain.ProtoSocks:
+		// SOCKS5 utility proxy. Plain (security none), no stream transport. An
+		// empty users list means no auth in sing-box.
+		m["type"] = "socks"
+		m["users"] = usernamePasswordUsers(users)
+	case domain.ProtoHTTP:
+		// HTTP CONNECT utility proxy. Plain (security none), no stream transport.
+		m["type"] = "http"
+		m["users"] = usernamePasswordUsers(users)
+	case domain.ProtoNaive:
+		// NaiveProxy: mandates TLS (the tls block is added by tlsBlock below when
+		// security==tls); carries no stream transport.
+		m["type"] = "naive"
+		m["users"] = usernamePasswordUsers(users)
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q for sing-box", in.Protocol)
 	}
@@ -654,6 +668,30 @@ func hysteriaObfs(in domain.Inbound) string {
 	h, _ := in.Raw["hysteria"].(map[string]any)
 	s, _ := h["obfs"].(string)
 	return s
+}
+
+// usernamePasswordUsers renders the {username, password} user list shared by the
+// socks/http/naive utility proxies. The username reuses the existing credential
+// (User.Username, falling back to the user ID when empty) and the password is
+// the shared trojan password. sing-box accepts an empty list (no auth).
+func usernamePasswordUsers(users []*domain.User) []map[string]any {
+	out := make([]map[string]any, 0, len(users))
+	for _, u := range users {
+		out = append(out, map[string]any{
+			"username": proxyUsername(u),
+			"password": u.Proxies.TrojanPass,
+		})
+	}
+	return out
+}
+
+// proxyUsername returns the per-user proxy username: User.Username when set,
+// otherwise the user ID string.
+func proxyUsername(u *domain.User) string {
+	if u.Username != "" {
+		return u.Username
+	}
+	return u.ID.String()
 }
 
 // anyTLSUsers renders the per-user password list for AnyTLS, reusing the trojan
@@ -879,6 +917,9 @@ func inboundUsable(in domain.Inbound) bool {
 		// Both mandate a TLS layer; without one sing-box rejects the inbound, so
 		// skip it rather than emit a broken block.
 		return in.Security == domain.SecurityTLS || in.Security == domain.SecurityReality
+	case domain.ProtoNaive:
+		// NaiveProxy mandates TLS; without it sing-box rejects the inbound.
+		return in.Security == domain.SecurityTLS
 	}
 	return true
 }
