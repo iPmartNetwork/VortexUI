@@ -630,3 +630,15 @@ CREATE TABLE ip_limit_events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_ip_limit_events_time ON ip_limit_events (created_at DESC);
+
+-- panel-feature-parity: Clean-IP scanner results cache
+CREATE TABLE clean_ip_scans (
+    id         UUID PRIMARY KEY,
+    ip         TEXT NOT NULL,
+    latency_ms INTEGER NOT NULL DEFAULT 0,
+    loss_pct   INTEGER NOT NULL DEFAULT 0,
+    score      INTEGER NOT NULL DEFAULT 0,
+    reachable  BOOLEAN NOT NULL DEFAULT FALSE,
+    scanned_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_clean_ip_score ON clean_ip_scans (score DESC);
