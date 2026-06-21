@@ -150,6 +150,8 @@ export interface CoreCapability {
   transports: string[];
   securities: string[];
   udp_native: string[];
+  no_transport: string[];
+  protocol_securities?: Record<string, string[]>;
 }
 
 export interface Capabilities {
