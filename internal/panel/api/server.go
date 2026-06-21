@@ -17,6 +17,7 @@ type Deps struct {
 	APITokens  *APITokenHandlers
 	Portal     *PortalHandlers
 	Reality    *RealityHandlers
+	CleanIP    *CleanIPHandlers
 	SubHosts   *SubHostHandlers
 	RoutingPacks *RoutingPackHandlers
 	Quota      *QuotaHandlers
@@ -211,6 +212,11 @@ func NewRouter(d Deps) *echo.Echo {
 	reality := authed.Group("/reality")
 	reality.POST("/scan", d.Reality.ScanReality, RequirePermission(d.Auth, domain.PermInboundWrite))
 	reality.GET("/results", d.Reality.GetCachedScans, RequirePermission(d.Auth, domain.PermInboundRead))
+
+	// --- Clean-IP Scanner ---
+	cleanip := authed.Group("/clean-ip")
+	cleanip.POST("/scan", d.CleanIP.Scan, RequirePermission(d.Auth, domain.PermInboundWrite))
+	cleanip.GET("/results", d.CleanIP.GetCached, RequirePermission(d.Auth, domain.PermInboundRead))
 
 	// --- Subscription Hosts (Marzban-style per-inbound overrides) ---
 	hosts := authed.Group("/sub-hosts")

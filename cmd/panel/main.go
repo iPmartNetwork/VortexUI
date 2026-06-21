@@ -244,6 +244,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	portalSvc := service.NewPortalService(users, store.Tickets(), store.Plans())
 	planSvc := service.NewPlanService(store.Plans(), userSvc)
 	realitySvc := service.NewRealityScannerService(store.RealityScans(), nodes)
+	cleanIPSvc := service.NewCleanIPScannerService(store.CleanIPScans())
 	subHostSvc := service.NewSubHostService(store.SubHosts())
 	routingPackSvc := service.NewRoutingPackService(store.RoutingPacks(), routingSvc, outboundSvc)
 	// Embed a selected routing pack's rules into Clash/sing-box subscriptions
@@ -294,6 +295,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		APITokens:   &api.APITokenHandlers{Svc: tokenSvc},
 		Portal:      &api.PortalHandlers{Portal: portalSvc, Issuer: issuer},
 		Reality:     &api.RealityHandlers{Scanner: realitySvc},
+		CleanIP:     &api.CleanIPHandlers{Scanner: cleanIPSvc},
 		SubHosts:    &api.SubHostHandlers{SubHosts: subHostSvc},
 		RoutingPacks: &api.RoutingPackHandlers{Packs: routingPackSvc},
 		Quota:       &api.QuotaHandlers{Quota: quotaSvc},

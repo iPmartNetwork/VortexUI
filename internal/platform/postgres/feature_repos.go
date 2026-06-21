@@ -1666,6 +1666,60 @@ func (r *WireGuardPeerRepo) ListByInbound(ctx context.Context, inboundID uuid.UU
 }
 
 
+// --- CleanIPScanRepo ---
+
+type CleanIPScanRepo struct{ pool *pgxpool.Pool }
+
+var _ port.CleanIPScanRepository = (*CleanIPScanRepo)(nil)
+
+func (r *CleanIPScanRepo) SaveBatch(ctx context.Context, results []*domain.CleanIPScan) error {
+	if len(results) == 0 {
+		return nil
+	}
+	batch := &pgx.Batch{}
+	for _, s := range results {
+		batch.Queue(
+			`INSERT INTO clean_ip_scans (id, ip, latency_ms, loss_pct, score, reachable, scanned_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			s.ID, s.IP, s.LatencyMS, s.LossPct, s.Score, s.Reachable, s.ScannedAt)
+	}
+	br := r.pool.SendBatch(ctx, batch)
+	defer br.Close() //nolint:errcheck // batch result cleanup
+	for range results {
+		if _, err := br.Exec(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *CleanIPScanRepo) List(ctx context.Context) ([]*domain.CleanIPScan, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, ip, latency_ms, loss_pct, score, reachable, scanned_at
+		 FROM clean_ip_scans
+		 ORDER BY score DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*domain.CleanIPScan
+	for rows.Next() {
+		var s domain.CleanIPScan
+		if err := rows.Scan(&s.ID, &s.IP, &s.LatencyMS, &s.LossPct, &s.Score, &s.Reachable, &s.ScannedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, &s)
+	}
+	return results, rows.Err()
+}
+
+func (r *CleanIPScanRepo) DeleteAll(ctx context.Context) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM clean_ip_scans`)
+	return err
+}
+
+
 // --- SubHostRepo ---
 
 type SubHostRepo struct{ pool *pgxpool.Pool }
