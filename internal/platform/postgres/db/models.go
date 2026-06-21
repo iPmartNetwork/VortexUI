@@ -70,6 +70,8 @@ type Inbound struct {
 	EvasionProfileID pgtype.UUID
 	Raw              []byte
 	Enabled          bool
+	SpeedLimit       int64
+	GeoPolicy        []byte
 }
 
 type Node struct {

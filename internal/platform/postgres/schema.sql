@@ -57,6 +57,8 @@ CREATE TABLE inbounds (
     evasion_profile_id UUID,
     raw                JSONB NOT NULL DEFAULT '{}',
     enabled            BOOLEAN NOT NULL DEFAULT TRUE,
+    speed_limit        BIGINT NOT NULL DEFAULT 0,
+    geo_policy         JSONB,
     UNIQUE (node_id, tag)
 );
 

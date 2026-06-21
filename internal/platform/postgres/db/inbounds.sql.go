@@ -15,9 +15,11 @@ import (
 const createInbound = `-- name: CreateInbound :exec
 INSERT INTO inbounds (
     id, node_id, tag, protocol, listen, port, network, security,
-    sni, path, host, flow, evasion_profile_id, raw, enabled
+    sni, path, host, flow, evasion_profile_id, raw, enabled,
+    speed_limit, geo_policy
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+    $16, $17
 )
 `
 
@@ -37,6 +39,8 @@ type CreateInboundParams struct {
 	EvasionProfileID pgtype.UUID
 	Raw              []byte
 	Enabled          bool
+	SpeedLimit       int64
+	GeoPolicy        []byte
 }
 
 func (q *Queries) CreateInbound(ctx context.Context, arg CreateInboundParams) error {
@@ -56,6 +60,8 @@ func (q *Queries) CreateInbound(ctx context.Context, arg CreateInboundParams) er
 		arg.EvasionProfileID,
 		arg.Raw,
 		arg.Enabled,
+		arg.SpeedLimit,
+		arg.GeoPolicy,
 	)
 	return err
 }
@@ -70,7 +76,7 @@ func (q *Queries) DeleteInbound(ctx context.Context, id uuid.UUID) error {
 }
 
 const getInboundByID = `-- name: GetInboundByID :one
-SELECT id, node_id, tag, protocol, listen, port, network, security, sni, path, host, flow, evasion_profile_id, raw, enabled FROM inbounds WHERE id = $1
+SELECT id, node_id, tag, protocol, listen, port, network, security, sni, path, host, flow, evasion_profile_id, raw, enabled, speed_limit, geo_policy FROM inbounds WHERE id = $1
 `
 
 func (q *Queries) GetInboundByID(ctx context.Context, id uuid.UUID) (Inbound, error) {
@@ -92,12 +98,14 @@ func (q *Queries) GetInboundByID(ctx context.Context, id uuid.UUID) (Inbound, er
 		&i.EvasionProfileID,
 		&i.Raw,
 		&i.Enabled,
+		&i.SpeedLimit,
+		&i.GeoPolicy,
 	)
 	return i, err
 }
 
 const listInboundsByNode = `-- name: ListInboundsByNode :many
-SELECT id, node_id, tag, protocol, listen, port, network, security, sni, path, host, flow, evasion_profile_id, raw, enabled FROM inbounds WHERE node_id = $1 ORDER BY tag
+SELECT id, node_id, tag, protocol, listen, port, network, security, sni, path, host, flow, evasion_profile_id, raw, enabled, speed_limit, geo_policy FROM inbounds WHERE node_id = $1 ORDER BY tag
 `
 
 func (q *Queries) ListInboundsByNode(ctx context.Context, nodeID uuid.UUID) ([]Inbound, error) {
@@ -125,6 +133,8 @@ func (q *Queries) ListInboundsByNode(ctx context.Context, nodeID uuid.UUID) ([]I
 			&i.EvasionProfileID,
 			&i.Raw,
 			&i.Enabled,
+			&i.SpeedLimit,
+			&i.GeoPolicy,
 		); err != nil {
 			return nil, err
 		}
@@ -140,7 +150,8 @@ const updateInbound = `-- name: UpdateInbound :exec
 UPDATE inbounds SET
     tag = $2, protocol = $3, listen = $4, port = $5, network = $6,
     security = $7, sni = $8, path = $9, host = $10, flow = $11,
-    evasion_profile_id = $12, raw = $13, enabled = $14
+    evasion_profile_id = $12, raw = $13, enabled = $14,
+    speed_limit = $15, geo_policy = $16
 WHERE id = $1
 `
 
@@ -159,6 +170,8 @@ type UpdateInboundParams struct {
 	EvasionProfileID pgtype.UUID
 	Raw              []byte
 	Enabled          bool
+	SpeedLimit       int64
+	GeoPolicy        []byte
 }
 
 func (q *Queries) UpdateInbound(ctx context.Context, arg UpdateInboundParams) error {
@@ -177,6 +190,8 @@ func (q *Queries) UpdateInbound(ctx context.Context, arg UpdateInboundParams) er
 		arg.EvasionProfileID,
 		arg.Raw,
 		arg.Enabled,
+		arg.SpeedLimit,
+		arg.GeoPolicy,
 	)
 	return err
 }
