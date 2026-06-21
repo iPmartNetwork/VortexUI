@@ -55,7 +55,7 @@ func TestDetectFormat(t *testing.T) {
 		"mihomo":              FormatClash,
 		"sing-box 1.8":        FormatSingbox,
 		"HiddifyNext/2":       FormatSingbox,
-		"v2rayNG/1.8":         FormatBase64,
+		"v2rayNG/1.8":         FormatLinks,
 		"":                    FormatBase64,
 	}
 	for ua, want := range cases {
@@ -391,5 +391,225 @@ func TestHostFieldsRenderWhenSet(t *testing.T) {
 	}
 	if s := string(singbox); !strings.Contains(s, "alpn") || !strings.Contains(s, "multiplex") {
 		t.Errorf("singbox output missing alpn/multiplex:\n%s", s)
+	}
+}
+
+// --- Phase 2: additional output formats (xray / outline / links) ---
+
+func vmessWSProxy() Proxy {
+	return Proxy{
+		Name: "vmessws", Protocol: domain.ProtoVMess, Host: "5.6.7.8", Port: 80,
+		Network: "ws", Security: "none", Path: "/vm", HostHeader: "vm.example.com",
+		UUID: "55555555-5555-5555-5555-555555555555",
+	}
+}
+
+func TestRenderXrayJSONOutbounds(t *testing.T) {
+	// A vless+tls proxy and a vmess+ws proxy exercise both vnext shapes and the
+	// TLS + websocket stream settings.
+	ps := []Proxy{sampleProxies()[0], vmessWSProxy()}
+	body, err := Render(FormatXray, ps, "VortexUI")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Outbounds []map[string]any `json:"outbounds"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("invalid xray json: %v\n%s", err, body)
+	}
+	// 2 proxies + 1 freedom tail.
+	if len(parsed.Outbounds) != 3 {
+		t.Fatalf("want 3 outbounds, got %d:\n%s", len(parsed.Outbounds), body)
+	}
+
+	vless := parsed.Outbounds[0]
+	if vless["protocol"] != "vless" {
+		t.Errorf("outbound[0] protocol = %v, want vless", vless["protocol"])
+	}
+	settings, _ := vless["settings"].(map[string]any)
+	vnext, _ := settings["vnext"].([]any)
+	if len(vnext) != 1 {
+		t.Fatalf("vless vnext malformed: %v", settings["vnext"])
+	}
+	first, _ := vnext[0].(map[string]any)
+	if first["address"] != "1.2.3.4" {
+		t.Errorf("vless address = %v, want 1.2.3.4", first["address"])
+	}
+	users, _ := first["users"].([]any)
+	u0, _ := users[0].(map[string]any)
+	if u0["id"] != "11111111-1111-1111-1111-111111111111" {
+		t.Errorf("vless user id = %v", u0["id"])
+	}
+	if u0["flow"] != "xtls-rprx-vision" {
+		t.Errorf("vless flow = %v, want xtls-rprx-vision", u0["flow"])
+	}
+	stream, _ := vless["streamSettings"].(map[string]any)
+	if stream["security"] != "tls" || stream["network"] != "ws" {
+		t.Errorf("vless streamSettings = %v", stream)
+	}
+	if _, ok := stream["tlsSettings"].(map[string]any); !ok {
+		t.Errorf("vless tlsSettings missing: %v", stream["tlsSettings"])
+	}
+
+	vmess := parsed.Outbounds[1]
+	if vmess["protocol"] != "vmess" {
+		t.Errorf("outbound[1] protocol = %v, want vmess", vmess["protocol"])
+	}
+	vstream, _ := vmess["streamSettings"].(map[string]any)
+	if vstream["network"] != "ws" {
+		t.Errorf("vmess network = %v, want ws", vstream["network"])
+	}
+	ws, _ := vstream["wsSettings"].(map[string]any)
+	if ws == nil || ws["path"] != "/vm" {
+		t.Errorf("vmess wsSettings path = %v", vstream["wsSettings"])
+	}
+
+	if parsed.Outbounds[2]["protocol"] != "freedom" {
+		t.Errorf("tail outbound = %v, want freedom", parsed.Outbounds[2]["protocol"])
+	}
+}
+
+func TestRenderOutlineOnlyShadowsocks(t *testing.T) {
+	// sampleProxies has one shadowsocks proxy (index 2) and two non-ss proxies.
+	body, err := Render(FormatOutline, sampleProxies(), "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("want exactly 1 ss line, got %d:\n%s", len(lines), body)
+	}
+	if !strings.HasPrefix(lines[0], "ss://") {
+		t.Errorf("outline line not ss://: %s", lines[0])
+	}
+	if strings.Contains(string(body), "vless://") || strings.Contains(string(body), "trojan://") {
+		t.Errorf("outline leaked non-ss links:\n%s", body)
+	}
+}
+
+func TestRenderOutlineEmptyWhenNoShadowsocks(t *testing.T) {
+	body, err := Render(FormatOutline, []Proxy{sampleProxies()[0]}, "P") // vless only
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(strings.TrimSpace(string(body))) != 0 {
+		t.Errorf("want empty body, got:\n%s", body)
+	}
+}
+
+func TestRenderLinksEqualsDecodedBase64(t *testing.T) {
+	ps := sampleProxies()
+	links, err := Render(FormatLinks, ps, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b64, err := Render(FormatBase64, ps, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dec, err := base64.StdEncoding.DecodeString(string(b64))
+	if err != nil {
+		t.Fatalf("base64 output not decodable: %v", err)
+	}
+	if string(links) != string(dec) {
+		t.Errorf("renderLinks != base64-decoded renderBase64:\nlinks=%q\ndec=%q", links, dec)
+	}
+	// And it must not itself be base64-wrapped.
+	if strings.Contains(string(links), "vless://") == false {
+		t.Errorf("links output should contain plain share links:\n%s", links)
+	}
+}
+
+func TestDetectNewFormats(t *testing.T) {
+	cases := map[string]Format{
+		"Outline/1.2 (client)": FormatOutline,
+		"v2rayNG/1.8":          FormatLinks,
+		"v2rayN/6.0":           FormatLinks,
+		"some-unknown-client":  FormatBase64,
+		"clash-verge":          FormatClash,
+		"sing-box":             FormatSingbox,
+	}
+	for ua, want := range cases {
+		if got := Detect(ua); got != want {
+			t.Errorf("Detect(%q) = %s, want %s", ua, got, want)
+		}
+	}
+}
+
+func TestContentTypeNewFormats(t *testing.T) {
+	cases := map[Format]string{
+		FormatXray:    "application/json; charset=utf-8",
+		FormatOutline: "text/plain; charset=utf-8",
+		FormatLinks:   "text/plain; charset=utf-8",
+	}
+	for f, want := range cases {
+		if got := f.ContentType(); got != want {
+			t.Errorf("%s.ContentType() = %q, want %q", f, got, want)
+		}
+	}
+}
+
+// Regression: the existing formats must produce byte-identical output to a
+// direct call of their renderer (Requirement 2.5).
+func TestExistingFormatsUnchanged(t *testing.T) {
+	ps := append(sampleProxies(), realityProxy(), httpUpgradeProxy())
+
+	b64, err := Render(FormatBase64, ps, "VortexUI")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b64) != string(renderBase64(ps)) {
+		t.Errorf("FormatBase64 output diverged from renderBase64")
+	}
+
+	clashDirect, err := renderClash(ps, "VortexUI")
+	if err != nil {
+		t.Fatal(err)
+	}
+	clashRender, err := Render(FormatClash, ps, "VortexUI")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(clashRender) != string(clashDirect) {
+		t.Errorf("FormatClash output diverged from renderClash")
+	}
+
+	sbDirect, err := renderSingbox(ps, "VortexUI")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sbRender, err := Render(FormatSingbox, ps, "VortexUI")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(sbRender) != string(sbDirect) {
+		t.Errorf("FormatSingbox output diverged from renderSingbox")
+	}
+}
+
+// Task 2.3: the new formats take []Proxy exactly like the others, so a
+// host-projected slice flows through unchanged with one entry per proxy.
+func TestNewFormatsConsumeProjectedProxiesUnchanged(t *testing.T) {
+	// Simulate a host-projected slice: two entries derived from one inbound.
+	projected := []Proxy{
+		{Name: "alice @ cdn-a", Protocol: domain.ProtoShadowsocks, Host: "a.cdn", Port: 8388, Password: "pw", SSMethod: "aes-128-gcm"},
+		{Name: "alice @ cdn-b", Protocol: domain.ProtoShadowsocks, Host: "b.cdn", Port: 8388, Password: "pw", SSMethod: "aes-128-gcm"},
+	}
+	out, err := Render(FormatOutline, projected, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("want 2 ss entries for 2 projected proxies, got %d:\n%s", len(lines), out)
+	}
+
+	links, err := Render(FormatLinks, projected, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(strings.TrimSpace(string(links)), "\n") + 1; n != 2 {
+		t.Errorf("want 2 plain links, got %d:\n%s", n, links)
 	}
 }

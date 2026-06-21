@@ -111,6 +111,9 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 		ClashURL:      subURL + "?format=clash",
 		SingboxURL:    subURL + "?format=singbox",
 		Base64URL:     subURL + "?format=base64",
+		XrayURL:       subURL + "?format=xray",
+		OutlineURL:    subURL + "?format=outline",
+		LinksURL:      subURL + "?format=links",
 		Links:         links,
 		ConfigCount:   len(links),
 		HasWireGuard:  hasWG,
@@ -137,6 +140,9 @@ type subInfoData struct {
 	ClashURL    string
 	SingboxURL  string
 	Base64URL   string
+	XrayURL     string
+	OutlineURL  string
+	LinksURL    string
 	Links       []string
 	ConfigCount int
 
