@@ -39,6 +39,12 @@ const (
 	// ProtoNaive is a NaiveProxy inbound (sing-box "naive"). It MANDATES TLS and
 	// carries no stream transport of its own.
 	ProtoNaive Protocol = "naive"
+	// ProtoDokodemo is the xray dokodemo-door inbound: a transparent/redirect
+	// listener with NO per-user auth. It carries no stream transport; its target
+	// address/port and network come from Inbound.Raw["dokodemo"]. NOTE the xray
+	// WIRE protocol name is "dokodemo-door" (mapped in the renderer), not the
+	// "dokodemo" value used here.
+	ProtoDokodemo Protocol = "dokodemo"
 )
 
 // Security is the TLS-layer obfuscation applied to an inbound.

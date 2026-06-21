@@ -47,6 +47,18 @@ func TestSupports(t *testing.T) {
 		{"singbox naive mandates tls", domain.CoreSingbox, domain.ProtoNaive, "", domain.SecurityTLS, false},
 		{"singbox naive rejects none", domain.CoreSingbox, domain.ProtoNaive, "", domain.SecurityNone, true},
 		{"xray naive unsupported protocol", domain.CoreXray, domain.ProtoNaive, "", domain.SecurityTLS, true},
+
+		// dokodemo (xray-only) carries no transport and allows only security none;
+		// kcp (mKCP) is a regular xray transport valid under any security.
+		{"xray dokodemo no-transport none", domain.CoreXray, domain.ProtoDokodemo, "", domain.SecurityNone, false},
+		{"xray dokodemo ignores network", domain.CoreXray, domain.ProtoDokodemo, "kcp", domain.SecurityNone, false},
+		{"xray dokodemo rejects tls", domain.CoreXray, domain.ProtoDokodemo, "", domain.SecurityTLS, true},
+		{"xray dokodemo rejects reality", domain.CoreXray, domain.ProtoDokodemo, "", domain.SecurityReality, true},
+		{"xray vless kcp none", domain.CoreXray, domain.ProtoVLESS, "kcp", domain.SecurityNone, false},
+		{"xray vless kcp tls", domain.CoreXray, domain.ProtoVLESS, "kcp", domain.SecurityTLS, false},
+		{"xray vless kcp reality", domain.CoreXray, domain.ProtoVLESS, "kcp", domain.SecurityReality, false},
+		{"singbox dokodemo unsupported protocol", domain.CoreSingbox, domain.ProtoDokodemo, "", domain.SecurityNone, true},
+		{"singbox kcp unsupported transport", domain.CoreSingbox, domain.ProtoVLESS, "kcp", domain.SecurityTLS, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -103,6 +115,7 @@ func TestSkipsTransport(t *testing.T) {
 		{domain.CoreSingbox, domain.ProtoVLESS, false},
 		{domain.CoreXray, domain.ProtoSocks, true},
 		{domain.CoreXray, domain.ProtoHTTP, true},
+		{domain.CoreXray, domain.ProtoDokodemo, true}, // NoTransport
 		{domain.CoreXray, domain.ProtoVLESS, false},
 	}
 	for _, tc := range cases {

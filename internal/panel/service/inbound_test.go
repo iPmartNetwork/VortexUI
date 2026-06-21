@@ -64,7 +64,7 @@ func TestCoreSupportsRejectsOffMatrixCombos(t *testing.T) {
 		// --- Rejected: transport not on the core ---
 		{"xray quic transport", domain.CoreXray, domain.ProtoVLESS, "quic", domain.SecurityReality, true},
 		{"singbox xhttp transport", domain.CoreSingbox, domain.ProtoVLESS, "xhttp", domain.SecurityNone, true},
-		{"xray unknown transport", domain.CoreXray, domain.ProtoVMess, "kcp", domain.SecurityNone, true},
+		{"xray unknown transport", domain.CoreXray, domain.ProtoVMess, "bogus-transport", domain.SecurityNone, true},
 
 		// --- Valid: present in the matrix ---
 		{"xray vless xhttp none ok", domain.CoreXray, domain.ProtoVLESS, "xhttp", domain.SecurityNone, false},
