@@ -1,9 +1,11 @@
 -- name: CreateInbound :exec
 INSERT INTO inbounds (
     id, node_id, tag, protocol, listen, port, network, security,
-    sni, path, host, flow, evasion_profile_id, raw, enabled
+    sni, path, host, flow, evasion_profile_id, raw, enabled,
+    speed_limit, geo_policy
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+    $16, $17
 );
 
 -- name: GetInboundByID :one
@@ -13,7 +15,8 @@ SELECT * FROM inbounds WHERE id = $1;
 UPDATE inbounds SET
     tag = $2, protocol = $3, listen = $4, port = $5, network = $6,
     security = $7, sni = $8, path = $9, host = $10, flow = $11,
-    evasion_profile_id = $12, raw = $13, enabled = $14
+    evasion_profile_id = $12, raw = $13, enabled = $14,
+    speed_limit = $15, geo_policy = $16
 WHERE id = $1;
 
 -- name: DeleteInbound :exec
