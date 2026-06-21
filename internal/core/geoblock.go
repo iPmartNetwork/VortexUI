@@ -18,17 +18,16 @@ func GeoBlockRules(inbound domain.Inbound) []domain.RoutingRule {
 	var rules []domain.RoutingRule
 
 	if len(gp.AllowedCountries) > 0 {
-		// Block everything NOT from allowed countries.
-		// Xray approach: route inbound traffic where source geoip is NOT in the
-		// allowed list to "blocked". We express this as: for each allowed country,
-		// add a pass-through rule; then a catch-all block for this inbound.
-		// Actually simpler: negate in one rule with source IP "geoip:!XX" is not
-		// natively supported, so we use the positive approach — route traffic from
-		// allowed countries to their normal outbound, then block the rest.
-
-		// Rule: traffic from allowed countries on this inbound → pass (no action needed,
-		// it falls through to normal routing). So we only need the block rule:
-		// "any traffic on this inbound NOT from allowed geoip → blocked"
+		// Block everything NOT from allowed countries, expressed positively as two
+		// rules evaluated in priority order:
+		//   1. allowed source geoip → "direct" (normal egress), highest priority
+		//   2. catch-all for this inbound → "blocked"
+		// We deliberately route the allow rule to the well-known "direct" outbound
+		// rather than leaving OutboundTag empty: an empty-target rule is dropped by
+		// both renderers (xray omits the outboundTag and the rule becomes a no-op;
+		// sing-box's buildRoute skips a rule with no resolvable target), which would
+		// let the catch-all block rule reject ALL traffic — including the allowed
+		// countries. "direct" is guaranteed to exist in both cores' outbound sets.
 		geoIPs := make([]string, len(gp.AllowedCountries))
 		for i, c := range gp.AllowedCountries {
 			geoIPs[i] = "geoip:" + c
@@ -36,8 +35,8 @@ func GeoBlockRules(inbound domain.Inbound) []domain.RoutingRule {
 		rules = append(rules, domain.RoutingRule{
 			Name:        "geo-allow-" + inbound.Tag,
 			InboundTags: []string{inbound.Tag},
-			IP:          geoIPs, // source IPs that ARE allowed
-			OutboundTag: "", // empty = pass through (don't block these)
+			IP:          geoIPs,   // source IPs that ARE allowed
+			OutboundTag: "direct", // route allowed traffic to normal egress (must be honored, not dropped)
 			Enabled:     true,
 			Priority:    -1, // highest priority
 		})

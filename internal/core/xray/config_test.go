@@ -395,3 +395,106 @@ func firstTag(outs []struct {
 	}
 	return outs[0].Tag
 }
+
+// TestBuilder_GeoBlockAllowedCountries verifies that GeoBlockRules for an
+// AllowedCountries policy render into xray routing such that (a) allowed-country
+// traffic is routed to a real egress (not dropped, not blocked) and (b) the rest
+// of the inbound's traffic is sent to the "blocked" outbound. The risk being
+// guarded against: if the "allow" rule lost its target it would be omitted and
+// the catch-all would block everything, breaking allowed-country access.
+func TestBuilder_GeoBlockAllowedCountries(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-geo", Protocol: domain.ProtoVLESS, Port: 443,
+		GeoPolicy: &domain.GeoPolicy{AllowedCountries: []string{"IR"}},
+	}
+	cfg := &core.GeneratedConfig{
+		Inbounds: []domain.Inbound{in},
+		Routing:  core.GeoBlockRules(in),
+	}
+	raw, err := Builder{APIPort: 10085}.Build(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var r struct {
+		Routing struct {
+			Rules []struct {
+				InboundTag  []string `json:"inboundTag"`
+				IP          []string `json:"ip"`
+				OutboundTag string   `json:"outboundTag"`
+			} `json:"rules"`
+		} `json:"routing"`
+	}
+	if err := json.Unmarshal(raw, &r); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	var allow, blockRest *struct {
+		InboundTag  []string `json:"inboundTag"`
+		IP          []string `json:"ip"`
+		OutboundTag string   `json:"outboundTag"`
+	}
+	for i := range r.Routing.Rules {
+		rule := &r.Routing.Rules[i]
+		if len(rule.InboundTag) != 1 || rule.InboundTag[0] != "vless-geo" {
+			continue
+		}
+		if len(rule.IP) == 1 && rule.IP[0] == "geoip:IR" {
+			allow = rule
+		} else if len(rule.IP) == 0 && rule.OutboundTag == "blocked" {
+			blockRest = rule
+		}
+	}
+
+	// (b) Non-IR traffic on the inbound must be blocked.
+	if blockRest == nil {
+		t.Fatal("missing catch-all rule sending non-allowed traffic to blocked")
+	}
+	// (a) IR traffic must be routed to a real egress, NOT dropped or blocked.
+	if allow == nil {
+		t.Fatal("allow rule for geoip:IR was dropped — allowed traffic would be blocked")
+	}
+	if allow.OutboundTag == "" {
+		t.Error("allow rule has no outboundTag — xray would omit it and block allowed traffic")
+	}
+	if allow.OutboundTag == "blocked" {
+		t.Errorf("allow rule routes allowed traffic to %q (must not be blocked)", allow.OutboundTag)
+	}
+}
+
+// TestBuilder_GeoBlockBlockedCountries verifies a BlockedCountries policy renders
+// a rule sending traffic from the blocked country's source IPs to "blocked".
+func TestBuilder_GeoBlockBlockedCountries(t *testing.T) {
+	in := domain.Inbound{
+		Tag: "vless-geo", Protocol: domain.ProtoVLESS, Port: 443,
+		GeoPolicy: &domain.GeoPolicy{BlockedCountries: []string{"CN"}},
+	}
+	cfg := &core.GeneratedConfig{
+		Inbounds: []domain.Inbound{in},
+		Routing:  core.GeoBlockRules(in),
+	}
+	raw, err := Builder{APIPort: 10085}.Build(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var r struct {
+		Routing struct {
+			Rules []struct {
+				InboundTag  []string `json:"inboundTag"`
+				IP          []string `json:"ip"`
+				OutboundTag string   `json:"outboundTag"`
+			} `json:"rules"`
+		} `json:"routing"`
+	}
+	if err := json.Unmarshal(raw, &r); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	var found bool
+	for _, rule := range r.Routing.Rules {
+		if len(rule.IP) == 1 && rule.IP[0] == "geoip:CN" && rule.OutboundTag == "blocked" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected a rule sending geoip:CN traffic to blocked")
+	}
+}
