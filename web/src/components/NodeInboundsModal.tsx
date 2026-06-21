@@ -59,7 +59,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     });
 
   function startEdit(ib: Inbound) {
-    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), speedLimit: "", geoAllow: "" });
+    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), speedLimit: ib.speed_limit ? String(ib.speed_limit) : "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", ") });
   }
 
   async function toggleEnable(ib: Inbound) {
@@ -75,12 +75,15 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     e.preventDefault();
     if (!node) return;
     const sni = f.sni ? f.sni.split(",").map((s) => s.trim()) : [];
+    const speed_limit = f.speedLimit ? Number(f.speedLimit) : 0;
+    const allowed = f.geoAllow ? f.geoAllow.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const geo_policy = allowed.length > 0 ? { allowed_countries: allowed } : null;
     try {
       if (editing) {
-        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network: f.network, security: f.security, sni, enabled: true } });
+        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network: f.network, security: f.security, sni, speed_limit, geo_policy, enabled: true } });
         toast.success(`Updated ${f.tag}`);
       } else {
-        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, enabled: true });
+        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, speed_limit, geo_policy, enabled: true });
         toast.success(`Added ${f.tag}`);
       }
       setF(newBlank());

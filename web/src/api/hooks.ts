@@ -156,6 +156,8 @@ export interface Inbound {
   security: string;
   sni?: string[];
   enabled: boolean;
+  speed_limit?: number;
+  geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
 }
 
 export interface CreateInboundInput {
@@ -170,6 +172,8 @@ export interface CreateInboundInput {
   flow?: string;
   raw?: Record<string, unknown>;
   enabled: boolean;
+  speed_limit?: number;
+  geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
 }
 
 export function useNodeInbounds(nodeId: string | null) {
@@ -201,6 +205,8 @@ export interface UpdateInboundInput {
   path?: string;
   flow?: string;
   enabled: boolean;
+  speed_limit?: number;
+  geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
 }
 
 export function useUpdateInbound() {
