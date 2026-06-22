@@ -30,7 +30,7 @@ const NO_TRANSPORT_PROTOCOLS = ["hysteria2", "tuic", "wireguard", "socks", "http
 // non-conflicting port. The admin can still type any port.
 const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
 
-const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "" });
+const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "", wgPrivateKey: "", wgSubnet: "", wgMtu: "" });
 const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {
@@ -123,7 +123,8 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
 
   function startEdit(ib: Inbound) {
     setRealityKeys(null);
-    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", ") });
+    const wg = (ib.raw?.wireguard ?? {}) as Record<string, unknown>;
+    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", "), wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "", wgSubnet: typeof wg.subnet === "string" ? wg.subnet : "", wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "" });
   }
 
   async function toggleEnable(ib: Inbound) {
@@ -155,6 +156,16 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
           ...(sni.length > 0 ? { server_names: sni, dest: `${sni[0]}:443` } : {}),
         },
       };
+    }
+    // WireGuard inbound: persist its native config under raw.wireguard using the
+    // exact keys buildWireGuardEndpoint consumes (private_key, subnet, mtu). The
+    // listen port comes from the inbound Port field, so it's not duplicated here.
+    if (f.protocol === "wireguard") {
+      const wg: Record<string, unknown> = {};
+      if (f.wgPrivateKey.trim()) wg.private_key = f.wgPrivateKey.trim();
+      if (f.wgSubnet.trim()) wg.subnet = f.wgSubnet.trim();
+      if (f.wgMtu.trim()) wg.mtu = Number(f.wgMtu);
+      if (Object.keys(wg).length > 0) raw = { ...(raw ?? {}), wireguard: wg };
     }
     try {
       if (editing) {
@@ -204,17 +215,17 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
 
   return (
     <>
-    <Modal open={!!node} onClose={onClose} title={`Inbounds · ${node.name}`} className="max-w-lg">
+    <Modal open={!!node} onClose={onClose} title={`Inbounds · ${node.name}`} className="max-w-xl">
       <div className="space-y-2">
         {list.data?.inbounds?.map((ib) => (
-          <div key={ib.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{ib.tag}</span>
+          <div key={ib.id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-medium truncate min-w-0">{ib.tag}</span>
               <Badge>{ib.protocol}</Badge>
-              <span className="text-xs text-muted-foreground">:{ib.port} · {ib.network}/{ib.security}</span>
-              <span className={`h-2 w-2 rounded-full ${ib.enabled ? "bg-success" : "bg-fg-subtle"}`} title={ib.enabled ? "Enabled" : "Disabled"} />
+              <span className="truncate text-xs text-muted-foreground">:{ib.port} · {ib.network}/{ib.security}</span>
+              <span className={`h-2 w-2 shrink-0 rounded-full ${ib.enabled ? "bg-success" : "bg-fg-subtle"}`} title={ib.enabled ? "Enabled" : "Disabled"} />
             </div>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <Button variant="ghost" size="sm" onClick={() => toggleEnable(ib)} title={ib.enabled ? "Disable" : "Enable"}>
                 {ib.enabled ? "🟢" : "⏸"}
               </Button>
@@ -290,6 +301,17 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
           <Input placeholder="Flow (e.g. xtls-rprx-vision, optional)" value={f.flow} onChange={set("flow")} />
         )}
         {f.security === "reality" && <RealityKeygenSection onKeys={setRealityKeys} />}
+        {f.protocol === "wireguard" && (
+          <div className="space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+            <span className="text-xs font-medium text-fg-muted">WireGuard</span>
+            <Input placeholder="Private key" value={f.wgPrivateKey} onChange={set("wgPrivateKey")} dir="ltr" className="font-mono text-xs" />
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder="Subnet (e.g. 10.7.0.0/24)" value={f.wgSubnet} onChange={set("wgSubnet")} dir="ltr" className="font-mono text-xs" />
+              <Input placeholder="MTU (default 1280)" value={f.wgMtu} onChange={set("wgMtu")} inputMode="numeric" />
+            </div>
+            <p className="text-[10px] text-fg-subtle">Listen port uses the Port field above. Peers are derived from bound users.</p>
+          </div>
+        )}
         <div>
           <p className="text-[10px] font-medium text-fg-muted mb-1">Geo-blocking (allowed countries, comma-separated ISO codes)</p>
           <Input placeholder="e.g. IR,TR (empty = all allowed)" value={f.geoAllow ?? ""} onChange={(e) => setF(s => ({...s, geoAllow: e.target.value}))} />

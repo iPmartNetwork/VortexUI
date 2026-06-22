@@ -209,6 +209,7 @@ export interface Inbound {
   flow?: string;
   enabled: boolean;
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
+  raw?: Record<string, unknown>;
 }
 
 export interface CreateInboundInput {
