@@ -33,7 +33,7 @@ import (
 
 // version is the panel build version. It defaults to the contents of the VERSION
 // file and is overridden at build time via -ldflags "-X main.version=...".
-var version = "1.2.0"
+var version = "1.2.3"
 
 func main() {
 	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)
@@ -284,6 +284,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	geoSvc := service.NewGeoService(geoResolver, store.UserGeo())
 
 	router := api.NewRouter(api.Deps{
+		Version: version,
 		Handlers: &api.Handlers{
 			Auth: authSvc, Users: userSvc, Sub: subSvc,
 			Nodes: nodeSvc, Inbounds: inboundSvc, Admins: adminSvc, Devices: devices,

@@ -44,9 +44,11 @@ import { useAuth } from "@/auth/auth";
 import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
 import { useLiveEvents } from "@/api/live";
+import { useVersion } from "@/api/hooks";
 import type { TKey, Lang } from "@/i18n/dict";
 
-const PANEL_VERSION = "1.2.0";
+// PANEL_VERSION is the fallback shown until the backend version is fetched.
+const PANEL_VERSION = "1.2.3";
 
 // Grouped navigation with collapsible sections
 interface NavItem { to: string; key: TKey; icon: React.ElementType }
@@ -146,6 +148,7 @@ export function Layout() {
     return init;
   });
   useLiveEvents();
+  const version = useVersion().data ?? PANEL_VERSION;
 
   function toggleSection(id: string) {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
@@ -242,12 +245,12 @@ export function Layout() {
         </div>
         {!collapsed && (
           <div className="mt-3 rounded-lg bg-surface-2/40 px-3 py-2 text-center">
-            <div className="text-[10px] font-semibold text-fg-subtle">VortexUI v{PANEL_VERSION}</div>
+            <div className="text-[10px] font-semibold text-fg-subtle">VortexUI v{version}</div>
             <div className="mt-0.5 text-[9px] text-fg-subtle/70">© {new Date().getFullYear()} iPmart Network. All rights reserved.</div>
           </div>
         )}
         {collapsed && (
-          <div className="mt-2 text-center text-[9px] text-fg-subtle/60">v{PANEL_VERSION}</div>
+          <div className="mt-2 text-center text-[9px] text-fg-subtle/60">v{version}</div>
         )}
       </div>
     </>
