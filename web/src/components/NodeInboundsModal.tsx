@@ -19,12 +19,25 @@ const SECURITIES = ["none", "tls", "reality"];
 
 // UDP-native protocol fallback (used until caps load). Authoritative list comes
 // from cap.udp_native per core.
-const UDP_PROTOCOLS = ["hysteria2", "tuic", "wireguard"];
+const UDP_PROTOCOLS = ["hysteria2", "tuic", "wireguard", "hysteria"];
 
 // No-transport protocol fallback (used until caps load). These protocols carry
 // no stream transport, so the network select is hidden. Authoritative list comes
 // from cap.no_transport per core.
-const NO_TRANSPORT_PROTOCOLS = ["hysteria2", "tuic", "wireguard", "socks", "http", "naive", "dokodemo"];
+const NO_TRANSPORT_PROTOCOLS = ["hysteria2", "tuic", "wireguard", "socks", "http", "naive", "dokodemo", "hysteria", "shadowtls", "anytls"];
+
+/** List-row label: WireGuard/Hysteria/TUIC are UDP-native — never tcp/ws + tls. */
+function inboundTransportLabel(
+  ib: { protocol: string; network: string; security: string },
+  udpNative: string[],
+  noTransport: string[],
+): string {
+  if (udpNative.includes(ib.protocol)) return "udp";
+  if (noTransport.includes(ib.protocol) && !ib.network) return "—";
+  const net = ib.network || "tcp";
+  const sec = ib.security || "none";
+  return `${net}/${sec}`;
+}
 
 // randomPort picks a high port (10000–60000) so new inbounds default to a free,
 // non-conflicting port. The admin can still type any port.
@@ -74,6 +87,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   const networks = cap?.transports ?? NETWORKS;
   const securities = cap?.securities ?? SECURITIES;
   const noTransport = [...new Set([...(cap?.udp_native ?? UDP_PROTOCOLS), ...(cap?.no_transport ?? NO_TRANSPORT_PROTOCOLS)])];
+  const udpNative = cap?.udp_native ?? UDP_PROTOCOLS;
   const isNoTransport = noTransport.includes(f.protocol);
   const securitiesFor = (proto: string) => cap?.protocol_securities?.[proto] ?? securities;
 
@@ -124,7 +138,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   function startEdit(ib: Inbound) {
     setRealityKeys(null);
     const wg = (ib.raw?.wireguard ?? {}) as Record<string, unknown>;
-    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", "), wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "", wgSubnet: typeof wg.subnet === "string" ? wg.subnet : "", wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "" });
+    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: udpNative.includes(ib.protocol) || noTransport.includes(ib.protocol) ? "" : ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", "), wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "", wgSubnet: typeof wg.subnet === "string" ? wg.subnet : "", wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "" });
   }
 
   async function toggleEnable(ib: Inbound) {
@@ -167,12 +181,13 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
       if (f.wgMtu.trim()) wg.mtu = Number(f.wgMtu);
       if (Object.keys(wg).length > 0) raw = { ...(raw ?? {}), wireguard: wg };
     }
+    const network = isNoTransport ? "" : f.network;
     try {
       if (editing) {
-        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network: f.network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) } });
+        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) } });
         toast.success(`Updated ${f.tag}`);
       } else {
-        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network: f.network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) });
+        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) });
         toast.success(`Added ${f.tag}`);
       }
       resetForm();
@@ -222,7 +237,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
             <div className="flex items-center gap-2 min-w-0">
               <span className="font-medium truncate min-w-0">{ib.tag}</span>
               <Badge>{ib.protocol}</Badge>
-              <span className="truncate text-xs text-muted-foreground">:{ib.port} · {ib.network}/{ib.security}</span>
+              <span className="truncate text-xs text-muted-foreground">:{ib.port} · {inboundTransportLabel(ib, udpNative, noTransport)}</span>
               <span className={`h-2 w-2 shrink-0 rounded-full ${ib.enabled ? "bg-success" : "bg-fg-subtle"}`} title={ib.enabled ? "Enabled" : "Disabled"} />
             </div>
             <div className="flex items-center gap-1 shrink-0">
@@ -283,9 +298,14 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
               {networks.map((n) => <option key={n} value={n}>{n}</option>)}
             </Select>
           )}
-          <Select value={f.security} onChange={set("security")}>
-            {securitiesFor(f.protocol).map((s) => <option key={s} value={s}>{s}</option>)}
-          </Select>
+          {!isNoTransport && (
+            <Select value={f.security} onChange={set("security")}>
+              {securitiesFor(f.protocol).map((s) => <option key={s} value={s}>{s}</option>)}
+            </Select>
+          )}
+          {isNoTransport && udpNative.includes(f.protocol) && (
+            <span className="col-span-2 flex items-center rounded-md border border-border/60 px-2 text-xs text-muted-foreground">udp</span>
+          )}
         </div>
         <Input placeholder="SNI (comma-separated, optional)" value={f.sni} onChange={set("sni")} />
         {["ws", "httpupgrade", "http", "h2", "xhttp"].includes(f.network) && (
