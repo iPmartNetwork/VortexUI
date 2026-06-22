@@ -1039,6 +1039,13 @@ func buildWireGuardEndpoint(in domain.Inbound, peers []domain.WireGuardPeer) map
 	} else if lpf, ok := wg["listen_port"].(float64); ok && lpf != 0 {
 		listenPort = int(lpf)
 	}
+	// MTU is configurable via Raw["wireguard"]["mtu"]; default to 1280 when unset.
+	mtu := 1280
+	if m, ok := wg["mtu"].(int); ok && m != 0 {
+		mtu = m
+	} else if mf, ok := wg["mtu"].(float64); ok && mf != 0 {
+		mtu = int(mf)
+	}
 	ep := map[string]any{
 		"type":        "wireguard",
 		"tag":         in.Tag,
@@ -1046,6 +1053,7 @@ func buildWireGuardEndpoint(in domain.Inbound, peers []domain.WireGuardPeer) map
 		"address":     []string{serverAddr},
 		"private_key": privateKey,
 		"listen_port": listenPort,
+		"mtu":         mtu,
 	}
 	var ps []map[string]any
 	for _, p := range peers {
