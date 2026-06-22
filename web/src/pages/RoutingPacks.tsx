@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trash2, Pencil, CheckCircle2, Server } from "lucide-react";
+import { Trash2, Pencil, CheckCircle2, Server, Copy } from "lucide-react";
 import {
   useApplyRoutingPack,
   useCreateRoutingPack,
@@ -77,17 +77,40 @@ export function RoutingPacks() {
   const setDefault = useSetDefaultRoutingPack();
 
   const [editorOpen, setEditorOpen] = useState(false);
+  // `editing` is the existing custom pack we update on save; null means we're
+  // creating a brand-new pack. `seed` carries the values used to prefill the
+  // form — for a clone it's a deep copy of a (possibly built-in) source pack so
+  // the original is never mutated.
   const [editing, setEditing] = useState<RoutingPack | null>(null);
+  const [seed, setSeed] = useState<RoutingPack | null>(null);
   const [applyFor, setApplyFor] = useState<RoutingPack | null>(null);
 
   const list = packs.data?.packs ?? [];
 
   function openCreate() {
     setEditing(null);
+    setSeed(null);
     setEditorOpen(true);
   }
   function openEdit(p: RoutingPack) {
     setEditing(p);
+    setSeed(p);
+    setEditorOpen(true);
+  }
+  // Clone seeds the create form with a deep copy of `p`'s values (rules and
+  // outbounds included) and a "(custom)" name, then switches into create mode
+  // so Save produces a NEW editable custom pack via useCreateRoutingPack.
+  function openClone(p: RoutingPack) {
+    const clone: RoutingPack = {
+      ...p,
+      id: "",
+      builtin: false,
+      name: `${p.name} (custom)`,
+      rules: JSON.parse(JSON.stringify(p.rules ?? [])) as PackRoutingRule[],
+      outbounds: p.outbounds ? (JSON.parse(JSON.stringify(p.outbounds)) as unknown[]) : undefined,
+    };
+    setEditing(null);
+    setSeed(clone);
     setEditorOpen(true);
   }
 
@@ -109,6 +132,10 @@ export function RoutingPacks() {
         <Button onClick={openCreate}>{t("common.add")}</Button>
       </PageHeader>
 
+      <p className="-mt-2 text-xs text-fg-muted">
+        Clone a built-in pack to customize its rules (e.g. change the target outbound).
+      </p>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {list.map((p) => (
           <Card key={p.id} className="space-y-3">
@@ -128,6 +155,7 @@ export function RoutingPacks() {
             <div className="flex flex-wrap justify-end gap-1.5 pt-1">
               <Button variant="ghost" size="sm" onClick={() => setApplyFor(p)}><Server size={14} /> Apply</Button>
               <Button variant="ghost" size="sm" onClick={() => makeDefault(p)}><CheckCircle2 size={14} /> Default</Button>
+              <Button variant="ghost" size="sm" onClick={() => openClone(p)}><Copy size={14} /> Clone</Button>
               {!p.builtin && (
                 <>
                   <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Pencil size={14} /></Button>
@@ -144,7 +172,8 @@ export function RoutingPacks() {
 
       <PackEditor
         open={editorOpen}
-        pack={editing}
+        seed={seed}
+        isEdit={!!editing}
         onClose={() => setEditorOpen(false)}
         onSubmit={async (body) => {
           if (editing) {
@@ -176,13 +205,15 @@ export function RoutingPacks() {
 
 function PackEditor({
   open,
-  pack,
+  seed,
+  isEdit,
   onClose,
   onSubmit,
   pending,
 }: {
   open: boolean;
-  pack: RoutingPack | null;
+  seed: RoutingPack | null;
+  isEdit: boolean;
   onClose: () => void;
   onSubmit: (body: RoutingPackBody) => void | Promise<void>;
   pending: boolean;
@@ -192,15 +223,19 @@ function PackEditor({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [rules, setRules] = useState<RuleForm[]>([emptyRule]);
+  // Preserve any pack-level outbounds (e.g. a built-in's warp outbound) so a
+  // cloned/edited pack keeps them on save even though they aren't edited here.
+  const [outbounds, setOutbounds] = useState<unknown[] | undefined>(undefined);
 
   // Re-seed the form whenever the modal opens for a new/different pack.
   useEffect(() => {
     if (!open) return;
-    setName(pack?.name ?? "");
-    setDescription(pack?.description ?? "");
-    setCategory(pack?.category ?? "");
-    setRules(pack && pack.rules.length ? pack.rules.map(ruleToForm) : [{ ...emptyRule }]);
-  }, [open, pack]);
+    setName(seed?.name ?? "");
+    setDescription(seed?.description ?? "");
+    setCategory(seed?.category ?? "");
+    setRules(seed && seed.rules.length ? seed.rules.map(ruleToForm) : [{ ...emptyRule }]);
+    setOutbounds(seed?.outbounds);
+  }, [open, seed]);
 
   function updateRule(idx: number, field: keyof RuleForm, value: string) {
     setRules((rs) => rs.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
@@ -219,12 +254,13 @@ function PackEditor({
       description,
       category,
       rules: rules.filter((r) => r.target.trim()).map(formToRule),
+      ...(outbounds ? { outbounds } : {}),
     };
     onSubmit(body);
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={pack ? `Edit ${pack.name}` : "New Routing Pack"} className="max-w-2xl">
+    <Modal open={open} onClose={onClose} title={isEdit && seed ? `Edit ${seed.name}` : "New Routing Pack"} className="max-w-2xl">
       <form onSubmit={submit} className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -266,7 +302,7 @@ function PackEditor({
 
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
-          <Button type="submit" disabled={pending || !name}>{pack ? t("common.save") : t("common.create")}</Button>
+          <Button type="submit" disabled={pending || !name}>{isEdit ? t("common.save") : t("common.create")}</Button>
         </div>
       </form>
     </Modal>
