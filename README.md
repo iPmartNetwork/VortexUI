@@ -20,7 +20,7 @@
 
   <br />
   
-  [Features](#-features) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+  [Features](#-features) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 </div>
 
 ---
@@ -42,6 +42,7 @@
 - User-centric model (one identity → many protocols)
 - Subscription: auto-detect Clash/sing-box/base64
 - **Self-service portal** (login with sub token, view usage, buy plans, open tickets)
+- **Subscription Hosts** — per-inbound CDN/SNI/host overrides in share links
 - **Family/group subscriptions** (shared data pool)
 - **Smart Quota** — progressive speed reduction instead of hard-cut
 - **Referral system** — invite codes with rewards
@@ -55,6 +56,7 @@
 ### 🌐 Network & Routing
 - Outbounds: freedom/blackhole/dns + proxy chaining
 - **CDN/Relay chain builder** (multi-hop paths)
+- **Smart routing rule packs** (apply to node or embed in subscription)
 - Routing rules: domain/IP/port/protocol matchers
 - **Multi-domain SNI routing** + auto SSL
 - Load balancers with health probing
@@ -79,6 +81,7 @@
 - **Client fingerprint validator** — block curl/Go/Python
 - **Decoy website** — serve fake site to probers
 - **Evasion profiles** (fragment, mux, uTLS, ECH)
+- **Clean-IP scanner** (Cloudflare) and **IP-limit enforcement**
 - WARP+ integration
 - **DNS-over-HTTPS** server (built-in, ad/malware blocking)
 - IP whitelist/blacklist
@@ -111,6 +114,25 @@
 </td>
 </tr>
 </table>
+
+---
+
+## 🆕 What's New in 1.2.3
+
+<div align="center">
+
+**Subscription Hosts · new output formats · smart routing packs · clean-IP scanner · IP-limit enforcement · more protocols**
+
+</div>
+
+| Feature | Description |
+|---------|-------------|
+| **Subscription Hosts** | Marzban-style per-inbound host overrides (address/SNI/Host/path/ALPN/fingerprint/security/fragment/mux) projected into subscription links, with template variables (`{USERNAME}`, `{SERVER_IP}`, …) |
+| **New subscription output formats** | Raw Xray/V2Ray JSON, Outline `ss://`, and plain V2rayN links (`?format=xray\|outline\|links`) |
+| **Smart routing rule packs** | Reusable routing rule sets applied to nodes and/or embedded into Clash/sing-box subscriptions; global + per-user selection |
+| **Clean-IP scanner (Cloudflare)** | Scan and score candidate CDN IPs by latency + loss, SSRF-guarded |
+| **IP-limit enforcement** | Warn / temporary-disable / kill-connections when a user exceeds its device-IP limit (kill applies to Xray; sing-box degrades to temporary disable) |
+| **New protocols** | `socks`, `http`, `naive` (sing-box), `dokodemo` (xray); sing-box hysteria v1, shadowtls, anytls; mKCP transport; per-protocol capability matrix |
 
 ---
 
@@ -211,7 +233,7 @@
 
 </div>
 
-| | VortexUI 1.2 | 3x-ui | Marzban | Hiddify |
+| | VortexUI 1.2.3 | 3x-ui | Marzban | Hiddify |
 |:--|:--:|:--:|:--:|:--:|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |
@@ -246,17 +268,24 @@
 
 | Protocol | Inbound | Outbound | Transport |
 |----------|:-------:|:--------:|:---------:|
-| **VLESS** | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, xHTTP |
-| **VMess** | ✅ | ✅ | TCP, WS, gRPC |
-| **Trojan** | ✅ | ✅ | TCP, WS, gRPC |
-| **Shadowsocks** | ✅ | ✅ | TCP |
-| **SOCKS** | — | ✅ | TCP |
-| **HTTP** | — | ✅ | TCP |
+| **VLESS** | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, xHTTP, mKCP |
+| **VMess** | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, mKCP |
+| **Trojan** | ✅ | ✅ | TCP, WS, gRPC, mKCP |
+| **Shadowsocks** | ✅ | ✅ | TCP (+ SS-2022 multi-user) |
+| **SOCKS** | ✅ | ✅ | TCP |
+| **HTTP** | ✅ | ✅ | TCP |
+| **Naive** | ✅ (sing-box) | — | TCP/TLS |
+| **Dokodemo** | ✅ (xray) | — | TCP/UDP |
 | **Hysteria2** | ✅ (sing-box) | — | UDP |
+| **Hysteria (v1)** | ✅ (sing-box) | — | UDP |
 | **TUIC** | ✅ (sing-box) | — | UDP |
+| **ShadowTLS** | ✅ (sing-box) | — | TCP |
+| **AnyTLS** | ✅ (sing-box) | — | TCP |
 | **WireGuard** | ✅ | — | UDP |
 
 </div>
+
+**Subscription output:** base64 · Clash/Clash.Meta · sing-box · Xray JSON · Outline · plain links (auto-detected by client).
 
 **Security layers:** None, TLS, REALITY (with built-in scanner)
 
