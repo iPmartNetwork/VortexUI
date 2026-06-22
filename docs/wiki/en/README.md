@@ -70,6 +70,8 @@ release yet, with **17 major features** and **24 UX improvements**.
 | [Protocols](13-protocols-config.md) | VLESS, VMess, Trojan, SS, Hysteria2, TUIC, WireGuard |
 | [Operations](14-operations-maintenance.md) | HTTPS, SSE, GeoIP, monitoring, scaling |
 | [Troubleshooting](15-troubleshooting-faq.md) | Common issues, FAQ, debug tips |
+| [v1.2.0 Features](16-v120-features.md) | Portal, scanner, smart quota, anti-censorship suite |
+| [v1.2.3 Features](17-v123-features.md) | Subscription hosts, new sub formats, routing packs, clean-IP scanner, IP-limit, new protocols |
 
 ---
 

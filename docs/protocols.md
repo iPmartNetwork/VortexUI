@@ -9,6 +9,7 @@ JSON automatically.
 
 ## Table of Contents
 
+- [Protocol Capability Matrix](#protocol-capability-matrix)
 - [VLESS](#vless)
   - [VLESS + TCP + REALITY](#vless--tcp--reality)
   - [VLESS + WebSocket + TLS](#vless--websocket--tls)
@@ -30,6 +31,61 @@ JSON automatically.
 - [TUIC](#tuic)
 - [Outbound Examples](#outbound-examples)
 - [Routing Examples](#routing-examples)
+
+---
+
+## Protocol Capability Matrix
+
+VortexUI runs on two interchangeable cores — **Xray-core** and **sing-box** — and the
+available protocols, transports, and security layers differ per core. The panel exposes
+this as a live **per-protocol capability matrix** (`GET /api/capabilities`), and that
+matrix is the **single source of truth**: the inbound editor only offers the
+protocol/transport/security combinations the selected node's core actually supports.
+The tables below mirror it for v1.2.3.
+
+### Xray-core
+
+| Capability | Supported values |
+|------------|------------------|
+| Inbound protocols | `vless`, `vmess`, `trojan`, `shadowsocks` (+ SS-2022 multi-user), `socks`, `http`, `dokodemo` |
+| Stream transports | `tcp`, `ws`, `grpc`, `httpupgrade`, `http`/`h2`, `xhttp`, `mkcp` (mKCP) |
+| Security | `none`, `tls`, `reality` |
+
+**Notes:**
+
+- **TLS** accepts an `alpn` list (e.g. `h2`, `http/1.1`) for negotiation.
+- **TCP** transport supports a header type of `none` or `http` (HTTP camouflage).
+- **xHTTP** supports a `mode` selector (`auto`, `packet-up`, `stream-up`, `stream-one`).
+- **REALITY** is available on raw `tcp` only (typically with `xtls-rprx-vision` flow).
+
+### sing-box
+
+| Capability | Supported values |
+|------------|------------------|
+| Inbound protocols | `vless`, `vmess`, `trojan`, `shadowsocks`, `hysteria2`, `tuic`, `wireguard`, `hysteria` (v1), `shadowtls`, `anytls`, `socks`, `http`, `naive` |
+| Stream transports | `tcp`, `ws`, `grpc`, `httpupgrade`, `http`/`h2`, `quic` |
+| Security | `none`, `tls`, `reality` |
+
+**Notes:**
+
+- UDP-native protocols (`hysteria2`, `tuic`, `hysteria`, `wireguard`) manage their own
+  transport and do not take a stream transport setting.
+
+### No-transport / plaintext protocols
+
+A few protocols do **not** carry a stream transport at all — they are point-to-point or
+manage their own framing:
+
+| Protocol | Core | Transport | Security |
+|----------|------|-----------|----------|
+| `socks` | both | none (raw TCP) | plaintext |
+| `http` | both | none (raw TCP) | plaintext |
+| `naive` | sing-box | none | **TLS mandatory** |
+| `dokodemo` | xray | none (raw TCP/UDP) | plaintext |
+
+`socks` and `http` are **plaintext** inbounds (no TLS) — use them only on trusted
+networks or behind a local relay. `naive` **mandates TLS**. `dokodemo` is a transparent
+port-forward/destination inbound and carries no stream settings.
 
 ---
 

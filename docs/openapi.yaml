@@ -22,6 +22,11 @@ tags:
   - name: Admins
   - name: Roles
   - name: Subscription
+  - name: Subscription Hosts
+  - name: Routing Packs
+  - name: Clean IP
+  - name: IP Limit
+  - name: Capabilities
 
 components:
   securitySchemes:
@@ -172,6 +177,95 @@ components:
           items:
             type: string
             enum: [user:read, user:write, node:read, node:write, inbound:read, inbound:write, admin:manage, system:read]
+
+    SubHost:
+      type: object
+      description: >
+        Per-inbound subscription host override (Marzban-style). Lets the link
+        rendered into a user's subscription advertise a different address / SNI /
+        Host header / path / transport security than the raw inbound, without
+        touching the live core config. String fields support template variables
+        (e.g. `{USERNAME}`, `{SERVER_IP}`, `{SERVER_PORT}`, `{PROTOCOL}`).
+      properties:
+        id: {type: string, format: uuid}
+        inbound_id: {type: string, format: uuid}
+        remark: {type: string, description: 'display/remark template, e.g. "{USERNAME} · DE"'}
+        address: {type: string, description: override host/IP advertised to clients}
+        port: {type: integer, description: override port (0 = inherit inbound port)}
+        sni: {type: string}
+        host: {type: string, description: Host header override}
+        path: {type: string}
+        alpn: {type: string, description: 'comma-separated, e.g. "h2,http/1.1"'}
+        fingerprint: {type: string, description: 'uTLS fingerprint, e.g. chrome'}
+        security: {type: string, enum: [inbound_default, none, tls, reality], description: 'transport security; inbound_default keeps the inbound setting'}
+        allow_insecure: {type: boolean}
+        mux_enable: {type: boolean}
+        fragment: {type: string, description: 'fragment spec, e.g. "1,40-60,30-50"'}
+        priority: {type: integer, description: ascending order within an inbound}
+        enabled: {type: boolean}
+    RoutingPack:
+      type: object
+      description: >
+        Reusable smart routing rule set (a named collection of routing rules) that
+        can be applied to nodes or embedded into Clash/sing-box subscriptions. A
+        pack can be the global default and/or assigned per user.
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        description: {type: string}
+        is_default: {type: boolean}
+        rules: {type: array, items: {$ref: '#/components/schemas/RoutingRule'}}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CleanIPResult:
+      type: object
+      description: Scored result of a clean-IP (Cloudflare CDN) scan.
+      properties:
+        ip: {type: string}
+        latency_ms: {type: integer}
+        loss_pct: {type: number}
+        score: {type: number}
+        reachable: {type: boolean}
+        scanned_at: {type: string, format: date-time}
+    IPLimitPolicy:
+      type: object
+      description: >
+        Account-sharing / device-limit enforcement policy. When a user exceeds
+        their concurrent IP/device cap the chosen action is taken (kill_connections
+        is Xray-only; sing-box degrades to disable_temporarily).
+      properties:
+        enabled: {type: boolean}
+        action: {type: string, enum: [warn, disable_temporarily, kill_connections]}
+        alert_cooldown: {type: integer, description: seconds between repeated alerts}
+        restore_after: {type: integer, description: seconds before a temporarily disabled user is restored}
+    IPLimitEvent:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        username: {type: string}
+        ip_count: {type: integer}
+        action: {type: string, enum: [warn, disable_temporarily, kill_connections]}
+        ips: {type: array, items: {type: string}}
+        created_at: {type: string, format: date-time}
+    Capabilities:
+      type: object
+      description: >
+        Per-core capability matrix — the single source of truth for which
+        protocol/transport/security combinations a core supports. Keyed by core
+        name (`xray`, `singbox`).
+      additionalProperties:
+        type: object
+        properties:
+          protocols: {type: array, items: {type: string}}
+          transports: {type: array, items: {type: string}}
+          securities: {type: array, items: {type: string}}
+          udp_native: {type: array, items: {type: string}, description: protocols that manage their own transport}
+          no_transport: {type: array, items: {type: string}, description: protocols that carry no stream transport}
+          protocol_securities:
+            type: object
+            additionalProperties: {type: array, items: {type: string}}
+            description: allowed security layers per protocol
 
   responses:
     Unauthorized: {description: missing/invalid token, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
@@ -826,12 +920,15 @@ paths:
       summary: Fetch a user's subscription (public, token-authenticated)
       description: >
         Response format adapts to the client's User-Agent (Clash YAML, sing-box
-        JSON, or base64 share links) and can be forced with `?format=`. Unhealthy
-        nodes are pruned. Sets `Subscription-Userinfo`, `Profile-Title`, and
-        `Profile-Update-Interval` headers. Enforces HWID allowlist / device limit.
+        JSON, or base64 share links) and can be forced with `?format=`. In
+        addition to `base64`, `clash`, and `singbox`, v1.2.3 adds `xray`
+        (raw Xray/V2Ray JSON), `outline` (`ss://` list), and `links` (plain
+        V2rayN share links). Unhealthy nodes are pruned. Sets
+        `Subscription-Userinfo`, `Profile-Title`, and `Profile-Update-Interval`
+        headers. Enforces HWID allowlist / device limit.
       parameters:
         - {name: token, in: path, required: true, schema: {type: string}}
-        - {name: format, in: query, schema: {type: string, enum: [clash, singbox, base64]}}
+        - {name: format, in: query, schema: {type: string, enum: [base64, clash, singbox, xray, outline, links]}}
         - {name: X-Device-Id, in: header, schema: {type: string}, description: device identifier for device-limit enforcement}
       responses:
         "200":
@@ -842,3 +939,210 @@ paths:
             application/json: {schema: {type: string}}
         "403": {description: device not authorized / device limit reached}
         "404": {description: unknown token}
+
+  /api/sub-hosts:
+    get:
+      tags: [Subscription Hosts]
+      summary: List subscription host overrides (perm inbound:read)
+      parameters:
+        - {name: inbound_id, in: query, schema: {type: string, format: uuid}, description: filter to one inbound}
+      responses:
+        "200": {description: hosts in priority order, content: {application/json: {schema: {type: object, properties: {hosts: {type: array, items: {$ref: '#/components/schemas/SubHost'}}}}}}}
+        "403": {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [Subscription Hosts]
+      summary: Create a subscription host override (perm inbound:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/SubHost'}}}
+      responses:
+        "201": {description: created, content: {application/json: {schema: {type: object, properties: {host: {$ref: '#/components/schemas/SubHost'}}}}}}
+        "400": {description: validation error}
+  /api/sub-hosts/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    put:
+      tags: [Subscription Hosts]
+      summary: Update a subscription host override (perm inbound:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/SubHost'}}}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {host: {$ref: '#/components/schemas/SubHost'}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Subscription Hosts]
+      summary: Delete a subscription host override (perm inbound:write)
+      responses:
+        "204": {description: deleted}
+        "404": {$ref: '#/components/responses/NotFound'}
+  /api/sub-hosts/reorder:
+    post:
+      tags: [Subscription Hosts]
+      summary: Reorder subscription host overrides (perm inbound:write)
+      description: Sets the ascending priority of hosts (typically within one inbound) from the supplied ordered id list.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                inbound_id: {type: string, format: uuid}
+                ids: {type: array, items: {type: string, format: uuid}, description: host ids in desired order}
+      responses:
+        "200": {description: reordered, content: {application/json: {schema: {type: object, properties: {hosts: {type: array, items: {$ref: '#/components/schemas/SubHost'}}}}}}}
+        "400": {description: validation error}
+
+  /api/routing-packs:
+    get:
+      tags: [Routing Packs]
+      summary: List smart routing rule packs (perm inbound:read)
+      responses:
+        "200": {description: packs, content: {application/json: {schema: {type: object, properties: {packs: {type: array, items: {$ref: '#/components/schemas/RoutingPack'}}}}}}}
+    post:
+      tags: [Routing Packs]
+      summary: Create a routing pack (perm inbound:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RoutingPack'}}}
+      responses:
+        "201": {description: created, content: {application/json: {schema: {type: object, properties: {pack: {$ref: '#/components/schemas/RoutingPack'}}}}}}
+        "400": {description: validation error}
+  /api/routing-packs/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    put:
+      tags: [Routing Packs]
+      summary: Update a routing pack (perm inbound:write)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RoutingPack'}}}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {type: object, properties: {pack: {$ref: '#/components/schemas/RoutingPack'}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Routing Packs]
+      summary: Delete a routing pack (perm inbound:write)
+      responses:
+        "204": {description: deleted}
+        "404": {$ref: '#/components/responses/NotFound'}
+  /api/routing-packs/apply:
+    post:
+      tags: [Routing Packs]
+      summary: Apply a routing pack to a node + resync (perm inbound:write)
+      description: Replaces the target node's routing rules with the pack's rules and resyncs its core.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [node_id, pack_id]
+              properties:
+                node_id: {type: string, format: uuid}
+                pack_id: {type: string, format: uuid}
+      responses:
+        "200": {description: applied, content: {application/json: {schema: {type: object, properties: {applied: {type: integer, description: rules applied}, warning: {type: string}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+  /api/routing-packs/default:
+    put:
+      tags: [Routing Packs]
+      summary: Set the global default routing pack (perm inbound:write)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pack_id]
+              properties:
+                pack_id: {type: string, format: uuid}
+      responses:
+        "200": {description: default set, content: {application/json: {schema: {type: object, properties: {pack: {$ref: '#/components/schemas/RoutingPack'}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+  /api/routing-packs/user/{user_id}:
+    parameters: [{name: user_id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [Routing Packs]
+      summary: Get the routing pack assigned to a user (perm inbound:read)
+      responses:
+        "200": {description: assignment, content: {application/json: {schema: {type: object, properties: {pack: {$ref: '#/components/schemas/RoutingPack', nullable: true}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Routing Packs]
+      summary: Assign a routing pack to a user (perm inbound:write)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pack_id]
+              properties:
+                pack_id: {type: string, format: uuid}
+      responses:
+        "200": {description: assigned, content: {application/json: {schema: {type: object, properties: {pack: {$ref: '#/components/schemas/RoutingPack'}}}}}}
+        "404": {$ref: '#/components/responses/NotFound'}
+
+  /api/clean-ip/scan:
+    post:
+      tags: [Clean IP]
+      summary: Scan candidate clean IPs (perm node:write)
+      description: >
+        Probes the supplied Cloudflare/CDN candidate IPs for latency and packet
+        loss and scores them. Outbound targets are validated against SSRF (private
+        / link-local ranges are rejected).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ips]
+              properties:
+                ips: {type: array, items: {type: string}, description: candidate IPv4/IPv6 addresses}
+                port: {type: integer, description: 'TCP port to probe (default 443)'}
+      responses:
+        "200": {description: scan results, content: {application/json: {schema: {type: object, properties: {results: {type: array, items: {$ref: '#/components/schemas/CleanIPResult'}}}}}}}
+        "400": {description: validation / SSRF rejection}
+  /api/clean-ip/results:
+    get:
+      tags: [Clean IP]
+      summary: Latest clean-IP scan results (perm node:read)
+      responses:
+        "200": {description: results (best score first), content: {application/json: {schema: {type: object, properties: {results: {type: array, items: {$ref: '#/components/schemas/CleanIPResult'}}}}}}}
+
+  /api/ip-limit/policy:
+    get:
+      tags: [IP Limit]
+      summary: Get the IP-limit enforcement policy (perm system:read)
+      responses:
+        "200": {description: policy, content: {application/json: {schema: {$ref: '#/components/schemas/IPLimitPolicy'}}}}
+    put:
+      tags: [IP Limit]
+      summary: Update the IP-limit enforcement policy (perm admin:manage)
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/IPLimitPolicy'}}}
+      responses:
+        "200": {description: updated, content: {application/json: {schema: {$ref: '#/components/schemas/IPLimitPolicy'}}}}
+        "400": {description: validation error}
+  /api/ip-limit/events:
+    get:
+      tags: [IP Limit]
+      summary: Recent IP-limit enforcement events (perm system:read)
+      parameters:
+        - {name: limit, in: query, schema: {type: integer, default: 100}}
+      responses:
+        "200": {description: events (newest first), content: {application/json: {schema: {type: object, properties: {events: {type: array, items: {$ref: '#/components/schemas/IPLimitEvent'}}}}}}}
+
+  /api/capabilities:
+    get:
+      tags: [Capabilities]
+      summary: Per-core protocol/transport/security capability matrix (perm inbound:read)
+      description: >
+        Returns the single source of truth for what each core supports. The
+        inbound editor uses this to constrain protocol / transport / security
+        choices to the selected node's core.
+      responses:
+        "200": {description: capability matrix, content: {application/json: {schema: {$ref: '#/components/schemas/Capabilities'}}}}

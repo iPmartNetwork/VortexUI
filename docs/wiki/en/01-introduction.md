@@ -22,7 +22,7 @@ identity provides access to all assigned protocols across all nodes simultaneous
 
 ---
 
-## Core Capabilities (v1.2.0)
+## Core Capabilities (v1.2.3)
 
 ### Engine & Infrastructure
 
@@ -191,14 +191,28 @@ as Clash, sing-box, or base64.
 
 | Protocol | Inbound | Outbound | Transport | Security |
 |----------|:-------:|:--------:|-----------|----------|
-| VLESS | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, xHTTP | None, TLS, REALITY |
-| VMess | ✅ | ✅ | TCP, WS, gRPC | None, TLS |
-| Trojan | ✅ | ✅ | TCP, WS, gRPC | TLS, REALITY |
-| Shadowsocks | ✅ | ✅ | TCP | None |
-| SOCKS / HTTP | — | ✅ | TCP | — |
+| VLESS | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, xHTTP, mKCP | None, TLS, REALITY |
+| VMess | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, mKCP | None, TLS |
+| Trojan | ✅ | ✅ | TCP, WS, gRPC, mKCP | TLS, REALITY |
+| Shadowsocks | ✅ | ✅ | TCP (+ SS-2022 multi-user) | None |
+| SOCKS | ✅ | ✅ | TCP (no transport) | plaintext |
+| HTTP | ✅ | ✅ | TCP (no transport) | plaintext |
+| Naive | ✅ (sing-box) | — | — | TLS (mandatory) |
+| Dokodemo | ✅ (xray) | — | — | plaintext |
 | Hysteria2 | ✅ (sing-box) | — | UDP | TLS |
+| Hysteria (v1) | ✅ (sing-box) | — | UDP | TLS |
 | TUIC | ✅ (sing-box) | — | UDP | TLS |
+| ShadowTLS | ✅ (sing-box) | — | TCP | TLS |
+| AnyTLS | ✅ (sing-box) | — | TCP | TLS |
 | WireGuard | ✅ | — | UDP | Native |
+
+**Subscription output formats:** `base64`, `clash`, `singbox`, `xray`, `outline`,
+`links` (auto-detected from the client User-Agent, or forced with `?format=`).
+
+!!! note
+    Available protocols/transports/security differ per core (Xray vs sing-box). The
+    panel publishes a live per-protocol capability matrix as the single source of truth —
+    see the [v1.2.3 Features](17-v123-features.md) guide and [Protocols](13-protocols-config.md).
 
 ---
 
