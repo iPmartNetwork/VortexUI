@@ -11,7 +11,7 @@ import { useI18n } from "@/i18n/i18n";
 import { JsonCodeEditor } from "@/components/JsonCodeEditor";
 import { DEFAULT_OUTBOUND_TEMPLATE, parseShareLink } from "@/lib/outbound-uri";
 
-const PROTOCOLS = ["freedom", "blackhole", "dns", "vless", "vmess", "trojan", "shadowsocks", "socks", "http"];
+const PROTOCOLS = ["freedom", "blackhole", "dns", "vless", "vmess", "trojan", "shadowsocks", "socks", "http", "wireguard"];
 
 export function Outbounds() {
   const { t } = useI18n();
@@ -25,9 +25,10 @@ export function Outbounds() {
   const confirm = useConfirm();
   const toast = useToast();
 
-  const [f, setF] = useState({ tag: "", protocol: "freedom", address: "", port: "", uuid: "", password: "", method: "aes-128-gcm", security: "none", sni: "" });
+  const [f, setF] = useState({ tag: "", protocol: "freedom", address: "", port: "", uuid: "", password: "", method: "aes-128-gcm", security: "none", sni: "", wgPrivateKey: "", wgAddress: "", wgEndpoint: "", wgPublicKey: "", wgReserved: "", wgMtu: "" });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
-  const proxy = !["freedom", "blackhole", "dns"].includes(f.protocol);
+  const isWireguard = f.protocol === "wireguard";
+  const proxy = !["freedom", "blackhole", "dns", "wireguard"].includes(f.protocol);
 
   const [tab, setTab] = useState<"basics" | "json">("basics");
   const [jsonText, setJsonText] = useState("");
@@ -97,11 +98,36 @@ export function Outbounds() {
     setJsonText("");
     setJsonErr("");
     setImportUri("");
-    setF({ tag: "", protocol: "freedom", address: "", port: "", uuid: "", password: "", method: "aes-128-gcm", security: "none", sni: "" });
+    setF({ tag: "", protocol: "freedom", address: "", port: "", uuid: "", password: "", method: "aes-128-gcm", security: "none", sni: "", wgPrivateKey: "", wgAddress: "", wgEndpoint: "", wgPublicKey: "", wgReserved: "", wgMtu: "" });
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (f.protocol === "wireguard") {
+      const raw: { wireguard: Record<string, unknown> } = {
+        wireguard: {
+          private_key: f.wgPrivateKey.trim(),
+          address: f.wgAddress.split(",").map((s) => s.trim()).filter(Boolean),
+        },
+      };
+      if (f.wgEndpoint.trim()) raw.wireguard.endpoint = f.wgEndpoint.trim();
+      if (f.wgPublicKey.trim()) raw.wireguard.public_key = f.wgPublicKey.trim();
+      if (f.wgReserved.trim()) {
+        const reserved = f.wgReserved.split(",").map((s) => Number(s.trim())).filter((n) => !Number.isNaN(n));
+        if (reserved.length === 3) raw.wireguard.reserved = reserved;
+      }
+      if (f.wgMtu.trim()) raw.wireguard.mtu = Number(f.wgMtu);
+      if (editing) {
+        await update.mutateAsync({ id: editing.id, body: { protocol: "wireguard", raw, enabled: true } });
+        toast.success(`${editing.tag} updated`);
+        setEditing(null);
+      } else {
+        await create.mutateAsync({ node_id: node, tag: f.tag, protocol: "wireguard", raw, enabled: true });
+        toast.success(`${f.tag} ✓`);
+      }
+      closeModal();
+      return;
+    }
     if (editing) {
       await update.mutateAsync({
         id: editing.id,
@@ -125,7 +151,18 @@ export function Outbounds() {
   }
 
   function edit(o: Outbound) {
-    setF({ tag: o.tag, protocol: o.protocol, address: o.address, port: String(o.port || ""), uuid: o.uuid, password: o.password, method: o.method || "aes-128-gcm", security: o.security || "none", sni: o.sni });
+    const wg = (o.raw?.wireguard ?? {}) as Record<string, unknown>;
+    const wgAddr = Array.isArray(wg.address) ? (wg.address as unknown[]).map((a) => String(a)).join(", ") : "";
+    const wgReserved = Array.isArray(wg.reserved) ? (wg.reserved as unknown[]).map((r) => String(r)).join(",") : "";
+    setF({
+      tag: o.tag, protocol: o.protocol, address: o.address, port: String(o.port || ""), uuid: o.uuid, password: o.password, method: o.method || "aes-128-gcm", security: o.security || "none", sni: o.sni,
+      wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "",
+      wgAddress: wgAddr,
+      wgEndpoint: typeof wg.endpoint === "string" ? wg.endpoint : "",
+      wgPublicKey: typeof wg.public_key === "string" ? wg.public_key : "",
+      wgReserved,
+      wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "",
+    });
     setJsonText(o.raw ? JSON.stringify(o.raw, null, 2) : "");
     setJsonErr("");
     setTab("basics");
@@ -191,6 +228,29 @@ export function Outbounds() {
                 {PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
               </Select>
             </div>
+            {isWireguard && (
+              <>
+                <Input placeholder="WireGuard private key" value={f.wgPrivateKey} onChange={set("wgPrivateKey")} required dir="ltr" className="font-mono text-xs" />
+                <Input placeholder="Local addresses (comma-separated, e.g. 172.16.0.2/32, fd01::5/128)" value={f.wgAddress} onChange={set("wgAddress")} required dir="ltr" className="font-mono text-xs" />
+                <Input placeholder="Endpoint (optional, default engage.cloudflareclient.com:2408)" value={f.wgEndpoint} onChange={set("wgEndpoint")} dir="ltr" className="font-mono text-xs" />
+                <Input placeholder="Peer public key (optional, default Cloudflare WARP)" value={f.wgPublicKey} onChange={set("wgPublicKey")} dir="ltr" className="font-mono text-xs" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Reserved (optional, 3 comma-separated ints, e.g. 171,48,225)" value={f.wgReserved} onChange={set("wgReserved")} dir="ltr" className="font-mono text-xs" />
+                  <Input placeholder="MTU (optional, default 1280)" value={f.wgMtu} onChange={set("wgMtu")} inputMode="numeric" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setF((s) => ({ ...s, wgEndpoint: "engage.cloudflareclient.com:2408", wgPublicKey: "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=" }))}
+                  >
+                    WARP defaults
+                  </Button>
+                  <span className="text-xs text-fg-muted">WARP needs a registered key — paste private_key/address/reserved from warp-cli.</span>
+                </div>
+              </>
+            )}
             {proxy && (
               <>
                 <div className="grid grid-cols-2 gap-2">
