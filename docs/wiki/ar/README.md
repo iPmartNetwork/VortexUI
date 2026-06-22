@@ -17,6 +17,7 @@
 | دليل اللوحة | [لوحة المعلومات](04-dashboard.md) · [المستخدمون](05-user-management.md) · [العقد](06-node-management.md) · [الشبكة](07-network-policy.md) |
 | الإدارة | [الأمان](08-security-administration.md) · [الخطط](09-plans-payments.md) · [الإشعارات](10-notifications.md) · [الإعدادات](11-settings-backup.md) |
 | مرجع تقني | [API](12-api-reference.md) · [البروتوكولات](13-protocols-config.md) · [العمليات](14-operations-maintenance.md) · [FAQ](15-troubleshooting-faq.md) |
+| جديد الإصدار | [ميزات v1.2.0](16-v120-features.md) · [ميزات v1.2.3](17-v123-features.md) |
 
 ## البنية
 
