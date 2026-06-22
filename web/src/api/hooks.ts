@@ -2,6 +2,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import type { CreateUserInput, ListUsersResponse, Node, User } from "./types";
 
+// --- panel version ---
+
+// useVersion fetches the actually running panel build version from the backend
+// (GET /api/version). The value only changes when the binary changes, so it is
+// cached for the whole session.
+export function useVersion() {
+  return useQuery({
+    queryKey: ["version"],
+    queryFn: () => api<{ version: string }>("/api/version"),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    select: (d) => d.version,
+  });
+}
+
 // --- users ---
 
 export function useUsers(params: { search?: string; status?: string; limit?: number; offset?: number }) {

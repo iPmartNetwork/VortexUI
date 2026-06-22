@@ -25,6 +25,7 @@ import (
 
 // Handlers bundles the service dependencies the HTTP routes need.
 type Handlers struct {
+	Version   string // panel build version, surfaced by GET /api/version
 	Auth      *service.AuthService
 	Users     *service.UserService
 	Sub       *service.SubscriptionService

@@ -28,6 +28,18 @@ type SystemInfo struct {
 	DiskPercent float64 `json:"disk_percent"` // host disk utilisation
 }
 
+// VersionInfo is returned by GET /api/version so the UI can show the actually
+// running build instead of a hardcoded constant.
+type VersionInfo struct {
+	Version string `json:"version"`
+}
+
+// GetVersion reports the panel build version (injected at build time via
+// -ldflags "-X main.version=..."). The UI footer consumes it.
+func (h *Handlers) GetVersion(c echo.Context) error {
+	return c.JSON(http.StatusOK, VersionInfo{Version: h.Version})
+}
+
 // GetSystem reports live panel process information for the dashboard system card.
 func (h *Handlers) GetSystem(c echo.Context) error {
 	var m runtime.MemStats

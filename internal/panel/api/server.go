@@ -13,6 +13,7 @@ import (
 
 // Deps are the dependencies needed to build the HTTP API.
 type Deps struct {
+	Version    string // panel build version, threaded to Handlers for GET /api/version
 	Handlers   *Handlers
 	APITokens  *APITokenHandlers
 	Portal     *PortalHandlers
@@ -54,6 +55,11 @@ func NewRouter(d Deps) *echo.Echo {
 	e.Use(middleware.RequestID())
 	e.Use(middleware.Logger())
 
+	// Thread the build version into the handlers so GET /api/version can report it.
+	if d.Handlers != nil {
+		d.Handlers.Version = d.Version
+	}
+
 	api := e.Group("/api")
 	api.GET("/health", func(c echo.Context) error { return c.JSON(200, echo.Map{"status": "ok"}) }) // Throttle login by client IP to blunt credential brute-forcing.
 	api.POST("/login", d.Handlers.Login, RateLimit(d.Limiter, 10, time.Minute, func(c echo.Context) string {
@@ -79,6 +85,8 @@ func NewRouter(d Deps) *echo.Echo {
 	authed.GET("/logs", d.Handlers.GetLogs, RequirePermission(d.Auth, domain.PermSystemRead))
 	// Live system info (process/memory).
 	authed.GET("/system", d.Handlers.GetSystem, RequirePermission(d.Auth, domain.PermSystemRead))
+	// Panel build version (for the UI footer).
+	authed.GET("/version", d.Handlers.GetVersion, RequirePermission(d.Auth, domain.PermSystemRead))
 
 	// Live connection monitor.
 	authed.GET("/monitor/connections", d.Monitor.GetLiveConnections, RequirePermission(d.Auth, domain.PermSystemRead))
