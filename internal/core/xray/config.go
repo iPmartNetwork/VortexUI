@@ -12,6 +12,7 @@ import (
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/core/reality"
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/warp"
 )
 
 // APIInboundTag is the reserved inbound Xray exposes its gRPC API on. The driver
@@ -145,6 +146,16 @@ func buildOutbound(o domain.Outbound) (outbound, error) {
 			server["users"] = []map[string]any{{"user": o.Username, "pass": o.Password}}
 		}
 		ob.Settings = mustRaw(map[string]any{"servers": []map[string]any{server}})
+	case domain.OutWireguard:
+		// WireGuard/WARP: build the native xray wireguard outbound from the params
+		// persisted in Raw["wireguard"]. cfg.XrayOutbound returns the full
+		// {tag,protocol,settings} object; we take its "settings" sub-map (the
+		// peers default to Cloudflare's endpoint/public key when unset). No
+		// streamSettings are attached — wireguard carries its own endpoint.
+		cfg := warp.ConfigFromMap(asWireguardMap(o.Raw["wireguard"]))
+		ob.Protocol = "wireguard"
+		ob.Settings = mustRaw(cfg.XrayOutbound(o.Tag)["settings"])
+		return ob, nil
 	default:
 		return outbound{}, fmt.Errorf("unsupported outbound protocol %q", o.Protocol)
 	}
@@ -823,6 +834,14 @@ func rawBool(v any) (bool, bool) {
 		return b, true
 	}
 	return false, false
+}
+
+// asWireguardMap safely coerces Outbound.Raw["wireguard"] (an any) into a
+// map[string]any for warp.ConfigFromMap, returning nil when the value is absent
+// or the wrong shape (ConfigFromMap tolerates a nil map).
+func asWireguardMap(v any) map[string]any {
+	m, _ := v.(map[string]any)
+	return m
 }
 
 func mustRaw(v any) json.RawMessage {	b, err := json.Marshal(v)

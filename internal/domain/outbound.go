@@ -17,12 +17,13 @@ const (
 	OutShadowsocks OutboundProtocol = "shadowsocks"
 	OutSocks       OutboundProtocol = "socks"
 	OutHTTP        OutboundProtocol = "http"
+	OutWireguard   OutboundProtocol = "wireguard" // WireGuard/WARP egress (config in Raw["wireguard"])
 )
 
 // Valid reports whether the protocol is one VortexUI knows how to render.
 func (p OutboundProtocol) Valid() bool {
 	switch p {
-	case OutFreedom, OutBlackhole, OutDNS, OutVMess, OutVLESS, OutTrojan, OutShadowsocks, OutSocks, OutHTTP:
+	case OutFreedom, OutBlackhole, OutDNS, OutVMess, OutVLESS, OutTrojan, OutShadowsocks, OutSocks, OutHTTP, OutWireguard:
 		return true
 	default:
 		return false
@@ -87,5 +88,41 @@ func (o *Outbound) Validate() error {
 	if o.Protocol.NeedsEndpoint() && (o.Address == "" || o.Port == 0) {
 		return errInvalid("outbound %q (%s) requires address and port", o.Tag, o.Protocol)
 	}
+	if o.Protocol == OutWireguard {
+		// WireGuard/WARP carries its endpoint and key material inside
+		// Raw["wireguard"] rather than the address/port + stream path, so validate
+		// that block directly: a non-empty private_key and at least one address.
+		wg, ok := o.Raw["wireguard"].(map[string]any)
+		if !ok {
+			return errInvalid("outbound %q (wireguard) requires a raw.wireguard config", o.Tag)
+		}
+		if pk, _ := wg["private_key"].(string); pk == "" {
+			return errInvalid("outbound %q (wireguard) requires a non-empty private_key", o.Tag)
+		}
+		if !wgHasAddress(wg["address"]) {
+			return errInvalid("outbound %q (wireguard) requires at least one address", o.Tag)
+		}
+	}
 	return nil
+}
+
+// wgHasAddress reports whether a decoded-JSON wireguard "address" value contains
+// at least one non-empty string entry. It accepts both the JSON-decoded []any
+// shape and a native []string.
+func wgHasAddress(v any) bool {
+	switch addrs := v.(type) {
+	case []string:
+		for _, a := range addrs {
+			if a != "" {
+				return true
+			}
+		}
+	case []any:
+		for _, item := range addrs {
+			if a, ok := item.(string); ok && a != "" {
+				return true
+			}
+		}
+	}
+	return false
 }

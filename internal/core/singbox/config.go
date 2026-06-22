@@ -15,6 +15,7 @@ import (
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/core/reality"
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/warp"
 )
 
 // Builder renders core.GeneratedConfig into sing-box native JSON. APIPort is the
@@ -242,6 +243,14 @@ func buildOutbound(o domain.Outbound) (map[string]any, error) {
 			m["username"] = o.Username
 			m["password"] = o.Password
 		}
+	case domain.OutWireguard:
+		// WireGuard/WARP: build from the params persisted in Raw["wireguard"].
+		// SingboxOutbound returns the complete {type:"wireguard",tag,...} map
+		// (peer_public_key/endpoint default to Cloudflare's WARP values when
+		// unset). NOTE: sing-box's WireGuard shape is version-dependent (>=1.11
+		// prefers a top-level `endpoints` entry); rendering it as a
+		// `type:"wireguard"` outbound per internal/warp is acceptable for now.
+		return warp.ConfigFromMap(asWireguardMap(o.Raw["wireguard"])).SingboxOutbound(o.Tag), nil
 	default:
 		return nil, fmt.Errorf("unsupported outbound protocol %q for sing-box", o.Protocol)
 	}
@@ -798,6 +807,14 @@ func rawString(v any) (string, bool) {
 func rawBool(v any) (bool, bool) {
 	b, ok := v.(bool)
 	return b, ok
+}
+
+// asWireguardMap safely coerces Outbound.Raw["wireguard"] (an any) into a
+// map[string]any for warp.ConfigFromMap, returning nil when the value is absent
+// or the wrong shape (ConfigFromMap tolerates a nil map).
+func asWireguardMap(v any) map[string]any {
+	m, _ := v.(map[string]any)
+	return m
 }
 
 // rawStrings coerces a JSON-decoded []any (or []string) of strings into []string.
