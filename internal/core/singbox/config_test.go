@@ -8,6 +8,7 @@ import (
 
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/warp"
 )
 
 type parsedConfig struct {
@@ -1101,5 +1102,54 @@ func TestBuilderRealityNoALPN(t *testing.T) {
 	}
 	if _, ok := tls["reality"]; !ok {
 		t.Errorf("reality block missing: %v", tls)
+	}
+}
+
+// TestBuilderWireguardOutbound verifies a wireguard/WARP outbound renders a
+// sing-box wireguard outbound carrying the tag, private_key and local_address,
+// with peer_public_key defaulting to Cloudflare's WARP key when unset.
+func TestBuilderWireguardOutbound(t *testing.T) {
+	cfg := &core.GeneratedConfig{
+		Outbounds: []domain.Outbound{
+			{Tag: "warp", Protocol: domain.OutWireguard, Enabled: true, Raw: map[string]any{
+				"wireguard": map[string]any{
+					"private_key": "secret-key",
+					"address":     []any{"172.16.0.2/32"},
+					"reserved":    []any{float64(171), float64(48), float64(225)},
+				},
+			}},
+		},
+	}
+	raw, err := Builder{APIPort: 9090}.Build(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var c struct {
+		Outbounds []map[string]any `json:"outbounds"`
+	}
+	if err := json.Unmarshal(raw, &c); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	var wg map[string]any
+	for _, o := range c.Outbounds {
+		if o["tag"] == "warp" {
+			wg = o
+		}
+	}
+	if wg == nil {
+		t.Fatal("warp outbound missing from output")
+	}
+	if wg["type"] != "wireguard" {
+		t.Errorf("type = %v, want wireguard", wg["type"])
+	}
+	if wg["private_key"] != "secret-key" {
+		t.Errorf("private_key = %v, want secret-key", wg["private_key"])
+	}
+	addr, ok := wg["local_address"].([]any)
+	if !ok || len(addr) != 1 || addr[0] != "172.16.0.2/32" {
+		t.Errorf("local_address = %v, want [172.16.0.2/32]", wg["local_address"])
+	}
+	if wg["peer_public_key"] != warp.DefaultPublicKey {
+		t.Errorf("peer_public_key = %v, want Cloudflare default", wg["peer_public_key"])
 	}
 }

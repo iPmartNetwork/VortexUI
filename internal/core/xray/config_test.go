@@ -8,6 +8,7 @@ import (
 
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/warp"
 )
 
 func TestBuilder_RendersValidXrayConfig(t *testing.T) {
@@ -863,5 +864,76 @@ func TestBuilder_XHTTPModeDefault(t *testing.T) {
 	}
 	if x["mode"] != "auto" {
 		t.Errorf("xhttpSettings.mode = %v, want auto (default)", x["mode"])
+	}
+}
+
+// TestBuilder_WireguardOutbound verifies a wireguard/WARP outbound renders as an
+// xray wireguard outbound whose settings carry the secretKey, address and a
+// peers entry. With endpoint/publicKey left unset the peer must default to
+// Cloudflare's WARP endpoint and public key, and the reserved bytes pass through.
+func TestBuilder_WireguardOutbound(t *testing.T) {
+	cfg := &core.GeneratedConfig{
+		Outbounds: []domain.Outbound{
+			{Tag: "warp", Protocol: domain.OutWireguard, Enabled: true, Raw: map[string]any{
+				"wireguard": map[string]any{
+					"private_key": "secret-key",
+					"address":     []any{"172.16.0.2/32", "fd01::1/128"},
+					"reserved":    []any{float64(171), float64(48), float64(225)},
+				},
+			}},
+		},
+	}
+	raw, err := Builder{APIPort: 10085}.Build(cfg)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var r fullRouting
+	if err := json.Unmarshal(raw, &r); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	var wg *struct {
+		Protocol string          `json:"protocol"`
+		Tag      string          `json:"tag"`
+		Settings json.RawMessage `json:"settings"`
+	}
+	for i := range r.Outbounds {
+		if r.Outbounds[i].Tag == "warp" {
+			wg = &r.Outbounds[i]
+		}
+	}
+	if wg == nil {
+		t.Fatal("warp outbound missing from output")
+	}
+	if wg.Protocol != "wireguard" {
+		t.Errorf("protocol = %q, want wireguard", wg.Protocol)
+	}
+
+	var s struct {
+		SecretKey string           `json:"secretKey"`
+		Address   []string         `json:"address"`
+		Reserved  []int            `json:"reserved"`
+		Peers     []map[string]any `json:"peers"`
+	}
+	if err := json.Unmarshal(wg.Settings, &s); err != nil {
+		t.Fatalf("settings parse: %v", err)
+	}
+	if s.SecretKey != "secret-key" {
+		t.Errorf("secretKey = %q, want secret-key", s.SecretKey)
+	}
+	if len(s.Address) != 2 || s.Address[0] != "172.16.0.2/32" {
+		t.Errorf("address = %v, want [172.16.0.2/32 fd01::1/128]", s.Address)
+	}
+	if len(s.Reserved) != 3 || s.Reserved[0] != 171 {
+		t.Errorf("reserved = %v, want [171 48 225]", s.Reserved)
+	}
+	if len(s.Peers) != 1 {
+		t.Fatalf("want 1 peer, got %d", len(s.Peers))
+	}
+	if s.Peers[0]["publicKey"] != warp.DefaultPublicKey {
+		t.Errorf("peer publicKey = %v, want Cloudflare default", s.Peers[0]["publicKey"])
+	}
+	if s.Peers[0]["endpoint"] != warp.DefaultEndpoint {
+		t.Errorf("peer endpoint = %v, want Cloudflare default", s.Peers[0]["endpoint"])
 	}
 }

@@ -28,7 +28,12 @@ type Config struct {
 	Endpoint string `json:"endpoint"` // e.g. "engage.cloudflareclient.com:2408"
 	// LicenseKey is the WARP+ license (optional, for premium routing).
 	LicenseKey string `json:"license_key,omitempty"`
+	// MTU is the WireGuard interface MTU; 0 means use the WARP default (1280).
+	MTU int `json:"mtu,omitempty"`
 }
+
+// defaultMTU is the WARP WireGuard interface MTU used when none is configured.
+const defaultMTU = 1280
 
 // DefaultEndpoint is Cloudflare's WARP engagement server.
 const DefaultEndpoint = "engage.cloudflareclient.com:2408"
@@ -54,7 +59,7 @@ func (c Config) XrayOutbound(tag string) map[string]any {
 		"secretKey": c.PrivateKey,
 		"address":   c.Address,
 		"peers":     peers,
-		"mtu":       1280,
+		"mtu":       c.mtu(),
 	}
 	if len(c.Reserved) == 3 {
 		settings["reserved"] = c.Reserved
@@ -86,12 +91,105 @@ func (c Config) SingboxOutbound(tag string) map[string]any {
 		"private_key":     c.PrivateKey,
 		"peer_public_key": pubKey,
 		"local_address":   c.Address,
-		"mtu":             1280,
+		"mtu":             c.mtu(),
 	}
 	if len(c.Reserved) == 3 {
 		out["reserved"] = fmt.Sprintf("%d,%d,%d", c.Reserved[0], c.Reserved[1], c.Reserved[2])
 	}
 	return out
+}
+
+// ConfigFromMap builds a Config from a generic decoded-JSON map, as produced by
+// unmarshalling Outbound.Raw["wireguard"] (where JSON numbers decode as float64
+// and arrays as []any). It is tolerant of missing keys and mixed numeric types
+// so renderers can construct a Config directly from persisted jsonb without an
+// intermediate typed round-trip.
+func ConfigFromMap(m map[string]any) Config {
+	c := Config{
+		PrivateKey: mapString(m["private_key"]),
+		PublicKey:  mapString(m["public_key"]),
+		Endpoint:   mapString(m["endpoint"]),
+		LicenseKey: mapString(m["license_key"]),
+		Address:    mapStringSlice(m["address"]),
+	}
+	if reserved := mapIntSlice(m["reserved"]); len(reserved) == 3 {
+		c.Reserved = reserved
+	}
+	if mtu, ok := mapInt(m["mtu"]); ok {
+		c.MTU = mtu
+	}
+	return c
+}
+
+// mtu returns the configured WireGuard MTU, falling back to the WARP default
+// when unset (0).
+func (c Config) mtu() int {
+	if c.MTU > 0 {
+		return c.MTU
+	}
+	return defaultMTU
+}
+
+// mapString coerces a decoded-JSON value into a string, returning "" for any
+// non-string (including nil).
+func mapString(v any) string {
+	s, _ := v.(string)
+	return s
+}
+
+// mapStringSlice coerces a decoded-JSON value into a []string. It accepts both a
+// native []string and a []any whose elements are strings (the JSON-decoded
+// shape), dropping non-string entries.
+func mapStringSlice(v any) []string {
+	switch s := v.(type) {
+	case []string:
+		return s
+	case []any:
+		out := make([]string, 0, len(s))
+		for _, item := range s {
+			if str, ok := item.(string); ok {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+// mapIntSlice coerces a decoded-JSON value into a []int. JSON numbers decode as
+// float64, so float64/int/int64 elements are all accepted; non-numeric entries
+// are dropped.
+func mapIntSlice(v any) []int {
+	switch s := v.(type) {
+	case []int:
+		return s
+	case []any:
+		out := make([]int, 0, len(s))
+		for _, item := range s {
+			if n, ok := mapInt(item); ok {
+				out = append(out, n)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+// mapInt coerces a decoded-JSON numeric value into an int, reporting whether a
+// usable number was present.
+func mapInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case float64:
+		return int(n), true
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	default:
+		return 0, false
+	}
 }
 
 // ToJSON serializes the config for storage.
