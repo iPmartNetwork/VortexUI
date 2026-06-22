@@ -17,6 +17,7 @@ Yeni nesil proxy panelini kurun ve yönetin (Xray + sing-box). **Dil seçiciyi**
 | Panel rehberi | [Pano](04-dashboard.md) · [Kullanıcılar](05-user-management.md) · [Node'lar](06-node-management.md) · [Ağ](07-network-policy.md) |
 | Yönetim | [Güvenlik](08-security-administration.md) · [Planlar](09-plans-payments.md) · [Bildirimler](10-notifications.md) · [Ayarlar](11-settings-backup.md) |
 | Teknik referans | [API](12-api-reference.md) · [Protokoller](13-protocols-config.md) · [Operasyonlar](14-operations-maintenance.md) · [SSS](15-troubleshooting-faq.md) |
+| Sürüm yenilikleri | [v1.2.0 Özellikleri](16-v120-features.md) · [v1.2.3 Özellikleri](17-v123-features.md) |
 
 ## Mimari
 
