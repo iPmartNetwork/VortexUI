@@ -165,6 +165,8 @@ func NewRouter(d Deps) *echo.Echo {
 	roles := authed.Group("/roles", RequirePermission(d.Auth, domain.PermAdminManage))
 	roles.GET("", d.Handlers.ListRoles)
 	roles.POST("", d.Handlers.CreateRole)
+	roles.PUT("/:id", d.Handlers.UpdateRole)
+	roles.DELETE("/:id", d.Handlers.DeleteRole)
 
 	// Audit log of mutating admin actions.
 	authed.GET("/audit", d.Handlers.ListAudit, RequirePermission(d.Auth, domain.PermAdminManage))

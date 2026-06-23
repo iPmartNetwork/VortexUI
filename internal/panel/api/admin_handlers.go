@@ -136,6 +136,44 @@ func (h *Handlers) CreateRole(c echo.Context) error {
 	return c.JSON(http.StatusCreated, echo.Map{"role": role})
 }
 
+// UpdateRole edits a permission bundle.
+func (h *Handlers) UpdateRole(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	var req createRoleRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	perms := make([]domain.Permission, len(req.Permissions))
+	for i, p := range req.Permissions {
+		perms[i] = domain.Permission(p)
+	}
+	role, err := h.Admins.UpdateRole(c.Request().Context(), id, req.Name, perms)
+	if errors.Is(err, domain.ErrNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "role not found")
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
+	}
+	return c.JSON(http.StatusOK, echo.Map{"role": role})
+}
+
+// DeleteRole removes a role.
+func (h *Handlers) DeleteRole(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if err := h.Admins.DeleteRole(c.Request().Context(), id); errors.Is(err, domain.ErrNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "role not found")
+	} else if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "delete failed")
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // ListAudit returns the recent admin action log (admin:manage).
 func (h *Handlers) ListAudit(c echo.Context) error {
 	if h.Audit == nil {

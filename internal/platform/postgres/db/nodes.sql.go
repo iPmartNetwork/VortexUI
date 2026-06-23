@@ -13,8 +13,8 @@ import (
 )
 
 const createNode = `-- name: CreateNode :exec
-INSERT INTO nodes (id, name, address, core, status, usage_ratio, endpoint, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO nodes (id, name, address, core, status, usage_ratio, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreateNodeParams struct {
@@ -24,7 +24,6 @@ type CreateNodeParams struct {
 	Core       string
 	Status     string
 	UsageRatio float64
-	Endpoint   string
 	CreatedAt  pgtype.Timestamptz
 }
 
@@ -36,7 +35,6 @@ func (q *Queries) CreateNode(ctx context.Context, arg CreateNodeParams) error {
 		arg.Core,
 		arg.Status,
 		arg.UsageRatio,
-		arg.Endpoint,
 		arg.CreatedAt,
 	)
 	return err
@@ -121,7 +119,7 @@ func (q *Queries) ListNodes(ctx context.Context) ([]Node, error) {
 }
 
 const updateNode = `-- name: UpdateNode :exec
-UPDATE nodes SET name = $2, address = $3, core = $4, status = $5, usage_ratio = $6, endpoint = $7
+UPDATE nodes SET name = $2, address = $3, core = $4, status = $5, usage_ratio = $6
 WHERE id = $1
 `
 
@@ -132,7 +130,6 @@ type UpdateNodeParams struct {
 	Core       string
 	Status     string
 	UsageRatio float64
-	Endpoint   string
 }
 
 func (q *Queries) UpdateNode(ctx context.Context, arg UpdateNodeParams) error {
@@ -143,7 +140,6 @@ func (q *Queries) UpdateNode(ctx context.Context, arg UpdateNodeParams) error {
 		arg.Core,
 		arg.Status,
 		arg.UsageRatio,
-		arg.Endpoint,
 	)
 	return err
 }
@@ -151,19 +147,17 @@ func (q *Queries) UpdateNode(ctx context.Context, arg UpdateNodeParams) error {
 const updateNodeHealth = `-- name: UpdateNodeHealth :exec
 UPDATE nodes SET
     cpu_percent = $2, mem_percent = $3, disk_percent = $4,
-    core_running = $5, connections = $6, core_version = $7, agent_version = $8, last_seen = now()
+    core_running = $5, connections = $6, last_seen = now()
 WHERE id = $1
 `
 
 type UpdateNodeHealthParams struct {
-	ID           uuid.UUID
-	CpuPercent   float64
-	MemPercent   float64
-	DiskPercent  float64
-	CoreRunning  bool
-	Connections  int32
-	CoreVersion  string
-	AgentVersion string
+	ID          uuid.UUID
+	CpuPercent  float64
+	MemPercent  float64
+	DiskPercent float64
+	CoreRunning bool
+	Connections int32
 }
 
 // UpdateNodeHealth persists the latest heartbeat snapshot from the hub.
@@ -175,8 +169,6 @@ func (q *Queries) UpdateNodeHealth(ctx context.Context, arg UpdateNodeHealthPara
 		arg.DiskPercent,
 		arg.CoreRunning,
 		arg.Connections,
-		arg.CoreVersion,
-		arg.AgentVersion,
 	)
 	return err
 }

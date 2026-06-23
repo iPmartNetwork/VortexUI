@@ -74,6 +74,8 @@ func (s *stubAdminRepo) CountSudo(context.Context) (int, error) {
 }
 func (s *stubAdminRepo) CreateRole(context.Context, *domain.Role) error    { return nil }
 func (s *stubAdminRepo) ListRoles(context.Context) ([]*domain.Role, error) { return nil, nil }
+func (s *stubAdminRepo) UpdateRole(context.Context, *domain.Role) error    { return nil }
+func (s *stubAdminRepo) DeleteRole(context.Context, uuid.UUID) error       { return nil }
 
 func TestAdminCreateRequiresRoleForReseller(t *testing.T) {
 	repo := newStubAdminRepo()

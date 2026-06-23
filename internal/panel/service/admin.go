@@ -42,6 +42,8 @@ type AdminStore interface {
 	CountSudo(ctx context.Context) (int, error)
 	CreateRole(ctx context.Context, role *domain.Role) error
 	ListRoles(ctx context.Context) ([]*domain.Role, error)
+	UpdateRole(ctx context.Context, role *domain.Role) error
+	DeleteRole(ctx context.Context, id uuid.UUID) error
 }
 
 // AdminService manages panel operators: bootstrap, CRUD, and role management.
@@ -216,6 +218,33 @@ func (s *AdminService) CreateRole(ctx context.Context, name string, perms []doma
 // ListRoles returns all roles.
 func (s *AdminService) ListRoles(ctx context.Context) ([]*domain.Role, error) {
 	return s.admins.ListRoles(ctx)
+}
+
+// UpdateRole replaces a role's name and permission bundle.
+func (s *AdminService) UpdateRole(ctx context.Context, id uuid.UUID, name string, perms []domain.Permission) (*domain.Role, error) {
+	role, err := s.admins.GetRole(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if name != "" {
+		role.Name = name
+	}
+	if perms != nil {
+		role.Permissions = perms
+	}
+	if err := s.admins.UpdateRole(ctx, role); err != nil {
+		return nil, err
+	}
+	return role, nil
+}
+
+// DeleteRole removes a role. Admins bound to it keep working with role_id cleared
+// (ON DELETE SET NULL).
+func (s *AdminService) DeleteRole(ctx context.Context, id uuid.UUID) error {
+	if _, err := s.admins.GetRole(ctx, id); err != nil {
+		return err
+	}
+	return s.admins.DeleteRole(ctx, id)
 }
 
 // Permissions returns the effective permission set for an admin. Sudo admins

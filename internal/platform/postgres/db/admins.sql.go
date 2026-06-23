@@ -85,6 +85,15 @@ func (q *Queries) DeleteAdmin(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const deleteRole = `-- name: DeleteRole :exec
+DELETE FROM roles WHERE id = $1
+`
+
+func (q *Queries) DeleteRole(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteRole, id)
+	return err
+}
+
 const getAdminByID = `-- name: GetAdminByID :one
 SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, last_login, created_at FROM admins WHERE id = $1
 `
@@ -233,5 +242,20 @@ func (q *Queries) UpdateAdmin(ctx context.Context, arg UpdateAdminParams) error 
 		arg.TrafficQuota,
 		arg.LastLogin,
 	)
+	return err
+}
+
+const updateRole = `-- name: UpdateRole :exec
+UPDATE roles SET name = $2, permissions = $3 WHERE id = $1
+`
+
+type UpdateRoleParams struct {
+	ID          uuid.UUID
+	Name        string
+	Permissions []byte
+}
+
+func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) error {
+	_, err := q.db.Exec(ctx, updateRole, arg.ID, arg.Name, arg.Permissions)
 	return err
 }
