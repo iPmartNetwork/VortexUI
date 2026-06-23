@@ -39,8 +39,26 @@ export function Admins() {
   const [editAdmin, setEditAdmin] = useState<Admin | null>(null);
   const [editRole, setEditRole] = useState<Role | null>(null);
 
-  const roleName = (id: string | null) => (roles.data?.roles ?? []).find((r) => r.id === id)?.name ?? "—";
-  const usageFor = (adminId: string) => (quotaUsage.data?.usage ?? []).find((u) => u.admin_id === adminId);
+  const roleName = (id: string | null) => roles.data?.roles.find((r) => r.id === id)?.name ?? "—";
+  const usageFor = (adminId: string) => quotaUsage.data?.usage.find((u) => u.admin_id === adminId);
+
+  const loading = admins.isLoading || roles.isLoading;
+  const loadError = admins.isError || roles.isError;
+  const adminList = admins.data?.admins ?? [];
+  const roleList = roles.data?.roles ?? [];
+  const usageList = quotaUsage.data?.usage ?? [];
+
+  if (loading) {
+    return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
+  }
+
+  if (loadError) {
+    return (
+      <p className="text-sm text-destructive">
+        {t("reseller.admins.loadFailed")}
+      </p>
+    );
+  }
 
   async function loginAs(a: Admin) {
     try {
@@ -99,10 +117,10 @@ export function Admins() {
 
   return (
     <div className="space-y-8">
-      <CreateAdminModal open={adminOpen} onClose={() => setAdminOpen(false)} />
-      <CreateRoleModal open={roleOpen} onClose={() => setRoleOpen(false)} />
-      <EditAdminModal admin={editAdmin} onClose={() => setEditAdmin(null)} />
-      <EditRoleModal role={editRole} onClose={() => setEditRole(null)} />
+      {adminOpen && <CreateAdminModal open onClose={() => setAdminOpen(false)} />}
+      {roleOpen && <CreateRoleModal open onClose={() => setRoleOpen(false)} />}
+      {editAdmin && <EditAdminModal admin={editAdmin} onClose={() => setEditAdmin(null)} />}
+      {editRole && <EditRoleModal role={editRole} onClose={() => setEditRole(null)} />}
 
       <div>
         <div className="mb-4 flex items-center justify-between">
@@ -110,7 +128,7 @@ export function Admins() {
           <Button onClick={() => setAdminOpen(true)}>{t("reseller.admins.newAdmin")}</Button>
         </div>
 
-        {(quotaUsage.data?.usage?.length ?? 0) > 0 && (
+        {usageList.length > 0 && (
           <Card className="mb-6 p-0">
             <div className="border-b px-5 py-3 text-sm font-semibold">{t("reseller.admins.quotaUsage")}</div>
             <table className="w-full text-sm">
@@ -125,7 +143,7 @@ export function Admins() {
                 </tr>
               </thead>
               <tbody>
-                {(quotaUsage.data?.usage ?? []).map((u) => (
+                {usageList.map((u) => (
                   <tr key={u.admin_id} className="border-b last:border-0">
                     <td className="px-5 py-3 font-medium">{u.username}</td>
                     <td className="px-5 py-3 text-muted-foreground">
@@ -162,7 +180,7 @@ export function Admins() {
               </tr>
             </thead>
             <tbody>
-              {(admins.data?.admins ?? []).map((a) => (
+              {adminList.map((a) => (
                 <tr key={a.id} className="border-b last:border-0 hover:bg-muted/40">
                   <td className="px-5 py-3 font-medium">
                     {a.username}
@@ -214,7 +232,7 @@ export function Admins() {
           <Button variant="ghost" onClick={() => setRoleOpen(true)}>{t("reseller.admins.newRole")}</Button>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {(roles.data?.roles ?? []).map((r) => (
+          {roleList.map((r) => (
             <Card key={r.id} className="space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="font-medium">{r.name}</div>
@@ -224,7 +242,7 @@ export function Admins() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-1">
-                {(r.permissions ?? []).map((p) => (
+                {r.permissions.map((p) => (
                   <span key={p} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
                     {p}
                   </span>
@@ -232,7 +250,7 @@ export function Admins() {
               </div>
             </Card>
           ))}
-          {(roles.data?.roles ?? []).length === 0 && roles.isSuccess && (
+          {roleList.length === 0 && (
             <p className="text-sm text-muted-foreground">{t("reseller.admins.noRoles")}</p>
           )}
         </div>

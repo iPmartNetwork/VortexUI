@@ -3,6 +3,11 @@ export function cn(...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(" ");
 }
 
+/** Coerce API list fields to arrays — Go nil slices and JSON null both become []. */
+export function ensureArray<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
 // formatBytes renders a byte count as a human-readable size.
 // 0 with allowUnlimited = true means "unlimited" (∞). Precise 2-decimal output.
 export function formatBytes(n: number, allowUnlimited = true): string {

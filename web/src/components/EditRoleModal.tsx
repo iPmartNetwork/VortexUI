@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useUpdateRole } from "@/api/admin-hooks";
 import { ALL_PERMISSIONS, type Role } from "@/api/types";
 import { RESELLER_PERMISSIONS } from "@/auth/permissions";
+import { ensureArray } from "@/lib/utils";
 import { Button, Input } from "./ui";
 import { Modal } from "./Modal";
 
@@ -14,7 +15,7 @@ export function EditRoleModal({ role, onClose }: { role: Role | null; onClose: (
   useEffect(() => {
     if (!role) return;
     setName(role.name);
-    setPerms([...role.permissions]);
+    setPerms([...ensureArray(role.permissions)]);
     setError("");
   }, [role]);
 

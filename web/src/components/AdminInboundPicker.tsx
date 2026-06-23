@@ -1,4 +1,5 @@
 import { useAllInbounds } from "@/api/hooks";
+import { ensureArray } from "@/lib/utils";
 
 /** Multi-select checklist of inbounds for reseller allowlist assignment. */
 export function AdminInboundPicker({
@@ -19,7 +20,7 @@ export function AdminInboundPicker({
       <p className="mb-1 text-xs font-medium text-muted-foreground">Allowed inbounds</p>
       <p className="mb-2 text-[10px] text-fg-subtle">Reseller can only assign users to these inbounds.</p>
       <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
-        {inbounds.data?.map((ib) => (
+        {ensureArray(inbounds.data).map((ib) => (
           <label key={ib.id} className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -30,7 +31,7 @@ export function AdminInboundPicker({
             <span className="text-muted-foreground">({ib.nodeName} · {ib.protocol})</span>
           </label>
         ))}
-        {inbounds.data?.length === 0 && (
+        {ensureArray(inbounds.data).length === 0 && (
           <p className="text-xs text-muted-foreground">No inbounds yet — create them under Nodes first.</p>
         )}
       </div>
