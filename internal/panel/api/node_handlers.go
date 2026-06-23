@@ -40,11 +40,28 @@ func (h *Handlers) CreateNode(c echo.Context) error {
 	return c.JSON(http.StatusCreated, resp)
 }
 
-// ListNodes returns all nodes.
+// ListNodes returns all nodes. Resellers only see nodes on their allowlist.
 func (h *Handlers) ListNodes(c echo.Context) error {
 	nodes, err := h.Nodes.List(c.Request().Context())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo && h.Admins != nil {
+		allowed, aerr := h.Admins.NodeIDsForAdmin(c.Request().Context(), claims.AdminID)
+		if aerr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+		}
+		allow := make(map[uuid.UUID]struct{}, len(allowed))
+		for _, id := range allowed {
+			allow[id] = struct{}{}
+		}
+		filtered := nodes[:0]
+		for _, n := range nodes {
+			if _, ok := allow[n.ID]; ok {
+				filtered = append(filtered, n)
+			}
+		}
+		nodes = filtered
 	}
 	return c.JSON(http.StatusOK, echo.Map{"nodes": nodes})
 }

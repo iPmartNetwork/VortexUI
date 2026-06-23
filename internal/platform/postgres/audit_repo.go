@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/platform/postgres/db"
 )
@@ -13,12 +15,13 @@ type AuditRepo struct{ q *db.Queries }
 // Insert writes one audit entry.
 func (r *AuditRepo) Insert(ctx context.Context, e domain.AuditEntry) error {
 	return r.q.InsertAudit(ctx, db.InsertAuditParams{
-		ID:      e.ID,
-		AdminID: ptrToUUID(e.AdminID),
-		Method:  e.Method,
-		Path:    e.Path,
-		Status:  int32(e.Status),
-		Ip:      e.IP,
+		ID:             e.ID,
+		AdminID:        ptrToUUID(e.AdminID),
+		ImpersonatorID: ptrToUUID(e.ImpersonatorID),
+		Method:         e.Method,
+		Path:           e.Path,
+		Status:         int32(e.Status),
+		Ip:             e.IP,
 	})
 }
 
@@ -34,14 +37,43 @@ func (r *AuditRepo) List(ctx context.Context, limit, offset int) ([]domain.Audit
 	out := make([]domain.AuditEntry, len(rows))
 	for i, row := range rows {
 		out[i] = domain.AuditEntry{
-			ID:       row.ID,
-			Time:     row.Time.Time,
-			AdminID:  uuidToPtr(row.AdminID),
-			Username: row.Username,
+			ID:             row.ID,
+			Time:           row.Time.Time,
+			AdminID:        uuidToPtr(row.AdminID),
+			ImpersonatorID: uuidToPtr(row.ImpersonatorID),
+			Username:       row.Username,
 			Method:   row.Method,
 			Path:     row.Path,
 			Status:   int(row.Status),
 			IP:       row.Ip,
+		}
+	}
+	return out, nil
+}
+
+// ListForAdmin returns audit entries for one reseller admin.
+func (r *AuditRepo) ListForAdmin(ctx context.Context, adminID uuid.UUID, limit, offset int) ([]domain.AuditEntry, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := r.q.ListAuditForAdmin(ctx, db.ListAuditForAdminParams{
+		AdminID: ptrToUUID(&adminID), Limit: int32(limit), Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.AuditEntry, len(rows))
+	for i, row := range rows {
+		out[i] = domain.AuditEntry{
+			ID:             row.ID,
+			Time:           row.Time.Time,
+			AdminID:        uuidToPtr(row.AdminID),
+			ImpersonatorID: uuidToPtr(row.ImpersonatorID),
+			Username:       row.Username,
+			Method:         row.Method,
+			Path:           row.Path,
+			Status:         int(row.Status),
+			IP:             row.Ip,
 		}
 	}
 	return out, nil

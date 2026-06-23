@@ -1,10 +1,13 @@
 import {
   Users, Wifi, Activity, Cpu, MemoryStick,
   Zap, Clock, TrendingUp, MonitorSmartphone, Layers, Timer, Box,
-  Power, RotateCcw, Tag,
+  Power, RotateCcw, Tag, Gauge, ChevronRight,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useOverview, useSystem, useTrafficSamples, useTrafficSeries, useRestartCore, useStopCore } from "@/api/policy-hooks";
+import { useAccountQuota } from "@/api/quota-hooks";
 import { useAllInbounds, useNodes } from "@/api/hooks";
+import { useAuth } from "@/auth/auth";
 import { Card } from "@/components/ui";
 import { TrafficSeriesChart } from "@/components/TrafficSeriesChart";
 import { useI18n } from "@/i18n/i18n";
@@ -104,6 +107,8 @@ function CoreCard({ name, version, running, onStop, onRestart }: {
    ═══════════════════════════════════════════════════════════════════════ */
 export function Overview() {
   useTitle("Overview");
+  const { sudo } = useAuth();
+  const accountQuota = useAccountQuota();
   const { data, dataUpdatedAt } = useOverview();
   const sys = useSystem();
   const inbounds = useAllInbounds();
@@ -149,6 +154,31 @@ export function Overview() {
           {dataUpdatedAt > 0 && <span className="flex items-center gap-1"><Clock size={10} />{new Date(dataUpdatedAt).toLocaleTimeString()}</span>}
         </div>
       </div>
+
+      {!sudo && accountQuota.data?.usage && (
+        <Card className="p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm font-semibold">{t("reseller.overview.pool")}</div>
+            <Link to="/reseller-dashboard" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+              {t("reseller.overview.viewDashboard")} <ChevronRight size={14} />
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+              <Users size={16} className="text-primary" />
+              <span>{t("reseller.dashboard.accounts")}: {accountQuota.data.usage.user_count}{accountQuota.data.usage.user_quota > 0 ? ` / ${accountQuota.data.usage.user_quota}` : ""}</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+              <Gauge size={16} className="text-accent" />
+              <span>{t("reseller.dashboard.assigned")}: {formatBytes(accountQuota.data.usage.traffic_allocated, false)}</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+              <TrendingUp size={16} className="text-success" />
+              <span>{t("reseller.dashboard.consumed")}: {formatBytes(accountQuota.data.usage.traffic_used, false)}</span>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* ── Hero stats ── */}
       <div className="grid grid-cols-2 gap-4 lg:gap-5 xl:grid-cols-4">

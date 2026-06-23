@@ -40,8 +40,35 @@ type Admin struct {
 	TOTPEnabled bool   `json:"totp_enabled"`
 
 	// Quota: a non-sudo admin can be capped on how many users/traffic they sell.
-	UserQuota    int   `json:"user_quota"`    // 0 = unlimited
-	TrafficQuota int64 `json:"traffic_quota"` // 0 = unlimited
+	UserQuota         int              `json:"user_quota"`          // 0 = unlimited
+	TrafficQuota      int64            `json:"traffic_quota"`       // 0 = unlimited
+	TrafficQuotaMode  TrafficQuotaMode `json:"traffic_quota_mode"`  // allocated | consumed
+
+	ParentAdminID *uuid.UUID `json:"parent_admin_id,omitempty"`
+
+	// Prepaid wallet (bytes + user slots). 0 = not using wallet for that dimension.
+	WalletTrafficBytes int64 `json:"wallet_traffic_bytes"`
+	WalletUserCredits  int   `json:"wallet_user_credits"`
+
+	// Outbound webhook for reseller automation.
+	WebhookURL     string `json:"webhook_url,omitempty"`
+	WebhookSecret  string `json:"-"`
+	WebhookEnabled bool   `json:"webhook_enabled"`
+
+	// Per-reseller abuse policies (0 = unlimited / allowed).
+	PolicyMaxDataLimit    int64 `json:"policy_max_data_limit"`
+	PolicyMaxExpireDays   int   `json:"policy_max_expire_days"`
+	PolicyAllowBulkDelete bool  `json:"policy_allow_bulk_delete"`
+	PolicyAllowBulkCreate bool  `json:"policy_allow_bulk_create"`
+
+	// Suspension (auto or manual).
+	Suspended                   bool       `json:"suspended"`
+	SuspendedAt                 *time.Time `json:"suspended_at,omitempty"`
+	SuspendReason               string     `json:"suspend_reason,omitempty"`
+	AutoSuspendEnabled          bool       `json:"auto_suspend_enabled"`
+	IPViolationSuspendThreshold int        `json:"ip_violation_suspend_threshold"`
+	SuspendGraceMinutes         int        `json:"suspend_grace_minutes"`
+	QuotaBreachedAt             *time.Time `json:"-"`
 
 	LastLogin *time.Time `json:"last_login,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -62,3 +89,11 @@ func (a *Admin) Has(p Permission, role *Role) bool {
 	}
 	return false
 }
+
+// TrafficQuotaMode controls how traffic_quota is enforced for resellers.
+type TrafficQuotaMode string
+
+const (
+	TrafficQuotaAllocated TrafficQuotaMode = "allocated" // sum(data_limit) pool
+	TrafficQuotaConsumed  TrafficQuotaMode = "consumed"  // sum(used_traffic) cap
+)

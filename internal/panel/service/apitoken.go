@@ -56,14 +56,48 @@ func (s *APITokenService) Create(ctx context.Context, adminID uuid.UUID, name st
 	}, nil
 }
 
-// List returns all tokens (without secrets).
-func (s *APITokenService) List(ctx context.Context) ([]domain.APIToken, error) {
-	return s.repo.List(ctx)
+// List returns tokens visible to the caller (own tokens unless sudo).
+func (s *APITokenService) List(ctx context.Context, adminID uuid.UUID, sudo bool) ([]domain.APIToken, error) {
+	all, err := s.repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if sudo {
+		return all, nil
+	}
+	out := make([]domain.APIToken, 0)
+	for _, t := range all {
+		if t.AdminID == adminID {
+			out = append(out, t)
+		}
+	}
+	return out, nil
 }
 
-// Delete removes a token.
-func (s *APITokenService) Delete(ctx context.Context, id uuid.UUID) error {
+// Delete removes a token if owned by the caller (sudo may delete any).
+func (s *APITokenService) Delete(ctx context.Context, id, adminID uuid.UUID, sudo bool) error {
+	if !sudo {
+		all, err := s.repo.List(ctx)
+		if err != nil {
+			return err
+		}
+		found := false
+		for _, t := range all {
+			if t.ID == id && t.AdminID == adminID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("token not found")
+		}
+	}
 	return s.repo.Delete(ctx, id)
+}
+
+// ListAll returns every token (legacy helper for tests).
+func (s *APITokenService) ListAll(ctx context.Context) ([]domain.APIToken, error) {
+	return s.repo.List(ctx)
 }
 
 func generateRawToken() (string, error) {

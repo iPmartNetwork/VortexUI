@@ -36,10 +36,12 @@ type Deps struct {
 	Federation *FederationHandlers
 	DeepLink   *DeepLinkHandlers
 	QuotaNotify *QuotaNotifyHandlers
+	AdminQuotaNotify *AdminQuotaNotifyHandlers
 	IPLimit    *IPLimitHandlers
 	SubSettings *SubSettingsHandlers
 	Monitor    *MonitorHandlers
 	Issuer     *auth.Issuer
+	PanelAuth  Authenticator
 	Auth       *service.AuthService
 	Limiter    RateLimiter   // nil disables login rate limiting
 	Audit      AuditRecorder // nil disables audit logging
@@ -73,7 +75,7 @@ func NewRouter(d Deps) *echo.Echo {
 	e.GET("/sub/:token/wireguard", d.Handlers.SubscribeWireGuard)
 
 	// Authenticated subtree. The audit middleware records every mutating request.
-	authed := api.Group("", RequireAuth(d.Issuer), Audit(d.Audit))
+	authed := api.Group("", RequireAuth(d.PanelAuth), RequireActiveAdmin(d.Handlers.Admins), Audit(d.Audit))
 
 	// Dashboard overview: user aggregates + node fleet health.
 	authed.GET("/overview", d.Handlers.GetOverview, RequirePermission(d.Auth, domain.PermSystemRead))
@@ -100,6 +102,7 @@ func NewRouter(d Deps) *echo.Echo {
 	users.GET("/:id/online-ips", d.Handlers.GetUserOnlineIPs, RequirePermission(d.Auth, domain.PermUserRead))
 	users.POST("", d.Handlers.CreateUser, RequirePermission(d.Auth, domain.PermUserWrite))
 	users.POST("/bulk", d.Handlers.BulkCreateUsers, RequirePermission(d.Auth, domain.PermUserWrite))
+	users.POST("/bulk-delete", d.Handlers.BulkDeleteUsers, RequirePermission(d.Auth, domain.PermUserWrite))
 	users.POST("/import", d.Handlers.ImportUsers, RequirePermission(d.Auth, domain.PermUserWrite))
 	users.PUT("/:id", d.Handlers.UpdateUser, RequirePermission(d.Auth, domain.PermUserWrite))
 	users.POST("/:id/reset", d.Handlers.ResetUserUsage, RequirePermission(d.Auth, domain.PermUserWrite))
@@ -162,7 +165,13 @@ func NewRouter(d Deps) *echo.Echo {
 	admins.POST("", d.Handlers.CreateAdmin)
 	admins.PUT("/:id", d.Handlers.UpdateAdmin)
 	admins.GET("/:id/inbounds", d.Handlers.GetAdminInbounds)
+	admins.GET("/:id/nodes", d.Handlers.GetAdminNodes)
+	admins.GET("/:id/plans", d.Handlers.GetAdminPlans)
 	admins.DELETE("/:id", d.Handlers.DeleteAdmin)
+	admins.POST("/:id/wallet", d.Handlers.TopUpAdminWallet)
+	admins.POST("/:id/impersonate", d.Handlers.ImpersonateAdmin)
+	admins.POST("/:id/unsuspend", d.Handlers.UnsuspendAdmin)
+	admins.POST("/:id/quota-adjust", d.Handlers.AdjustAdminQuota)
 
 	roles := authed.Group("/roles", RequirePermission(d.Auth, domain.PermAdminManage))
 	roles.GET("", d.Handlers.ListRoles)
@@ -170,13 +179,23 @@ func NewRouter(d Deps) *echo.Echo {
 	roles.PUT("/:id", d.Handlers.UpdateRole)
 	roles.DELETE("/:id", d.Handlers.DeleteRole)
 
-	// Audit log of mutating admin actions.
-	authed.GET("/audit", d.Handlers.ListAudit, RequirePermission(d.Auth, domain.PermAdminManage))
+	// Audit log of mutating admin actions (sudo: all; reseller: own scope).
+	authed.GET("/audit", d.Handlers.ListAudit, RequirePermission(d.Auth, domain.PermSystemRead))
 
 	// Self-service account actions: any authenticated admin manages their own 2FA.
 	account := authed.Group("/account")
 	account.GET("", d.Handlers.GetAccount)
 	account.GET("/quota", d.Handlers.GetAccountQuota)
+	account.GET("/dashboard", d.Handlers.GetResellerDashboard)
+	account.GET("/export/users", d.Handlers.ExportAccountUsers)
+	account.GET("/wallet", d.Handlers.GetAccountWallet)
+	account.GET("/sub-admins", d.Handlers.ListSubAdmins)
+	account.POST("/sub-admins", d.Handlers.CreateSubAdmin)
+	account.GET("/branding", d.Handlers.GetAccountBranding)
+	account.PUT("/branding", d.Handlers.UpdateAccountBranding)
+	account.GET("/webhook", d.Handlers.GetAccountWebhook)
+	account.PUT("/webhook", d.Handlers.UpdateAccountWebhook)
+	account.POST("/stop-impersonate", d.Handlers.StopImpersonation)
 	account.POST("/password", d.Handlers.ChangePassword)
 	account.POST("/2fa/setup", d.Handlers.SetupTOTP)
 	account.POST("/2fa/confirm", d.Handlers.ConfirmTOTP)
@@ -190,18 +209,19 @@ func NewRouter(d Deps) *echo.Echo {
 
 	// Plans + Orders (admin)
 	plans := authed.Group("/plans")
-	plans.GET("", d.Handlers.ListPlans, RequirePermission(d.Auth, domain.PermAdminManage))
+	plans.GET("", d.Handlers.ListPlans, RequirePermission(d.Auth, domain.PermUserRead))
 	plans.POST("", d.Handlers.CreatePlan, RequirePermission(d.Auth, domain.PermAdminManage))
 	plans.DELETE("/:id", d.Handlers.DeletePlan, RequirePermission(d.Auth, domain.PermAdminManage))
 
 	orders := authed.Group("/orders")
-	orders.GET("", d.Handlers.ListOrders, RequirePermission(d.Auth, domain.PermAdminManage))
+	orders.GET("", d.Handlers.ListOrders, RequirePermission(d.Auth, domain.PermUserRead))
 
 	// Public payment endpoints (no auth — user self-purchase)
 	e.GET("/api/shop/plans", d.Handlers.PublicPlans)
 	e.POST("/api/shop/purchase", d.Handlers.InitPurchase)
 	e.GET("/api/payment/callback", d.Handlers.PaymentCallback)
 	e.POST("/api/payment/ipn/nowpayments", d.Handlers.NowPaymentsIPN)
+	e.GET("/api/portal/branding", d.Handlers.PublicPortalBranding)
 
 	// Update checker (admin)
 	authed.GET("/update/check", d.Handlers.CheckUpdate, RequirePermission(d.Auth, domain.PermAdminManage))
@@ -374,6 +394,14 @@ func NewRouter(d Deps) *echo.Echo {
 	qn.GET("/config", d.QuotaNotify.GetConfig)
 	qn.PUT("/config", d.QuotaNotify.UpdateConfig)
 	qn.GET("/events", d.QuotaNotify.ListEvents)
+
+	// --- Reseller quota alerts ---
+	if d.AdminQuotaNotify != nil {
+		aqn := authed.Group("/admin-quota-notify", RequirePermission(d.Auth, domain.PermAdminManage))
+		aqn.GET("/config", d.AdminQuotaNotify.GetConfig)
+		aqn.PUT("/config", d.AdminQuotaNotify.UpdateConfig)
+		aqn.GET("/events", d.AdminQuotaNotify.ListEvents)
+	}
 
 	// --- IP-limit enforcement ---
 	iplimit := authed.Group("/ip-limit", RequirePermission(d.Auth, domain.PermAdminManage))

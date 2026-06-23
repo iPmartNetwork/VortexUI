@@ -20,16 +20,25 @@ type ResolvedToken struct {
 	RoleID  *uuid.UUID
 }
 
-func (r *APITokenRepo) Insert(ctx context.Context, id uuid.UUID, name, hash string, adminID uuid.UUID) error {
-	return r.q.InsertAPIToken(ctx, db.InsertAPITokenParams{ID: id, Name: name, TokenHash: hash, AdminID: adminID})
+// Resolve implements auth.TokenResolver for vtx_ API tokens.
+func (r *APITokenRepo) Resolve(ctx context.Context, hash string) (uuid.UUID, bool, *uuid.UUID, uuid.UUID, error) {
+	row, err := r.q.ResolveAPIToken(ctx, hash)
+	if err != nil {
+		return uuid.Nil, false, nil, uuid.Nil, err
+	}
+	return row.AdminID, row.Sudo, uuidToPtr(row.RoleID), row.ID, nil
 }
 
-func (r *APITokenRepo) Resolve(ctx context.Context, hash string) (ResolvedToken, error) {
+func (r *APITokenRepo) resolveToken(ctx context.Context, hash string) (ResolvedToken, error) {
 	row, err := r.q.ResolveAPIToken(ctx, hash)
 	if err != nil {
 		return ResolvedToken{}, err
 	}
 	return ResolvedToken{ID: row.ID, AdminID: row.AdminID, Sudo: row.Sudo, RoleID: uuidToPtr(row.RoleID)}, nil
+}
+
+func (r *APITokenRepo) Insert(ctx context.Context, id uuid.UUID, name, hash string, adminID uuid.UUID) error {
+	return r.q.InsertAPIToken(ctx, db.InsertAPITokenParams{ID: id, Name: name, TokenHash: hash, AdminID: adminID})
 }
 
 func (r *APITokenRepo) Touch(ctx context.Context, id uuid.UUID) error {

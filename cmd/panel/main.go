@@ -33,7 +33,7 @@ import (
 
 // version is the panel build version. It defaults to the contents of the VERSION
 // file and is overridden at build time via -ldflags "-X main.version=...".
-var version = "1.2.3"
+var version = "1.2.5"
 
 func main() {
 	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)
@@ -204,6 +204,11 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	ipLimitSvc := service.NewIPLimitService(store.IPLimits())
 	shareGuard.SetIPLimit(store.IPLimits(), nodes)
 	go shareGuard.Run(ctx)
+
+	adminQuotaWarner := service.NewAdminQuotaWarner(admins, users, store.AdminQuotaNotify(), log)
+	adminQuotaWarner.SetPublisher(bus)
+	go adminQuotaWarner.Run(ctx)
+
 	subSvc := service.NewSubscriptionService(users, nodes, store.SubHosts())
 	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
@@ -219,6 +224,11 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	routingSvc := service.NewRoutingService(store.Routing(), syncSvc)
 	balancerSvc := service.NewBalancerService(store.Balancers(), syncSvc)
 	adminSvc := service.NewAdminService(admins, users)
+	resellerWH := service.NewResellerWebhookDispatcher(adminSvc, log)
+	go resellerWH.Run(ctx, bus.Subscribe(256))
+	resellerSuspender := service.NewResellerAutoSuspender(adminSvc, userSvc, users, log)
+	resellerSuspender.SetPublisher(bus)
+	go resellerSuspender.Run(ctx)
 	overviewSvc := service.NewOverviewService(users, nodes)
 	backupSvc := service.NewBackupService(nodes, store.Inbounds(), store.Outbounds(), store.Routing(), store.Balancers(), users, store.Backup())
 
@@ -271,6 +281,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	fedSvc := service.NewFederationService(store.Federation())
 	deepLinkSvc := service.NewDeepLinkService(store.DeepLinks())
 	quotaNotifySvc := service.NewQuotaNotifyService(store.QuotaNotify())
+	adminQuotaNotifySvc := service.NewAdminQuotaNotifyService(store.AdminQuotaNotify())
 	subSettingsSvc := service.NewSubSettingsService(store.SubSettings())
 
 	// GeoIP resolver for the "Traffic by Country" analytics. Optional: an empty
@@ -282,6 +293,8 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	}
 	defer func() { _ = geoResolver.Close() }()
 	geoSvc := service.NewGeoService(geoResolver, store.UserGeo())
+
+	panelAuth := &auth.PanelAuth{JWT: issuer, Tokens: store.APITokens()}
 
 	router := api.NewRouter(api.Deps{
 		Version: version,
@@ -298,9 +311,10 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Events:   bus,
 			SubSettings: subSettingsSvc,
 			Geo:         geoSvc,
+			Issuer:      issuer,
 		},
 		APITokens:   &api.APITokenHandlers{Svc: tokenSvc},
-		Portal:      &api.PortalHandlers{Portal: portalSvc, Issuer: issuer},
+		Portal:      &api.PortalHandlers{Portal: portalSvc, Issuer: issuer, Admins: adminSvc},
 		Reality:     &api.RealityHandlers{Scanner: realitySvc},
 		CleanIP:     &api.CleanIPHandlers{Scanner: cleanIPSvc},
 		SubHosts:    &api.SubHostHandlers{SubHosts: subHostSvc},
@@ -320,10 +334,12 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Federation:  &api.FederationHandlers{Fed: fedSvc},
 		DeepLink:    &api.DeepLinkHandlers{DeepLink: deepLinkSvc},
 		QuotaNotify: &api.QuotaNotifyHandlers{QN: quotaNotifySvc},
+		AdminQuotaNotify: &api.AdminQuotaNotifyHandlers{Svc: adminQuotaNotifySvc},
 		IPLimit:     &api.IPLimitHandlers{IPLimit: ipLimitSvc},
 		SubSettings: &api.SubSettingsHandlers{Svc: subSettingsSvc},
 		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Monitor: monitorAdapter{store.Monitor()}},
 		Issuer:      issuer,
+		PanelAuth:   panelAuth,
 		Auth:        authSvc,
 		Limiter:     limiter,
 		Audit:       store.Audit(),

@@ -19,6 +19,8 @@ type Claims struct {
 	AdminID uuid.UUID  `json:"aid"`
 	Sudo    bool       `json:"sudo"`
 	RoleID  *uuid.UUID `json:"rid,omitempty"`
+	// ImpersonatorID is set when a sudo admin acts as another admin.
+	ImpersonatorID *uuid.UUID `json:"imp,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -36,22 +38,31 @@ func NewIssuer(secret []byte, ttl time.Duration) *Issuer {
 
 // Issue mints a signed token for an admin.
 func (i *Issuer) Issue(adminID uuid.UUID, sudo bool, roleID *uuid.UUID) (string, error) {
+	return i.issue(adminID, sudo, roleID, nil, i.ttl)
+}
+
+// IssueImpersonation mints a shorter-lived token for sudo support sessions.
+func (i *Issuer) IssueImpersonation(targetID uuid.UUID, sudo bool, roleID *uuid.UUID, impersonatorID uuid.UUID) (string, error) {
+	return i.issue(targetID, sudo, roleID, &impersonatorID, time.Hour)
+}
+
+func (i *Issuer) issue(adminID uuid.UUID, sudo bool, roleID *uuid.UUID, impersonatorID *uuid.UUID, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		AdminID: adminID,
-		Sudo:    sudo,
-		RoleID:  roleID,
+		AdminID:        adminID,
+		Sudo:           sudo,
+		RoleID:         roleID,
+		ImpersonatorID: impersonatorID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   adminID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(i.ttl)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(i.secret)
 }
 
-// Verify parses and validates a token, returning its claims. It pins the signing
-// method to HS256 to defend against algorithm-confusion attacks.
+// Verify parses and validates a token, returning its claims.
 func (i *Issuer) Verify(token string) (*Claims, error) {
 	parsed, err := jwt.ParseWithClaims(token, &Claims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {

@@ -53,11 +53,21 @@ type AdminStore interface {
 	SetInbounds(ctx context.Context, adminID uuid.UUID, inboundIDs []uuid.UUID) error
 	ListInboundIDs(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error)
 	CountInboundAccess(ctx context.Context, adminID uuid.UUID, inboundIDs []uuid.UUID) (int64, error)
+	SetPlans(ctx context.Context, adminID uuid.UUID, planIDs []uuid.UUID) error
+	ListPlanIDs(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error)
+	CountPlanAccess(ctx context.Context, adminID uuid.UUID, planIDs []uuid.UUID) (int64, error)
+	SetNodes(ctx context.Context, adminID uuid.UUID, nodeIDs []uuid.UUID) error
+	ListNodeIDs(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error)
+	CountNodeAccess(ctx context.Context, adminID uuid.UUID, nodeIDs []uuid.UUID) (int64, error)
 }
 
 // AdminUserStatsReader loads aggregated usage for reseller quota checks.
 type AdminUserStatsReader interface {
 	StatsForAdmin(ctx context.Context, adminID uuid.UUID) (domain.AdminUserStats, error)
+	StatsByStatusForAdmin(ctx context.Context, adminID uuid.UUID) (map[string]int64, error)
+	TopUsersForAdmin(ctx context.Context, adminID uuid.UUID, limit int32) ([]domain.ResellerTopUser, error)
+	CountExpiringSoonForAdmin(ctx context.Context, adminID uuid.UUID) (int64, error)
+	CountCreatedSinceForAdmin(ctx context.Context, adminID uuid.UUID, since time.Time) (int64, error)
 }
 
 // AdminService manages panel operators: bootstrap, CRUD, and role management.
@@ -80,9 +90,13 @@ type CreateAdminInput struct {
 	Sudo         bool
 	EnableTOTP   bool
 	RoleID       *uuid.UUID // required when Sudo is false
-	UserQuota    int
-	TrafficQuota int64
-	InboundIDs   []uuid.UUID // optional allowlist for resellers
+	UserQuota          int
+	TrafficQuota       int64
+	TrafficQuotaMode   domain.TrafficQuotaMode
+	InboundIDs         []uuid.UUID // optional allowlist for resellers
+	NodeIDs            []uuid.UUID
+	PlanIDs            []uuid.UUID
+	ParentAdminID      *uuid.UUID
 }
 
 // Create provisions an admin, refusing to clobber an existing username. When
@@ -117,12 +131,23 @@ func (s *AdminService) Create(ctx context.Context, in CreateAdminInput) (admin *
 		Username:     in.Username,
 		PasswordHash: hash,
 		Sudo:         in.Sudo,
-		UserQuota:    in.UserQuota,
-		TrafficQuota: in.TrafficQuota,
-		CreatedAt:    s.now(),
+		UserQuota:        in.UserQuota,
+		TrafficQuota:     in.TrafficQuota,
+		TrafficQuotaMode: in.TrafficQuotaMode,
+		CreatedAt:        s.now(),
+	}
+	if in.ParentAdminID != nil {
+		a.ParentAdminID = in.ParentAdminID
+	}
+	if a.TrafficQuotaMode == "" {
+		a.TrafficQuotaMode = domain.TrafficQuotaAllocated
 	}
 	if !in.Sudo {
 		a.RoleID = in.RoleID
+		a.PolicyAllowBulkDelete = true
+		a.PolicyAllowBulkCreate = true
+		a.AutoSuspendEnabled = true
+		a.SuspendGraceMinutes = 60
 	}
 	if in.EnableTOTP {
 		secret, url, err := auth.GenerateTOTP("VortexUI", in.Username)
@@ -139,6 +164,16 @@ func (s *AdminService) Create(ctx context.Context, in CreateAdminInput) (admin *
 	if !in.Sudo && len(in.InboundIDs) > 0 {
 		if err := s.admins.SetInbounds(ctx, a.ID, in.InboundIDs); err != nil {
 			return nil, "", fmt.Errorf("set inbounds: %w", err)
+		}
+	}
+	if !in.Sudo && len(in.NodeIDs) > 0 {
+		if err := s.admins.SetNodes(ctx, a.ID, in.NodeIDs); err != nil {
+			return nil, "", fmt.Errorf("set nodes: %w", err)
+		}
+	}
+	if !in.Sudo && len(in.PlanIDs) > 0 {
+		if err := s.admins.SetPlans(ctx, a.ID, in.PlanIDs); err != nil {
+			return nil, "", fmt.Errorf("set plans: %w", err)
 		}
 	}
 	return a, totpURL, nil
@@ -160,11 +195,21 @@ func (s *AdminService) Get(ctx context.Context, id uuid.UUID) (*domain.Admin, er
 type UpdateAdminInput struct {
 	Password     string
 	Sudo         bool
-	UserQuota    int
-	TrafficQuota int64
-	RoleID       *uuid.UUID
-	DisableTOTP  bool
-	InboundIDs   *[]uuid.UUID // nil = leave allowlist unchanged
+	UserQuota          int
+	TrafficQuota       int64
+	TrafficQuotaMode   *domain.TrafficQuotaMode
+	RoleID             *uuid.UUID
+	DisableTOTP          bool
+	InboundIDs           *[]uuid.UUID // nil = leave allowlist unchanged
+	NodeIDs              *[]uuid.UUID
+	PlanIDs              *[]uuid.UUID
+	PolicyMaxDataLimit          *int64
+	PolicyMaxExpireDays         *int
+	PolicyAllowBulkDelete       *bool
+	PolicyAllowBulkCreate       *bool
+	AutoSuspendEnabled          *bool
+	IPViolationSuspendThreshold *int
+	SuspendGraceMinutes         *int
 }
 
 // Update applies changes to an admin. Demoting the last sudo admin is refused so
@@ -189,10 +234,37 @@ func (s *AdminService) Update(ctx context.Context, id uuid.UUID, in UpdateAdminI
 	a.Sudo = in.Sudo
 	a.UserQuota = in.UserQuota
 	a.TrafficQuota = in.TrafficQuota
+	if in.TrafficQuotaMode != nil {
+		a.TrafficQuotaMode = *in.TrafficQuotaMode
+		if a.TrafficQuotaMode == "" {
+			a.TrafficQuotaMode = domain.TrafficQuotaAllocated
+		}
+	}
 	a.RoleID = in.RoleID
 	if in.DisableTOTP {
 		a.TOTPEnabled = false
 		a.TOTPSecret = ""
+	}
+	if in.PolicyMaxDataLimit != nil {
+		a.PolicyMaxDataLimit = *in.PolicyMaxDataLimit
+	}
+	if in.PolicyMaxExpireDays != nil {
+		a.PolicyMaxExpireDays = *in.PolicyMaxExpireDays
+	}
+	if in.PolicyAllowBulkDelete != nil {
+		a.PolicyAllowBulkDelete = *in.PolicyAllowBulkDelete
+	}
+	if in.PolicyAllowBulkCreate != nil {
+		a.PolicyAllowBulkCreate = *in.PolicyAllowBulkCreate
+	}
+	if in.AutoSuspendEnabled != nil {
+		a.AutoSuspendEnabled = *in.AutoSuspendEnabled
+	}
+	if in.IPViolationSuspendThreshold != nil {
+		a.IPViolationSuspendThreshold = *in.IPViolationSuspendThreshold
+	}
+	if in.SuspendGraceMinutes != nil {
+		a.SuspendGraceMinutes = *in.SuspendGraceMinutes
 	}
 	if err := s.admins.Update(ctx, a); err != nil {
 		return nil, err
@@ -200,6 +272,16 @@ func (s *AdminService) Update(ctx context.Context, id uuid.UUID, in UpdateAdminI
 	if in.InboundIDs != nil && !a.Sudo {
 		if err := s.admins.SetInbounds(ctx, a.ID, *in.InboundIDs); err != nil {
 			return nil, fmt.Errorf("set inbounds: %w", err)
+		}
+	}
+	if in.NodeIDs != nil && !a.Sudo {
+		if err := s.admins.SetNodes(ctx, a.ID, *in.NodeIDs); err != nil {
+			return nil, fmt.Errorf("set nodes: %w", err)
+		}
+	}
+	if in.PlanIDs != nil && !a.Sudo {
+		if err := s.admins.SetPlans(ctx, a.ID, *in.PlanIDs); err != nil {
+			return nil, fmt.Errorf("set plans: %w", err)
 		}
 	}
 	return a, nil
@@ -294,6 +376,154 @@ func (s *AdminService) ValidateInboundAccess(ctx context.Context, adminID uuid.U
 	return nil
 }
 
+// PlanIDsForAdmin returns plan IDs a reseller may sell.
+func (s *AdminService) PlanIDsForAdmin(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error) {
+	return s.admins.ListPlanIDs(ctx, adminID)
+}
+
+// NodeIDsForAdmin returns node IDs a reseller may use.
+func (s *AdminService) NodeIDsForAdmin(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error) {
+	return s.admins.ListNodeIDs(ctx, adminID)
+}
+
+// ValidatePlanAccess ensures every plan is on the admin's allowlist.
+func (s *AdminService) ValidatePlanAccess(ctx context.Context, adminID uuid.UUID, planID uuid.UUID) error {
+	n, err := s.admins.CountPlanAccess(ctx, adminID, []uuid.UUID{planID})
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("plan not allowed for this admin")
+	}
+	return nil
+}
+
+// ValidateNodeAccess ensures every node is on the admin's allowlist.
+func (s *AdminService) ValidateNodeAccess(ctx context.Context, adminID uuid.UUID, nodeIDs []uuid.UUID) error {
+	if len(nodeIDs) == 0 {
+		return nil
+	}
+	n, err := s.admins.CountNodeAccess(ctx, adminID, nodeIDs)
+	if err != nil {
+		return err
+	}
+	if int(n) != len(nodeIDs) {
+		return errors.New("node not allowed for this admin")
+	}
+	return nil
+}
+
+// FilterPlanIDs returns the subset of planIDs the admin may access.
+func (s *AdminService) FilterPlanIDs(ctx context.Context, adminID uuid.UUID, all []uuid.UUID) ([]uuid.UUID, error) {
+	allowed, err := s.admins.ListPlanIDs(ctx, adminID)
+	if err != nil {
+		return nil, err
+	}
+	if len(allowed) == 0 {
+		return nil, nil
+	}
+	allow := make(map[uuid.UUID]struct{}, len(allowed))
+	for _, id := range allowed {
+		allow[id] = struct{}{}
+	}
+	out := make([]uuid.UUID, 0)
+	for _, id := range all {
+		if _, ok := allow[id]; ok {
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+// FilterPlans returns plans a reseller may sell (empty allowlist = all).
+func (s *AdminService) FilterPlans(ctx context.Context, adminID uuid.UUID, plans []*domain.Plan) ([]*domain.Plan, error) {
+	allowed, err := s.admins.ListPlanIDs(ctx, adminID)
+	if err != nil {
+		return nil, err
+	}
+	if len(allowed) == 0 {
+		return plans, nil
+	}
+	allow := make(map[uuid.UUID]struct{}, len(allowed))
+	for _, id := range allowed {
+		allow[id] = struct{}{}
+	}
+	out := make([]*domain.Plan, 0, len(plans))
+	for _, p := range plans {
+		if _, ok := allow[p.ID]; ok {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+// AdjustQuota applies deltas to a reseller's pool limits (sudo quick-adjust).
+func (s *AdminService) AdjustQuota(ctx context.Context, id uuid.UUID, userDelta int, trafficDelta int64) (*domain.Admin, error) {
+	a, err := s.admins.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if a.Sudo {
+		return nil, errors.New("cannot adjust sudo admin quota")
+	}
+	if userDelta != 0 {
+		a.UserQuota += userDelta
+		if a.UserQuota < 0 {
+			a.UserQuota = 0
+		}
+	}
+	if trafficDelta != 0 {
+		a.TrafficQuota += trafficDelta
+		if a.TrafficQuota < 0 {
+			a.TrafficQuota = 0
+		}
+	}
+	if err := s.admins.Update(ctx, a); err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+// ResellerDashboard builds the reseller home summary.
+func (s *AdminService) ResellerDashboard(ctx context.Context, adminID uuid.UUID) (*domain.ResellerDashboard, error) {
+	quota, err := s.QuotaUsage(ctx, adminID)
+	if err != nil {
+		return nil, err
+	}
+	if s.users == nil {
+		return &domain.ResellerDashboard{Quota: *quota}, nil
+	}
+	byStatus, err := s.users.StatsByStatusForAdmin(ctx, adminID)
+	if err != nil {
+		return nil, err
+	}
+	top, err := s.users.TopUsersForAdmin(ctx, adminID, 5)
+	if err != nil {
+		return nil, err
+	}
+	expiring, err := s.users.CountExpiringSoonForAdmin(ctx, adminID)
+	if err != nil {
+		return nil, err
+	}
+	now := s.now()
+	n7, err := s.users.CountCreatedSinceForAdmin(ctx, adminID, now.Add(-7*24*time.Hour))
+	if err != nil {
+		return nil, err
+	}
+	n30, err := s.users.CountCreatedSinceForAdmin(ctx, adminID, now.Add(-30*24*time.Hour))
+	if err != nil {
+		return nil, err
+	}
+	return &domain.ResellerDashboard{
+		Quota:         *quota,
+		UsersByStatus: byStatus,
+		TopUsers:      top,
+		ExpiringSoon:  expiring,
+		NewUsers7d:    n7,
+		NewUsers30d:   n30,
+	}, nil
+}
+
 // QuotaUsage returns limits and live usage for one admin.
 func (s *AdminService) QuotaUsage(ctx context.Context, adminID uuid.UUID) (*domain.AdminQuotaUsage, error) {
 	admin, err := s.admins.GetByID(ctx, adminID)
@@ -325,10 +555,11 @@ func (s *AdminService) ListResellerQuotaUsage(ctx context.Context) ([]*domain.Ad
 
 func (s *AdminService) quotaUsageFor(ctx context.Context, admin *domain.Admin) (*domain.AdminQuotaUsage, error) {
 	u := &domain.AdminQuotaUsage{
-		AdminID:      admin.ID,
-		Username:     admin.Username,
-		UserQuota:    admin.UserQuota,
-		TrafficQuota: admin.TrafficQuota,
+		AdminID:          admin.ID,
+		Username:         admin.Username,
+		UserQuota:        admin.UserQuota,
+		TrafficQuota:     admin.TrafficQuota,
+		TrafficQuotaMode: string(admin.TrafficQuotaMode),
 	}
 	if s.users != nil {
 		stats, err := s.users.StatsForAdmin(ctx, admin.ID)
@@ -347,7 +578,13 @@ func (s *AdminService) quotaUsageFor(ctx context.Context, admin *domain.Admin) (
 		u.UsersRemaining = &rem
 	}
 	if admin.TrafficQuota > 0 {
-		rem := admin.TrafficQuota - u.TrafficAllocated
+		var used int64
+		if admin.TrafficQuotaMode == domain.TrafficQuotaConsumed {
+			used = u.TrafficUsed
+		} else {
+			used = u.TrafficAllocated
+		}
+		rem := admin.TrafficQuota - used
 		if rem < 0 {
 			rem = 0
 		}
@@ -375,11 +612,13 @@ func (s *AdminService) AssertCanAddUsers(ctx context.Context, adminID uuid.UUID,
 	if admin.UserQuota > 0 && stats.UserCount+int64(addCount) > int64(admin.UserQuota) {
 		return ErrUserQuotaExceeded
 	}
-	addAlloc := dataLimitPerUser * int64(addCount)
-	if admin.TrafficQuota > 0 && stats.TrafficAllocated+addAlloc > admin.TrafficQuota {
-		return ErrTrafficQuotaExceeded
+	if admin.TrafficQuota > 0 && admin.TrafficQuotaMode != domain.TrafficQuotaConsumed {
+		addAlloc := dataLimitPerUser * int64(addCount)
+		if stats.TrafficAllocated+addAlloc > admin.TrafficQuota {
+			return ErrTrafficQuotaExceeded
+		}
 	}
-	return nil
+	return s.checkWalletForAdd(ctx, admin, addCount, dataLimitPerUser)
 }
 
 // AssertCanSetDataLimit checks traffic pool when changing a user's data cap.
@@ -392,6 +631,9 @@ func (s *AdminService) AssertCanSetDataLimit(ctx context.Context, adminID uuid.U
 		return err
 	}
 	if admin.Sudo || admin.TrafficQuota <= 0 {
+		return nil
+	}
+	if admin.TrafficQuotaMode == domain.TrafficQuotaConsumed {
 		return nil
 	}
 	stats, err := s.users.StatsForAdmin(ctx, adminID)

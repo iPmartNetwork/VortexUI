@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"github.com/vortexui/vortexui/internal/auth"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/logbuf"
 	"github.com/vortexui/vortexui/internal/panel/port"
@@ -53,6 +54,7 @@ type Handlers struct {
 	WireGuard *service.WireGuardService     // optional; nil disables the WireGuard .conf endpoint
 	Throttle  *LoginThrottle // optional; nil disables login brute-force protection
 	Events    EventStream    // optional; nil disables the SSE live-events endpoint
+	Issuer    *auth.Issuer   // JWT issuer for impersonation flows
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a
@@ -103,6 +105,9 @@ func (h *Handlers) Login(c echo.Context) error {
 		h.Throttle.Fail(key)
 		return echo.NewHTTPError(http.StatusUnauthorized, "invalid credentials")
 	}
+	if errors.Is(err, service.ErrAdminSuspended) {
+		return echo.NewHTTPError(http.StatusForbidden, "account suspended")
+	}
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "login failed")
 	}
@@ -136,6 +141,9 @@ func (h *Handlers) CreateUser(c echo.Context) error {
 	if err := h.validateInboundAccess(c, inboundIDs); err != nil {
 		return err
 	}
+	if err := h.enforceResellerPolicy(c, req.DataLimit, req.ExpireAt); err != nil {
+		return err
+	}
 	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
 		if err := h.Admins.AssertCanAddUsers(c.Request().Context(), claims.AdminID, 1, req.DataLimit); err != nil {
 			return echo.NewHTTPError(http.StatusForbidden, errString(err))
@@ -156,6 +164,11 @@ func (h *Handlers) CreateUser(c echo.Context) error {
 	})
 	if u == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo && adminID != nil {
+		if werr := h.Admins.WalletDebitAfterUserCreate(c.Request().Context(), *adminID, 1, req.DataLimit); werr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "wallet debit failed: "+werr.Error())
+		}
 	}
 	// u may be non-nil with a provisioning warning; report it without failing
 	// the creation, which is already durable.
@@ -203,6 +216,16 @@ func (h *Handlers) BulkCreateUsers(c echo.Context) error {
 		return err
 	}
 	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		ok, perr := h.Admins.PolicyAllowsBulkCreate(c.Request().Context(), claims.AdminID)
+		if perr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "policy check failed")
+		}
+		if !ok {
+			return echo.NewHTTPError(http.StatusForbidden, errString(service.ErrPolicyBulkCreateDenied))
+		}
+		if err := h.enforceResellerPolicy(c, req.DataLimit, req.ExpireAt); err != nil {
+			return err
+		}
 		if err := h.Admins.AssertCanAddUsers(c.Request().Context(), claims.AdminID, req.Count, req.DataLimit); err != nil {
 			return echo.NewHTTPError(http.StatusForbidden, errString(err))
 		}
@@ -238,6 +261,9 @@ func (h *Handlers) BulkCreateUsers(c echo.Context) error {
 			continue
 		}
 		created = append(created, u)
+		if claims := claimsFrom(c); claims != nil && !claims.Sudo && adminID != nil {
+			_ = h.Admins.WalletDebitAfterUserCreate(c.Request().Context(), *adminID, 1, req.DataLimit)
+		}
 	}
 	return c.JSON(http.StatusCreated, echo.Map{
 		"created":       created,
@@ -294,6 +320,13 @@ func (h *Handlers) ImportUsers(c echo.Context) error {
 		return err
 	}
 	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		ok, perr := h.Admins.PolicyAllowsBulkCreate(c.Request().Context(), claims.AdminID)
+		if perr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "policy check failed")
+		}
+		if !ok {
+			return echo.NewHTTPError(http.StatusForbidden, errString(service.ErrPolicyBulkCreateDenied))
+		}
 		if err := h.Admins.AssertCanAddUsers(c.Request().Context(), claims.AdminID, len(parsed), 0); err != nil {
 			return echo.NewHTTPError(http.StatusForbidden, errString(err))
 		}
@@ -304,6 +337,10 @@ func (h *Handlers) ImportUsers(c echo.Context) error {
 	adminID := creatorAdminID(c)
 	for _, p := range parsed {
 		if p.Username == "" {
+			continue
+		}
+		if err := h.enforceResellerPolicy(c, p.DataLimit, p.ExpireAt); err != nil {
+			failures = append(failures, echo.Map{"username": p.Username, "error": errString(err)})
 			continue
 		}
 		u, cerr := h.Users.Create(c.Request().Context(), service.CreateUserInput{
@@ -321,6 +358,9 @@ func (h *Handlers) ImportUsers(c echo.Context) error {
 			continue
 		}
 		created = append(created, u)
+		if claims := claimsFrom(c); claims != nil && !claims.Sudo && adminID != nil {
+			_ = h.Admins.WalletDebitAfterUserCreate(c.Request().Context(), *adminID, 1, p.DataLimit)
+		}
 	}
 	return c.JSON(http.StatusCreated, echo.Map{
 		"parsed":        len(parsed),
@@ -465,6 +505,9 @@ func (h *Handlers) UpdateUser(c echo.Context) error {
 		if err := h.Admins.AssertCanSetDataLimit(c.Request().Context(), claims.AdminID, u.DataLimit, req.DataLimit); err != nil {
 			return echo.NewHTTPError(http.StatusForbidden, errString(err))
 		}
+		if err := h.enforceResellerPolicy(c, req.DataLimit, req.ExpireAt); err != nil {
+			return err
+		}
 	}
 	status := domain.UserStatus(req.Status)
 	if status == "" {
@@ -604,6 +647,52 @@ func (h *Handlers) DeleteUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "delete failed")
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+type bulkDeleteUsersRequest struct {
+	IDs []string `json:"ids"`
+}
+
+// BulkDeleteUsers removes multiple users in one request (policy-gated for resellers).
+func (h *Handlers) BulkDeleteUsers(c echo.Context) error {
+	var req bulkDeleteUsersRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if len(req.IDs) < 2 {
+		return echo.NewHTTPError(http.StatusBadRequest, "select at least two users")
+	}
+	if len(req.IDs) > 500 {
+		return echo.NewHTTPError(http.StatusBadRequest, "too many ids (max 500)")
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		ok, err := h.Admins.PolicyAllowsBulkDelete(c.Request().Context(), claims.AdminID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "policy check failed")
+		}
+		if !ok {
+			return echo.NewHTTPError(http.StatusForbidden, errString(service.ErrPolicyBulkDeleteDenied))
+		}
+	}
+	deleted := 0
+	failures := make([]echo.Map, 0)
+	for _, idStr := range req.IDs {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			failures = append(failures, echo.Map{"id": idStr, "error": "invalid id"})
+			continue
+		}
+		if _, err := h.assertUserOwned(c, id); err != nil {
+			failures = append(failures, echo.Map{"id": idStr, "error": "not found"})
+			continue
+		}
+		if err := h.Users.Delete(c.Request().Context(), id); err != nil {
+			failures = append(failures, echo.Map{"id": idStr, "error": errString(err)})
+			continue
+		}
+		deleted++
+	}
+	return c.JSON(http.StatusOK, echo.Map{"deleted": deleted, "failures": failures})
 }
 
 // GetUserSubscription returns a user's subscription URLs (overall and per
@@ -821,4 +910,18 @@ func errString(err error) string {
 		return "bad request"
 	}
 	return err.Error()
+}
+
+func (h *Handlers) enforceResellerPolicy(c echo.Context, dataLimit int64, expireAt *time.Time) error {
+	claims := claimsFrom(c)
+	if claims == nil || claims.Sudo {
+		return nil
+	}
+	if err := h.Admins.EnsureActiveAdmin(c.Request().Context(), claims.AdminID); err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, errString(err))
+	}
+	if err := h.Admins.ValidateUserPolicy(c.Request().Context(), claims.AdminID, dataLimit, expireAt); err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, errString(err))
+	}
+	return nil
 }

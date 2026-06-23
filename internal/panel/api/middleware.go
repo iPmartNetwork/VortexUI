@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,9 +21,9 @@ import (
 // claimsKey is the echo context key under which verified claims are stored.
 const claimsKey = "vortex.claims"
 
-// Authenticator verifies bearer tokens. *auth.Issuer satisfies it.
+// Authenticator verifies bearer tokens. *auth.PanelAuth satisfies it.
 type Authenticator interface {
-	Verify(token string) (*auth.Claims, error)
+	Verify(ctx context.Context, token string) (*auth.Claims, error)
 }
 
 // RequireAuth verifies the Authorization: Bearer token and stashes the claims
@@ -39,11 +40,29 @@ func RequireAuth(a Authenticator) echo.MiddlewareFunc {
 			if raw == "" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "missing bearer token")
 			}
-			claims, err := a.Verify(raw)
+			claims, err := a.Verify(c.Request().Context(), raw)
 			if err != nil {
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
 			}
 			c.Set(claimsKey, claims)
+			return next(c)
+		}
+	}
+}
+
+// RequireActiveAdmin blocks suspended reseller accounts on authenticated routes.
+func RequireActiveAdmin(admins *service.AdminService) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			claims := claimsFrom(c)
+			if claims == nil || claims.Sudo {
+				return next(c)
+			}
+			if err := admins.EnsureActiveAdmin(c.Request().Context(), claims.AdminID); errors.Is(err, service.ErrAdminSuspended) {
+				return echo.NewHTTPError(http.StatusForbidden, "account suspended")
+			} else if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "authorization failed")
+			}
 			return next(c)
 		}
 	}
@@ -103,6 +122,7 @@ func RateLimit(rl RateLimiter, limit int, window time.Duration, keyFn func(echo.
 type AuditRecorder interface {
 	Insert(ctx context.Context, e domain.AuditEntry) error
 	List(ctx context.Context, limit, offset int) ([]domain.AuditEntry, error)
+	ListForAdmin(ctx context.Context, adminID uuid.UUID, limit, offset int) ([]domain.AuditEntry, error)
 }
 
 // Audit records every authenticated mutating request (POST/PUT/DELETE) for
@@ -131,6 +151,7 @@ func Audit(rec AuditRecorder) echo.MiddlewareFunc {
 			if claims := claimsFrom(c); claims != nil {
 				id := claims.AdminID
 				entry.AdminID = &id
+				entry.ImpersonatorID = claims.ImpersonatorID
 			}
 			go func() { _ = rec.Insert(context.Background(), entry) }()
 			return err

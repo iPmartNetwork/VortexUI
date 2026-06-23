@@ -69,6 +69,13 @@ func uuidToPtr(v pgtype.UUID) *uuid.UUID {
 	return &id
 }
 
+func pgText(s string) pgtype.Text {
+	if s == "" {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: s, Valid: true}
+}
+
 // jsonbStrings marshals a string slice for a JSONB column, never emitting null.
 func jsonbStrings(ss []string) []byte {
 	if ss == nil {

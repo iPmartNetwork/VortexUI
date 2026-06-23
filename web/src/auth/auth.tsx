@@ -6,6 +6,7 @@ import { hasPermission } from "./permissions";
 interface Session {
   admin: Admin;
   permissions: Set<string>;
+  impersonatorId?: string | null;
 }
 
 interface AuthState {
@@ -13,6 +14,7 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
   sudo: boolean;
+  impersonating: boolean;
   permissions: Set<string>;
   can: (perm: string) => boolean;
   login: (username: string, password: string, totp?: string) => Promise<void>;
@@ -35,8 +37,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setLoading(true);
     try {
-      const res = await api<{ admin: Admin; permissions: string[] }>("/api/account");
-      setSession({ admin: res.admin, permissions: new Set(res.permissions) });
+      const res = await api<{ admin: Admin; permissions: string[]; impersonator_id?: string | null }>("/api/account");
+      setSession({
+        admin: res.admin,
+        permissions: new Set(res.permissions),
+        impersonatorId: res.impersonator_id ?? null,
+      });
     } catch {
       clearToken();
       setTok(null);
@@ -53,8 +59,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     setToken(res.token);
     setTok(res.token);
-    const account = await api<{ admin: Admin; permissions: string[] }>("/api/account");
-    setSession({ admin: account.admin, permissions: new Set(account.permissions) });
+    const account = await api<{ admin: Admin; permissions: string[]; impersonator_id?: string | null }>("/api/account");
+    setSession({
+      admin: account.admin,
+      permissions: new Set(account.permissions),
+      impersonatorId: account.impersonator_id ?? null,
+    });
     setLoading(false);
   }, []);
 
@@ -86,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sudo = session?.admin.sudo ?? false;
+  const impersonating = !!session?.impersonatorId;
   const permissions = session?.permissions ?? new Set<string>();
 
   const value = useMemo<AuthState>(
@@ -94,13 +105,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       loading,
       sudo,
+      impersonating,
       permissions,
       can: (perm: string) => hasPermission(sudo, permissions, perm),
       login,
       logout,
       refreshSession,
     }),
-    [token, session, loading, sudo, permissions, login, logout, refreshSession],
+    [token, session, loading, sudo, impersonating, permissions, login, logout, refreshSession],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

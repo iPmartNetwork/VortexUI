@@ -10,22 +10,78 @@ import (
 )
 
 type Admin struct {
-	ID           uuid.UUID
-	Username     string
-	PasswordHash string
-	Sudo         bool
-	RoleID       pgtype.UUID
-	TotpSecret   string
-	TotpEnabled  bool
-	UserQuota    int32
-	TrafficQuota int64
-	LastLogin    pgtype.Timestamptz
-	CreatedAt    pgtype.Timestamptz
+	ID                          uuid.UUID
+	Username                    string
+	PasswordHash                string
+	Sudo                        bool
+	RoleID                      pgtype.UUID
+	TotpSecret                  string
+	TotpEnabled                 bool
+	UserQuota                   int32
+	TrafficQuota                int64
+	TrafficQuotaMode            string
+	ParentAdminID               pgtype.UUID
+	WalletTrafficBytes          int64
+	WalletUserCredits           int32
+	WebhookUrl                  string
+	WebhookSecret               string
+	WebhookEnabled              bool
+	PolicyMaxDataLimit          int64
+	PolicyMaxExpireDays         int32
+	PolicyAllowBulkDelete       bool
+	PolicyAllowBulkCreate       bool
+	Suspended                   bool
+	SuspendedAt                 pgtype.Timestamptz
+	SuspendReason               string
+	AutoSuspendEnabled          bool
+	IpViolationSuspendThreshold int32
+	SuspendGraceMinutes         int32
+	QuotaBreachedAt             pgtype.Timestamptz
+	LastLogin                   pgtype.Timestamptz
+	CreatedAt                   pgtype.Timestamptz
 }
 
 type AdminInbound struct {
 	AdminID   uuid.UUID
 	InboundID uuid.UUID
+}
+
+type AdminNode struct {
+	AdminID uuid.UUID
+	NodeID  uuid.UUID
+}
+
+type AdminPlan struct {
+	AdminID uuid.UUID
+	PlanID  uuid.UUID
+}
+
+type AdminQuotaNotifyConfig struct {
+	ID              int32
+	Enabled         bool
+	ThresholdPct    []int32
+	NotifyTelegram  bool
+	WebhookUrl      string
+	CooldownMinutes int32
+}
+
+type AdminQuotaNotifyEvent struct {
+	ID        uuid.UUID
+	AdminID   uuid.UUID
+	Threshold int32
+	Metric    string
+	UsagePct  int32
+	CreatedAt pgtype.Timestamptz
+}
+
+type AdminWalletLedger struct {
+	ID           uuid.UUID
+	AdminID      uuid.UUID
+	DeltaTraffic int64
+	DeltaUsers   int32
+	Reason       string
+	ActorAdminID pgtype.UUID
+	CreatedAt    pgtype.Timestamptz
 }
 
 type ApiToken struct {
@@ -38,13 +94,14 @@ type ApiToken struct {
 }
 
 type AuditLog struct {
-	ID      uuid.UUID
-	Time    pgtype.Timestamptz
-	AdminID pgtype.UUID
-	Method  string
-	Path    string
-	Status  int32
-	Ip      string
+	ID             uuid.UUID
+	Time           pgtype.Timestamptz
+	AdminID        pgtype.UUID
+	ImpersonatorID pgtype.UUID
+	Method         string
+	Path           string
+	Status         int32
+	Ip             string
 }
 
 type Balancer struct {
@@ -291,6 +348,32 @@ type Outbound struct {
 	Host     string
 	Raw      []byte
 	Enabled  bool
+}
+
+type Plan struct {
+	ID            uuid.UUID
+	Name          string
+	Description   string
+	DataLimit     int64
+	DurationDays  int32
+	DeviceLimit   int32
+	ResetStrategy string
+	InboundIds    []byte
+	PriceToman    int64
+	PriceUsd      float64
+	MaxUsers      int32
+	Enabled       bool
+	CreatedAt     pgtype.Timestamptz
+}
+
+type PortalBranding struct {
+	AdminID      uuid.UUID
+	PanelTitle   string
+	LogoUrl      string
+	AccentColor  string
+	FooterText   string
+	PortalSlug   pgtype.Text
+	CustomDomain string
 }
 
 type ProbeEvent struct {

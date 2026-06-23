@@ -10,15 +10,18 @@ export const RESELLER_PERMISSIONS = [
 /** Minimum permission to show a sidebar route (any listed permission is enough). */
 export const ROUTE_PERMISSIONS: Record<string, readonly string[]> = {
   "/overview": ["system:read"],
+  "/reseller-dashboard": ["system:read"],
+  "/reseller-account": ["system:read"],
+  "/my-quota": ["system:read"],
   "/monitor": ["system:read"],
   "/analytics": ["system:read"],
   "/users": ["user:read"],
-  "/my-quota": ["system:read"],
+  "/plans": ["user:read"],
+  "/orders": ["user:read"],
   "/family-groups": ["user:write"],
-  "/plans": ["admin:manage"],
-  "/orders": ["admin:manage"],
   "/smart-quota": ["admin:manage"],
   "/quota-notifications": ["admin:manage"],
+  "/reseller-quota-alerts": ["admin:manage"],
   "/referrals": ["admin:manage"],
   "/tickets": ["user:write"],
   "/nodes": ["node:read"],
@@ -41,7 +44,7 @@ export const ROUTE_PERMISSIONS: Record<string, readonly string[]> = {
   "/doh": ["admin:manage"],
   "/admins": ["admin:manage"],
   "/deep-links": ["admin:manage"],
-  "/audit": ["admin:manage"],
+  "/audit": ["system:read"],
   "/logs": ["system:read"],
 };
 

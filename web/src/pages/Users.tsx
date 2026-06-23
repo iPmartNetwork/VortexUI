@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDeleteUser, useUsers } from "@/api/hooks";
+import { useBulkDeleteUsers, useDeleteUser, useUsers } from "@/api/hooks";
 import type { User } from "@/api/types";
 import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui";
 import { Pagination } from "@/components/Pagination";
@@ -72,6 +72,7 @@ export function Users() {
     setPage(0); // a new query resets to the first page
   }
   const del = useDeleteUser();
+  const bulkDel = useBulkDeleteUsers();
   const confirm = useConfirm();
   const toast = useToast();
   const { t } = useI18n();
@@ -127,9 +128,14 @@ export function Users() {
           <div className="ms-auto flex gap-2">
             <Button variant="outline" size="sm" onClick={async () => {
               if (await confirm({ title: `Delete ${selected.size} users?`, confirmLabel: "Delete", destructive: true })) {
-                for (const id of selected) await del.mutateAsync(id);
-                setSelected(new Set());
-                toast.success(`Deleted ${selected.size} users`);
+                try {
+                  const res = await bulkDel.mutateAsync([...selected]);
+                  setSelected(new Set());
+                  toast.success(`Deleted ${res.deleted} users`);
+                  if (res.failures.length > 0) toast.error(`${res.failures.length} deletions failed`);
+                } catch {
+                  toast.error("Bulk delete failed");
+                }
               }
             }}>Delete selected</Button>
             <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>

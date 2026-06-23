@@ -83,6 +83,20 @@ func (s *stubAdminRepo) ListInboundIDs(context.Context, uuid.UUID) ([]uuid.UUID,
 func (s *stubAdminRepo) CountInboundAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
 	return 0, nil
 }
+func (s *stubAdminRepo) SetPlans(context.Context, uuid.UUID, []uuid.UUID) error { return nil }
+func (s *stubAdminRepo) ListPlanIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (s *stubAdminRepo) CountPlanAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
+	return 0, nil
+}
+func (s *stubAdminRepo) SetNodes(context.Context, uuid.UUID, []uuid.UUID) error { return nil }
+func (s *stubAdminRepo) ListNodeIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (s *stubAdminRepo) CountNodeAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
+	return 0, nil
+}
 
 func TestAdminCreateRequiresRoleForReseller(t *testing.T) {
 	repo := newStubAdminRepo()

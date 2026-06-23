@@ -13,23 +13,25 @@ import (
 )
 
 const insertAudit = `-- name: InsertAudit :exec
-INSERT INTO audit_log (id, admin_id, method, path, status, ip)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO audit_log (id, admin_id, impersonator_id, method, path, status, ip)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertAuditParams struct {
-	ID      uuid.UUID
-	AdminID pgtype.UUID
-	Method  string
-	Path    string
-	Status  int32
-	Ip      string
+	ID             uuid.UUID
+	AdminID        pgtype.UUID
+	ImpersonatorID pgtype.UUID
+	Method         string
+	Path           string
+	Status         int32
+	Ip             string
 }
 
 func (q *Queries) InsertAudit(ctx context.Context, arg InsertAuditParams) error {
 	_, err := q.db.Exec(ctx, insertAudit,
 		arg.ID,
 		arg.AdminID,
+		arg.ImpersonatorID,
 		arg.Method,
 		arg.Path,
 		arg.Status,
@@ -39,7 +41,7 @@ func (q *Queries) InsertAudit(ctx context.Context, arg InsertAuditParams) error 
 }
 
 const listAudit = `-- name: ListAudit :many
-SELECT a.id, a.time, a.admin_id, a.method, a.path, a.status, a.ip,
+SELECT a.id, a.time, a.admin_id, a.impersonator_id, a.method, a.path, a.status, a.ip,
        COALESCE(ad.username, '') AS username
 FROM audit_log a
 LEFT JOIN admins ad ON ad.id = a.admin_id
@@ -53,14 +55,15 @@ type ListAuditParams struct {
 }
 
 type ListAuditRow struct {
-	ID       uuid.UUID
-	Time     pgtype.Timestamptz
-	AdminID  pgtype.UUID
-	Method   string
-	Path     string
-	Status   int32
-	Ip       string
-	Username string
+	ID             uuid.UUID
+	Time           pgtype.Timestamptz
+	AdminID        pgtype.UUID
+	ImpersonatorID pgtype.UUID
+	Method         string
+	Path           string
+	Status         int32
+	Ip             string
+	Username       string
 }
 
 // ListAudit returns recent entries newest-first, joining the admin's username
@@ -78,6 +81,66 @@ func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]ListAud
 			&i.ID,
 			&i.Time,
 			&i.AdminID,
+			&i.ImpersonatorID,
+			&i.Method,
+			&i.Path,
+			&i.Status,
+			&i.Ip,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditForAdmin = `-- name: ListAuditForAdmin :many
+SELECT a.id, a.time, a.admin_id, a.impersonator_id, a.method, a.path, a.status, a.ip,
+       COALESCE(ad.username, '') AS username
+FROM audit_log a
+LEFT JOIN admins ad ON ad.id = a.admin_id
+WHERE a.admin_id = $1
+ORDER BY a.time DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListAuditForAdminParams struct {
+	AdminID pgtype.UUID
+	Limit   int32
+	Offset  int32
+}
+
+type ListAuditForAdminRow struct {
+	ID             uuid.UUID
+	Time           pgtype.Timestamptz
+	AdminID        pgtype.UUID
+	ImpersonatorID pgtype.UUID
+	Method         string
+	Path           string
+	Status         int32
+	Ip             string
+	Username       string
+}
+
+// ListAuditForAdmin returns audit rows for one reseller (actions they performed).
+func (q *Queries) ListAuditForAdmin(ctx context.Context, arg ListAuditForAdminParams) ([]ListAuditForAdminRow, error) {
+	rows, err := q.db.Query(ctx, listAuditForAdmin, arg.AdminID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAuditForAdminRow{}
+	for rows.Next() {
+		var i ListAuditForAdminRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Time,
+			&i.AdminID,
+			&i.ImpersonatorID,
 			&i.Method,
 			&i.Path,
 			&i.Status,

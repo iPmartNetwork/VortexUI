@@ -11,7 +11,7 @@ export function useAdmins() {
 export function useCreateAdmin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { username: string; password: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number; inbound_ids?: string[] }) =>
+    mutationFn: (input: { username: string; password: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number; traffic_quota_mode?: string; inbound_ids?: string[]; node_ids?: string[]; plan_ids?: string[] }) =>
       api<{ admin: Admin }>("/api/admins", { method: "POST", body: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admins"] });
@@ -28,10 +28,39 @@ export function useDeleteAdmin() {
   });
 }
 
+export function useUnsuspendAdmin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<{ admin: Admin }>(`/api/admins/${id}/unsuspend`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admins"] }),
+  });
+}
+
+export function useAdjustAdminQuota() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; user_quota_delta?: number; traffic_quota_delta?: number }) =>
+      api<{ admin: Admin }>(`/api/admins/${args.id}/quota-adjust`, {
+        method: "POST",
+        body: { user_quota_delta: args.user_quota_delta ?? 0, traffic_quota_delta: args.traffic_quota_delta ?? 0 },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admins"] });
+      qc.invalidateQueries({ queryKey: ["reseller-quota-usage"] });
+    },
+  });
+}
+
 export function useUpdateAdmin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: string; input: { password?: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number; inbound_ids?: string[] } }) =>
+    mutationFn: (args: { id: string; input: {
+      password?: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number;
+      traffic_quota_mode?: string; inbound_ids?: string[]; node_ids?: string[]; plan_ids?: string[];
+      policy_max_data_limit?: number; policy_max_expire_days?: number;
+      policy_allow_bulk_delete?: boolean; policy_allow_bulk_create?: boolean;
+      auto_suspend_enabled?: boolean; ip_violation_suspend_threshold?: number; suspend_grace_minutes?: number;
+    } }) =>
       api<{ admin: Admin }>(`/api/admins/${args.id}`, { method: "PUT", body: args.input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admins"] });
@@ -45,6 +74,22 @@ export function useAdminInbounds(adminId: string | null) {
   return useQuery({
     queryKey: ["admin-inbounds", adminId],
     queryFn: () => api<{ inbound_ids: string[] }>(`/api/admins/${adminId}/inbounds`),
+    enabled: !!adminId,
+  });
+}
+
+export function useAdminNodes(adminId: string | null) {
+  return useQuery({
+    queryKey: ["admin-nodes", adminId],
+    queryFn: () => api<{ node_ids: string[] }>(`/api/admins/${adminId}/nodes`),
+    enabled: !!adminId,
+  });
+}
+
+export function useAdminPlans(adminId: string | null) {
+  return useQuery({
+    queryKey: ["admin-plans", adminId],
+    queryFn: () => api<{ plan_ids: string[] }>(`/api/admins/${adminId}/plans`),
     enabled: !!adminId,
   });
 }

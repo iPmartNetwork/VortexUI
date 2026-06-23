@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "./client";
+import { api, getToken } from "./client";
 
 export interface AdminQuotaUsage {
   admin_id: string;
@@ -8,6 +8,7 @@ export interface AdminQuotaUsage {
   user_count: number;
   users_remaining: number | null;
   traffic_quota: number;
+  traffic_quota_mode?: string;
   traffic_used: number;
   traffic_allocated: number;
   traffic_remaining: number | null;
@@ -25,4 +26,26 @@ export function useResellerQuotaUsage() {
     queryKey: ["reseller-quota-usage"],
     queryFn: () => api<{ usage: AdminQuotaUsage[] }>("/api/admins/usage"),
   });
+}
+
+export interface ResellerDashboardData {
+  quota: AdminQuotaUsage;
+  users_by_status: Record<string, number>;
+  top_users: { id: string; username: string; used_traffic: number; data_limit: number; status: string }[];
+  expiring_soon: number;
+  new_users_7d: number;
+  new_users_30d: number;
+}
+
+export function useResellerDashboard() {
+  return useQuery({
+    queryKey: ["reseller-dashboard"],
+    queryFn: () => api<{ dashboard: ResellerDashboardData }>("/api/account/dashboard"),
+  });
+}
+
+export function exportResellerUsersCsv() {
+  const token = getToken();
+  if (!token) throw new Error("not authenticated");
+  window.open(`/api/account/export/users?access_token=${encodeURIComponent(token)}`, "_blank");
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -44,6 +45,18 @@ func (r *listUserRepo) InboundsFor(_ context.Context, id uuid.UUID) ([]domain.In
 }
 func (r *listUserRepo) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
 	return domain.AdminUserStats{}, nil
+}
+func (r *listUserRepo) StatsByStatusForAdmin(context.Context, uuid.UUID) (map[string]int64, error) {
+	return nil, nil
+}
+func (r *listUserRepo) TopUsersForAdmin(context.Context, uuid.UUID, int32) ([]domain.ResellerTopUser, error) {
+	return nil, nil
+}
+func (r *listUserRepo) CountExpiringSoonForAdmin(context.Context, uuid.UUID) (int64, error) {
+	return 0, nil
+}
+func (r *listUserRepo) CountCreatedSinceForAdmin(context.Context, uuid.UUID, time.Time) (int64, error) {
+	return 0, nil
 }
 
 // capRestorer captures the backup handed to Restore.

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -65,6 +66,18 @@ func (f *fakeMigrationUsers) InboundsFor(_ context.Context, userID uuid.UUID) ([
 }
 func (f *fakeMigrationUsers) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
 	return domain.AdminUserStats{}, nil
+}
+func (f *fakeMigrationUsers) StatsByStatusForAdmin(context.Context, uuid.UUID) (map[string]int64, error) {
+	return nil, nil
+}
+func (f *fakeMigrationUsers) TopUsersForAdmin(context.Context, uuid.UUID, int32) ([]domain.ResellerTopUser, error) {
+	return nil, nil
+}
+func (f *fakeMigrationUsers) CountExpiringSoonForAdmin(context.Context, uuid.UUID) (int64, error) {
+	return 0, nil
+}
+func (f *fakeMigrationUsers) CountCreatedSinceForAdmin(context.Context, uuid.UUID, time.Time) (int64, error) {
+	return 0, nil
 }
 
 type fakeMigrationNodes struct {

@@ -66,6 +66,53 @@ func (q *Queries) AddUserInbound(ctx context.Context, arg AddUserInboundParams) 
 	return err
 }
 
+const adminTopUsersByTraffic = `-- name: AdminTopUsersByTraffic :many
+SELECT id, username, used_traffic, data_limit, status
+FROM users
+WHERE admin_id = $1
+ORDER BY used_traffic DESC
+LIMIT $2
+`
+
+type AdminTopUsersByTrafficParams struct {
+	AdminID pgtype.UUID
+	Lim     int32
+}
+
+type AdminTopUsersByTrafficRow struct {
+	ID          uuid.UUID
+	Username    string
+	UsedTraffic int64
+	DataLimit   int64
+	Status      string
+}
+
+func (q *Queries) AdminTopUsersByTraffic(ctx context.Context, arg AdminTopUsersByTrafficParams) ([]AdminTopUsersByTrafficRow, error) {
+	rows, err := q.db.Query(ctx, adminTopUsersByTraffic, arg.AdminID, arg.Lim)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminTopUsersByTrafficRow{}
+	for rows.Next() {
+		var i AdminTopUsersByTrafficRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.UsedTraffic,
+			&i.DataLimit,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const adminUserStats = `-- name: AdminUserStats :one
 SELECT
     count(*)::bigint AS user_count,
@@ -88,6 +135,38 @@ func (q *Queries) AdminUserStats(ctx context.Context, adminID pgtype.UUID) (Admi
 	return i, err
 }
 
+const adminUserStatsByStatus = `-- name: AdminUserStatsByStatus :many
+SELECT status, count(*)::bigint AS count
+FROM users
+WHERE admin_id = $1
+GROUP BY status
+`
+
+type AdminUserStatsByStatusRow struct {
+	Status string
+	Count  int64
+}
+
+func (q *Queries) AdminUserStatsByStatus(ctx context.Context, adminID pgtype.UUID) ([]AdminUserStatsByStatusRow, error) {
+	rows, err := q.db.Query(ctx, adminUserStatsByStatus, adminID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminUserStatsByStatusRow{}
+	for rows.Next() {
+		var i AdminUserStatsByStatusRow
+		if err := rows.Scan(&i.Status, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const clearUserInbounds = `-- name: ClearUserInbounds :exec
 DELETE FROM user_inbounds WHERE user_id = $1
 `
@@ -95,6 +174,55 @@ DELETE FROM user_inbounds WHERE user_id = $1
 func (q *Queries) ClearUserInbounds(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, clearUserInbounds, userID)
 	return err
+}
+
+const countAdminUsersCreatedSince = `-- name: CountAdminUsersCreatedSince :one
+SELECT count(*)::bigint FROM users
+WHERE admin_id = $1 AND created_at >= $2
+`
+
+type CountAdminUsersCreatedSinceParams struct {
+	AdminID   pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) CountAdminUsersCreatedSince(ctx context.Context, arg CountAdminUsersCreatedSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminUsersCreatedSince, arg.AdminID, arg.CreatedAt)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countAdminUsersExpiringSoon = `-- name: CountAdminUsersExpiringSoon :one
+SELECT count(*)::bigint FROM users
+WHERE admin_id = $1 AND status = 'active'
+  AND expire_at IS NOT NULL AND expire_at <= now() + interval '7 days' AND expire_at > now()
+`
+
+func (q *Queries) CountAdminUsersExpiringSoon(ctx context.Context, adminID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminUsersExpiringSoon, adminID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countIPLimitEventsForAdminSince = `-- name: CountIPLimitEventsForAdminSince :one
+SELECT count(*)::bigint
+FROM ip_limit_events e
+INNER JOIN users u ON u.id = e.user_id
+WHERE u.admin_id = $1 AND e.created_at >= $2
+`
+
+type CountIPLimitEventsForAdminSinceParams struct {
+	AdminID   pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) CountIPLimitEventsForAdminSince(ctx context.Context, arg CountIPLimitEventsForAdminSinceParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countIPLimitEventsForAdminSince, arg.AdminID, arg.CreatedAt)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const countUsers = `-- name: CountUsers :one

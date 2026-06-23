@@ -36,6 +36,12 @@ func describe(e events.Event) string {
 		return fmt.Sprintf("🔴 Node down: %s", e.NodeName)
 	case events.NodeUp:
 		return fmt.Sprintf("🟢 Node up: %s", e.NodeName)
+	case events.AdminQuotaWarning:
+		admin, _ := e.Data["admin"].(string)
+		metric, _ := e.Data["metric"].(string)
+		pct := e.Data["usage_pct"]
+		th := e.Data["threshold"]
+		return fmt.Sprintf("📊 Reseller quota alert: %s — %s at %v%% (threshold %v%%)", admin, metric, pct, th)
 	default:
 		msg := e.Message
 		if msg == "" {

@@ -16,10 +16,28 @@ CREATE TABLE admins (
     role_id       UUID REFERENCES roles(id) ON DELETE SET NULL,
     totp_secret   TEXT NOT NULL DEFAULT '',
     totp_enabled  BOOLEAN NOT NULL DEFAULT FALSE,
-    user_quota    INTEGER NOT NULL DEFAULT 0,
-    traffic_quota BIGINT  NOT NULL DEFAULT 0,
-    last_login    TIMESTAMPTZ,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    user_quota          INTEGER NOT NULL DEFAULT 0,
+    traffic_quota       BIGINT  NOT NULL DEFAULT 0,
+    traffic_quota_mode  TEXT NOT NULL DEFAULT 'allocated',
+    parent_admin_id     UUID REFERENCES admins(id) ON DELETE SET NULL,
+    wallet_traffic_bytes BIGINT NOT NULL DEFAULT 0,
+    wallet_user_credits  INT NOT NULL DEFAULT 0,
+    webhook_url          TEXT NOT NULL DEFAULT '',
+    webhook_secret       TEXT NOT NULL DEFAULT '',
+    webhook_enabled      BOOLEAN NOT NULL DEFAULT FALSE,
+    policy_max_data_limit BIGINT NOT NULL DEFAULT 0,
+    policy_max_expire_days INT NOT NULL DEFAULT 0,
+    policy_allow_bulk_delete BOOLEAN NOT NULL DEFAULT TRUE,
+    policy_allow_bulk_create BOOLEAN NOT NULL DEFAULT TRUE,
+    suspended            BOOLEAN NOT NULL DEFAULT FALSE,
+    suspended_at         TIMESTAMPTZ,
+    suspend_reason       TEXT NOT NULL DEFAULT '',
+    auto_suspend_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    ip_violation_suspend_threshold INT NOT NULL DEFAULT 0,
+    suspend_grace_minutes INT NOT NULL DEFAULT 60,
+    quota_breached_at    TIMESTAMPTZ,
+    last_login          TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE nodes (
@@ -97,6 +115,72 @@ CREATE TABLE admin_inbounds (
 
 CREATE INDEX idx_admin_inbounds_inbound ON admin_inbounds (inbound_id);
 
+CREATE TABLE plans (
+    id             UUID PRIMARY KEY,
+    name           TEXT NOT NULL,
+    description    TEXT NOT NULL DEFAULT '',
+    data_limit     BIGINT NOT NULL DEFAULT 0,
+    duration_days  INTEGER NOT NULL DEFAULT 30,
+    device_limit   INTEGER NOT NULL DEFAULT 0,
+    reset_strategy TEXT NOT NULL DEFAULT 'monthly',
+    inbound_ids    JSONB NOT NULL DEFAULT '[]',
+    price_toman    BIGINT NOT NULL DEFAULT 0,
+    price_usd      DOUBLE PRECISION NOT NULL DEFAULT 0,
+    max_users      INTEGER NOT NULL DEFAULT 0,
+    enabled        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE admin_plans (
+    admin_id UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    plan_id  UUID NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    PRIMARY KEY (admin_id, plan_id)
+);
+
+CREATE TABLE admin_nodes (
+    admin_id UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    node_id  UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    PRIMARY KEY (admin_id, node_id)
+);
+
+CREATE TABLE admin_quota_notify_config (
+    id               INT PRIMARY KEY DEFAULT 1,
+    enabled          BOOLEAN NOT NULL DEFAULT FALSE,
+    threshold_pct    INT[] NOT NULL DEFAULT '{80,90,100}',
+    notify_telegram  BOOLEAN NOT NULL DEFAULT TRUE,
+    webhook_url      TEXT NOT NULL DEFAULT '',
+    cooldown_minutes INT NOT NULL DEFAULT 1440
+);
+
+CREATE TABLE admin_quota_notify_events (
+    id         UUID PRIMARY KEY,
+    admin_id   UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    threshold  INT NOT NULL,
+    metric     TEXT NOT NULL,
+    usage_pct  INT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE admin_wallet_ledger (
+    id             UUID PRIMARY KEY,
+    admin_id       UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    delta_traffic  BIGINT NOT NULL DEFAULT 0,
+    delta_users    INT NOT NULL DEFAULT 0,
+    reason         TEXT NOT NULL,
+    actor_admin_id UUID REFERENCES admins(id) ON DELETE SET NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE portal_branding (
+    admin_id      UUID PRIMARY KEY REFERENCES admins(id) ON DELETE CASCADE,
+    panel_title   TEXT NOT NULL DEFAULT '',
+    logo_url      TEXT NOT NULL DEFAULT '',
+    accent_color  TEXT NOT NULL DEFAULT '#6366f1',
+    footer_text   TEXT NOT NULL DEFAULT '',
+    portal_slug   TEXT UNIQUE,
+    custom_domain TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE user_inbounds (
     user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     inbound_id UUID NOT NULL REFERENCES inbounds(id) ON DELETE CASCADE,
@@ -114,13 +198,14 @@ CREATE TABLE traffic_points (
 );
 
 CREATE TABLE audit_log (
-    id       UUID PRIMARY KEY,
-    time     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    admin_id UUID,
-    method   TEXT NOT NULL,
-    path     TEXT NOT NULL,
-    status   INTEGER NOT NULL,
-    ip       TEXT NOT NULL DEFAULT ''
+    id              UUID PRIMARY KEY,
+    time            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    admin_id        UUID,
+    impersonator_id UUID,
+    method          TEXT NOT NULL,
+    path            TEXT NOT NULL,
+    status          INTEGER NOT NULL,
+    ip              TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE api_tokens (

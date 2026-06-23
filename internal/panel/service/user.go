@@ -236,7 +236,10 @@ func (s *UserService) Create(ctx context.Context, in CreateUserInput) (*domain.U
 	if err := s.users.Create(ctx, u); err != nil {
 		return nil, fmt.Errorf("persist user: %w", err)
 	}
-	s.pub.Publish(events.Event{Type: events.UserCreated, UserID: u.ID.String(), Username: u.Username})
+	s.pub.Publish(events.Event{
+		Type: events.UserCreated, UserID: u.ID.String(), Username: u.Username,
+		Data: eventAdminData(u.AdminID),
+	})
 	if len(in.InboundIDs) > 0 {
 		if err := s.users.SetInbounds(ctx, u.ID, in.InboundIDs); err != nil {
 			return u, fmt.Errorf("bind inbounds: %w", err)
@@ -350,8 +353,33 @@ func (s *UserService) Delete(ctx context.Context, id uuid.UUID) error {
 	// After the user (and its bindings) are gone, rebuild WireGuard peers on any
 	// node that hosted a WG inbound for them so they drop out of the server config.
 	s.resyncWireGuardNodes(ctx, inbounds)
-	s.pub.Publish(events.Event{Type: events.UserDeleted, UserID: u.ID.String(), Username: u.Username})
+	s.pub.Publish(events.Event{
+		Type: events.UserDeleted, UserID: u.ID.String(), Username: u.Username,
+		Data: eventAdminData(u.AdminID),
+	})
 	return nil
+}
+
+// DisableAllForAdmin disables every user owned by a reseller (e.g. on suspension).
+func (s *UserService) DisableAllForAdmin(ctx context.Context, adminID uuid.UUID) (int, error) {
+	users, _, err := s.users.List(ctx, port.UserFilter{AdminID: &adminID, Limit: 100000})
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, u := range users {
+		if u.Status == domain.UserStatusDisabled {
+			continue
+		}
+		if _, err := s.Update(ctx, u.ID, UpdateUserInput{
+			Note: u.Note, Status: domain.UserStatusDisabled, DataLimit: u.DataLimit,
+			ExpireAt: u.ExpireAt, DeviceLimit: u.DeviceLimit, ResetStrategy: u.ResetStrategy,
+		}); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
 }
 
 // Sync re-applies a user to every node it is bound to, used after edits or to
@@ -519,4 +547,11 @@ func randToken() (string, error) {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func eventAdminData(adminID *uuid.UUID) map[string]any {
+	if adminID == nil {
+		return nil
+	}
+	return map[string]any{"admin_id": adminID.String()}
 }

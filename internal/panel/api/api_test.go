@@ -53,6 +53,20 @@ func (f *fakeAdminRepo) ListInboundIDs(context.Context, uuid.UUID) ([]uuid.UUID,
 func (f *fakeAdminRepo) CountInboundAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
 	return 0, nil
 }
+func (f *fakeAdminRepo) SetPlans(context.Context, uuid.UUID, []uuid.UUID) error { return nil }
+func (f *fakeAdminRepo) ListPlanIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (f *fakeAdminRepo) CountPlanAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
+	return 0, nil
+}
+func (f *fakeAdminRepo) SetNodes(context.Context, uuid.UUID, []uuid.UUID) error { return nil }
+func (f *fakeAdminRepo) ListNodeIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (f *fakeAdminRepo) CountNodeAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
+	return 0, nil
+}
 
 type fakeUserRepo struct {
 	listed   []*domain.User
@@ -87,6 +101,18 @@ func (f *fakeUserRepo) InboundsFor(context.Context, uuid.UUID) ([]domain.Inbound
 }
 func (f *fakeUserRepo) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
 	return domain.AdminUserStats{}, nil
+}
+func (f *fakeUserRepo) StatsByStatusForAdmin(context.Context, uuid.UUID) (map[string]int64, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) TopUsersForAdmin(context.Context, uuid.UUID, int32) ([]domain.ResellerTopUser, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) CountExpiringSoonForAdmin(context.Context, uuid.UUID) (int64, error) {
+	return 0, nil
+}
+func (f *fakeUserRepo) CountCreatedSinceForAdmin(context.Context, uuid.UUID, time.Time) (int64, error) {
+	return 0, nil
 }
 
 type fakeNodeRepo struct{ node *domain.Node }
@@ -150,9 +176,10 @@ func newTestServer(t *testing.T) (http.Handler, *auth.Issuer, *domain.Admin) {
 		{Time: time.Now(), Up: 50, Down: 75},
 	}}
 	router := NewRouter(Deps{
-		Handlers: &Handlers{Auth: authSvc, Users: userSvc, Sub: subSvc, Admins: adminSvc, Repo: userRepo, Traffic: trafficRepo},
-		Issuer:   iss,
-		Auth:     authSvc,
+		Handlers:  &Handlers{Auth: authSvc, Users: userSvc, Sub: subSvc, Admins: adminSvc, Repo: userRepo, Traffic: trafficRepo},
+		Issuer:    iss,
+		PanelAuth: &auth.PanelAuth{JWT: iss},
+		Auth:      authSvc,
 	})
 	return router, iss, admin
 }
@@ -194,10 +221,11 @@ func TestLoginRateLimited(t *testing.T) {
 	iss := auth.NewIssuer([]byte("0123456789abcdef0123456789abcdef"), time.Hour)
 	authSvc := service.NewAuthService(&fakeAdminRepo{admin: admin}, iss)
 	router := NewRouter(Deps{
-		Handlers: &Handlers{Auth: authSvc},
-		Issuer:   iss,
-		Auth:     authSvc,
-		Limiter:  &fakeLimiter{},
+		Handlers:  &Handlers{Auth: authSvc},
+		Issuer:    iss,
+		PanelAuth: &auth.PanelAuth{JWT: iss},
+		Auth:      authSvc,
+		Limiter:   &fakeLimiter{},
 	})
 
 	// The login route is limited to 10/min; the 11th attempt from one IP is 429.
@@ -355,9 +383,10 @@ func subRouter(t *testing.T, user *domain.User, devices DeviceLimiter) http.Hand
 	iss := auth.NewIssuer([]byte("0123456789abcdef0123456789abcdef"), time.Hour)
 	authSvc := service.NewAuthService(&fakeAdminRepo{}, iss)
 	return NewRouter(Deps{
-		Handlers: &Handlers{Sub: service.NewSubscriptionService(userRepo, nodeRepo, nil), Devices: devices},
-		Issuer:   iss,
-		Auth:     authSvc,
+		Handlers:  &Handlers{Sub: service.NewSubscriptionService(userRepo, nodeRepo, nil), Devices: devices},
+		Issuer:    iss,
+		PanelAuth: &auth.PanelAuth{JWT: iss},
+		Auth:      authSvc,
 	})
 }
 

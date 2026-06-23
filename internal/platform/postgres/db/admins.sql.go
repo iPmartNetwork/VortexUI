@@ -27,12 +27,78 @@ func (q *Queries) AddAdminInbound(ctx context.Context, arg AddAdminInboundParams
 	return err
 }
 
+const addAdminNode = `-- name: AddAdminNode :exec
+INSERT INTO admin_nodes (admin_id, node_id) VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddAdminNodeParams struct {
+	AdminID uuid.UUID
+	NodeID  uuid.UUID
+}
+
+func (q *Queries) AddAdminNode(ctx context.Context, arg AddAdminNodeParams) error {
+	_, err := q.db.Exec(ctx, addAdminNode, arg.AdminID, arg.NodeID)
+	return err
+}
+
+const addAdminPlan = `-- name: AddAdminPlan :exec
+INSERT INTO admin_plans (admin_id, plan_id) VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddAdminPlanParams struct {
+	AdminID uuid.UUID
+	PlanID  uuid.UUID
+}
+
+func (q *Queries) AddAdminPlan(ctx context.Context, arg AddAdminPlanParams) error {
+	_, err := q.db.Exec(ctx, addAdminPlan, arg.AdminID, arg.PlanID)
+	return err
+}
+
+const adjustAdminWallet = `-- name: AdjustAdminWallet :exec
+UPDATE admins SET
+    wallet_traffic_bytes = wallet_traffic_bytes + $2,
+    wallet_user_credits = wallet_user_credits + $3
+WHERE id = $1
+`
+
+type AdjustAdminWalletParams struct {
+	ID                 uuid.UUID
+	WalletTrafficBytes int64
+	WalletUserCredits  int32
+}
+
+func (q *Queries) AdjustAdminWallet(ctx context.Context, arg AdjustAdminWalletParams) error {
+	_, err := q.db.Exec(ctx, adjustAdminWallet, arg.ID, arg.WalletTrafficBytes, arg.WalletUserCredits)
+	return err
+}
+
 const clearAdminInbounds = `-- name: ClearAdminInbounds :exec
 DELETE FROM admin_inbounds WHERE admin_id = $1
 `
 
 func (q *Queries) ClearAdminInbounds(ctx context.Context, adminID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, clearAdminInbounds, adminID)
+	return err
+}
+
+const clearAdminNodes = `-- name: ClearAdminNodes :exec
+DELETE FROM admin_nodes WHERE admin_id = $1
+`
+
+func (q *Queries) ClearAdminNodes(ctx context.Context, adminID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearAdminNodes, adminID)
+	return err
+}
+
+const clearAdminPlans = `-- name: ClearAdminPlans :exec
+DELETE FROM admin_plans WHERE admin_id = $1
+`
+
+func (q *Queries) ClearAdminPlans(ctx context.Context, adminID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearAdminPlans, adminID)
 	return err
 }
 
@@ -48,6 +114,40 @@ type CountAdminInboundAccessParams struct {
 
 func (q *Queries) CountAdminInboundAccess(ctx context.Context, arg CountAdminInboundAccessParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countAdminInboundAccess, arg.AdminID, arg.InboundIds)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countAdminNodeAccess = `-- name: CountAdminNodeAccess :one
+SELECT count(*)::bigint FROM admin_nodes
+WHERE admin_id = $1 AND node_id = ANY($2::uuid[])
+`
+
+type CountAdminNodeAccessParams struct {
+	AdminID uuid.UUID
+	NodeIds []uuid.UUID
+}
+
+func (q *Queries) CountAdminNodeAccess(ctx context.Context, arg CountAdminNodeAccessParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminNodeAccess, arg.AdminID, arg.NodeIds)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countAdminPlanAccess = `-- name: CountAdminPlanAccess :one
+SELECT count(*)::bigint FROM admin_plans
+WHERE admin_id = $1 AND plan_id = ANY($2::uuid[])
+`
+
+type CountAdminPlanAccessParams struct {
+	AdminID uuid.UUID
+	PlanIds []uuid.UUID
+}
+
+func (q *Queries) CountAdminPlanAccess(ctx context.Context, arg CountAdminPlanAccessParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminPlanAccess, arg.AdminID, arg.PlanIds)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -69,21 +169,30 @@ func (q *Queries) CountSudoAdmins(ctx context.Context) (int64, error) {
 const createAdmin = `-- name: CreateAdmin :exec
 INSERT INTO admins (
     id, username, password_hash, sudo, role_id, totp_secret, totp_enabled,
-    user_quota, traffic_quota, created_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    user_quota, traffic_quota, traffic_quota_mode, parent_admin_id,
+    wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled,
+    created_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 `
 
 type CreateAdminParams struct {
-	ID           uuid.UUID
-	Username     string
-	PasswordHash string
-	Sudo         bool
-	RoleID       pgtype.UUID
-	TotpSecret   string
-	TotpEnabled  bool
-	UserQuota    int32
-	TrafficQuota int64
-	CreatedAt    pgtype.Timestamptz
+	ID                 uuid.UUID
+	Username           string
+	PasswordHash       string
+	Sudo               bool
+	RoleID             pgtype.UUID
+	TotpSecret         string
+	TotpEnabled        bool
+	UserQuota          int32
+	TrafficQuota       int64
+	TrafficQuotaMode   string
+	ParentAdminID      pgtype.UUID
+	WalletTrafficBytes int64
+	WalletUserCredits  int32
+	WebhookUrl         string
+	WebhookSecret      string
+	WebhookEnabled     bool
+	CreatedAt          pgtype.Timestamptz
 }
 
 func (q *Queries) CreateAdmin(ctx context.Context, arg CreateAdminParams) error {
@@ -97,6 +206,13 @@ func (q *Queries) CreateAdmin(ctx context.Context, arg CreateAdminParams) error 
 		arg.TotpEnabled,
 		arg.UserQuota,
 		arg.TrafficQuota,
+		arg.TrafficQuotaMode,
+		arg.ParentAdminID,
+		arg.WalletTrafficBytes,
+		arg.WalletUserCredits,
+		arg.WebhookUrl,
+		arg.WebhookSecret,
+		arg.WebhookEnabled,
 		arg.CreatedAt,
 	)
 	return err
@@ -136,7 +252,7 @@ func (q *Queries) DeleteRole(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAdminByID = `-- name: GetAdminByID :one
-SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, last_login, created_at FROM admins WHERE id = $1
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins WHERE id = $1
 `
 
 func (q *Queries) GetAdminByID(ctx context.Context, id uuid.UUID) (Admin, error) {
@@ -152,6 +268,24 @@ func (q *Queries) GetAdminByID(ctx context.Context, id uuid.UUID) (Admin, error)
 		&i.TotpEnabled,
 		&i.UserQuota,
 		&i.TrafficQuota,
+		&i.TrafficQuotaMode,
+		&i.ParentAdminID,
+		&i.WalletTrafficBytes,
+		&i.WalletUserCredits,
+		&i.WebhookUrl,
+		&i.WebhookSecret,
+		&i.WebhookEnabled,
+		&i.PolicyMaxDataLimit,
+		&i.PolicyMaxExpireDays,
+		&i.PolicyAllowBulkDelete,
+		&i.PolicyAllowBulkCreate,
+		&i.Suspended,
+		&i.SuspendedAt,
+		&i.SuspendReason,
+		&i.AutoSuspendEnabled,
+		&i.IpViolationSuspendThreshold,
+		&i.SuspendGraceMinutes,
+		&i.QuotaBreachedAt,
 		&i.LastLogin,
 		&i.CreatedAt,
 	)
@@ -159,7 +293,7 @@ func (q *Queries) GetAdminByID(ctx context.Context, id uuid.UUID) (Admin, error)
 }
 
 const getAdminByUsername = `-- name: GetAdminByUsername :one
-SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, last_login, created_at FROM admins WHERE username = $1
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins WHERE username = $1
 `
 
 func (q *Queries) GetAdminByUsername(ctx context.Context, username string) (Admin, error) {
@@ -175,8 +309,82 @@ func (q *Queries) GetAdminByUsername(ctx context.Context, username string) (Admi
 		&i.TotpEnabled,
 		&i.UserQuota,
 		&i.TrafficQuota,
+		&i.TrafficQuotaMode,
+		&i.ParentAdminID,
+		&i.WalletTrafficBytes,
+		&i.WalletUserCredits,
+		&i.WebhookUrl,
+		&i.WebhookSecret,
+		&i.WebhookEnabled,
+		&i.PolicyMaxDataLimit,
+		&i.PolicyMaxExpireDays,
+		&i.PolicyAllowBulkDelete,
+		&i.PolicyAllowBulkCreate,
+		&i.Suspended,
+		&i.SuspendedAt,
+		&i.SuspendReason,
+		&i.AutoSuspendEnabled,
+		&i.IpViolationSuspendThreshold,
+		&i.SuspendGraceMinutes,
+		&i.QuotaBreachedAt,
 		&i.LastLogin,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getAdminQuotaNotifyConfig = `-- name: GetAdminQuotaNotifyConfig :one
+SELECT id, enabled, threshold_pct, notify_telegram, webhook_url, cooldown_minutes FROM admin_quota_notify_config WHERE id = 1
+`
+
+func (q *Queries) GetAdminQuotaNotifyConfig(ctx context.Context) (AdminQuotaNotifyConfig, error) {
+	row := q.db.QueryRow(ctx, getAdminQuotaNotifyConfig)
+	var i AdminQuotaNotifyConfig
+	err := row.Scan(
+		&i.ID,
+		&i.Enabled,
+		&i.ThresholdPct,
+		&i.NotifyTelegram,
+		&i.WebhookUrl,
+		&i.CooldownMinutes,
+	)
+	return i, err
+}
+
+const getPortalBranding = `-- name: GetPortalBranding :one
+SELECT admin_id, panel_title, logo_url, accent_color, footer_text, portal_slug, custom_domain FROM portal_branding WHERE admin_id = $1
+`
+
+func (q *Queries) GetPortalBranding(ctx context.Context, adminID uuid.UUID) (PortalBranding, error) {
+	row := q.db.QueryRow(ctx, getPortalBranding, adminID)
+	var i PortalBranding
+	err := row.Scan(
+		&i.AdminID,
+		&i.PanelTitle,
+		&i.LogoUrl,
+		&i.AccentColor,
+		&i.FooterText,
+		&i.PortalSlug,
+		&i.CustomDomain,
+	)
+	return i, err
+}
+
+const getPortalBrandingBySlug = `-- name: GetPortalBrandingBySlug :one
+SELECT admin_id, panel_title, logo_url, accent_color, footer_text, portal_slug, custom_domain FROM portal_branding WHERE portal_slug = $1
+`
+
+func (q *Queries) GetPortalBrandingBySlug(ctx context.Context, portalSlug pgtype.Text) (PortalBranding, error) {
+	row := q.db.QueryRow(ctx, getPortalBrandingBySlug, portalSlug)
+	var i PortalBranding
+	err := row.Scan(
+		&i.AdminID,
+		&i.PanelTitle,
+		&i.LogoUrl,
+		&i.AccentColor,
+		&i.FooterText,
+		&i.PortalSlug,
+		&i.CustomDomain,
 	)
 	return i, err
 }
@@ -192,8 +400,119 @@ func (q *Queries) GetRole(ctx context.Context, id uuid.UUID) (Role, error) {
 	return i, err
 }
 
+const insertAdminQuotaNotifyEvent = `-- name: InsertAdminQuotaNotifyEvent :exec
+INSERT INTO admin_quota_notify_events (id, admin_id, threshold, metric, usage_pct, created_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type InsertAdminQuotaNotifyEventParams struct {
+	ID        uuid.UUID
+	AdminID   uuid.UUID
+	Threshold int32
+	Metric    string
+	UsagePct  int32
+	CreatedAt pgtype.Timestamptz
+}
+
+func (q *Queries) InsertAdminQuotaNotifyEvent(ctx context.Context, arg InsertAdminQuotaNotifyEventParams) error {
+	_, err := q.db.Exec(ctx, insertAdminQuotaNotifyEvent,
+		arg.ID,
+		arg.AdminID,
+		arg.Threshold,
+		arg.Metric,
+		arg.UsagePct,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const insertWalletLedger = `-- name: InsertWalletLedger :exec
+INSERT INTO admin_wallet_ledger (id, admin_id, delta_traffic, delta_users, reason, actor_admin_id, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type InsertWalletLedgerParams struct {
+	ID           uuid.UUID
+	AdminID      uuid.UUID
+	DeltaTraffic int64
+	DeltaUsers   int32
+	Reason       string
+	ActorAdminID pgtype.UUID
+	CreatedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) InsertWalletLedger(ctx context.Context, arg InsertWalletLedgerParams) error {
+	_, err := q.db.Exec(ctx, insertWalletLedger,
+		arg.ID,
+		arg.AdminID,
+		arg.DeltaTraffic,
+		arg.DeltaUsers,
+		arg.Reason,
+		arg.ActorAdminID,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const lastAdminQuotaNotifyEvent = `-- name: LastAdminQuotaNotifyEvent :one
+SELECT id, admin_id, threshold, metric, usage_pct, created_at FROM admin_quota_notify_events
+WHERE admin_id = $1 AND metric = $2 AND threshold = $3
+ORDER BY created_at DESC LIMIT 1
+`
+
+type LastAdminQuotaNotifyEventParams struct {
+	AdminID   uuid.UUID
+	Metric    string
+	Threshold int32
+}
+
+func (q *Queries) LastAdminQuotaNotifyEvent(ctx context.Context, arg LastAdminQuotaNotifyEventParams) (AdminQuotaNotifyEvent, error) {
+	row := q.db.QueryRow(ctx, lastAdminQuotaNotifyEvent, arg.AdminID, arg.Metric, arg.Threshold)
+	var i AdminQuotaNotifyEvent
+	err := row.Scan(
+		&i.ID,
+		&i.AdminID,
+		&i.Threshold,
+		&i.Metric,
+		&i.UsagePct,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listAdminQuotaNotifyEvents = `-- name: ListAdminQuotaNotifyEvents :many
+SELECT id, admin_id, threshold, metric, usage_pct, created_at FROM admin_quota_notify_events ORDER BY created_at DESC LIMIT $1
+`
+
+func (q *Queries) ListAdminQuotaNotifyEvents(ctx context.Context, limit int32) ([]AdminQuotaNotifyEvent, error) {
+	rows, err := q.db.Query(ctx, listAdminQuotaNotifyEvents, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminQuotaNotifyEvent{}
+	for rows.Next() {
+		var i AdminQuotaNotifyEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.AdminID,
+			&i.Threshold,
+			&i.Metric,
+			&i.UsagePct,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAdmins = `-- name: ListAdmins :many
-SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, last_login, created_at FROM admins ORDER BY created_at
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins ORDER BY created_at
 `
 
 func (q *Queries) ListAdmins(ctx context.Context) ([]Admin, error) {
@@ -215,6 +534,117 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]Admin, error) {
 			&i.TotpEnabled,
 			&i.UserQuota,
 			&i.TrafficQuota,
+			&i.TrafficQuotaMode,
+			&i.ParentAdminID,
+			&i.WalletTrafficBytes,
+			&i.WalletUserCredits,
+			&i.WebhookUrl,
+			&i.WebhookSecret,
+			&i.WebhookEnabled,
+			&i.PolicyMaxDataLimit,
+			&i.PolicyMaxExpireDays,
+			&i.PolicyAllowBulkDelete,
+			&i.PolicyAllowBulkCreate,
+			&i.Suspended,
+			&i.SuspendedAt,
+			&i.SuspendReason,
+			&i.AutoSuspendEnabled,
+			&i.IpViolationSuspendThreshold,
+			&i.SuspendGraceMinutes,
+			&i.QuotaBreachedAt,
+			&i.LastLogin,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAdminsWithWebhooks = `-- name: ListAdminsWithWebhooks :many
+SELECT id, username, webhook_url, webhook_secret, webhook_enabled FROM admins
+WHERE webhook_enabled = TRUE AND webhook_url <> ''
+`
+
+type ListAdminsWithWebhooksRow struct {
+	ID             uuid.UUID
+	Username       string
+	WebhookUrl     string
+	WebhookSecret  string
+	WebhookEnabled bool
+}
+
+func (q *Queries) ListAdminsWithWebhooks(ctx context.Context) ([]ListAdminsWithWebhooksRow, error) {
+	rows, err := q.db.Query(ctx, listAdminsWithWebhooks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAdminsWithWebhooksRow{}
+	for rows.Next() {
+		var i ListAdminsWithWebhooksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.WebhookUrl,
+			&i.WebhookSecret,
+			&i.WebhookEnabled,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listChildAdmins = `-- name: ListChildAdmins :many
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins WHERE parent_admin_id = $1 ORDER BY created_at
+`
+
+func (q *Queries) ListChildAdmins(ctx context.Context, parentAdminID pgtype.UUID) ([]Admin, error) {
+	rows, err := q.db.Query(ctx, listChildAdmins, parentAdminID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Admin{}
+	for rows.Next() {
+		var i Admin
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.PasswordHash,
+			&i.Sudo,
+			&i.RoleID,
+			&i.TotpSecret,
+			&i.TotpEnabled,
+			&i.UserQuota,
+			&i.TrafficQuota,
+			&i.TrafficQuotaMode,
+			&i.ParentAdminID,
+			&i.WalletTrafficBytes,
+			&i.WalletUserCredits,
+			&i.WebhookUrl,
+			&i.WebhookSecret,
+			&i.WebhookEnabled,
+			&i.PolicyMaxDataLimit,
+			&i.PolicyMaxExpireDays,
+			&i.PolicyAllowBulkDelete,
+			&i.PolicyAllowBulkCreate,
+			&i.Suspended,
+			&i.SuspendedAt,
+			&i.SuspendReason,
+			&i.AutoSuspendEnabled,
+			&i.IpViolationSuspendThreshold,
+			&i.SuspendGraceMinutes,
+			&i.QuotaBreachedAt,
 			&i.LastLogin,
 			&i.CreatedAt,
 		); err != nil {
@@ -252,6 +682,108 @@ func (q *Queries) ListInboundIDsForAdmin(ctx context.Context, adminID uuid.UUID)
 	return items, nil
 }
 
+const listNodeIDsForAdmin = `-- name: ListNodeIDsForAdmin :many
+SELECT node_id FROM admin_nodes WHERE admin_id = $1
+`
+
+func (q *Queries) ListNodeIDsForAdmin(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listNodeIDsForAdmin, adminID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var node_id uuid.UUID
+		if err := rows.Scan(&node_id); err != nil {
+			return nil, err
+		}
+		items = append(items, node_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPlanIDsForAdmin = `-- name: ListPlanIDsForAdmin :many
+SELECT plan_id FROM admin_plans WHERE admin_id = $1
+`
+
+func (q *Queries) ListPlanIDsForAdmin(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listPlanIDsForAdmin, adminID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var plan_id uuid.UUID
+		if err := rows.Scan(&plan_id); err != nil {
+			return nil, err
+		}
+		items = append(items, plan_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listResellerCandidates = `-- name: ListResellerCandidates :many
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins WHERE sudo = FALSE AND suspended = FALSE ORDER BY created_at
+`
+
+func (q *Queries) ListResellerCandidates(ctx context.Context) ([]Admin, error) {
+	rows, err := q.db.Query(ctx, listResellerCandidates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Admin{}
+	for rows.Next() {
+		var i Admin
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.PasswordHash,
+			&i.Sudo,
+			&i.RoleID,
+			&i.TotpSecret,
+			&i.TotpEnabled,
+			&i.UserQuota,
+			&i.TrafficQuota,
+			&i.TrafficQuotaMode,
+			&i.ParentAdminID,
+			&i.WalletTrafficBytes,
+			&i.WalletUserCredits,
+			&i.WebhookUrl,
+			&i.WebhookSecret,
+			&i.WebhookEnabled,
+			&i.PolicyMaxDataLimit,
+			&i.PolicyMaxExpireDays,
+			&i.PolicyAllowBulkDelete,
+			&i.PolicyAllowBulkCreate,
+			&i.Suspended,
+			&i.SuspendedAt,
+			&i.SuspendReason,
+			&i.AutoSuspendEnabled,
+			&i.IpViolationSuspendThreshold,
+			&i.SuspendGraceMinutes,
+			&i.QuotaBreachedAt,
+			&i.LastLogin,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRoles = `-- name: ListRoles :many
 SELECT id, name, permissions FROM roles ORDER BY name
 `
@@ -276,23 +808,119 @@ func (q *Queries) ListRoles(ctx context.Context) ([]Role, error) {
 	return items, nil
 }
 
+const listWalletLedger = `-- name: ListWalletLedger :many
+SELECT id, admin_id, delta_traffic, delta_users, reason, actor_admin_id, created_at FROM admin_wallet_ledger WHERE admin_id = $1 ORDER BY created_at DESC LIMIT $2
+`
+
+type ListWalletLedgerParams struct {
+	AdminID uuid.UUID
+	Limit   int32
+}
+
+func (q *Queries) ListWalletLedger(ctx context.Context, arg ListWalletLedgerParams) ([]AdminWalletLedger, error) {
+	rows, err := q.db.Query(ctx, listWalletLedger, arg.AdminID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminWalletLedger{}
+	for rows.Next() {
+		var i AdminWalletLedger
+		if err := rows.Scan(
+			&i.ID,
+			&i.AdminID,
+			&i.DeltaTraffic,
+			&i.DeltaUsers,
+			&i.Reason,
+			&i.ActorAdminID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setAdminQuotaBreachedAt = `-- name: SetAdminQuotaBreachedAt :exec
+UPDATE admins SET quota_breached_at = $2 WHERE id = $1
+`
+
+type SetAdminQuotaBreachedAtParams struct {
+	ID              uuid.UUID
+	QuotaBreachedAt pgtype.Timestamptz
+}
+
+func (q *Queries) SetAdminQuotaBreachedAt(ctx context.Context, arg SetAdminQuotaBreachedAtParams) error {
+	_, err := q.db.Exec(ctx, setAdminQuotaBreachedAt, arg.ID, arg.QuotaBreachedAt)
+	return err
+}
+
+const suspendAdmin = `-- name: SuspendAdmin :exec
+UPDATE admins SET suspended = TRUE, suspended_at = $2, suspend_reason = $3, quota_breached_at = NULL
+WHERE id = $1
+`
+
+type SuspendAdminParams struct {
+	ID            uuid.UUID
+	SuspendedAt   pgtype.Timestamptz
+	SuspendReason string
+}
+
+func (q *Queries) SuspendAdmin(ctx context.Context, arg SuspendAdminParams) error {
+	_, err := q.db.Exec(ctx, suspendAdmin, arg.ID, arg.SuspendedAt, arg.SuspendReason)
+	return err
+}
+
+const unsuspendAdmin = `-- name: UnsuspendAdmin :exec
+UPDATE admins SET suspended = FALSE, suspended_at = NULL, suspend_reason = '', quota_breached_at = NULL
+WHERE id = $1
+`
+
+func (q *Queries) UnsuspendAdmin(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, unsuspendAdmin, id)
+	return err
+}
+
 const updateAdmin = `-- name: UpdateAdmin :exec
 UPDATE admins SET
     password_hash = $2, sudo = $3, role_id = $4, totp_secret = $5,
-    totp_enabled = $6, user_quota = $7, traffic_quota = $8, last_login = $9
+    totp_enabled = $6, user_quota = $7, traffic_quota = $8, traffic_quota_mode = $9,
+    parent_admin_id = $10, wallet_traffic_bytes = $11, wallet_user_credits = $12,
+    webhook_url = $13, webhook_secret = $14, webhook_enabled = $15, last_login = $16,
+    policy_max_data_limit = $17, policy_max_expire_days = $18,
+    policy_allow_bulk_delete = $19, policy_allow_bulk_create = $20,
+    auto_suspend_enabled = $21, ip_violation_suspend_threshold = $22, suspend_grace_minutes = $23
 WHERE id = $1
 `
 
 type UpdateAdminParams struct {
-	ID           uuid.UUID
-	PasswordHash string
-	Sudo         bool
-	RoleID       pgtype.UUID
-	TotpSecret   string
-	TotpEnabled  bool
-	UserQuota    int32
-	TrafficQuota int64
-	LastLogin    pgtype.Timestamptz
+	ID                          uuid.UUID
+	PasswordHash                string
+	Sudo                        bool
+	RoleID                      pgtype.UUID
+	TotpSecret                  string
+	TotpEnabled                 bool
+	UserQuota                   int32
+	TrafficQuota                int64
+	TrafficQuotaMode            string
+	ParentAdminID               pgtype.UUID
+	WalletTrafficBytes          int64
+	WalletUserCredits           int32
+	WebhookUrl                  string
+	WebhookSecret               string
+	WebhookEnabled              bool
+	LastLogin                   pgtype.Timestamptz
+	PolicyMaxDataLimit          int64
+	PolicyMaxExpireDays         int32
+	PolicyAllowBulkDelete       bool
+	PolicyAllowBulkCreate       bool
+	AutoSuspendEnabled          bool
+	IpViolationSuspendThreshold int32
+	SuspendGraceMinutes         int32
 }
 
 func (q *Queries) UpdateAdmin(ctx context.Context, arg UpdateAdminParams) error {
@@ -305,7 +933,42 @@ func (q *Queries) UpdateAdmin(ctx context.Context, arg UpdateAdminParams) error 
 		arg.TotpEnabled,
 		arg.UserQuota,
 		arg.TrafficQuota,
+		arg.TrafficQuotaMode,
+		arg.ParentAdminID,
+		arg.WalletTrafficBytes,
+		arg.WalletUserCredits,
+		arg.WebhookUrl,
+		arg.WebhookSecret,
+		arg.WebhookEnabled,
 		arg.LastLogin,
+		arg.PolicyMaxDataLimit,
+		arg.PolicyMaxExpireDays,
+		arg.PolicyAllowBulkDelete,
+		arg.PolicyAllowBulkCreate,
+		arg.AutoSuspendEnabled,
+		arg.IpViolationSuspendThreshold,
+		arg.SuspendGraceMinutes,
+	)
+	return err
+}
+
+const updateAdminWebhook = `-- name: UpdateAdminWebhook :exec
+UPDATE admins SET webhook_url = $2, webhook_secret = $3, webhook_enabled = $4 WHERE id = $1
+`
+
+type UpdateAdminWebhookParams struct {
+	ID             uuid.UUID
+	WebhookUrl     string
+	WebhookSecret  string
+	WebhookEnabled bool
+}
+
+func (q *Queries) UpdateAdminWebhook(ctx context.Context, arg UpdateAdminWebhookParams) error {
+	_, err := q.db.Exec(ctx, updateAdminWebhook,
+		arg.ID,
+		arg.WebhookUrl,
+		arg.WebhookSecret,
+		arg.WebhookEnabled,
 	)
 	return err
 }
@@ -322,5 +985,70 @@ type UpdateRoleParams struct {
 
 func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) error {
 	_, err := q.db.Exec(ctx, updateRole, arg.ID, arg.Name, arg.Permissions)
+	return err
+}
+
+const upsertAdminQuotaNotifyConfig = `-- name: UpsertAdminQuotaNotifyConfig :exec
+INSERT INTO admin_quota_notify_config (id, enabled, threshold_pct, notify_telegram, webhook_url, cooldown_minutes)
+VALUES (1, $1, $2, $3, $4, $5)
+ON CONFLICT (id) DO UPDATE SET
+    enabled = EXCLUDED.enabled,
+    threshold_pct = EXCLUDED.threshold_pct,
+    notify_telegram = EXCLUDED.notify_telegram,
+    webhook_url = EXCLUDED.webhook_url,
+    cooldown_minutes = EXCLUDED.cooldown_minutes
+`
+
+type UpsertAdminQuotaNotifyConfigParams struct {
+	Enabled         bool
+	ThresholdPct    []int32
+	NotifyTelegram  bool
+	WebhookUrl      string
+	CooldownMinutes int32
+}
+
+func (q *Queries) UpsertAdminQuotaNotifyConfig(ctx context.Context, arg UpsertAdminQuotaNotifyConfigParams) error {
+	_, err := q.db.Exec(ctx, upsertAdminQuotaNotifyConfig,
+		arg.Enabled,
+		arg.ThresholdPct,
+		arg.NotifyTelegram,
+		arg.WebhookUrl,
+		arg.CooldownMinutes,
+	)
+	return err
+}
+
+const upsertPortalBranding = `-- name: UpsertPortalBranding :exec
+INSERT INTO portal_branding (admin_id, panel_title, logo_url, accent_color, footer_text, portal_slug, custom_domain)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (admin_id) DO UPDATE SET
+    panel_title = EXCLUDED.panel_title,
+    logo_url = EXCLUDED.logo_url,
+    accent_color = EXCLUDED.accent_color,
+    footer_text = EXCLUDED.footer_text,
+    portal_slug = EXCLUDED.portal_slug,
+    custom_domain = EXCLUDED.custom_domain
+`
+
+type UpsertPortalBrandingParams struct {
+	AdminID      uuid.UUID
+	PanelTitle   string
+	LogoUrl      string
+	AccentColor  string
+	FooterText   string
+	PortalSlug   pgtype.Text
+	CustomDomain string
+}
+
+func (q *Queries) UpsertPortalBranding(ctx context.Context, arg UpsertPortalBrandingParams) error {
+	_, err := q.db.Exec(ctx, upsertPortalBranding,
+		arg.AdminID,
+		arg.PanelTitle,
+		arg.LogoUrl,
+		arg.AccentColor,
+		arg.FooterText,
+		arg.PortalSlug,
+		arg.CustomDomain,
+	)
 	return err
 }

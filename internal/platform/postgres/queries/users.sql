@@ -122,3 +122,31 @@ SELECT
     COALESCE(SUM(data_limit), 0)::bigint AS traffic_allocated
 FROM users
 WHERE admin_id = $1;
+
+-- name: AdminUserStatsByStatus :many
+SELECT status, count(*)::bigint AS count
+FROM users
+WHERE admin_id = $1
+GROUP BY status;
+
+-- name: AdminTopUsersByTraffic :many
+SELECT id, username, used_traffic, data_limit, status
+FROM users
+WHERE admin_id = $1
+ORDER BY used_traffic DESC
+LIMIT sqlc.arg(lim);
+
+-- name: CountAdminUsersExpiringSoon :one
+SELECT count(*)::bigint FROM users
+WHERE admin_id = $1 AND status = 'active'
+  AND expire_at IS NOT NULL AND expire_at <= now() + interval '7 days' AND expire_at > now();
+
+-- name: CountAdminUsersCreatedSince :one
+SELECT count(*)::bigint FROM users
+WHERE admin_id = $1 AND created_at >= $2;
+
+-- name: CountIPLimitEventsForAdminSince :one
+SELECT count(*)::bigint
+FROM ip_limit_events e
+INNER JOIN users u ON u.id = e.user_id
+WHERE u.admin_id = $1 AND e.created_at >= $2;
