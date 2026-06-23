@@ -164,7 +164,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, routing_pack_id, created_at, updated_at FROM users WHERE id = $1
+SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, created_at, updated_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -189,7 +189,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.SsPassword,
 		&i.SsMethod,
 		&i.SubToken,
-		&i.RoutingPackID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -197,7 +196,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const getUserBySubToken = `-- name: GetUserBySubToken :one
-SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, routing_pack_id, created_at, updated_at FROM users WHERE sub_token = $1
+SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, created_at, updated_at FROM users WHERE sub_token = $1
 `
 
 func (q *Queries) GetUserBySubToken(ctx context.Context, subToken string) (User, error) {
@@ -222,7 +221,6 @@ func (q *Queries) GetUserBySubToken(ctx context.Context, subToken string) (User,
 		&i.SsPassword,
 		&i.SsMethod,
 		&i.SubToken,
-		&i.RoutingPackID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -230,7 +228,7 @@ func (q *Queries) GetUserBySubToken(ctx context.Context, subToken string) (User,
 }
 
 const inboundsForUser = `-- name: InboundsForUser :many
-SELECT i.id, i.node_id, i.tag, i.protocol, i.listen, i.port, i.network, i.security, i.sni, i.path, i.host, i.flow, i.evasion_profile_id, i.raw, i.enabled, i.speed_limit, i.geo_policy FROM inbounds i
+SELECT i.id, i.node_id, i.tag, i.protocol, i.listen, i.port, i.network, i.security, i.sni, i.path, i.host, i.flow, i.evasion_profile_id, i.raw, i.enabled FROM inbounds i
 JOIN user_inbounds ui ON ui.inbound_id = i.id
 WHERE ui.user_id = $1
 `
@@ -260,8 +258,6 @@ func (q *Queries) InboundsForUser(ctx context.Context, userID uuid.UUID) ([]Inbo
 			&i.EvasionProfileID,
 			&i.Raw,
 			&i.Enabled,
-			&i.SpeedLimit,
-			&i.GeoPolicy,
 		); err != nil {
 			return nil, err
 		}
@@ -274,7 +270,7 @@ func (q *Queries) InboundsForUser(ctx context.Context, userID uuid.UUID) ([]Inbo
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, routing_pack_id, created_at, updated_at FROM users
+SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, created_at, updated_at FROM users
 WHERE ($1::text = '' OR username ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR status = $2)
 ORDER BY created_at DESC
@@ -321,7 +317,6 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.SsPassword,
 			&i.SsMethod,
 			&i.SubToken,
-			&i.RoutingPackID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -432,7 +427,7 @@ func (q *Queries) UserStats(ctx context.Context) ([]UserStatsRow, error) {
 }
 
 const usersByNode = `-- name: UsersByNode :many
-SELECT i.tag, u.id, u.username, u.status, u.note, u.data_limit, u.used_traffic, u.expire_at, u.on_hold_expire, u.reset_strategy, u.last_reset, u.device_limit, u.allowed_hwids, u.vmess_uuid, u.vless_uuid, u.trojan_pass, u.ss_password, u.ss_method, u.sub_token, u.routing_pack_id, u.created_at, u.updated_at
+SELECT i.tag, u.id, u.username, u.status, u.note, u.data_limit, u.used_traffic, u.expire_at, u.on_hold_expire, u.reset_strategy, u.last_reset, u.device_limit, u.allowed_hwids, u.vmess_uuid, u.vless_uuid, u.trojan_pass, u.ss_password, u.ss_method, u.sub_token, u.created_at, u.updated_at
 FROM inbounds i
 JOIN user_inbounds ui ON ui.inbound_id = i.id
 JOIN users u ON u.id = ui.user_id
@@ -475,7 +470,6 @@ func (q *Queries) UsersByNode(ctx context.Context, nodeID uuid.UUID) ([]UsersByN
 			&i.User.SsPassword,
 			&i.User.SsMethod,
 			&i.User.SubToken,
-			&i.User.RoutingPackID,
 			&i.User.CreatedAt,
 			&i.User.UpdatedAt,
 		); err != nil {
@@ -490,7 +484,7 @@ func (q *Queries) UsersByNode(ctx context.Context, nodeID uuid.UUID) ([]UsersByN
 }
 
 const usersToLimit = `-- name: UsersToLimit :many
-SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, routing_pack_id, created_at, updated_at FROM users
+SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, created_at, updated_at FROM users
 WHERE status = 'active'
   AND (
     (data_limit > 0 AND used_traffic >= data_limit)
@@ -529,7 +523,6 @@ func (q *Queries) UsersToLimit(ctx context.Context) ([]User, error) {
 			&i.SsPassword,
 			&i.SsMethod,
 			&i.SubToken,
-			&i.RoutingPackID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -544,7 +537,7 @@ func (q *Queries) UsersToLimit(ctx context.Context) ([]User, error) {
 }
 
 const usersToReset = `-- name: UsersToReset :many
-SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, routing_pack_id, created_at, updated_at FROM users
+SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, created_at, updated_at FROM users
 WHERE reset_strategy <> 'no_reset'
   AND (
     last_reset IS NULL
@@ -584,7 +577,52 @@ func (q *Queries) UsersToReset(ctx context.Context) ([]User, error) {
 			&i.SsPassword,
 			&i.SsMethod,
 			&i.SubToken,
-			&i.RoutingPackID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const usersExpiringSoon = `-- name: UsersExpiringSoon :many
+SELECT id, username, status, note, data_limit, used_traffic, expire_at, on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids, vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token, created_at, updated_at FROM users
+WHERE status = 'active' AND expire_at IS NOT NULL AND expire_at <= $1 AND expire_at > now()
+`
+
+func (q *Queries) UsersExpiringSoon(ctx context.Context, before pgtype.Timestamptz) ([]User, error) {
+	rows, err := q.db.Query(ctx, usersExpiringSoon, before)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Status,
+			&i.Note,
+			&i.DataLimit,
+			&i.UsedTraffic,
+			&i.ExpireAt,
+			&i.OnHoldExpire,
+			&i.ResetStrategy,
+			&i.LastReset,
+			&i.DeviceLimit,
+			&i.AllowedHwids,
+			&i.VmessUuid,
+			&i.VlessUuid,
+			&i.TrojanPass,
+			&i.SsPassword,
+			&i.SsMethod,
+			&i.SubToken,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
