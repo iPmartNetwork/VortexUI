@@ -189,7 +189,7 @@ Switch language from the panel header. Keys live under `reseller.*` in `web/src/
 | `/api/admin-quota-notify/config` | GET/PUT | Sudo | Quota alert config |
 | `/api/admin-quota-notify/events` | GET | Sudo | Recent alerts |
 
-See [API reference](12-api-reference.md) and [`docs/openapi.yaml`](../../openapi.yaml) for request bodies.
+See [API reference](12-api-reference.md) and [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) for request bodies.
 
 ---
 
