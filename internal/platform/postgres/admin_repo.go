@@ -84,6 +84,9 @@ func (r *AdminRepo) Update(ctx context.Context, a *domain.Admin) error {
 		AutoSuspendEnabled:          a.AutoSuspendEnabled,
 		IpViolationSuspendThreshold: int32(a.IPViolationSuspendThreshold),
 		SuspendGraceMinutes:         int32(a.SuspendGraceMinutes),
+		AllowSubResellers:           a.AllowSubResellers,
+		AllowUserBackup:             a.AllowUserBackup,
+		ResellerSettings:            resellerSettingsToJSON(a.ResellerSettings),
 	})
 }
 
@@ -396,6 +399,9 @@ func adminToDomain(a db.Admin) *domain.Admin {
 		IPViolationSuspendThreshold: int(a.IpViolationSuspendThreshold),
 		SuspendGraceMinutes:         int(a.SuspendGraceMinutes),
 		QuotaBreachedAt:             tsToPtr(a.QuotaBreachedAt),
+		AllowSubResellers:           a.AllowSubResellers,
+		AllowUserBackup:             a.AllowUserBackup,
+		ResellerSettings:            jsonToResellerSettings(a.ResellerSettings),
 		LastLogin:          tsToPtr(a.LastLogin),
 		CreatedAt:          a.CreatedAt.Time,
 	}
@@ -423,4 +429,26 @@ func (r *AdminRepo) ListResellerCandidates(ctx context.Context) ([]*domain.Admin
 		out[i] = adminToDomain(rows[i])
 	}
 	return out, nil
+}
+
+func resellerSettingsToJSON(m map[string]bool) []byte {
+	if len(m) == 0 {
+		return []byte("{}")
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return []byte("{}")
+	}
+	return b
+}
+
+func jsonToResellerSettings(b []byte) map[string]bool {
+	if len(b) == 0 {
+		return nil
+	}
+	var m map[string]bool
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil
+	}
+	return m
 }

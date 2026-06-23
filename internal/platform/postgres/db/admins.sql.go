@@ -252,7 +252,7 @@ func (q *Queries) DeleteRole(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAdminByID = `-- name: GetAdminByID :one
-SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins WHERE id = $1
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, allow_sub_resellers, allow_user_backup, reseller_settings, last_login, created_at FROM admins WHERE id = $1
 `
 
 func (q *Queries) GetAdminByID(ctx context.Context, id uuid.UUID) (Admin, error) {
@@ -286,6 +286,9 @@ func (q *Queries) GetAdminByID(ctx context.Context, id uuid.UUID) (Admin, error)
 		&i.IpViolationSuspendThreshold,
 		&i.SuspendGraceMinutes,
 		&i.QuotaBreachedAt,
+		&i.AllowSubResellers,
+		&i.AllowUserBackup,
+		&i.ResellerSettings,
 		&i.LastLogin,
 		&i.CreatedAt,
 	)
@@ -293,7 +296,7 @@ func (q *Queries) GetAdminByID(ctx context.Context, id uuid.UUID) (Admin, error)
 }
 
 const getAdminByUsername = `-- name: GetAdminByUsername :one
-SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins WHERE username = $1
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, allow_sub_resellers, allow_user_backup, reseller_settings, last_login, created_at FROM admins WHERE username = $1
 `
 
 func (q *Queries) GetAdminByUsername(ctx context.Context, username string) (Admin, error) {
@@ -327,6 +330,9 @@ func (q *Queries) GetAdminByUsername(ctx context.Context, username string) (Admi
 		&i.IpViolationSuspendThreshold,
 		&i.SuspendGraceMinutes,
 		&i.QuotaBreachedAt,
+		&i.AllowSubResellers,
+		&i.AllowUserBackup,
+		&i.ResellerSettings,
 		&i.LastLogin,
 		&i.CreatedAt,
 	)
@@ -512,7 +518,7 @@ func (q *Queries) ListAdminQuotaNotifyEvents(ctx context.Context, limit int32) (
 }
 
 const listAdmins = `-- name: ListAdmins :many
-SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins ORDER BY created_at
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, allow_sub_resellers, allow_user_backup, reseller_settings, last_login, created_at FROM admins ORDER BY created_at
 `
 
 func (q *Queries) ListAdmins(ctx context.Context) ([]Admin, error) {
@@ -552,6 +558,9 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]Admin, error) {
 			&i.IpViolationSuspendThreshold,
 			&i.SuspendGraceMinutes,
 			&i.QuotaBreachedAt,
+			&i.AllowSubResellers,
+			&i.AllowUserBackup,
+			&i.ResellerSettings,
 			&i.LastLogin,
 			&i.CreatedAt,
 		); err != nil {
@@ -605,7 +614,7 @@ func (q *Queries) ListAdminsWithWebhooks(ctx context.Context) ([]ListAdminsWithW
 }
 
 const listChildAdmins = `-- name: ListChildAdmins :many
-SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins WHERE parent_admin_id = $1 ORDER BY created_at
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, allow_sub_resellers, allow_user_backup, reseller_settings, last_login, created_at FROM admins WHERE parent_admin_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListChildAdmins(ctx context.Context, parentAdminID pgtype.UUID) ([]Admin, error) {
@@ -645,6 +654,9 @@ func (q *Queries) ListChildAdmins(ctx context.Context, parentAdminID pgtype.UUID
 			&i.IpViolationSuspendThreshold,
 			&i.SuspendGraceMinutes,
 			&i.QuotaBreachedAt,
+			&i.AllowSubResellers,
+			&i.AllowUserBackup,
+			&i.ResellerSettings,
 			&i.LastLogin,
 			&i.CreatedAt,
 		); err != nil {
@@ -731,7 +743,7 @@ func (q *Queries) ListPlanIDsForAdmin(ctx context.Context, adminID uuid.UUID) ([
 }
 
 const listResellerCandidates = `-- name: ListResellerCandidates :many
-SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, last_login, created_at FROM admins WHERE sudo = FALSE AND suspended = FALSE ORDER BY created_at
+SELECT id, username, password_hash, sudo, role_id, totp_secret, totp_enabled, user_quota, traffic_quota, traffic_quota_mode, parent_admin_id, wallet_traffic_bytes, wallet_user_credits, webhook_url, webhook_secret, webhook_enabled, policy_max_data_limit, policy_max_expire_days, policy_allow_bulk_delete, policy_allow_bulk_create, suspended, suspended_at, suspend_reason, auto_suspend_enabled, ip_violation_suspend_threshold, suspend_grace_minutes, quota_breached_at, allow_sub_resellers, allow_user_backup, reseller_settings, last_login, created_at FROM admins WHERE sudo = FALSE AND suspended = FALSE ORDER BY created_at
 `
 
 func (q *Queries) ListResellerCandidates(ctx context.Context) ([]Admin, error) {
@@ -771,6 +783,9 @@ func (q *Queries) ListResellerCandidates(ctx context.Context) ([]Admin, error) {
 			&i.IpViolationSuspendThreshold,
 			&i.SuspendGraceMinutes,
 			&i.QuotaBreachedAt,
+			&i.AllowSubResellers,
+			&i.AllowUserBackup,
+			&i.ResellerSettings,
 			&i.LastLogin,
 			&i.CreatedAt,
 		); err != nil {
@@ -893,7 +908,8 @@ UPDATE admins SET
     webhook_url = $13, webhook_secret = $14, webhook_enabled = $15, last_login = $16,
     policy_max_data_limit = $17, policy_max_expire_days = $18,
     policy_allow_bulk_delete = $19, policy_allow_bulk_create = $20,
-    auto_suspend_enabled = $21, ip_violation_suspend_threshold = $22, suspend_grace_minutes = $23
+    auto_suspend_enabled = $21, ip_violation_suspend_threshold = $22, suspend_grace_minutes = $23,
+    allow_sub_resellers = $24, allow_user_backup = $25, reseller_settings = $26
 WHERE id = $1
 `
 
@@ -921,6 +937,9 @@ type UpdateAdminParams struct {
 	AutoSuspendEnabled          bool
 	IpViolationSuspendThreshold int32
 	SuspendGraceMinutes         int32
+	AllowSubResellers           bool
+	AllowUserBackup             bool
+	ResellerSettings            []byte
 }
 
 func (q *Queries) UpdateAdmin(ctx context.Context, arg UpdateAdminParams) error {
@@ -948,6 +967,9 @@ func (q *Queries) UpdateAdmin(ctx context.Context, arg UpdateAdminParams) error 
 		arg.AutoSuspendEnabled,
 		arg.IpViolationSuspendThreshold,
 		arg.SuspendGraceMinutes,
+		arg.AllowSubResellers,
+		arg.AllowUserBackup,
+		arg.ResellerSettings,
 	)
 	return err
 }

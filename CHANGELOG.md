@@ -51,10 +51,14 @@ and full i18n across all eight panel languages.
   to migrations `0021`–`0023` so native panel installs apply schema updates on startup.
 - **Native update** — `vortexui update` rebuilds the panel with `go build -a` so embedded
   migrations are always re-baked into the binary.
+- **Edit Admin modal** — fix crash when role/node/plan lists are null while editing resellers.
+- **Reseller panel UX** — sudo-controlled sub-reseller creation, per-section Settings access,
+  logo upload and color picker for portal branding, read-only Nodes, scoped Live Monitor and
+  Analytics, and JSON backup of owned users only.
 
 ### Database
 - Migrations `0021_reseller_enhancements.sql`, `0022_reseller_advanced.sql`,
-  `0023_reseller_policy_suspend.sql`.
+  `0023_reseller_policy_suspend.sql`, `0024_reseller_features.sql`.
 
 ## [1.2.3] - 2026-06-17
 

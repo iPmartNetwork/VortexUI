@@ -41,7 +41,7 @@ type UserRepository interface {
 type UserFilter struct {
 	Search  string
 	Status  domain.UserStatus
-	AdminID *uuid.UUID // non-nil scopes to users created by this admin (reseller)
+	AdminID  *uuid.UUID // non-nil scopes to users created by this admin (reseller)
 	Limit   int
 	Offset  int
 }
@@ -114,4 +114,5 @@ type SeriesQuery struct {
 	FromUnix int64
 	ToUnix   int64
 	Bucket   string // e.g. "1h", "1d" — passed to time_bucket()
+	AdminID  *uuid.UUID
 }

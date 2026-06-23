@@ -7,12 +7,14 @@ import { QRCodeSVG } from "qrcode.react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { useConfirmTOTP, useDisableTOTP, useSetupTOTP } from "@/api/admin-hooks";
-import { useExportBackup, useRestoreBackup, useAPITokens, useCreateAPIToken, useDeleteAPIToken } from "@/api/policy-hooks";
+import { useExportBackup, useRestoreBackup, useExportUserBackup, useAPITokens, useCreateAPIToken, useDeleteAPIToken } from "@/api/policy-hooks";
 import { Button, Card, Input, PageHeader } from "@/components/ui";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
+import { useAuth } from "@/auth/auth";
+import { mergeResellerSettings, type ResellerSettingKey } from "@/auth/permissions";
 import type { Lang } from "@/i18n/dict";
 import { cn } from "@/lib/utils";
 
@@ -78,12 +80,15 @@ export function Settings() {
   const { t } = useI18n();
   const { theme, setTheme } = useTheme();
   const { lang, setLang } = useI18n();
+  const { sudo, session } = useAuth();
+  const flags = mergeResellerSettings(session?.admin.reseller_settings);
+  const show = (key: ResellerSettingKey) => sudo || flags[key];
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 animate-fade-in">
       <PageHeader title={t("nav.settings")} />
 
-      {/* Appearance */}
+      {show("appearance") && (
       <Section icon={<Palette size={16} />} title={t("settings.appearance")}>
         <div className="space-y-5">
           <div>
@@ -104,36 +109,20 @@ export function Settings() {
           </div>
         </div>
       </Section>
+      )}
 
-      {/* Change Password */}
-      <PasswordSection />
-
-      {/* 2FA */}
-      <TwoFASection />
-
-      {/* API Tokens */}
-      <APITokenSection />
-
-      {/* Backup */}
-      <BackupSection />
-
-      {/* Subscription Config Template */}
-      <ConfigTemplateSection />
-
-      {/* Subscription Auto-Update */}
-      <SubUpdateSection />
-
-      {/* IP Guard */}
-      <IPGuardSection />
-
-      {/* Custom Branding */}
-      <BrandingSection />
-
-      {/* Auto Backup */}
-      <AutoBackupSection />
-
-      {/* Update Checker */}
-      <UpdateSection />
+      {show("password") && <PasswordSection />}
+      {show("totp") && <TwoFASection />}
+      {show("api_tokens") && <APITokenSection />}
+      {show("backup") || (!sudo && !!session?.admin.allow_user_backup) ? (
+        <BackupSection usersOnly={!sudo} allowRestore={sudo} />
+      ) : null}
+      {show("config_template") && <ConfigTemplateSection />}
+      {show("sub_update") && <SubUpdateSection />}
+      {show("ip_guard") && <IPGuardSection />}
+      {show("branding") && <BrandingSection />}
+      {show("auto_backup") && <AutoBackupSection />}
+      {show("update") && <UpdateSection />}
     </div>
   );
 }
@@ -305,10 +294,11 @@ function APITokenSection() {
 }
 
 // ─── Backup Section ───────────────────────────────────────────────────────────
-function BackupSection() {
+function BackupSection({ usersOnly, allowRestore }: { usersOnly?: boolean; allowRestore?: boolean }) {
   const toast = useToast();
   const confirm = useConfirm();
   const exportBackup = useExportBackup();
+  const exportUsers = useExportUserBackup();
   const restoreBackup = useRestoreBackup();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -331,17 +321,29 @@ function BackupSection() {
   }
 
   return (
-    <Section icon={<Cpu size={16} />} title={`Backup / Restore`} description="Export or replace the entire proxy configuration — nodes, inbounds, outbounds, routing, users and bindings.">
+    <Section
+      icon={<Cpu size={16} />}
+      title={usersOnly ? "My users backup" : "Backup / Restore"}
+      description={usersOnly
+        ? "Download a JSON snapshot of users you created (your accounts only)."
+        : "Export or replace the entire proxy configuration — nodes, inbounds, outbounds, routing, users and bindings."}
+    >
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" onClick={() => exportBackup.mutate()} disabled={exportBackup.isPending}>
-          <Download size={15} /> Export backup
+        <Button
+          variant="outline"
+          onClick={() => (usersOnly ? exportUsers : exportBackup).mutate()}
+          disabled={usersOnly ? exportUsers.isPending : exportBackup.isPending}
+        >
+          <Download size={15} /> {usersOnly ? "Export my users" : "Export backup"}
         </Button>
+        {allowRestore && (
         <label className="cursor-pointer">
           <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleRestore} />
           <span className="inline-flex items-center gap-2 rounded-xl border border-border-strong/80 bg-surface/60 px-4 py-2 text-sm font-medium text-fg transition hover:bg-surface-2/80">
             <Upload size={15} className="text-fg-muted" /> Import & restore
           </span>
         </label>
+        )}
       </div>
     </Section>
   );

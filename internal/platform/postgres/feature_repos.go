@@ -29,9 +29,11 @@ func (r *AnalyticsRepo) GeoBreakdown(ctx context.Context, q port.SeriesQuery) ([
 		        COALESCE(SUM(tp.down), 0)::bigint   AS bytes_down
 		 FROM traffic_points tp
 		 JOIN user_geo ug ON ug.user_id = tp.user_id
+		 JOIN users u ON u.id = tp.user_id
 		 WHERE tp.time >= $1 AND tp.time <= $2 AND ug.country <> ''
+		   AND ($3::uuid IS NULL OR u.admin_id = $3)
 		 GROUP BY ug.country
-		 ORDER BY (SUM(tp.up) + SUM(tp.down)) DESC`, from, to)
+		 ORDER BY (SUM(tp.up) + SUM(tp.down)) DESC`, from, to, q.AdminID)
 	if err != nil {
 		return nil, err
 	}
@@ -48,13 +50,14 @@ func (r *AnalyticsRepo) GeoBreakdown(ctx context.Context, q port.SeriesQuery) ([
 	return results, rows.Err()
 }
 
-func (r *AnalyticsRepo) TopUsers(ctx context.Context, limit int) ([]domain.UserTrafficRank, error) {
+func (r *AnalyticsRepo) TopUsers(ctx context.Context, limit int, adminID *uuid.UUID) ([]domain.UserTrafficRank, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT u.id, u.username, u.used_traffic
 		 FROM users u
 		 WHERE u.used_traffic > 0
+		   AND ($2::uuid IS NULL OR u.admin_id = $2)
 		 ORDER BY u.used_traffic DESC
-		 LIMIT $1`, limit)
+		 LIMIT $1`, limit, adminID)
 	if err != nil {
 		return nil, nil
 	}
@@ -74,13 +77,15 @@ func (r *AnalyticsRepo) PeakHours(ctx context.Context, q port.SeriesQuery) ([]do
 	from := time.Unix(q.FromUnix, 0)
 	to := time.Unix(q.ToUnix, 0)
 	rows, err := r.pool.Query(ctx,
-		`SELECT EXTRACT(HOUR FROM time)::int AS hour,
+		`SELECT EXTRACT(HOUR FROM tp.time)::int AS hour,
 		        COUNT(*)::bigint AS connections,
-		        COALESCE(SUM(up + down), 0)::bigint AS bytes_total
-		 FROM traffic_points
-		 WHERE time >= $1 AND time <= $2
+		        COALESCE(SUM(tp.up + tp.down), 0)::bigint AS bytes_total
+		 FROM traffic_points tp
+		 JOIN users u ON u.id = tp.user_id
+		 WHERE tp.time >= $1 AND tp.time <= $2
+		   AND ($3::uuid IS NULL OR u.admin_id = $3)
 		 GROUP BY hour
-		 ORDER BY hour`, from, to)
+		 ORDER BY hour`, from, to, q.AdminID)
 	if err != nil {
 		return nil, nil
 	}
@@ -101,20 +106,23 @@ func (r *AnalyticsRepo) TotalTraffic(ctx context.Context, q port.SeriesQuery) (i
 	to := time.Unix(q.ToUnix, 0)
 	var up, down int64
 
-	// Try traffic_geo first (aggregated geo data).
-	err := r.pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(bytes_up), 0), COALESCE(SUM(bytes_down), 0)
-		 FROM traffic_geo
-		 WHERE time >= $1 AND time <= $2`, from, to).Scan(&up, &down)
-	if err == nil && (up > 0 || down > 0) {
-		return up, down, nil
+	if q.AdminID == nil {
+		// Try traffic_geo first (aggregated geo data).
+		err := r.pool.QueryRow(ctx,
+			`SELECT COALESCE(SUM(bytes_up), 0), COALESCE(SUM(bytes_down), 0)
+			 FROM traffic_geo
+			 WHERE time >= $1 AND time <= $2`, from, to).Scan(&up, &down)
+		if err == nil && (up > 0 || down > 0) {
+			return up, down, nil
+		}
 	}
 
-	// Fallback: read from traffic_points (always populated by stats aggregator).
-	err = r.pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(up), 0), COALESCE(SUM(down), 0)
-		 FROM traffic_points
-		 WHERE time >= $1 AND time <= $2`, from, to).Scan(&up, &down)
+	err := r.pool.QueryRow(ctx,
+		`SELECT COALESCE(SUM(tp.up), 0), COALESCE(SUM(tp.down), 0)
+		 FROM traffic_points tp
+		 JOIN users u ON u.id = tp.user_id
+		 WHERE tp.time >= $1 AND tp.time <= $2
+		   AND ($3::uuid IS NULL OR u.admin_id = $3)`, from, to, q.AdminID).Scan(&up, &down)
 	if err != nil {
 		return 0, 0, nil
 	}

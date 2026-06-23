@@ -88,6 +88,9 @@ type updateAdminRequest struct {
 	AutoSuspendEnabled          *bool  `json:"auto_suspend_enabled"`
 	IPViolationSuspendThreshold *int   `json:"ip_violation_suspend_threshold"`
 	SuspendGraceMinutes         *int   `json:"suspend_grace_minutes"`
+	AllowSubResellers           *bool  `json:"allow_sub_resellers"`
+	AllowUserBackup             *bool  `json:"allow_user_backup"`
+	ResellerSettings            *map[string]bool `json:"reseller_settings"`
 }
 
 // UpdateAdmin edits an operator. Demoting the last sudo admin is refused.
@@ -135,6 +138,8 @@ func (h *Handlers) UpdateAdmin(c echo.Context) error {
 		PolicyAllowBulkDelete: req.PolicyAllowBulkDelete, PolicyAllowBulkCreate: req.PolicyAllowBulkCreate,
 		AutoSuspendEnabled: req.AutoSuspendEnabled, IPViolationSuspendThreshold: req.IPViolationSuspendThreshold,
 		SuspendGraceMinutes: req.SuspendGraceMinutes,
+		AllowSubResellers: req.AllowSubResellers, AllowUserBackup: req.AllowUserBackup,
+		ResellerSettings: req.ResellerSettings,
 	})
 	if errors.Is(err, service.ErrLastSudo) {
 		return echo.NewHTTPError(http.StatusConflict, "cannot demote the last sudo admin")
@@ -421,6 +426,9 @@ func (h *Handlers) GetAccount(c echo.Context) error {
 	for i, p := range perms {
 		out[i] = string(p)
 	}
+	if !admin.Sudo {
+		admin.ResellerSettings = domain.MergeResellerSettings(admin.ResellerSettings)
+	}
 	return c.JSON(http.StatusOK, echo.Map{"admin": admin, "permissions": out, "impersonator_id": claims.ImpersonatorID})
 }
 
@@ -494,6 +502,39 @@ func (h *Handlers) ExportAccountUsers(c echo.Context) error {
 	}
 	w.Flush()
 	return nil
+}
+
+// ExportAccountUsersBackup returns a JSON snapshot of users owned by the caller (reseller backup).
+func (h *Handlers) ExportAccountUsersBackup(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	admin, err := h.Admins.Get(c.Request().Context(), claims.AdminID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
+	}
+	if !claims.Sudo && !admin.AllowUserBackup {
+		return echo.NewHTTPError(http.StatusForbidden, "user backup is disabled for this account")
+	}
+	if h.Repo == nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "export unavailable")
+	}
+	f := port.UserFilter{Limit: 100_000}
+	if !claims.Sudo {
+		f.AdminID = &claims.AdminID
+	}
+	users, _, err := h.Repo.List(c.Request().Context(), f)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "export failed")
+	}
+	c.Response().Header().Set("Content-Disposition", `attachment; filename="my-users-backup.json"`)
+	return c.JSON(http.StatusOK, echo.Map{
+		"version":     1,
+		"exported_at": time.Now().UTC(),
+		"admin_id":    claims.AdminID,
+		"users":       users,
+	})
 }
 
 // ListResellerQuotaUsage returns quota usage for all resellers (sudo).

@@ -162,6 +162,9 @@ export interface Admin {
   auto_suspend_enabled?: boolean;
   ip_violation_suspend_threshold?: number;
   suspend_grace_minutes?: number;
+  allow_sub_resellers?: boolean;
+  allow_user_backup?: boolean;
+  reseller_settings?: Record<string, boolean>;
   last_login: string | null;
   created_at: string;
 }

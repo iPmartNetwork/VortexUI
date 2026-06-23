@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"github.com/vortexui/vortexui/internal/panel/service"
@@ -32,7 +33,12 @@ func (h *AnalyticsHandlers) GetAnalytics(c echo.Context) error {
 		}
 	}
 
-	overview, err := h.Analytics.GetOverview(c.Request().Context(), from, to)
+	var adminID *uuid.UUID
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		adminID = &claims.AdminID
+	}
+
+	overview, err := h.Analytics.GetOverview(c.Request().Context(), from, to, adminID)
 	if err != nil || overview == nil {
 		return c.JSON(http.StatusOK, echo.Map{
 			"geo_breakdown": []any{},
@@ -61,7 +67,12 @@ func (h *AnalyticsHandlers) ExportAnalyticsCSV(c echo.Context) error {
 		}
 	}
 
-	overview, err := h.Analytics.GetOverview(c.Request().Context(), from, to)
+	var adminID *uuid.UUID
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		adminID = &claims.AdminID
+	}
+
+	overview, err := h.Analytics.GetOverview(c.Request().Context(), from, to, adminID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

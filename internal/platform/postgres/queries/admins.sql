@@ -20,7 +20,8 @@ UPDATE admins SET
     webhook_url = $13, webhook_secret = $14, webhook_enabled = $15, last_login = $16,
     policy_max_data_limit = $17, policy_max_expire_days = $18,
     policy_allow_bulk_delete = $19, policy_allow_bulk_create = $20,
-    auto_suspend_enabled = $21, ip_violation_suspend_threshold = $22, suspend_grace_minutes = $23
+    auto_suspend_enabled = $21, ip_violation_suspend_threshold = $22, suspend_grace_minutes = $23,
+    allow_sub_resellers = $24, allow_user_backup = $25, reseller_settings = $26
 WHERE id = $1;
 
 -- name: SuspendAdmin :exec

@@ -337,7 +337,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		AdminQuotaNotify: &api.AdminQuotaNotifyHandlers{Svc: adminQuotaNotifySvc},
 		IPLimit:     &api.IPLimitHandlers{IPLimit: ipLimitSvc},
 		SubSettings: &api.SubSettingsHandlers{Svc: subSettingsSvc},
-		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Monitor: monitorAdapter{store.Monitor()}},
+		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Users: users, Monitor: monitorAdapter{store.Monitor()}},
 		Issuer:      issuer,
 		PanelAuth:   panelAuth,
 		Auth:        authSvc,
