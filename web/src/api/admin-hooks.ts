@@ -60,6 +60,30 @@ export function useCreateRole() {
   });
 }
 
+export function useUpdateRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; input: { name: string; permissions: string[] } }) =>
+      api<{ role: Role }>(`/api/roles/${args.id}`, { method: "PUT", body: args.input }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roles"] });
+      qc.invalidateQueries({ queryKey: ["admins"] });
+      qc.invalidateQueries({ queryKey: ["account"] });
+    },
+  });
+}
+
+export function useDeleteRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/api/roles/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roles"] });
+      qc.invalidateQueries({ queryKey: ["admins"] });
+    },
+  });
+}
+
 // --- 2FA self-enrollment ---
 
 export function useSetupTOTP() {

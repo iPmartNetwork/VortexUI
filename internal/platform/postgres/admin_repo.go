@@ -114,6 +114,18 @@ func (r *AdminRepo) GetRole(ctx context.Context, id uuid.UUID) (*domain.Role, er
 	return &domain.Role{ID: row.ID, Name: row.Name, Permissions: perms}, nil
 }
 
+func (r *AdminRepo) UpdateRole(ctx context.Context, role *domain.Role) error {
+	perms, err := json.Marshal(role.Permissions)
+	if err != nil {
+		return err
+	}
+	return r.q.UpdateRole(ctx, db.UpdateRoleParams{ID: role.ID, Name: role.Name, Permissions: perms})
+}
+
+func (r *AdminRepo) DeleteRole(ctx context.Context, id uuid.UUID) error {
+	return r.q.DeleteRole(ctx, id)
+}
+
 func adminToDomain(a db.Admin) *domain.Admin {
 	return &domain.Admin{
 		ID:           a.ID,

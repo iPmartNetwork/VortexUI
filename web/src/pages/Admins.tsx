@@ -1,22 +1,25 @@
 import { useState } from "react";
-import { useAdmins, useDeleteAdmin, useRoles } from "@/api/admin-hooks";
+import { useAdmins, useDeleteAdmin, useDeleteRole, useRoles } from "@/api/admin-hooks";
 import { Badge, Button, Card } from "@/components/ui";
 import { CreateAdminModal } from "@/components/CreateAdminModal";
 import { CreateRoleModal } from "@/components/CreateRoleModal";
 import { EditAdminModal } from "@/components/EditAdminModal";
+import { EditRoleModal } from "@/components/EditRoleModal";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
-import type { Admin } from "@/api/types";
+import type { Admin, Role } from "@/api/types";
 
 export function Admins() {
   const admins = useAdmins();
   const roles = useRoles();
   const del = useDeleteAdmin();
+  const delRole = useDeleteRole();
   const confirm = useConfirm();
   const toast = useToast();
   const [adminOpen, setAdminOpen] = useState(false);
   const [roleOpen, setRoleOpen] = useState(false);
   const [editAdmin, setEditAdmin] = useState<Admin | null>(null);
+  const [editRole, setEditRole] = useState<Role | null>(null);
 
   const roleName = (id: string | null) => roles.data?.roles.find((r) => r.id === id)?.name ?? "—";
 
@@ -31,11 +34,28 @@ export function Admins() {
     }
   }
 
+  async function removeRole(r: Role) {
+    const ok = await confirm({
+      title: `Delete role ${r.name}?`,
+      message: "Admins using this role will lose their role assignment.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await delRole.mutateAsync(r.id);
+      toast.success(`Deleted role ${r.name}`);
+    } catch {
+      toast.error("Could not delete role");
+    }
+  }
+
   return (
     <div className="space-y-8">
       <CreateAdminModal open={adminOpen} onClose={() => setAdminOpen(false)} />
       <CreateRoleModal open={roleOpen} onClose={() => setRoleOpen(false)} />
       <EditAdminModal admin={editAdmin} onClose={() => setEditAdmin(null)} />
+      <EditRoleModal role={editRole} onClose={() => setEditRole(null)} />
 
       <div>
         <div className="mb-4 flex items-center justify-between">
@@ -85,7 +105,13 @@ export function Admins() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {roles.data?.roles.map((r) => (
             <Card key={r.id} className="space-y-2">
-              <div className="font-medium">{r.name}</div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="font-medium">{r.name}</div>
+                <div className="flex shrink-0 gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => setEditRole(r)}>Edit</Button>
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeRole(r)}>Delete</Button>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-1">
                 {r.permissions.map((p) => (
                   <span key={p} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">

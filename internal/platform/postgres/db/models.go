@@ -54,6 +54,139 @@ type Balancer struct {
 	Enabled       bool
 }
 
+type BlockedIp struct {
+	Ip        string
+	Reason    string
+	BlockedAt pgtype.Timestamptz
+	ExpiresAt pgtype.Timestamptz
+}
+
+type CleanIpScan struct {
+	ID        uuid.UUID
+	Ip        string
+	LatencyMs int32
+	LossPct   int32
+	Score     int32
+	Reachable bool
+	ScannedAt pgtype.Timestamptz
+}
+
+type DecoySite struct {
+	ID         uuid.UUID
+	NodeID     pgtype.UUID
+	Mode       string
+	TargetUrl  string
+	StaticHtml string
+	Enabled    bool
+	CreatedAt  pgtype.Timestamptz
+}
+
+type DeeplinkConfig struct {
+	ID          int32
+	BaseUrl     string
+	AppScheme   string
+	IncludeName bool
+	QrLogoUrl   string
+}
+
+type DohConfig struct {
+	ID              int32
+	Enabled         bool
+	ListenAddr      string
+	UpstreamDns     []byte
+	BlockAds        bool
+	BlockMalware    bool
+	CustomBlocklist []byte
+	LogQueries      bool
+	CacheTtl        int32
+}
+
+type DohQueryLog struct {
+	Domain    string
+	Type      string
+	ClientIp  string
+	Blocked   bool
+	LatencyMs int32
+	Timestamp pgtype.Timestamptz
+}
+
+type FamilyGroup struct {
+	ID          uuid.UUID
+	Name        string
+	OwnerID     uuid.UUID
+	DataLimit   int64
+	UsedTraffic int64
+	MaxMembers  int32
+	MemberQuota int64
+	CreatedAt   pgtype.Timestamptz
+}
+
+type FamilyMember struct {
+	ID          uuid.UUID
+	GroupID     uuid.UUID
+	UserID      uuid.UUID
+	UsedTraffic int64
+	Label       string
+	JoinedAt    pgtype.Timestamptz
+}
+
+type FederationConfig struct {
+	ID           int32
+	Enabled      bool
+	ClusterName  string
+	SsoEnabled   bool
+	SyncInterval int32
+}
+
+type FederationPeer struct {
+	ID        uuid.UUID
+	Name      string
+	Endpoint  string
+	ApiKey    string
+	Status    string
+	SyncUsers bool
+	SyncNodes bool
+	LastSync  pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
+type FederationSyncEvent struct {
+	ID         uuid.UUID
+	PeerName   string
+	Direction  string
+	EntityType string
+	Count      int32
+	Status     string
+	CreatedAt  pgtype.Timestamptz
+}
+
+type FingerprintEvent struct {
+	ID          uuid.UUID
+	ClientIp    string
+	Fingerprint string
+	UserAgent   string
+	Action      string
+	CreatedAt   pgtype.Timestamptz
+}
+
+type FingerprintPolicy struct {
+	ID            int32
+	Enabled       bool
+	DefaultAction string
+	LogUnknown    bool
+}
+
+type FingerprintRule struct {
+	ID          uuid.UUID
+	Name        string
+	Fingerprint string
+	Ja3Hash     string
+	Action      string
+	Priority    int32
+	Enabled     bool
+	CreatedAt   pgtype.Timestamptz
+}
+
 type Inbound struct {
 	ID               uuid.UUID
 	NodeID           uuid.UUID
@@ -72,6 +205,47 @@ type Inbound struct {
 	Enabled          bool
 	SpeedLimit       int64
 	GeoPolicy        []byte
+}
+
+type IpLimitEvent struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Username  string
+	OnlineIps int32
+	LimitVal  int32
+	Action    string
+	CreatedAt pgtype.Timestamptz
+}
+
+type IpLimitPolicy struct {
+	ID            int32
+	Enabled       bool
+	Action        string
+	AlertCooldown int32
+	RestoreAfter  int32
+}
+
+type MigrationEvent struct {
+	ID         uuid.UUID
+	UserID     pgtype.UUID
+	Username   string
+	FromNodeID uuid.UUID
+	ToNodeID   uuid.UUID
+	Reason     string
+	Status     string
+	Error      string
+	CreatedAt  pgtype.Timestamptz
+}
+
+type MigrationPolicy struct {
+	ID                  int32
+	Enabled             bool
+	HealthCheckInterval int32
+	UnhealthyThreshold  int32
+	CpuThreshold        float64
+	MemThreshold        float64
+	PacketLossMax       float64
+	MigrateBack         bool
 }
 
 type Node struct {
@@ -114,10 +288,122 @@ type Outbound struct {
 	Enabled  bool
 }
 
+type ProbeEvent struct {
+	ID          uuid.UUID
+	SourceIp    string
+	Port        int32
+	Method      string
+	Fingerprint string
+	Action      string
+	NodeID      pgtype.UUID
+	CreatedAt   pgtype.Timestamptz
+}
+
+type ProbingPolicy struct {
+	ID             int32
+	Enabled        bool
+	Action         string
+	BlockDuration  int32
+	MaxProbePerMin int32
+	WhitelistedIps []byte
+	HoneypotHtml   string
+	NotifyTelegram bool
+}
+
+type QuotaNotifyConfig struct {
+	ID              int32
+	Enabled         bool
+	ThresholdPct    int32
+	NotifyTelegram  bool
+	NotifyEmail     bool
+	MessageTemplate string
+}
+
+type QuotaNotifyEvent struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Username  string
+	Threshold int32
+	UsagePct  int32
+	Notified  bool
+	CreatedAt pgtype.Timestamptz
+}
+
+type QuotaPolicy struct {
+	ID        uuid.UUID
+	Name      string
+	Tiers     []byte
+	Enabled   bool
+	CreatedAt pgtype.Timestamptz
+}
+
+type RealityScan struct {
+	ID        uuid.UUID
+	NodeID    uuid.UUID
+	Sni       string
+	LatencyMs int32
+	Score     int32
+	Valid     bool
+	ScannedAt pgtype.Timestamptz
+}
+
+type ReferralCode struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Code      string
+	Uses      int32
+	MaxUses   int32
+	CreatedAt pgtype.Timestamptz
+}
+
+type ReferralConfig struct {
+	ID           int32
+	Enabled      bool
+	RewardType   string
+	RewardAmount int64
+	MaxReferrals int32
+	RequirePaid  bool
+}
+
+type ReferralEvent struct {
+	ID            uuid.UUID
+	ReferrerID    uuid.UUID
+	ReferredID    uuid.UUID
+	CodeUsed      string
+	RewardType    string
+	RewardAmount  int64
+	RewardApplied bool
+	CreatedAt     pgtype.Timestamptz
+}
+
+type RelayChain struct {
+	ID        uuid.UUID
+	Name      string
+	NodeID    uuid.UUID
+	Hops      []byte
+	Enabled   bool
+	CreatedAt pgtype.Timestamptz
+}
+
 type Role struct {
 	ID          uuid.UUID
 	Name        string
 	Permissions []byte
+}
+
+type RoutingPack struct {
+	ID          uuid.UUID
+	Name        string
+	Description string
+	Category    string
+	Rules       []byte
+	Outbounds   []byte
+	CreatedAt   pgtype.Timestamptz
+}
+
+type RoutingPackSelection struct {
+	ID     int32
+	PackID string
 }
 
 type RoutingRule struct {
@@ -134,6 +420,106 @@ type RoutingRule struct {
 	OutboundTag string
 	BalancerTag string
 	Enabled     bool
+}
+
+type SniDomain struct {
+	ID         uuid.UUID
+	InboundID  uuid.UUID
+	Domain     string
+	AutoCert   bool
+	CertStatus string
+	ExpiresAt  pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
+}
+
+type SniRoute struct {
+	ID        uuid.UUID
+	InboundID uuid.UUID
+	Sni       string
+	Action    string
+	TargetTag string
+	Priority  int32
+	Enabled   bool
+	CreatedAt pgtype.Timestamptz
+}
+
+type SslCertificate struct {
+	ID        uuid.UUID
+	Domain    string
+	Wildcard  bool
+	Issuer    string
+	Status    string
+	AutoRenew bool
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
+type SubHost struct {
+	ID            uuid.UUID
+	InboundID     uuid.UUID
+	Remark        string
+	Address       string
+	Port          pgtype.Int4
+	Sni           string
+	HostHeader    string
+	Path          string
+	Alpn          string
+	Fingerprint   string
+	Security      string
+	AllowInsecure bool
+	MuxEnable     bool
+	Fragment      string
+	Priority      int32
+	Enabled       bool
+	CreatedAt     pgtype.Timestamptz
+}
+
+type SubSetting struct {
+	ID             int32
+	UpdateInterval int32
+	UpdatedAt      pgtype.Timestamptz
+}
+
+type Ticket struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Subject   string
+	Status    string
+	Priority  string
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+type TicketMessage struct {
+	ID        uuid.UUID
+	TicketID  uuid.UUID
+	Sender    string
+	SenderID  uuid.UUID
+	Body      string
+	CreatedAt pgtype.Timestamptz
+}
+
+type TlsTrickProfile struct {
+	ID               uuid.UUID
+	Name             string
+	Description      string
+	FragmentEnabled  bool
+	FragmentLength   string
+	FragmentInterval string
+	Fingerprint      string
+	MuxEnabled       bool
+	MuxProtocol      string
+	Enabled          bool
+	CreatedAt        pgtype.Timestamptz
+}
+
+type TrafficGeo struct {
+	Time        pgtype.Timestamptz
+	NodeID      uuid.UUID
+	Country     string
+	Connections int32
+	BytesUp     int64
+	BytesDown   int64
 }
 
 type TrafficPoint struct {
@@ -163,11 +549,28 @@ type User struct {
 	SsPassword    string
 	SsMethod      string
 	SubToken      string
+	RoutingPackID string
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
+}
+
+type UserGeo struct {
+	UserID    uuid.UUID
+	Country   string
+	Ip        string
+	UpdatedAt pgtype.Timestamptz
 }
 
 type UserInbound struct {
 	UserID    uuid.UUID
 	InboundID uuid.UUID
+}
+
+type WireguardPeer struct {
+	InboundID  uuid.UUID
+	UserID     uuid.UUID
+	PrivateKey string
+	PublicKey  string
+	Address    string
+	CreatedAt  pgtype.Timestamptz
 }

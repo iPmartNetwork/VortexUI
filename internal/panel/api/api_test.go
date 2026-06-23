@@ -44,6 +44,8 @@ func (f *fakeAdminRepo) CreateRole(context.Context, *domain.Role) error { return
 func (f *fakeAdminRepo) ListRoles(context.Context) ([]*domain.Role, error) {
 	return []*domain.Role{}, nil
 }
+func (f *fakeAdminRepo) UpdateRole(context.Context, *domain.Role) error { return nil }
+func (f *fakeAdminRepo) DeleteRole(context.Context, uuid.UUID) error    { return nil }
 
 type fakeUserRepo struct {
 	listed   []*domain.User
