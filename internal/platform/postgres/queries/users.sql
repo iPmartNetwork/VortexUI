@@ -108,3 +108,7 @@ WHERE i.node_id = $1 AND i.enabled = TRUE;
 SELECT status, COUNT(*)::bigint AS count, COALESCE(SUM(used_traffic), 0)::bigint AS used_traffic
 FROM users
 GROUP BY status;
+
+-- name: UsersExpiringSoon :many
+SELECT * FROM users
+WHERE status = 'active' AND expire_at IS NOT NULL AND expire_at <= $1 AND expire_at > now();
