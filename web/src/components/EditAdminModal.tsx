@@ -1,18 +1,34 @@
 import { useEffect, useState } from "react";
-import { useAdminInbounds, useRoles, useUpdateAdmin } from "@/api/admin-hooks";
+import { useAdminInbounds, useAdminNodes, useAdminPlans, useRoles, useUpdateAdmin } from "@/api/admin-hooks";
 import type { Admin } from "@/api/types";
 import { AdminInboundPicker } from "@/components/AdminInboundPicker";
+import { AdminNodePicker } from "@/components/AdminNodePicker";
+import { AdminPlanPicker } from "@/components/AdminPlanPicker";
+import { useI18n } from "@/i18n/i18n";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 
 export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClose: () => void }) {
+  const { t } = useI18n();
   const update = useUpdateAdmin();
   const roles = useRoles();
   const assigned = useAdminInbounds(admin?.id ?? null);
+  const nodes = useAdminNodes(admin?.id ?? null);
+  const plans = useAdminPlans(admin?.id ?? null);
   const [roleId, setRoleId] = useState("");
   const [userQuota, setUserQuota] = useState("");
   const [trafficQuota, setTrafficQuota] = useState("");
+  const [trafficMode, setTrafficMode] = useState("allocated");
   const [inboundIds, setInboundIds] = useState<string[]>([]);
+  const [nodeIds, setNodeIds] = useState<string[]>([]);
+  const [planIds, setPlanIds] = useState<string[]>([]);
+  const [policyMaxGB, setPolicyMaxGB] = useState("");
+  const [policyMaxExpireDays, setPolicyMaxExpireDays] = useState("");
+  const [allowBulkCreate, setAllowBulkCreate] = useState(true);
+  const [allowBulkDelete, setAllowBulkDelete] = useState(true);
+  const [autoSuspend, setAutoSuspend] = useState(true);
+  const [ipViolationThreshold, setIpViolationThreshold] = useState("");
+  const [suspendGraceMinutes, setSuspendGraceMinutes] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -20,6 +36,14 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
     setRoleId(admin.role_id ?? "");
     setUserQuota(admin.user_quota ? String(admin.user_quota) : "");
     setTrafficQuota(admin.traffic_quota ? String(Math.round(admin.traffic_quota / (1024 ** 3))) : "");
+    setTrafficMode(admin.traffic_quota_mode || "allocated");
+    setPolicyMaxGB(admin.policy_max_data_limit ? String(Math.round(admin.policy_max_data_limit / (1024 ** 3))) : "");
+    setPolicyMaxExpireDays(admin.policy_max_expire_days ? String(admin.policy_max_expire_days) : "");
+    setAllowBulkCreate(admin.policy_allow_bulk_create !== false);
+    setAllowBulkDelete(admin.policy_allow_bulk_delete !== false);
+    setAutoSuspend(admin.auto_suspend_enabled !== false);
+    setIpViolationThreshold(admin.ip_violation_suspend_threshold ? String(admin.ip_violation_suspend_threshold) : "");
+    setSuspendGraceMinutes(admin.suspend_grace_minutes ? String(admin.suspend_grace_minutes) : "60");
     setError("");
   }, [admin]);
 
@@ -27,12 +51,20 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
     if (assigned.data) setInboundIds(assigned.data.inbound_ids ?? []);
   }, [assigned.data]);
 
+  useEffect(() => {
+    if (nodes.data) setNodeIds(nodes.data.node_ids ?? []);
+  }, [nodes.data]);
+
+  useEffect(() => {
+    if (plans.data) setPlanIds(plans.data.plan_ids ?? []);
+  }, [plans.data]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!admin || admin.sudo) return;
     setError("");
     if (!roleId) {
-      setError("Role is required for resellers");
+      setError(t("reseller.editAdmin.roleRequired"));
       return;
     }
     try {
@@ -43,44 +75,91 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
           role_id: roleId,
           user_quota: userQuota ? Number(userQuota) : 0,
           traffic_quota: trafficQuota ? Number(trafficQuota) * 1024 * 1024 * 1024 : 0,
+          traffic_quota_mode: trafficMode,
           inbound_ids: inboundIds,
+          node_ids: nodeIds,
+          plan_ids: planIds,
+          policy_max_data_limit: policyMaxGB ? Number(policyMaxGB) * 1024 * 1024 * 1024 : 0,
+          policy_max_expire_days: policyMaxExpireDays ? Number(policyMaxExpireDays) : 0,
+          policy_allow_bulk_create: allowBulkCreate,
+          policy_allow_bulk_delete: allowBulkDelete,
+          auto_suspend_enabled: autoSuspend,
+          ip_violation_suspend_threshold: ipViolationThreshold ? Number(ipViolationThreshold) : 0,
+          suspend_grace_minutes: suspendGraceMinutes ? Number(suspendGraceMinutes) : 60,
         },
       });
       onClose();
     } catch {
-      setError("Could not update admin");
+      setError(t("reseller.editAdmin.updateFailed"));
     }
   }
 
+  const title = t("reseller.editAdmin.title").replace("{name}", admin?.username ?? "admin");
+
   return (
-    <Modal open={!!admin} onClose={onClose} title={`Edit ${admin?.username ?? "admin"}`}>
+    <Modal open={!!admin} onClose={onClose} title={title}>
       {admin && !admin.sudo && (
         <form onSubmit={submit} className="space-y-3">
           <label className="block text-xs text-muted-foreground">
-            Role
+            {t("reseller.editAdmin.role")}
             <Select className="mt-1" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
-              <option value="">Select role…</option>
+              <option value="">{t("reseller.editAdmin.selectRole")}</option>
               {roles.data?.roles.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </Select>
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="User quota (0=unlimited)" value={userQuota} onChange={(e) => setUserQuota(e.target.value)} inputMode="numeric" />
-            <Input placeholder="Traffic quota (GB, 0=unlimited)" value={trafficQuota} onChange={(e) => setTrafficQuota(e.target.value)} inputMode="numeric" />
+            <Input placeholder={t("reseller.editAdmin.userQuota")} value={userQuota} onChange={(e) => setUserQuota(e.target.value)} inputMode="numeric" />
+            <Input placeholder={t("reseller.editAdmin.trafficQuota")} value={trafficQuota} onChange={(e) => setTrafficQuota(e.target.value)} inputMode="numeric" />
           </div>
+          <label className="block text-xs text-muted-foreground">
+            {t("reseller.editAdmin.trafficMode")}
+            <Select className="mt-1" value={trafficMode} onChange={(e) => setTrafficMode(e.target.value)}>
+              <option value="allocated">{t("reseller.editAdmin.allocated")}</option>
+              <option value="consumed">{t("reseller.editAdmin.consumed")}</option>
+            </Select>
+          </label>
           <AdminInboundPicker selected={inboundIds} onChange={setInboundIds} />
+          <AdminNodePicker selected={nodeIds} onChange={setNodeIds} />
+          <AdminPlanPicker selected={planIds} onChange={setPlanIds} />
+          <div className="rounded-md border p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">{t("reseller.editAdmin.policyLimits")}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder={t("reseller.editAdmin.maxDataLimit")} value={policyMaxGB} onChange={(e) => setPolicyMaxGB(e.target.value)} inputMode="numeric" />
+              <Input placeholder={t("reseller.editAdmin.maxExpire")} value={policyMaxExpireDays} onChange={(e) => setPolicyMaxExpireDays(e.target.value)} inputMode="numeric" />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={allowBulkCreate} onChange={(e) => setAllowBulkCreate(e.target.checked)} />
+              {t("reseller.editAdmin.allowBulkCreate")}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={allowBulkDelete} onChange={(e) => setAllowBulkDelete(e.target.checked)} />
+              {t("reseller.editAdmin.allowBulkDelete")}
+            </label>
+          </div>
+          <div className="rounded-md border p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">{t("reseller.editAdmin.autoSuspend")}</p>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={autoSuspend} onChange={(e) => setAutoSuspend(e.target.checked)} />
+              {t("reseller.editAdmin.enableAutoSuspend")}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input placeholder={t("reseller.editAdmin.ipViolations")} value={ipViolationThreshold} onChange={(e) => setIpViolationThreshold(e.target.value)} inputMode="numeric" />
+              <Input placeholder={t("reseller.editAdmin.quotaGrace")} value={suspendGraceMinutes} onChange={(e) => setSuspendGraceMinutes(e.target.value)} inputMode="numeric" />
+            </div>
+          </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={update.isPending}>
-              {update.isPending ? "Saving…" : "Save"}
+              {update.isPending ? t("reseller.editAdmin.saving") : t("common.save")}
             </Button>
           </div>
         </form>
       )}
       {admin?.sudo && (
-        <p className="text-sm text-muted-foreground">Sudo admins have full access; edit role/quota is not applicable.</p>
+        <p className="text-sm text-muted-foreground">{t("reseller.editAdmin.sudoHint")}</p>
       )}
     </Modal>
   );

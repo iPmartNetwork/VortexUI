@@ -22,7 +22,7 @@ identity provides access to all assigned protocols across all nodes simultaneous
 
 ---
 
-## Core Capabilities (v1.2.3)
+## Core Capabilities (v1.2.5)
 
 ### Engine & Infrastructure
 
@@ -212,7 +212,7 @@ as Clash, sing-box, or base64.
 !!! note
     Available protocols/transports/security differ per core (Xray vs sing-box). The
     panel publishes a live per-protocol capability matrix as the single source of truth —
-    see the [v1.2.3 Features](17-v123-features.md) guide and [Protocols](13-protocols-config.md).
+    see the [v1.2.5 Features](18-v125-features.md) (reseller platform), [v1.2.3 Features](17-v123-features.md) guide, and [Protocols](13-protocols-config.md).
 
 ---
 

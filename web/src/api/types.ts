@@ -151,6 +151,17 @@ export interface Admin {
   totp_enabled: boolean;
   user_quota: number;
   traffic_quota: number;
+  traffic_quota_mode?: string;
+  policy_max_data_limit?: number;
+  policy_max_expire_days?: number;
+  policy_allow_bulk_delete?: boolean;
+  policy_allow_bulk_create?: boolean;
+  suspended?: boolean;
+  suspended_at?: string | null;
+  suspend_reason?: string;
+  auto_suspend_enabled?: boolean;
+  ip_violation_suspend_threshold?: number;
+  suspend_grace_minutes?: number;
   last_login: string | null;
   created_at: string;
 }

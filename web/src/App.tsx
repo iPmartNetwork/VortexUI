@@ -11,7 +11,9 @@ import { Routing } from "@/pages/Routing";
 import { RoutingPacks } from "@/pages/RoutingPacks";
 import { Balancers } from "@/pages/Balancers";
 import { Admins } from "@/pages/Admins";
-import { MyQuota } from "@/pages/MyQuota";
+import { ResellerDashboard } from "@/pages/ResellerDashboard";
+import { ResellerAccount } from "@/pages/ResellerAccount";
+import { ResellerQuotaAlerts } from "@/pages/ResellerQuotaAlerts";
 import { Audit } from "@/pages/Audit";
 import { Logs } from "@/pages/Logs";
 import { Settings } from "@/pages/Settings";
@@ -64,7 +66,9 @@ export function App() {
         <Route path="/overview" element={<Overview />} />
         <Route path="/users" element={<Users />} />
         <Route path="/users/:id" element={<UserDetail />} />
-        <Route path="/my-quota" element={<MyQuota />} />
+        <Route path="/reseller-dashboard" element={<ResellerDashboard />} />
+        <Route path="/reseller-account" element={<ResellerAccount />} />
+        <Route path="/my-quota" element={<Navigate to="/reseller-dashboard" replace />} />
         <Route path="/nodes" element={<Nodes />} />
         <Route path="/outbounds" element={<Outbounds />} />
         <Route path="/routing" element={<Routing />} />
@@ -94,6 +98,7 @@ export function App() {
         <Route path="/federation" element={<Federation />} />
         <Route path="/deep-links" element={<DeepLinks />} />
         <Route path="/quota-notifications" element={<QuotaNotifications />} />
+        <Route path="/reseller-quota-alerts" element={<ResellerQuotaAlerts />} />
         <Route path="/audit" element={<Audit />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/settings" element={<Settings />} />

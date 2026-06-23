@@ -14,9 +14,13 @@ type APITokenHandlers struct {
 	Svc *service.APITokenService
 }
 
-// ListAPITokens returns all tokens (secrets excluded).
+// ListAPITokens returns tokens for the calling admin.
 func (h *APITokenHandlers) ListAPITokens(c echo.Context) error {
-	tokens, err := h.Svc.List(c.Request().Context())
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	tokens, err := h.Svc.List(c.Request().Context(), claims.AdminID, claims.Sudo)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
 	}
@@ -46,11 +50,15 @@ func (h *APITokenHandlers) CreateAPIToken(c echo.Context) error {
 
 // DeleteAPIToken revokes a token.
 func (h *APITokenHandlers) DeleteAPIToken(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
-	if err := h.Svc.Delete(c.Request().Context(), id); err != nil {
+	if err := h.Svc.Delete(c.Request().Context(), id, claims.AdminID, claims.Sudo); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "delete failed")
 	}
 	return c.NoContent(http.StatusNoContent)

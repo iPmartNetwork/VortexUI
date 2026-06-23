@@ -132,6 +132,7 @@ func (s *PlanService) FulfillOrder(ctx context.Context, orderID uuid.UUID) error
 		DeviceLimit:   plan.DeviceLimit,
 		ResetStrategy: plan.ResetStrategy,
 		InboundIDs:    plan.InboundIDs,
+		AdminID:       order.AdminID,
 	})
 	return err
 }

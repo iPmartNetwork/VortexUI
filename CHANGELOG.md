@@ -6,6 +6,50 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-06-17
+
+Reseller platform release: scoped allowlists, quota modes, wallet and sub-reseller
+hierarchy, whitelabel branding, outbound webhooks, policy enforcement, auto-suspend,
+and full i18n across all eight panel languages.
+
+### Added
+- **Reseller allowlists** — per-admin plan, node, and inbound pickers restrict what
+  resellers can sell, deploy on, and assign to users.
+- **Traffic quota modes** — `allocated` (pool assigned across users) or `consumed`
+  (actual usage counts against the reseller pool).
+- **Reseller dashboard** — accounts, traffic assigned/consumed, users by status, top
+  consumers, and expiring users summary at `/reseller-dashboard`.
+- **Reseller quota alerts** — Telegram and optional webhook notifications when
+  resellers approach account or traffic thresholds (`/reseller-quota-alerts`).
+- **Reseller wallet** — traffic and user credits with ledger history; sudo/parent
+  top-up via the Admins page.
+- **Sub-resellers** — create child resellers under a parent with role and quota
+  assignment from **Reseller account**.
+- **Portal whitelabel** — per-reseller panel title, logo URL, accent color, portal
+  slug, and footer text.
+- **Outbound reseller webhook** — HMAC-SHA256 signed `user.created` / `user.deleted`
+  events for automation integrations.
+- **Impersonate** — sudo admins can log in as a reseller (`Login as`) for support.
+- **Scoped audit log** — resellers see only their own mutating actions; sudo sees all.
+- **Reseller policy limits** — max data limit, max expire days, bulk create/import and
+  bulk delete toggles enforced when resellers manage users.
+- **Auto-suspend** — optional suspension on IP violations (7-day window) or quota
+  overage with configurable grace minutes; background worker evaluates resellers.
+- **CSV export** — resellers download an owned-users report from the dashboard.
+- **Bulk quota adjust** — sudo quick-adjust buttons (+50 accounts, +10/+50 GB) on the
+  Admins quota usage table.
+- **Reseller navigation** — dedicated sidebar section (dashboard, account, quota alerts,
+  my quota) plus quota summary cards on Overview.
+
+### Changed
+- **My quota** route redirects to the reseller dashboard for a single quota home.
+- **Reseller UI i18n** — dashboard, account, quota alerts, Admins, and Edit Admin
+  modal translated in EN, FA, TR, AR, RU, ZH, JA, and ES.
+
+### Database
+- Migrations `0021_reseller_enhancements.sql`, `0022_reseller_advanced.sql`,
+  `0023_reseller_policy_suspend.sql`.
+
 ## [1.2.3] - 2026-06-17
 
 ### Added
@@ -292,7 +336,8 @@ First stable release.
 
 ---
 
-[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.3...HEAD
+[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.5...HEAD
+[1.2.5]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.3...v1.2.5
 [1.2.3]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.0...v1.2.3
 [1.2.0]: https://github.com/iPmartNetwork/VortexUI/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/iPmartNetwork/VortexUI/compare/v1.0.1...v1.1.0

@@ -142,6 +142,7 @@ plugins:
             Troubleshooting: Troubleshooting & FAQ
             v1.2.0 Features: v1.2.0 Features
             v1.2.3 Features: v1.2.3 Features
+            v1.2.5 Features: v1.2.5 Features
         - locale: fa
           name: فارسی
           build: true
@@ -170,6 +171,7 @@ plugins:
             Troubleshooting: عیب‌یابی و FAQ
             v1.2.0 Features: ویژگی‌های نسخه 1.2.0
             v1.2.3 Features: ویژگی‌های نسخه 1.2.3
+            v1.2.5 Features: ویژگی‌های نسخه 1.2.5
         - locale: ar
           name: العربية
           build: true
@@ -198,6 +200,7 @@ plugins:
             Troubleshooting: استكشاف الأخطاء
             v1.2.0 Features: ميزات الإصدار 1.2.0
             v1.2.3 Features: ميزات الإصدار 1.2.3
+            v1.2.5 Features: ميزات الإصدار 1.2.5
         - locale: tr
           name: Türkçe
           build: true
@@ -226,6 +229,7 @@ plugins:
             Troubleshooting: Sorun giderme
             v1.2.0 Features: v1.2.0 Özellikleri
             v1.2.3 Features: v1.2.3 Özellikleri
+            v1.2.5 Features: v1.2.5 Özellikleri
 
 nav:
   - Home: README.md
@@ -249,5 +253,6 @@ nav:
       - Troubleshooting: 15-troubleshooting-faq.md
   - v1.2.0 Features: 16-v120-features.md
   - v1.2.3 Features: 17-v123-features.md
+  - v1.2.5 Features: 18-v125-features.md
 
 # _enhance_wiki.py is a maintenance script, not published

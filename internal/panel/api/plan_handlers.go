@@ -57,6 +57,27 @@ func (h *Handlers) ListPlans(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
 	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo && h.Admins != nil {
+		ids := make([]uuid.UUID, len(plans))
+		for i, p := range plans {
+			ids[i] = p.ID
+		}
+		allowed, aerr := h.Admins.FilterPlanIDs(c.Request().Context(), claims.AdminID, ids)
+		if aerr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+		}
+		allow := make(map[uuid.UUID]struct{}, len(allowed))
+		for _, id := range allowed {
+			allow[id] = struct{}{}
+		}
+		filtered := plans[:0]
+		for _, p := range plans {
+			if _, ok := allow[p.ID]; ok {
+				filtered = append(filtered, p)
+			}
+		}
+		plans = filtered
+	}
 	return c.JSON(http.StatusOK, echo.Map{"plans": plans})
 }
 
@@ -84,6 +105,15 @@ func (h *Handlers) ListOrders(c echo.Context) error {
 	orders, err := h.Plans.ListOrders(c.Request().Context(), userID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		filtered := orders[:0]
+		for _, o := range orders {
+			if o.AdminID != nil && *o.AdminID == claims.AdminID {
+				filtered = append(filtered, o)
+			}
+		}
+		orders = filtered
 	}
 	return c.JSON(http.StatusOK, echo.Map{"orders": orders})
 }

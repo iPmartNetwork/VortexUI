@@ -252,6 +252,47 @@ func (r *UserRepo) StatsForAdmin(ctx context.Context, adminID uuid.UUID) (domain
 	}, nil
 }
 
+func (r *UserRepo) StatsByStatusForAdmin(ctx context.Context, adminID uuid.UUID) (map[string]int64, error) {
+	rows, err := r.q.AdminUserStatsByStatus(ctx, ptrToUUID(&adminID))
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		out[row.Status] = row.Count
+	}
+	return out, nil
+}
+
+func (r *UserRepo) TopUsersForAdmin(ctx context.Context, adminID uuid.UUID, limit int32) ([]domain.ResellerTopUser, error) {
+	rows, err := r.q.AdminTopUsersByTraffic(ctx, db.AdminTopUsersByTrafficParams{AdminID: ptrToUUID(&adminID), Lim: limit})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.ResellerTopUser, len(rows))
+	for i, row := range rows {
+		out[i] = domain.ResellerTopUser{
+			ID:          row.ID,
+			Username:    row.Username,
+			UsedTraffic: row.UsedTraffic,
+			DataLimit:   row.DataLimit,
+			Status:      row.Status,
+		}
+	}
+	return out, nil
+}
+
+func (r *UserRepo) CountExpiringSoonForAdmin(ctx context.Context, adminID uuid.UUID) (int64, error) {
+	return r.q.CountAdminUsersExpiringSoon(ctx, ptrToUUID(&adminID))
+}
+
+func (r *UserRepo) CountCreatedSinceForAdmin(ctx context.Context, adminID uuid.UUID, since time.Time) (int64, error) {
+	return r.q.CountAdminUsersCreatedSince(ctx, db.CountAdminUsersCreatedSinceParams{
+		AdminID:   ptrToUUID(&adminID),
+		CreatedAt: timeToTS(since),
+	})
+}
+
 func userToDomain(u db.User) *domain.User {
 	return &domain.User{
 		ID:            u.ID,
@@ -303,4 +344,10 @@ func (r *UserRepo) Stats(ctx context.Context) (domain.UserStats, error) {
 		out.TotalUsed += row.UsedTraffic
 	}
 	return out, nil
+}
+
+func (r *UserRepo) CountIPLimitEventsForAdminSince(ctx context.Context, adminID uuid.UUID, since time.Time) (int64, error) {
+	return r.q.CountIPLimitEventsForAdminSince(ctx, db.CountIPLimitEventsForAdminSinceParams{
+		AdminID: ptrToUUID(&adminID), CreatedAt: timeToTS(since),
+	})
 }

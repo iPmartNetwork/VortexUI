@@ -11,8 +11,9 @@ import (
 type AuditEntry struct {
 	ID       uuid.UUID  `json:"id"`
 	Time     time.Time  `json:"time"`
-	AdminID  *uuid.UUID `json:"admin_id,omitempty"`
-	Username string     `json:"username"` // denormalized for display (admin may be deleted)
+	AdminID         *uuid.UUID `json:"admin_id,omitempty"`
+	ImpersonatorID  *uuid.UUID `json:"impersonator_id,omitempty"`
+	Username        string     `json:"username"` // denormalized for display (admin may be deleted)
 	Method   string     `json:"method"`
 	Path     string     `json:"path"`
 	Status   int        `json:"status"`

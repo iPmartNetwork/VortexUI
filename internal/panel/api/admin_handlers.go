@@ -1,13 +1,17 @@
 package api
 
 import (
+	"encoding/csv"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/panel/port"
 	"github.com/vortexui/vortexui/internal/panel/service"
 )
 
@@ -17,9 +21,12 @@ type createAdminRequest struct {
 	Sudo         bool       `json:"sudo"`
 	EnableTOTP   bool       `json:"enable_totp"`
 	RoleID       *uuid.UUID `json:"role_id"`
-	UserQuota    int        `json:"user_quota"`
-	TrafficQuota int64      `json:"traffic_quota"`
-	InboundIDs   []string   `json:"inbound_ids"`
+	UserQuota          int        `json:"user_quota"`
+	TrafficQuota       int64      `json:"traffic_quota"`
+	TrafficQuotaMode   string     `json:"traffic_quota_mode"`
+	InboundIDs         []string   `json:"inbound_ids"`
+	NodeIDs            []string   `json:"node_ids"`
+	PlanIDs            []string   `json:"plan_ids"`
 }
 
 // CreateAdmin provisions a new operator. The otpauth URL (if 2FA enabled) is
@@ -29,10 +36,17 @@ func (h *Handlers) CreateAdmin(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
+	mode := domain.TrafficQuotaMode(req.TrafficQuotaMode)
+	if mode == "" {
+		mode = domain.TrafficQuotaAllocated
+	}
 	admin, totpURL, err := h.Admins.Create(c.Request().Context(), service.CreateAdminInput{
 		Username: req.Username, Password: req.Password, Sudo: req.Sudo, EnableTOTP: req.EnableTOTP,
 		RoleID: req.RoleID, UserQuota: req.UserQuota, TrafficQuota: req.TrafficQuota,
+		TrafficQuotaMode: mode,
 		InboundIDs: mustParseInboundIDs(req.InboundIDs),
+		NodeIDs:    mustParseInboundIDs(req.NodeIDs),
+		PlanIDs:    mustParseInboundIDs(req.PlanIDs),
 	})
 	if errors.Is(err, service.ErrAdminExists) {
 		return echo.NewHTTPError(http.StatusConflict, "admin already exists")
@@ -59,11 +73,21 @@ func (h *Handlers) ListAdmins(c echo.Context) error {
 type updateAdminRequest struct {
 	Password     string     `json:"password"`
 	Sudo         bool       `json:"sudo"`
-	UserQuota    int        `json:"user_quota"`
-	TrafficQuota int64      `json:"traffic_quota"`
-	RoleID       *uuid.UUID `json:"role_id"`
-	DisableTOTP  bool       `json:"disable_totp"`
-	InboundIDs   *[]string  `json:"inbound_ids"`
+	UserQuota          int        `json:"user_quota"`
+	TrafficQuota       int64      `json:"traffic_quota"`
+	TrafficQuotaMode   *string    `json:"traffic_quota_mode"`
+	RoleID             *uuid.UUID `json:"role_id"`
+	DisableTOTP        bool       `json:"disable_totp"`
+	InboundIDs         *[]string  `json:"inbound_ids"`
+	NodeIDs            *[]string  `json:"node_ids"`
+	PlanIDs            *[]string  `json:"plan_ids"`
+	PolicyMaxDataLimit          *int64 `json:"policy_max_data_limit"`
+	PolicyMaxExpireDays         *int   `json:"policy_max_expire_days"`
+	PolicyAllowBulkDelete       *bool  `json:"policy_allow_bulk_delete"`
+	PolicyAllowBulkCreate       *bool  `json:"policy_allow_bulk_create"`
+	AutoSuspendEnabled          *bool  `json:"auto_suspend_enabled"`
+	IPViolationSuspendThreshold *int   `json:"ip_violation_suspend_threshold"`
+	SuspendGraceMinutes         *int   `json:"suspend_grace_minutes"`
 }
 
 // UpdateAdmin edits an operator. Demoting the last sudo admin is refused.
@@ -76,7 +100,7 @@ func (h *Handlers) UpdateAdmin(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
-	var inboundIDs *[]uuid.UUID
+	var inboundIDs, nodeIDs, planIDs *[]uuid.UUID
 	if req.InboundIDs != nil {
 		parsed, perr := parseUUIDs(*req.InboundIDs)
 		if perr != nil {
@@ -84,10 +108,33 @@ func (h *Handlers) UpdateAdmin(c echo.Context) error {
 		}
 		inboundIDs = &parsed
 	}
+	if req.NodeIDs != nil {
+		parsed, perr := parseUUIDs(*req.NodeIDs)
+		if perr != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid node id")
+		}
+		nodeIDs = &parsed
+	}
+	if req.PlanIDs != nil {
+		parsed, perr := parseUUIDs(*req.PlanIDs)
+		if perr != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid plan id")
+		}
+		planIDs = &parsed
+	}
+	var quotaMode *domain.TrafficQuotaMode
+	if req.TrafficQuotaMode != nil {
+		m := domain.TrafficQuotaMode(*req.TrafficQuotaMode)
+		quotaMode = &m
+	}
 	admin, err := h.Admins.Update(c.Request().Context(), id, service.UpdateAdminInput{
 		Password: req.Password, Sudo: req.Sudo, UserQuota: req.UserQuota,
-		TrafficQuota: req.TrafficQuota, RoleID: req.RoleID, DisableTOTP: req.DisableTOTP,
-		InboundIDs: inboundIDs,
+		TrafficQuota: req.TrafficQuota, TrafficQuotaMode: quotaMode, RoleID: req.RoleID, DisableTOTP: req.DisableTOTP,
+		InboundIDs: inboundIDs, NodeIDs: nodeIDs, PlanIDs: planIDs,
+		PolicyMaxDataLimit: req.PolicyMaxDataLimit, PolicyMaxExpireDays: req.PolicyMaxExpireDays,
+		PolicyAllowBulkDelete: req.PolicyAllowBulkDelete, PolicyAllowBulkCreate: req.PolicyAllowBulkCreate,
+		AutoSuspendEnabled: req.AutoSuspendEnabled, IPViolationSuspendThreshold: req.IPViolationSuspendThreshold,
+		SuspendGraceMinutes: req.SuspendGraceMinutes,
 	})
 	if errors.Is(err, service.ErrLastSudo) {
 		return echo.NewHTTPError(http.StatusConflict, "cannot demote the last sudo admin")
@@ -97,6 +144,50 @@ func (h *Handlers) UpdateAdmin(c echo.Context) error {
 	}
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "update failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"admin": admin})
+}
+
+type adjustQuotaRequest struct {
+	UserQuotaDelta    int   `json:"user_quota_delta"`
+	TrafficQuotaDelta int64 `json:"traffic_quota_delta"`
+}
+
+// AdjustAdminQuota adds to a reseller's pool limits without opening the edit modal.
+func (h *Handlers) AdjustAdminQuota(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	var req adjustQuotaRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if req.UserQuotaDelta == 0 && req.TrafficQuotaDelta == 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "no adjustment specified")
+	}
+	admin, err := h.Admins.AdjustQuota(c.Request().Context(), id, req.UserQuotaDelta, req.TrafficQuotaDelta)
+	if errors.Is(err, domain.ErrNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "admin not found")
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
+	}
+	return c.JSON(http.StatusOK, echo.Map{"admin": admin})
+}
+
+// UnsuspendAdmin re-enables a suspended reseller (sudo only).
+func (h *Handlers) UnsuspendAdmin(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	admin, err := h.Admins.UnsuspendAdmin(c.Request().Context(), id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "admin not found")
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
 	}
 	return c.JSON(http.StatusOK, echo.Map{"admin": admin})
 }
@@ -125,6 +216,60 @@ func (h *Handlers) GetAdminInbounds(c echo.Context) error {
 		out[i] = inID.String()
 	}
 	return c.JSON(http.StatusOK, echo.Map{"inbound_ids": out})
+}
+
+// GetAdminNodes returns the node allowlist for a reseller admin.
+func (h *Handlers) GetAdminNodes(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	admin, err := h.Admins.Get(c.Request().Context(), id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "admin not found")
+	} else if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
+	}
+	if admin.Sudo {
+		return c.JSON(http.StatusOK, echo.Map{"node_ids": []string{}})
+	}
+	ids, err := h.Admins.NodeIDsForAdmin(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	out := uuidSliceToStrings(ids)
+	return c.JSON(http.StatusOK, echo.Map{"node_ids": out})
+}
+
+// GetAdminPlans returns the plan allowlist for a reseller admin.
+func (h *Handlers) GetAdminPlans(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	admin, err := h.Admins.Get(c.Request().Context(), id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "admin not found")
+	} else if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
+	}
+	if admin.Sudo {
+		return c.JSON(http.StatusOK, echo.Map{"plan_ids": []string{}})
+	}
+	ids, err := h.Admins.PlanIDsForAdmin(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	out := uuidSliceToStrings(ids)
+	return c.JSON(http.StatusOK, echo.Map{"plan_ids": out})
+}
+
+func uuidSliceToStrings(ids []uuid.UUID) []string {
+	out := make([]string, len(ids))
+	for i, id := range ids {
+		out[i] = id.String()
+	}
+	return out
 }
 
 func mustParseInboundIDs(ss []string) []uuid.UUID {
@@ -223,14 +368,23 @@ func (h *Handlers) DeleteRole(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// ListAudit returns the recent admin action log (admin:manage).
+// ListAudit returns the recent admin action log. Sudo sees all entries; resellers see only their own.
 func (h *Handlers) ListAudit(c echo.Context) error {
 	if h.Audit == nil {
 		return c.JSON(http.StatusOK, echo.Map{"entries": []any{}})
 	}
 	limit := atoiDefault(c.QueryParam("limit"), 100)
 	offset := atoiDefault(c.QueryParam("offset"), 0)
-	entries, err := h.Audit.List(c.Request().Context(), limit, offset)
+	claims := claimsFrom(c)
+	var (
+		entries []domain.AuditEntry
+		err     error
+	)
+	if claims != nil && !claims.Sudo {
+		entries, err = h.Audit.ListForAdmin(c.Request().Context(), claims.AdminID, limit, offset)
+	} else {
+		entries, err = h.Audit.List(c.Request().Context(), limit, offset)
+	}
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "audit list failed")
 	}
@@ -267,7 +421,7 @@ func (h *Handlers) GetAccount(c echo.Context) error {
 	for i, p := range perms {
 		out[i] = string(p)
 	}
-	return c.JSON(http.StatusOK, echo.Map{"admin": admin, "permissions": out})
+	return c.JSON(http.StatusOK, echo.Map{"admin": admin, "permissions": out, "impersonator_id": claims.ImpersonatorID})
 }
 
 // GetAccountQuota returns the calling admin's reseller quota usage.
@@ -281,6 +435,65 @@ func (h *Handlers) GetAccountQuota(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "quota failed")
 	}
 	return c.JSON(http.StatusOK, echo.Map{"usage": usage})
+}
+
+// GetResellerDashboard returns the reseller home summary for the calling admin.
+func (h *Handlers) GetResellerDashboard(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	dash, err := h.Admins.ResellerDashboard(c.Request().Context(), claims.AdminID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "dashboard failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"dashboard": dash})
+}
+
+// ExportAccountUsers returns a CSV of users for accounting (scoped to the reseller).
+func (h *Handlers) ExportAccountUsers(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	if h.Repo == nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "export unavailable")
+	}
+	f := port.UserFilter{Limit: 100000}
+	if !claims.Sudo {
+		f.AdminID = &claims.AdminID
+	}
+	users, _, err := h.Repo.List(c.Request().Context(), f)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "export failed")
+	}
+
+	c.Response().Header().Set("Content-Type", "text/csv; charset=utf-8")
+	c.Response().Header().Set("Content-Disposition", `attachment; filename="reseller-users.csv"`)
+	w := csv.NewWriter(c.Response())
+	_ = w.Write([]string{"username", "status", "data_limit_bytes", "used_traffic_bytes", "remaining_bytes", "expire_at", "created_at", "note"})
+	for _, u := range users {
+		remaining := ""
+		if u.DataLimit > 0 {
+			remaining = strconv.FormatInt(u.DataLimit-u.UsedTraffic, 10)
+		}
+		expire := ""
+		if u.ExpireAt != nil {
+			expire = u.ExpireAt.UTC().Format(time.RFC3339)
+		}
+		_ = w.Write([]string{
+			u.Username,
+			string(u.Status),
+			strconv.FormatInt(u.DataLimit, 10),
+			strconv.FormatInt(u.UsedTraffic, 10),
+			remaining,
+			expire,
+			u.CreatedAt.UTC().Format(time.RFC3339),
+			u.Note,
+		})
+	}
+	w.Flush()
+	return nil
 }
 
 // ListResellerQuotaUsage returns quota usage for all resellers (sudo).

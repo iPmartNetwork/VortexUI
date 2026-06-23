@@ -17,7 +17,7 @@
 | راهنمای پنل | [داشبورد](04-dashboard.md) · [کاربران](05-user-management.md) · [نودها](06-node-management.md) · [شبکه](07-network-policy.md) |
 | مدیریت | [امنیت](08-security-administration.md) · [پلن‌ها](09-plans-payments.md) · [اعلان‌ها](10-notifications.md) · [تنظیمات](11-settings-backup.md) |
 | مرجع فنی | [API](12-api-reference.md) · [پروتکل‌ها](13-protocols-config.md) · [عملیات](14-operations-maintenance.md) · [FAQ](15-troubleshooting-faq.md) |
-| تازه‌های نسخه | [ویژگی‌های نسخه 1.2.0](16-v120-features.md) · [ویژگی‌های نسخه 1.2.3](17-v123-features.md) |
+| تازه‌های نسخه | [ویژگی‌های نسخه 1.2.5](18-v125-features.md) · [ویژگی‌های نسخه 1.2.3](17-v123-features.md) · [ویژگی‌های نسخه 1.2.0](16-v120-features.md) |
 
 ## معماری
 

@@ -38,6 +38,7 @@ import {
   Unplug,
   Ban,
   ChevronDown,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/auth";
@@ -46,40 +47,52 @@ import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
 import { useLiveEvents } from "@/api/live";
 import { useVersion } from "@/api/hooks";
+import { useStopImpersonation } from "@/api/reseller-hooks";
+import { setToken } from "@/api/client";
 import type { TKey, Lang } from "@/i18n/dict";
 
 // PANEL_VERSION is the fallback shown until the backend version is fetched.
-const PANEL_VERSION = "1.2.3";
+const PANEL_VERSION = "1.2.5";
 
 // Grouped navigation with collapsible sections
 interface NavItem { to: string; key: TKey; icon: React.ElementType }
 interface NavSection { label: string; id: string; items: NavItem[] }
 
-const navSections: NavSection[] = [
-  {
-    label: "nav.section.dashboard",
-    id: "dashboard",
+function buildNavSections(sudo: boolean): NavSection[] {
+  const resellerSection: NavSection | null = sudo ? null : {
+    label: "nav.section.reseller",
+    id: "reseller",
     items: [
-      { to: "/overview", key: "nav.overview", icon: LayoutDashboard },
-      { to: "/monitor", key: "nav.monitor", icon: Server },
-      { to: "/analytics", key: "nav.analytics", icon: BarChart3 },
+      { to: "/reseller-dashboard", key: "nav.resellerDashboard", icon: Gauge },
+      { to: "/reseller-account", key: "nav.resellerAccount", icon: Wallet },
     ],
-  },
-  {
-    label: "nav.section.users",
-    id: "users",
-    items: [
-      { to: "/users", key: "nav.users", icon: UsersIcon },
-      { to: "/my-quota", key: "nav.myQuota", icon: Gauge },
-      { to: "/family-groups", key: "nav.familyGroups", icon: Users2 },
-      { to: "/plans", key: "nav.plans", icon: Network },
-      { to: "/orders", key: "nav.orders", icon: History },
-      { to: "/smart-quota", key: "nav.smartQuota", icon: Gauge },
-      { to: "/quota-notifications", key: "nav.quotaNotify", icon: Bell },
-      { to: "/referrals", key: "nav.referrals", icon: Gift },
-      { to: "/tickets", key: "nav.tickets", icon: LifeBuoy },
-    ],
-  },
+  };
+
+  const sections: NavSection[] = [
+    {
+      label: "nav.section.dashboard",
+      id: "dashboard",
+      items: [
+        { to: "/overview", key: "nav.overview", icon: LayoutDashboard },
+        { to: "/monitor", key: "nav.monitor", icon: Server },
+        { to: "/analytics", key: "nav.analytics", icon: BarChart3 },
+      ],
+    },
+    {
+      label: "nav.section.users",
+      id: "users",
+      items: [
+        { to: "/users", key: "nav.users", icon: UsersIcon },
+        { to: "/family-groups", key: "nav.familyGroups", icon: Users2 },
+        { to: "/plans", key: "nav.plans", icon: Network },
+        { to: "/orders", key: "nav.orders", icon: History },
+        { to: "/smart-quota", key: "nav.smartQuota", icon: Gauge },
+        { to: "/quota-notifications", key: "nav.quotaNotify", icon: Bell },
+        { to: "/reseller-quota-alerts", key: "nav.resellerQuotaAlerts", icon: Bell },
+        { to: "/referrals", key: "nav.referrals", icon: Gift },
+        { to: "/tickets", key: "nav.tickets", icon: LifeBuoy },
+      ],
+    },
   {
     label: "nav.section.network",
     id: "network",
@@ -121,7 +134,9 @@ const navSections: NavSection[] = [
       { to: "/settings", key: "nav.settings", icon: SettingsIcon },
     ],
   },
-];
+  ];
+  return resellerSection ? [resellerSection, ...sections] : sections;
+}
 
 function IconButton({ onClick, label, children, className }: { onClick: () => void; label: string; children: React.ReactNode; className?: string }) {
   return (
@@ -132,7 +147,8 @@ function IconButton({ onClick, label, children, className }: { onClick: () => vo
 }
 
 export function Layout() {
-  const { logout, sudo, permissions } = useAuth();
+  const { logout, sudo, permissions, impersonating, session, refreshSession } = useAuth();
+  const stopImpersonate = useStopImpersonation();
   const navigate = useNavigate();
   const location = useLocation();
   const { resolved, toggle } = useTheme();
@@ -140,13 +156,13 @@ export function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    // Auto-open the section containing the current route
     const init: Record<string, boolean> = {};
-    navSections.forEach(s => {
+    const sections = buildNavSections(sudo);
+    sections.forEach(s => {
       init[s.id] = s.items.some(item => location.pathname.startsWith(item.to));
     });
-    // Always open dashboard
     init["dashboard"] = true;
+    if (!sudo) init["reseller"] = true;
     return init;
   });
   useLiveEvents();
@@ -156,12 +172,23 @@ export function Layout() {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
   }
 
-  const visibleSections = navSections
+  const visibleSections = buildNavSections(sudo)
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => canAccessRoute(item.to, sudo, permissions)),
     }))
     .filter((section) => section.items.length > 0);
+
+  async function exitImpersonation() {
+    try {
+      const res = await stopImpersonate.mutateAsync();
+      setToken(res.token);
+      await refreshSession();
+    } catch {
+      logout();
+      navigate("/login");
+    }
+  }
 
   const sidebarContent = (
     <>
@@ -301,6 +328,16 @@ export function Layout() {
           <span className="text-sm font-black tracking-wider" style={{ fontFamily: "'Orbitron', sans-serif" }}>VortexUI</span>
         </div>
         <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-8 animate-fade-in">
+          {impersonating && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+              <span>
+                Impersonating <strong>@{session?.admin.username}</strong> (support session)
+              </span>
+              <button type="button" onClick={() => void exitImpersonation()} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500">
+                Exit impersonation
+              </button>
+            </div>
+          )}
           <Outlet />
         </div>
       </main>

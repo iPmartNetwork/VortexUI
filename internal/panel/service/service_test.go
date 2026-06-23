@@ -68,6 +68,18 @@ func (f *fakeUserRepo) InboundsFor(context.Context, uuid.UUID) ([]domain.Inbound
 func (f *fakeUserRepo) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
 	return domain.AdminUserStats{}, nil
 }
+func (f *fakeUserRepo) StatsByStatusForAdmin(context.Context, uuid.UUID) (map[string]int64, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) TopUsersForAdmin(context.Context, uuid.UUID, int32) ([]domain.ResellerTopUser, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) CountExpiringSoonForAdmin(context.Context, uuid.UUID) (int64, error) {
+	return 0, nil
+}
+func (f *fakeUserRepo) CountCreatedSinceForAdmin(context.Context, uuid.UUID, time.Time) (int64, error) {
+	return 0, nil
+}
 
 type fakeNodeOps struct {
 	added   []string

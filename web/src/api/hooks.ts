@@ -123,6 +123,18 @@ export function useDeleteUser() {
   });
 }
 
+export function useBulkDeleteUsers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      api<{ deleted: number; failures: { id: string; error: string }[] }>("/api/users/bulk-delete", {
+        method: "POST",
+        body: { ids },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
 // --- nodes ---
 
 export function useNodes() {

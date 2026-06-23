@@ -20,7 +20,7 @@
 
   <br />
   
-  [Features](#-features) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+  [Features](#-features) · [What's New in 1.2.5](#-whats-new-in-125) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 </div>
 
 ---
@@ -89,7 +89,7 @@
 
 ### 🔐 Auth & Admin
 - JWT + TOTP 2FA
-- RBAC + reseller sub-panel
+- RBAC + **full reseller platform** (wallet, sub-resellers, whitelabel, webhooks, policy limits, auto-suspend)
 - API tokens (PAT)
 - Login brute-force protection
 - Account-sharing guard
@@ -114,6 +114,35 @@
 </td>
 </tr>
 </table>
+
+---
+
+## 🆕 What's New in 1.2.5
+
+<div align="center">
+
+**Reseller platform · wallet & sub-resellers · whitelabel · webhooks · policy limits · auto-suspend · full i18n**
+
+</div>
+
+| Feature | Description |
+|---------|-------------|
+| **Allowlists** | Per-reseller plan, node, and inbound pickers — resellers only see what you assign |
+| **Quota modes** | `allocated` vs `consumed` traffic pool enforcement |
+| **Reseller dashboard** | Accounts, traffic pool, top consumers, expiring users, CSV export |
+| **Quota alerts** | Telegram + webhook when resellers approach limits |
+| **Wallet & ledger** | Traffic/user credits with top-up and history |
+| **Sub-resellers** | Hierarchical child resellers with role + quota |
+| **Whitelabel** | Custom panel title, logo, accent, slug, footer |
+| **Outbound webhook** | Signed `user.created` / `user.deleted` events |
+| **Impersonate** | Sudo **Login as** for reseller support |
+| **Scoped audit** | Resellers see only their own audit entries |
+| **Policy limits** | Max data/expire, bulk create/delete gates |
+| **Auto-suspend** | IP violation and quota overage suspension worker |
+| **Bulk quota adjust** | +50 accounts / +10 GB / +50 GB from Admins table |
+| **i18n** | All reseller pages in 8 languages (EN/FA/TR/AR/RU/ZH/JA/ES) |
+
+See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup details.
 
 ---
 
@@ -233,7 +262,7 @@
 
 </div>
 
-| | VortexUI 1.2.3 | 3x-ui | Marzban | Hiddify |
+| | VortexUI 1.2.5 | 3x-ui | Marzban | Hiddify |
 |:--|:--:|:--:|:--:|:--:|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |
@@ -255,6 +284,7 @@
 | **Smart quota** | ✅ progressive | ❌ | ❌ | ❌ |
 | **CDN/Relay chains** | ✅ visual builder | ❌ | ❌ | ❌ |
 | **Analytics (geo)** | ✅ + CSV export | ❌ | ❌ | ❌ |
+| **Reseller platform** | ✅ wallet, sub-resellers, whitelabel | Partial | ✅ | Partial |
 | **Notifications** | Webhook + TG + portal | TG | ✅ | TG |
 | **Languages** | 8 | 13 | 3 | 5 |
 | **Backend** | Go | Go | Python | Python |
@@ -393,7 +423,7 @@ make run-panel          # start panel
 - [x] Automatic HTTPS (Caddy)
 - [x] One-line installer + CLI
 - [x] Hysteria2 + TUIC + WireGuard
-- [x] Reseller sub-panel
+- [x] Reseller platform (v1.2.5)
 - [x] Payment gateways (ZarinPal + crypto)
 - [x] Evasion profiles + WARP+
 - [x] Cluster mode (HA)

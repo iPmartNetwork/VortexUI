@@ -54,6 +54,9 @@ func (s *AuthService) Login(ctx context.Context, in LoginInput) (string, error) 
 	if admin.TOTPEnabled && !auth.VerifyTOTP(admin.TOTPSecret, in.TOTPCode) {
 		return "", ErrInvalidCredentials
 	}
+	if !admin.Sudo && admin.Suspended {
+		return "", ErrAdminSuspended
+	}
 
 	token, err := s.issuer.Issue(admin.ID, admin.Sudo, admin.RoleID)
 	if err != nil {

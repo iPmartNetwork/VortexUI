@@ -61,6 +61,11 @@ func (w *Webhook) Run(ctx context.Context, ch <-chan events.Event) {
 	}
 }
 
+// Deliver marshals and POSTs a single event (exported for reseller dispatchers).
+func (w *Webhook) Deliver(ctx context.Context, e events.Event) error {
+	return w.deliver(ctx, e)
+}
+
 // deliver marshals the event and POSTs it, retrying with exponential backoff.
 func (w *Webhook) deliver(ctx context.Context, e events.Event) error {
 	body, err := json.Marshal(e)

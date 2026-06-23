@@ -15,6 +15,7 @@ import (
 // PortalHandlers serves end-user self-service endpoints.
 type PortalHandlers struct {
 	Portal *service.PortalService
+	Admins *service.AdminService
 	Issuer *auth.Issuer
 }
 
@@ -73,11 +74,21 @@ func (h *PortalHandlers) PortalDashboard(c echo.Context) error {
 
 // --- Portal Plans ---
 
-// PortalListPlans returns enabled plans for purchase.
+// PortalListPlans returns enabled plans for purchase (filtered by reseller allowlist).
 func (h *PortalHandlers) PortalListPlans(c echo.Context) error {
+	userID := portalUserID(c)
 	plans, err := h.Portal.ListPlans(c.Request().Context())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to list plans")
+	}
+	if h.Admins != nil && userID != uuid.Nil {
+		user, uerr := h.Portal.GetUsage(c.Request().Context(), userID)
+		if uerr == nil && user.AdminID != nil {
+			plans, err = h.Admins.FilterPlans(c.Request().Context(), *user.AdminID, plans)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "failed to filter plans")
+			}
+		}
 	}
 	return c.JSON(http.StatusOK, echo.Map{"plans": plans})
 }
