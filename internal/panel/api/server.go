@@ -160,6 +160,7 @@ func NewRouter(d Deps) *echo.Echo {
 	admins.GET("", d.Handlers.ListAdmins)
 	admins.POST("", d.Handlers.CreateAdmin)
 	admins.PUT("/:id", d.Handlers.UpdateAdmin)
+	admins.GET("/:id/inbounds", d.Handlers.GetAdminInbounds)
 	admins.DELETE("/:id", d.Handlers.DeleteAdmin)
 
 	roles := authed.Group("/roles", RequirePermission(d.Auth, domain.PermAdminManage))

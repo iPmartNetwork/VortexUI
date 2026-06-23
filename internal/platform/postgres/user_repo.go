@@ -44,6 +44,7 @@ func (r *UserRepo) Create(ctx context.Context, u *domain.User) error {
 		SsPassword:    u.Proxies.ShadowsocksP,
 		SsMethod:      u.Proxies.SSMethod,
 		SubToken:      u.SubToken,
+		AdminID:       ptrToUUID(u.AdminID),
 		CreatedAt:     timeToTS(u.CreatedAt),
 		UpdatedAt:     timeToTS(u.UpdatedAt),
 	})
@@ -95,15 +96,20 @@ func (r *UserRepo) List(ctx context.Context, f port.UserFilter) ([]*domain.User,
 		limit = 50
 	}
 	rows, err := r.q.ListUsers(ctx, db.ListUsersParams{
-		Search: f.Search,
-		Status: string(f.Status),
-		Off:    int32(f.Offset),
-		Lim:    limit,
+		Search:  f.Search,
+		Status:  string(f.Status),
+		AdminID: ptrToUUID(f.AdminID),
+		Off:     int32(f.Offset),
+		Lim:     limit,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := r.q.CountUsers(ctx, db.CountUsersParams{Search: f.Search, Status: string(f.Status)})
+	total, err := r.q.CountUsers(ctx, db.CountUsersParams{
+		Search:  f.Search,
+		Status:  string(f.Status),
+		AdminID: ptrToUUID(f.AdminID),
+	})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -240,6 +246,7 @@ func userToDomain(u db.User) *domain.User {
 		Username:      u.Username,
 		Status:        domain.UserStatus(u.Status),
 		Note:          u.Note,
+		AdminID:       uuidToPtr(u.AdminID),
 		DataLimit:     u.DataLimit,
 		UsedTraffic:   u.UsedTraffic,
 		ExpireAt:      tsToPtr(u.ExpireAt),

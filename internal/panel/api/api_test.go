@@ -46,6 +46,13 @@ func (f *fakeAdminRepo) ListRoles(context.Context) ([]*domain.Role, error) {
 }
 func (f *fakeAdminRepo) UpdateRole(context.Context, *domain.Role) error { return nil }
 func (f *fakeAdminRepo) DeleteRole(context.Context, uuid.UUID) error    { return nil }
+func (f *fakeAdminRepo) SetInbounds(context.Context, uuid.UUID, []uuid.UUID) error { return nil }
+func (f *fakeAdminRepo) ListInboundIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (f *fakeAdminRepo) CountInboundAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
+	return 0, nil
+}
 
 type fakeUserRepo struct {
 	listed   []*domain.User

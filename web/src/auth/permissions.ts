@@ -1,10 +1,9 @@
-/** Default permission bundle for a reseller (manage users + view/edit shared inbounds). */
+/** Default permission bundle for a reseller (own users + read-only nodes/inbounds). */
 export const RESELLER_PERMISSIONS = [
   "user:read",
   "user:write",
   "node:read",
   "inbound:read",
-  "inbound:write",
   "system:read",
 ] as const;
 

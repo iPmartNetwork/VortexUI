@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/port"
@@ -12,7 +13,10 @@ import (
 )
 
 // AdminRepo implements port.AdminRepository.
-type AdminRepo struct{ q *db.Queries }
+type AdminRepo struct {
+	q    *db.Queries
+	pool *pgxpool.Pool
+}
 
 var _ port.AdminRepository = (*AdminRepo)(nil)
 
@@ -124,6 +128,40 @@ func (r *AdminRepo) UpdateRole(ctx context.Context, role *domain.Role) error {
 
 func (r *AdminRepo) DeleteRole(ctx context.Context, id uuid.UUID) error {
 	return r.q.DeleteRole(ctx, id)
+}
+
+// SetInbounds replaces the inbound allowlist for a reseller admin.
+func (r *AdminRepo) SetInbounds(ctx context.Context, adminID uuid.UUID, inboundIDs []uuid.UUID) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // no-op after Commit
+
+	qtx := db.New(tx)
+	if err := qtx.ClearAdminInbounds(ctx, adminID); err != nil {
+		return err
+	}
+	for _, inID := range inboundIDs {
+		if err := qtx.AddAdminInbound(ctx, db.AddAdminInboundParams{AdminID: adminID, InboundID: inID}); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+func (r *AdminRepo) ListInboundIDs(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error) {
+	return r.q.ListInboundIDsForAdmin(ctx, adminID)
+}
+
+func (r *AdminRepo) CountInboundAccess(ctx context.Context, adminID uuid.UUID, inboundIDs []uuid.UUID) (int64, error) {
+	if len(inboundIDs) == 0 {
+		return 0, nil
+	}
+	return r.q.CountAdminInboundAccess(ctx, db.CountAdminInboundAccessParams{
+		AdminID:    adminID,
+		InboundIds: inboundIDs,
+	})
 }
 
 func adminToDomain(a db.Admin) *domain.Admin {

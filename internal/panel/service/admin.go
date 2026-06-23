@@ -44,6 +44,9 @@ type AdminStore interface {
 	ListRoles(ctx context.Context) ([]*domain.Role, error)
 	UpdateRole(ctx context.Context, role *domain.Role) error
 	DeleteRole(ctx context.Context, id uuid.UUID) error
+	SetInbounds(ctx context.Context, adminID uuid.UUID, inboundIDs []uuid.UUID) error
+	ListInboundIDs(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error)
+	CountInboundAccess(ctx context.Context, adminID uuid.UUID, inboundIDs []uuid.UUID) (int64, error)
 }
 
 // AdminService manages panel operators: bootstrap, CRUD, and role management.
@@ -67,6 +70,7 @@ type CreateAdminInput struct {
 	RoleID       *uuid.UUID // required when Sudo is false
 	UserQuota    int
 	TrafficQuota int64
+	InboundIDs   []uuid.UUID // optional allowlist for resellers
 }
 
 // Create provisions an admin, refusing to clobber an existing username. When
@@ -120,6 +124,11 @@ func (s *AdminService) Create(ctx context.Context, in CreateAdminInput) (admin *
 	if err := s.admins.Create(ctx, a); err != nil {
 		return nil, "", fmt.Errorf("persist admin: %w", err)
 	}
+	if !in.Sudo && len(in.InboundIDs) > 0 {
+		if err := s.admins.SetInbounds(ctx, a.ID, in.InboundIDs); err != nil {
+			return nil, "", fmt.Errorf("set inbounds: %w", err)
+		}
+	}
 	return a, totpURL, nil
 }
 
@@ -143,6 +152,7 @@ type UpdateAdminInput struct {
 	TrafficQuota int64
 	RoleID       *uuid.UUID
 	DisableTOTP  bool
+	InboundIDs   *[]uuid.UUID // nil = leave allowlist unchanged
 }
 
 // Update applies changes to an admin. Demoting the last sudo admin is refused so
@@ -174,6 +184,11 @@ func (s *AdminService) Update(ctx context.Context, id uuid.UUID, in UpdateAdminI
 	}
 	if err := s.admins.Update(ctx, a); err != nil {
 		return nil, err
+	}
+	if in.InboundIDs != nil && !a.Sudo {
+		if err := s.admins.SetInbounds(ctx, a.ID, *in.InboundIDs); err != nil {
+			return nil, fmt.Errorf("set inbounds: %w", err)
+		}
 	}
 	return a, nil
 }
@@ -245,6 +260,26 @@ func (s *AdminService) DeleteRole(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return s.admins.DeleteRole(ctx, id)
+}
+
+// InboundIDsForAdmin returns inbound IDs a reseller may assign to users.
+func (s *AdminService) InboundIDsForAdmin(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error) {
+	return s.admins.ListInboundIDs(ctx, adminID)
+}
+
+// ValidateInboundAccess ensures every inbound is on the admin's allowlist.
+func (s *AdminService) ValidateInboundAccess(ctx context.Context, adminID uuid.UUID, inboundIDs []uuid.UUID) error {
+	if len(inboundIDs) == 0 {
+		return nil
+	}
+	n, err := s.admins.CountInboundAccess(ctx, adminID, inboundIDs)
+	if err != nil {
+		return err
+	}
+	if int(n) != len(inboundIDs) {
+		return errors.New("inbound not allowed for this admin")
+	}
+	return nil
 }
 
 // Permissions returns the effective permission set for an admin. Sudo admins

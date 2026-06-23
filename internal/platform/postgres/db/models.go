@@ -23,6 +23,11 @@ type Admin struct {
 	CreatedAt    pgtype.Timestamptz
 }
 
+type AdminInbound struct {
+	AdminID   uuid.UUID
+	InboundID uuid.UUID
+}
+
 type ApiToken struct {
 	ID         uuid.UUID
 	Name       string
@@ -550,6 +555,7 @@ type User struct {
 	SsMethod      string
 	SubToken      string
 	RoutingPackID string
+	AdminID       pgtype.UUID
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 }

@@ -3,10 +3,10 @@ INSERT INTO users (
     id, username, status, note, data_limit, used_traffic, expire_at,
     on_hold_expire, reset_strategy, last_reset, device_limit, allowed_hwids,
     vmess_uuid, vless_uuid, trojan_pass, ss_password, ss_method, sub_token,
-    created_at, updated_at
+    admin_id, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-    $13, $14, $15, $16, $17, $18, $19, $20
+    $13, $14, $15, $16, $17, $18, $19, $20, $21
 );
 
 -- name: GetUserByID :one
@@ -47,13 +47,15 @@ WHERE u.id = d.id;
 SELECT * FROM users
 WHERE (sqlc.arg(search)::text = '' OR username ILIKE '%' || sqlc.arg(search) || '%')
   AND (sqlc.arg(status)::text = '' OR status = sqlc.arg(status))
+  AND (sqlc.narg(admin_id)::uuid IS NULL OR admin_id = sqlc.narg(admin_id))
 ORDER BY created_at DESC
 LIMIT sqlc.arg(lim) OFFSET sqlc.arg(off);
 
 -- name: CountUsers :one
 SELECT count(*) FROM users
 WHERE (sqlc.arg(search)::text = '' OR username ILIKE '%' || sqlc.arg(search) || '%')
-  AND (sqlc.arg(status)::text = '' OR status = sqlc.arg(status));
+  AND (sqlc.arg(status)::text = '' OR status = sqlc.arg(status))
+  AND (sqlc.narg(admin_id)::uuid IS NULL OR admin_id = sqlc.narg(admin_id));
 
 -- UsersToLimit returns active users who have crossed their data cap or expiry,
 -- so the enforcement loop can disable+de-provision exactly those (not a full

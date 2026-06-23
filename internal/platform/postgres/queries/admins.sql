@@ -41,3 +41,17 @@ UPDATE roles SET name = $2, permissions = $3 WHERE id = $1;
 
 -- name: DeleteRole :exec
 DELETE FROM roles WHERE id = $1;
+
+-- name: ClearAdminInbounds :exec
+DELETE FROM admin_inbounds WHERE admin_id = $1;
+
+-- name: AddAdminInbound :exec
+INSERT INTO admin_inbounds (admin_id, inbound_id) VALUES ($1, $2)
+ON CONFLICT DO NOTHING;
+
+-- name: ListInboundIDsForAdmin :many
+SELECT inbound_id FROM admin_inbounds WHERE admin_id = $1;
+
+-- name: CountAdminInboundAccess :one
+SELECT count(*)::bigint FROM admin_inbounds
+WHERE admin_id = sqlc.arg(admin_id) AND inbound_id = ANY(sqlc.arg(inbound_ids)::uuid[]);

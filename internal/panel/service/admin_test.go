@@ -76,6 +76,13 @@ func (s *stubAdminRepo) CreateRole(context.Context, *domain.Role) error    { ret
 func (s *stubAdminRepo) ListRoles(context.Context) ([]*domain.Role, error) { return nil, nil }
 func (s *stubAdminRepo) UpdateRole(context.Context, *domain.Role) error    { return nil }
 func (s *stubAdminRepo) DeleteRole(context.Context, uuid.UUID) error       { return nil }
+func (s *stubAdminRepo) SetInbounds(context.Context, uuid.UUID, []uuid.UUID) error { return nil }
+func (s *stubAdminRepo) ListInboundIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (s *stubAdminRepo) CountInboundAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
+	return 0, nil
+}
 
 func TestAdminCreateRequiresRoleForReseller(t *testing.T) {
 	repo := newStubAdminRepo()

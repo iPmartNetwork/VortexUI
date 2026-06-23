@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCreateAdmin, useRoles } from "@/api/admin-hooks";
+import { AdminInboundPicker } from "@/components/AdminInboundPicker";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 
@@ -12,6 +13,7 @@ export function CreateAdminModal({ open, onClose }: { open: boolean; onClose: ()
   const [roleId, setRoleId] = useState("");
   const [userQuota, setUserQuota] = useState("");
   const [trafficQuota, setTrafficQuota] = useState("");
+  const [inboundIds, setInboundIds] = useState<string[]>([]);
   const [error, setError] = useState("");
 
   function close() {
@@ -21,6 +23,7 @@ export function CreateAdminModal({ open, onClose }: { open: boolean; onClose: ()
     setRoleId("");
     setUserQuota("");
     setTrafficQuota("");
+    setInboundIds([]);
     setError("");
     onClose();
   }
@@ -38,6 +41,7 @@ export function CreateAdminModal({ open, onClose }: { open: boolean; onClose: ()
         role_id: sudo ? null : roleId,
         user_quota: userQuota ? Number(userQuota) : 0,
         traffic_quota: trafficQuota ? Number(trafficQuota) * 1024 * 1024 * 1024 : 0,
+        inbound_ids: sudo ? undefined : inboundIds,
       });
       close();
     } catch {
@@ -70,6 +74,7 @@ export function CreateAdminModal({ open, onClose }: { open: boolean; onClose: ()
               <Input placeholder="Traffic quota (GB, 0=unlimited)" value={trafficQuota} onChange={(e) => setTrafficQuota(e.target.value)} inputMode="numeric" />
             </div>
             <p className="text-[10px] text-fg-subtle">Reseller limits: max users this admin can create, and max traffic per user (GB).</p>
+            <AdminInboundPicker selected={inboundIds} onChange={setInboundIds} />
           </>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}

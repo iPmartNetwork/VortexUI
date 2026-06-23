@@ -82,9 +82,20 @@ CREATE TABLE users (
     ss_method      TEXT NOT NULL DEFAULT 'aes-128-gcm',
     sub_token      TEXT NOT NULL UNIQUE,
     routing_pack_id TEXT NOT NULL DEFAULT '',
+    admin_id       UUID REFERENCES admins(id) ON DELETE SET NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_users_admin_id ON users (admin_id);
+
+CREATE TABLE admin_inbounds (
+    admin_id   UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    inbound_id UUID NOT NULL REFERENCES inbounds(id) ON DELETE CASCADE,
+    PRIMARY KEY (admin_id, inbound_id)
+);
+
+CREATE INDEX idx_admin_inbounds_inbound ON admin_inbounds (inbound_id);
 
 CREATE TABLE user_inbounds (
     user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
