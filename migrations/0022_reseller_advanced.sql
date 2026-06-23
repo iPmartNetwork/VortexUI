@@ -1,3 +1,4 @@
+-- +goose Up
 -- Wallet, sub-reseller hierarchy, portal branding, reseller webhooks, impersonation audit.
 
 ALTER TABLE admins
@@ -34,3 +35,17 @@ CREATE TABLE IF NOT EXISTS portal_branding (
 
 ALTER TABLE audit_log
     ADD COLUMN IF NOT EXISTS impersonator_id UUID REFERENCES admins(id) ON DELETE SET NULL;
+
+-- +goose Down
+ALTER TABLE audit_log DROP COLUMN IF EXISTS impersonator_id;
+DROP TABLE IF EXISTS portal_branding;
+DROP INDEX IF EXISTS idx_wallet_ledger_admin;
+DROP TABLE IF EXISTS admin_wallet_ledger;
+DROP INDEX IF EXISTS idx_admins_parent;
+ALTER TABLE admins
+    DROP COLUMN IF EXISTS webhook_enabled,
+    DROP COLUMN IF EXISTS webhook_secret,
+    DROP COLUMN IF EXISTS webhook_url,
+    DROP COLUMN IF EXISTS wallet_user_credits,
+    DROP COLUMN IF EXISTS wallet_traffic_bytes,
+    DROP COLUMN IF EXISTS parent_admin_id;

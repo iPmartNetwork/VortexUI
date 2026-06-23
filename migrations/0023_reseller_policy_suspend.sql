@@ -1,3 +1,4 @@
+-- +goose Up
 -- Reseller abuse policies (max per-user limits) and auto-suspend.
 
 ALTER TABLE admins
@@ -12,3 +13,17 @@ ALTER TABLE admins
     ADD COLUMN IF NOT EXISTS ip_violation_suspend_threshold INT NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS suspend_grace_minutes INT NOT NULL DEFAULT 60,
     ADD COLUMN IF NOT EXISTS quota_breached_at TIMESTAMPTZ;
+
+-- +goose Down
+ALTER TABLE admins
+    DROP COLUMN IF EXISTS quota_breached_at,
+    DROP COLUMN IF EXISTS suspend_grace_minutes,
+    DROP COLUMN IF EXISTS ip_violation_suspend_threshold,
+    DROP COLUMN IF EXISTS auto_suspend_enabled,
+    DROP COLUMN IF EXISTS suspend_reason,
+    DROP COLUMN IF EXISTS suspended_at,
+    DROP COLUMN IF EXISTS suspended,
+    DROP COLUMN IF EXISTS policy_allow_bulk_create,
+    DROP COLUMN IF EXISTS policy_allow_bulk_delete,
+    DROP COLUMN IF EXISTS policy_max_expire_days,
+    DROP COLUMN IF EXISTS policy_max_data_limit;
