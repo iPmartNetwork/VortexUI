@@ -1,3 +1,4 @@
+-- +goose Up
 -- Reseller enhancements: plan/node allowlists, traffic quota mode, quota alerts.
 
 ALTER TABLE admins
@@ -41,3 +42,13 @@ CREATE TABLE IF NOT EXISTS admin_quota_notify_events (
 
 CREATE INDEX IF NOT EXISTS idx_admin_quota_notify_admin
     ON admin_quota_notify_events (admin_id, created_at DESC);
+
+-- +goose Down
+DROP INDEX IF EXISTS idx_admin_quota_notify_admin;
+DROP TABLE IF EXISTS admin_quota_notify_events;
+DROP TABLE IF EXISTS admin_quota_notify_config;
+DROP INDEX IF EXISTS idx_admin_nodes_node;
+DROP TABLE IF EXISTS admin_nodes;
+DROP INDEX IF EXISTS idx_admin_plans_plan;
+DROP TABLE IF EXISTS admin_plans;
+ALTER TABLE admins DROP COLUMN IF EXISTS traffic_quota_mode;
