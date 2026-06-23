@@ -136,6 +136,11 @@ func (h *Handlers) CreateUser(c echo.Context) error {
 	if err := h.validateInboundAccess(c, inboundIDs); err != nil {
 		return err
 	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		if err := h.Admins.AssertCanAddUsers(c.Request().Context(), claims.AdminID, 1, req.DataLimit); err != nil {
+			return echo.NewHTTPError(http.StatusForbidden, errString(err))
+		}
+	}
 	// Tag the user with the creating admin (reseller ownership).
 	adminID := creatorAdminID(c)
 	u, err := h.Users.Create(c.Request().Context(), service.CreateUserInput{
@@ -196,6 +201,11 @@ func (h *Handlers) BulkCreateUsers(c echo.Context) error {
 	}
 	if err := h.validateInboundAccess(c, inboundIDs); err != nil {
 		return err
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		if err := h.Admins.AssertCanAddUsers(c.Request().Context(), claims.AdminID, req.Count, req.DataLimit); err != nil {
+			return echo.NewHTTPError(http.StatusForbidden, errString(err))
+		}
 	}
 	start := req.Start
 	if start == 0 {
@@ -282,6 +292,11 @@ func (h *Handlers) ImportUsers(c echo.Context) error {
 	}
 	if err := h.validateInboundAccess(c, inboundIDs); err != nil {
 		return err
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		if err := h.Admins.AssertCanAddUsers(c.Request().Context(), claims.AdminID, len(parsed), 0); err != nil {
+			return echo.NewHTTPError(http.StatusForbidden, errString(err))
+		}
 	}
 
 	created := make([]*domain.User, 0, len(parsed))
@@ -438,12 +453,18 @@ func (h *Handlers) UpdateUser(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
-	if _, err := h.assertUserOwned(c, id); err != nil {
-		return err
-	}
 	var req updateUserRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	u, err := h.assertUserOwned(c, id)
+	if err != nil {
+		return err
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		if err := h.Admins.AssertCanSetDataLimit(c.Request().Context(), claims.AdminID, u.DataLimit, req.DataLimit); err != nil {
+			return echo.NewHTTPError(http.StatusForbidden, errString(err))
+		}
 	}
 	status := domain.UserStatus(req.Status)
 	if status == "" {
@@ -463,7 +484,7 @@ func (h *Handlers) UpdateUser(c echo.Context) error {
 			return err
 		}
 	}
-	u, err := h.Users.Update(c.Request().Context(), id, service.UpdateUserInput{
+	updated, err := h.Users.Update(c.Request().Context(), id, service.UpdateUserInput{
 		Note: req.Note, Status: status, DataLimit: req.DataLimit, ExpireAt: req.ExpireAt,
 		DeviceLimit: req.DeviceLimit, ResetStrategy: domain.ResetStrategy(req.ResetStrategy),
 		InboundIDs: inboundIDs,
@@ -471,10 +492,10 @@ func (h *Handlers) UpdateUser(c echo.Context) error {
 	if errors.Is(err, domain.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, "user not found")
 	}
-	if u == nil {
+	if updated == nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "update failed")
 	}
-	resp := echo.Map{"user": u}
+	resp := echo.Map{"user": updated}
 	if err != nil {
 		resp["warning"] = err.Error()
 	}

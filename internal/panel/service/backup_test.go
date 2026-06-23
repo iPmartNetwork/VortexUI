@@ -42,6 +42,9 @@ func (r *listUserRepo) SetInbounds(context.Context, uuid.UUID, []uuid.UUID) erro
 func (r *listUserRepo) InboundsFor(_ context.Context, id uuid.UUID) ([]domain.Inbound, error) {
 	return r.bindings[id], nil
 }
+func (r *listUserRepo) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
+	return domain.AdminUserStats{}, nil
+}
 
 // capRestorer captures the backup handed to Restore.
 type capRestorer struct{ got *domain.Backup }

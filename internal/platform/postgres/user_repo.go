@@ -240,6 +240,18 @@ func (r *UserRepo) UsersByNode(ctx context.Context, nodeID uuid.UUID) (map[strin
 	return out, nil
 }
 
+func (r *UserRepo) StatsForAdmin(ctx context.Context, adminID uuid.UUID) (domain.AdminUserStats, error) {
+	row, err := r.q.AdminUserStats(ctx, ptrToUUID(&adminID))
+	if err != nil {
+		return domain.AdminUserStats{}, err
+	}
+	return domain.AdminUserStats{
+		UserCount:        row.UserCount,
+		TrafficUsed:      row.TrafficUsed,
+		TrafficAllocated: row.TrafficAllocated,
+	}, nil
+}
+
 func userToDomain(u db.User) *domain.User {
 	return &domain.User{
 		ID:            u.ID,

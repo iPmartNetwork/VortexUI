@@ -70,6 +70,7 @@ const navSections: NavSection[] = [
     id: "users",
     items: [
       { to: "/users", key: "nav.users", icon: UsersIcon },
+      { to: "/my-quota", key: "nav.myQuota", icon: Gauge },
       { to: "/family-groups", key: "nav.familyGroups", icon: Users2 },
       { to: "/plans", key: "nav.plans", icon: Network },
       { to: "/orders", key: "nav.orders", icon: History },

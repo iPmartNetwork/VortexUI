@@ -24,6 +24,12 @@ var ErrLastSudo = errors.New("cannot remove the last sudo admin")
 // current password.
 var ErrWrongPassword = errors.New("current password is incorrect")
 
+// Reseller quota errors.
+var (
+	ErrUserQuotaExceeded    = errors.New("user quota exceeded")
+	ErrTrafficQuotaExceeded = errors.New("traffic quota exceeded")
+)
+
 // TOTP self-enrollment errors.
 var (
 	ErrTOTPAlreadyEnabled = errors.New("2fa already enabled")
@@ -49,15 +55,21 @@ type AdminStore interface {
 	CountInboundAccess(ctx context.Context, adminID uuid.UUID, inboundIDs []uuid.UUID) (int64, error)
 }
 
+// AdminUserStatsReader loads aggregated usage for reseller quota checks.
+type AdminUserStatsReader interface {
+	StatsForAdmin(ctx context.Context, adminID uuid.UUID) (domain.AdminUserStats, error)
+}
+
 // AdminService manages panel operators: bootstrap, CRUD, and role management.
 type AdminService struct {
 	admins AdminStore
+	users  AdminUserStatsReader
 	now    func() time.Time
 }
 
-// NewAdminService wires the service.
-func NewAdminService(admins AdminStore) *AdminService {
-	return &AdminService{admins: admins, now: time.Now}
+// NewAdminService wires the service. users may be nil (quota features disabled).
+func NewAdminService(admins AdminStore, users AdminUserStatsReader) *AdminService {
+	return &AdminService{admins: admins, users: users, now: time.Now}
 }
 
 // CreateAdminInput describes a new operator. The password is hashed here and the
@@ -278,6 +290,117 @@ func (s *AdminService) ValidateInboundAccess(ctx context.Context, adminID uuid.U
 	}
 	if int(n) != len(inboundIDs) {
 		return errors.New("inbound not allowed for this admin")
+	}
+	return nil
+}
+
+// QuotaUsage returns limits and live usage for one admin.
+func (s *AdminService) QuotaUsage(ctx context.Context, adminID uuid.UUID) (*domain.AdminQuotaUsage, error) {
+	admin, err := s.admins.GetByID(ctx, adminID)
+	if err != nil {
+		return nil, err
+	}
+	return s.quotaUsageFor(ctx, admin)
+}
+
+// ListResellerQuotaUsage returns usage for every non-sudo admin.
+func (s *AdminService) ListResellerQuotaUsage(ctx context.Context) ([]*domain.AdminQuotaUsage, error) {
+	admins, err := s.admins.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*domain.AdminQuotaUsage, 0)
+	for _, a := range admins {
+		if a.Sudo {
+			continue
+		}
+		u, err := s.quotaUsageFor(ctx, a)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	return out, nil
+}
+
+func (s *AdminService) quotaUsageFor(ctx context.Context, admin *domain.Admin) (*domain.AdminQuotaUsage, error) {
+	u := &domain.AdminQuotaUsage{
+		AdminID:      admin.ID,
+		Username:     admin.Username,
+		UserQuota:    admin.UserQuota,
+		TrafficQuota: admin.TrafficQuota,
+	}
+	if s.users != nil {
+		stats, err := s.users.StatsForAdmin(ctx, admin.ID)
+		if err != nil {
+			return nil, err
+		}
+		u.UserCount = stats.UserCount
+		u.TrafficUsed = stats.TrafficUsed
+		u.TrafficAllocated = stats.TrafficAllocated
+	}
+	if admin.UserQuota > 0 {
+		rem := int64(admin.UserQuota) - u.UserCount
+		if rem < 0 {
+			rem = 0
+		}
+		u.UsersRemaining = &rem
+	}
+	if admin.TrafficQuota > 0 {
+		rem := admin.TrafficQuota - u.TrafficAllocated
+		if rem < 0 {
+			rem = 0
+		}
+		u.TrafficRemaining = &rem
+	}
+	return u, nil
+}
+
+// AssertCanAddUsers checks reseller user/traffic limits before provisioning.
+func (s *AdminService) AssertCanAddUsers(ctx context.Context, adminID uuid.UUID, addCount int, dataLimitPerUser int64) error {
+	if adminID == uuid.Nil || s.users == nil {
+		return nil
+	}
+	admin, err := s.admins.GetByID(ctx, adminID)
+	if err != nil {
+		return err
+	}
+	if admin.Sudo {
+		return nil
+	}
+	stats, err := s.users.StatsForAdmin(ctx, adminID)
+	if err != nil {
+		return err
+	}
+	if admin.UserQuota > 0 && stats.UserCount+int64(addCount) > int64(admin.UserQuota) {
+		return ErrUserQuotaExceeded
+	}
+	addAlloc := dataLimitPerUser * int64(addCount)
+	if admin.TrafficQuota > 0 && stats.TrafficAllocated+addAlloc > admin.TrafficQuota {
+		return ErrTrafficQuotaExceeded
+	}
+	return nil
+}
+
+// AssertCanSetDataLimit checks traffic pool when changing a user's data cap.
+func (s *AdminService) AssertCanSetDataLimit(ctx context.Context, adminID uuid.UUID, currentLimit, newLimit int64) error {
+	if adminID == uuid.Nil || s.users == nil || newLimit <= 0 {
+		return nil
+	}
+	admin, err := s.admins.GetByID(ctx, adminID)
+	if err != nil {
+		return err
+	}
+	if admin.Sudo || admin.TrafficQuota <= 0 {
+		return nil
+	}
+	stats, err := s.users.StatsForAdmin(ctx, adminID)
+	if err != nil {
+		return err
+	}
+	next := stats.TrafficAllocated - currentLimit + newLimit
+	if next > admin.TrafficQuota {
+		return ErrTrafficQuotaExceeded
 	}
 	return nil
 }

@@ -32,6 +32,9 @@ type UserRepository interface {
 	// Bindings management for the user-centric model.
 	SetInbounds(ctx context.Context, userID uuid.UUID, inboundIDs []uuid.UUID) error
 	InboundsFor(ctx context.Context, userID uuid.UUID) ([]domain.Inbound, error)
+
+	// StatsForAdmin aggregates owned-user counts and traffic for reseller quotas.
+	StatsForAdmin(ctx context.Context, adminID uuid.UUID) (domain.AdminUserStats, error)
 }
 
 // UserFilter parameterizes paginated listing.

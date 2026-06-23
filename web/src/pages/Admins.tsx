@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAdmins, useDeleteAdmin, useDeleteRole, useRoles } from "@/api/admin-hooks";
+import { useResellerQuotaUsage } from "@/api/quota-hooks";
 import { Badge, Button, Card } from "@/components/ui";
 import { CreateAdminModal } from "@/components/CreateAdminModal";
 import { CreateRoleModal } from "@/components/CreateRoleModal";
@@ -8,9 +9,11 @@ import { EditRoleModal } from "@/components/EditRoleModal";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import type { Admin, Role } from "@/api/types";
+import { formatBytes } from "@/lib/utils";
 
 export function Admins() {
   const admins = useAdmins();
+  const quotaUsage = useResellerQuotaUsage();
   const roles = useRoles();
   const del = useDeleteAdmin();
   const delRole = useDeleteRole();
@@ -22,6 +25,7 @@ export function Admins() {
   const [editRole, setEditRole] = useState<Role | null>(null);
 
   const roleName = (id: string | null) => roles.data?.roles.find((r) => r.id === id)?.name ?? "—";
+  const usageFor = (adminId: string) => quotaUsage.data?.usage.find((u) => u.admin_id === adminId);
 
   async function remove(a: Admin) {
     const ok = await confirm({ title: `Delete admin ${a.username}?`, confirmLabel: "Delete", destructive: true });
@@ -62,6 +66,40 @@ export function Admins() {
           <h1 className="text-2xl font-bold tracking-tight">Admins</h1>
           <Button onClick={() => setAdminOpen(true)}>New admin</Button>
         </div>
+
+        {quotaUsage.data && quotaUsage.data.usage.length > 0 && (
+          <Card className="mb-6 p-0">
+            <div className="border-b px-5 py-3 text-sm font-semibold">Reseller quota usage</div>
+            <table className="w-full text-sm">
+              <thead className="border-b text-left text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Reseller</th>
+                  <th className="px-5 py-3 font-medium">Accounts</th>
+                  <th className="px-5 py-3 font-medium">Assigned</th>
+                  <th className="px-5 py-3 font-medium">Consumed</th>
+                  <th className="px-5 py-3 font-medium">Pool left</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quotaUsage.data.usage.map((u) => (
+                  <tr key={u.admin_id} className="border-b last:border-0">
+                    <td className="px-5 py-3 font-medium">{u.username}</td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {u.user_count}{u.user_quota > 0 ? ` / ${u.user_quota}` : ""}
+                      {u.users_remaining != null && <span className="ms-1 text-xs">({u.users_remaining} left)</span>}
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">{formatBytes(u.traffic_allocated, false)}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{formatBytes(u.traffic_used, false)}</td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {u.traffic_remaining != null ? formatBytes(u.traffic_remaining, false) : "∞"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
+
         <Card className="p-0">
           <table className="w-full text-sm">
             <thead className="border-b text-left text-muted-foreground">
@@ -70,6 +108,7 @@ export function Admins() {
                 <th className="px-5 py-3 font-medium">Access</th>
                 <th className="px-5 py-3 font-medium">Role</th>
                 <th className="px-5 py-3 font-medium">2FA</th>
+                <th className="px-5 py-3 font-medium hidden lg:table-cell">Usage</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
@@ -82,6 +121,13 @@ export function Admins() {
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{a.sudo ? "—" : roleName(a.role_id)}</td>
                   <td className="px-5 py-3 text-muted-foreground">{a.totp_enabled ? "on" : "off"}</td>
+                  <td className="px-5 py-3 text-muted-foreground hidden lg:table-cell">
+                    {!a.sudo && (() => {
+                      const u = usageFor(a.id);
+                      if (!u) return "—";
+                      return `${u.user_count}${u.user_quota > 0 ? `/${u.user_quota}` : ""} · ${formatBytes(u.traffic_used, false)} used`;
+                    })()}
+                  </td>
                   <td className="px-5 py-3 text-right">
                     {!a.sudo && (
                       <Button variant="ghost" onClick={() => setEditAdmin(a)}>Edit</Button>

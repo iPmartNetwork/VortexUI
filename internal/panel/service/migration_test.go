@@ -63,6 +63,9 @@ func (f *fakeMigrationUsers) SetInbounds(_ context.Context, userID uuid.UUID, id
 func (f *fakeMigrationUsers) InboundsFor(_ context.Context, userID uuid.UUID) ([]domain.Inbound, error) {
 	return f.inbounds[userID], nil
 }
+func (f *fakeMigrationUsers) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
+	return domain.AdminUserStats{}, nil
+}
 
 type fakeMigrationNodes struct {
 	nodes []*domain.Node

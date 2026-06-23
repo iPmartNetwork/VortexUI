@@ -11,6 +11,7 @@ import { Routing } from "@/pages/Routing";
 import { RoutingPacks } from "@/pages/RoutingPacks";
 import { Balancers } from "@/pages/Balancers";
 import { Admins } from "@/pages/Admins";
+import { MyQuota } from "@/pages/MyQuota";
 import { Audit } from "@/pages/Audit";
 import { Logs } from "@/pages/Logs";
 import { Settings } from "@/pages/Settings";
@@ -63,6 +64,7 @@ export function App() {
         <Route path="/overview" element={<Overview />} />
         <Route path="/users" element={<Users />} />
         <Route path="/users/:id" element={<UserDetail />} />
+        <Route path="/my-quota" element={<MyQuota />} />
         <Route path="/nodes" element={<Nodes />} />
         <Route path="/outbounds" element={<Outbounds />} />
         <Route path="/routing" element={<Routing />} />

@@ -85,6 +85,9 @@ func (f *fakeUserRepo) SetInbounds(context.Context, uuid.UUID, []uuid.UUID) erro
 func (f *fakeUserRepo) InboundsFor(context.Context, uuid.UUID) ([]domain.Inbound, error) {
 	return f.inbounds, nil
 }
+func (f *fakeUserRepo) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
+	return domain.AdminUserStats{}, nil
+}
 
 type fakeNodeRepo struct{ node *domain.Node }
 
@@ -141,7 +144,7 @@ func newTestServer(t *testing.T) (http.Handler, *auth.Issuer, *domain.Admin) {
 	authSvc := service.NewAuthService(adminRepo, iss)
 	userSvc := service.NewUserService(userRepo, nopNodeOps{})
 	subSvc := service.NewSubscriptionService(userRepo, nodeRepo, nil)
-	adminSvc := service.NewAdminService(adminRepo)
+	adminSvc := service.NewAdminService(adminRepo, userRepo)
 	trafficRepo := &fakeTrafficRepo{points: []domain.TrafficPoint{
 		{Time: time.Now().Add(-24 * time.Hour), Up: 100, Down: 200},
 		{Time: time.Now(), Up: 50, Down: 75},
