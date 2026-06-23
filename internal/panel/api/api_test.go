@@ -395,8 +395,11 @@ func TestAdminEndpoints(t *testing.T) {
 	if rec := do(t, h, http.MethodGet, "/api/admins", sudoTok, ""); rec.Code != http.StatusOK {
 		t.Fatalf("list admins code = %d, want 200 (%s)", rec.Code, rec.Body)
 	}
-	if rec := do(t, h, http.MethodPost, "/api/admins", sudoTok, `{"username":"ops","password":"pw"}`); rec.Code != http.StatusCreated {
+	if rec := do(t, h, http.MethodPost, "/api/admins", sudoTok, `{"username":"ops","password":"pw","sudo":true}`); rec.Code != http.StatusCreated {
 		t.Fatalf("create admin code = %d, want 201 (%s)", rec.Code, rec.Body)
+	}
+	if rec := do(t, h, http.MethodPost, "/api/admins", sudoTok, `{"username":"reseller","password":"pw"}`); rec.Code != http.StatusBadRequest {
+		t.Errorf("non-sudo without role code = %d, want 400 (%s)", rec.Code, rec.Body)
 	}
 
 	// A non-sudo admin with no role is denied (admin:manage required).
