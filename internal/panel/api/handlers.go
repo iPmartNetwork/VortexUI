@@ -134,11 +134,7 @@ func (h *Handlers) CreateUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
 	}
 	// Tag the user with the creating admin (reseller ownership).
-	var adminID *uuid.UUID
-	if claims := claimsFrom(c); claims != nil {
-		id := claims.AdminID
-		adminID = &id
-	}
+	adminID := creatorAdminID(c)
 	u, err := h.Users.Create(c.Request().Context(), service.CreateUserInput{
 		Username:      req.Username,
 		Note:          req.Note,
@@ -199,6 +195,7 @@ func (h *Handlers) BulkCreateUsers(c echo.Context) error {
 	if start == 0 {
 		start = 1
 	}
+	adminID := creatorAdminID(c)
 	created := make([]*domain.User, 0, req.Count)
 	failures := make([]echo.Map, 0)
 	for i := 0; i < req.Count; i++ {
@@ -218,6 +215,7 @@ func (h *Handlers) BulkCreateUsers(c echo.Context) error {
 			ResetStrategy: domain.ResetStrategy(req.ResetStrategy),
 			InboundIDs:    inboundIDs,
 			OnHold:        req.OnHold,
+			AdminID:       adminID,
 		})
 		if u == nil {
 			failures = append(failures, echo.Map{"username": username, "error": errString(cerr)})
@@ -279,6 +277,7 @@ func (h *Handlers) ImportUsers(c echo.Context) error {
 
 	created := make([]*domain.User, 0, len(parsed))
 	failures := make([]echo.Map, 0)
+	adminID := creatorAdminID(c)
 	for _, p := range parsed {
 		if p.Username == "" {
 			continue
@@ -291,6 +290,7 @@ func (h *Handlers) ImportUsers(c echo.Context) error {
 			DeviceLimit:   p.DeviceLimit,
 			ResetStrategy: domain.ResetStrategy(p.ResetStrategy),
 			InboundIDs:    inboundIDs,
+			AdminID:       adminID,
 		})
 		if u == nil {
 			failures = append(failures, echo.Map{"username": p.Username, "error": errString(cerr)})
@@ -429,6 +429,9 @@ func (h *Handlers) UpdateUser(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
+	if _, err := h.assertUserOwned(c, id); err != nil {
+		return err
+	}
 	var req updateUserRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
@@ -493,12 +496,9 @@ func (h *Handlers) GetUser(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
-	u, err := h.Repo.GetByID(c.Request().Context(), id)
-	if errors.Is(err, domain.ErrNotFound) {
-		return echo.NewHTTPError(http.StatusNotFound, "user not found")
-	}
+	u, err := h.assertUserOwned(c, id)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
+		return err
 	}
 	// Include the user's current inbound bindings so the UI can pre-select them.
 	inboundIDs := []string{}
@@ -516,6 +516,9 @@ func (h *Handlers) GetUserUsage(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if _, err := h.assertUserOwned(c, id); err != nil {
+		return err
 	}
 	now := time.Now()
 	q := port.SeriesQuery{
@@ -559,6 +562,9 @@ func (h *Handlers) DeleteUser(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
+	if _, err := h.assertUserOwned(c, id); err != nil {
+		return err
+	}
 	if err := h.Users.Delete(c.Request().Context(), id); errors.Is(err, domain.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, "user not found")
 	} else if err != nil {
@@ -575,6 +581,9 @@ func (h *Handlers) GetUserSubscription(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if _, err := h.assertUserOwned(c, id); err != nil {
+		return err
 	}
 	res, err := h.Sub.BuildForUser(c.Request().Context(), id)
 	if errors.Is(err, domain.ErrNotFound) || res == nil {
@@ -614,6 +623,9 @@ func (h *Handlers) ResetUserUsage(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
+	if _, err := h.assertUserOwned(c, id); err != nil {
+		return err
+	}
 	u, err := h.Users.ResetUsage(c.Request().Context(), id)
 	if errors.Is(err, domain.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, "user not found")
@@ -634,6 +646,9 @@ func (h *Handlers) RevokeUserSub(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
+	if _, err := h.assertUserOwned(c, id); err != nil {
+		return err
+	}
 	u, err := h.Users.RevokeSubToken(c.Request().Context(), id)
 	if errors.Is(err, domain.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, "user not found")
@@ -650,6 +665,9 @@ func (h *Handlers) GetUserOnline(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if _, err := h.assertUserOwned(c, id); err != nil {
+		return err
 	}
 	resp := echo.Map{"window_seconds": int(deviceWindow.Seconds())}
 
@@ -685,6 +703,9 @@ func (h *Handlers) GetUserOnlineIPs(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
+	if _, err := h.assertUserOwned(c, id); err != nil {
+		return err
+	}
 	ips, tracked, err := h.Users.OnlineIPList(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "online ip lookup failed")
@@ -696,6 +717,33 @@ func (h *Handlers) GetUserOnlineIPs(c echo.Context) error {
 }
 
 // --- helpers ---
+
+// creatorAdminID tags new users with the authenticated admin (reseller ownership).
+func creatorAdminID(c echo.Context) *uuid.UUID {
+	if claims := claimsFrom(c); claims != nil {
+		id := claims.AdminID
+		return &id
+	}
+	return nil
+}
+
+// assertUserOwned loads a user and enforces reseller scoping: non-sudo admins
+// may only access users they created.
+func (h *Handlers) assertUserOwned(c echo.Context, id uuid.UUID) (*domain.User, error) {
+	u, err := h.Repo.GetByID(c.Request().Context(), id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return nil, echo.NewHTTPError(http.StatusNotFound, "user not found")
+	}
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		if u.AdminID == nil || *u.AdminID != claims.AdminID {
+			return nil, echo.NewHTTPError(http.StatusNotFound, "user not found")
+		}
+	}
+	return u, nil
+}
 
 func parseUUIDs(ss []string) ([]uuid.UUID, error) {
 	out := make([]uuid.UUID, 0, len(ss))

@@ -12,10 +12,13 @@ import (
 )
 
 type createAdminRequest struct {
-	Username   string `json:"username"`
-	Password   string `json:"password"`
-	Sudo       bool   `json:"sudo"`
-	EnableTOTP bool   `json:"enable_totp"`
+	Username     string     `json:"username"`
+	Password     string     `json:"password"`
+	Sudo         bool       `json:"sudo"`
+	EnableTOTP   bool       `json:"enable_totp"`
+	RoleID       *uuid.UUID `json:"role_id"`
+	UserQuota    int        `json:"user_quota"`
+	TrafficQuota int64      `json:"traffic_quota"`
 }
 
 // CreateAdmin provisions a new operator. The otpauth URL (if 2FA enabled) is
@@ -27,6 +30,7 @@ func (h *Handlers) CreateAdmin(c echo.Context) error {
 	}
 	admin, totpURL, err := h.Admins.Create(c.Request().Context(), service.CreateAdminInput{
 		Username: req.Username, Password: req.Password, Sudo: req.Sudo, EnableTOTP: req.EnableTOTP,
+		RoleID: req.RoleID, UserQuota: req.UserQuota, TrafficQuota: req.TrafficQuota,
 	})
 	if errors.Is(err, service.ErrAdminExists) {
 		return echo.NewHTTPError(http.StatusConflict, "admin already exists")
@@ -153,6 +157,30 @@ func (h *Handlers) ListRoles(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
 	}
 	return c.JSON(http.StatusOK, echo.Map{"roles": roles})
+}
+
+// GetAccount returns the calling admin and their effective RBAC permissions.
+func (h *Handlers) GetAccount(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	admin, err := h.Admins.Get(c.Request().Context(), claims.AdminID)
+	if errors.Is(err, domain.ErrNotFound) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "admin not found")
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
+	}
+	perms, err := h.Admins.Permissions(c.Request().Context(), claims.AdminID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "permissions failed")
+	}
+	out := make([]string, len(perms))
+	for i, p := range perms {
+		out[i] = string(p)
+	}
+	return c.JSON(http.StatusOK, echo.Map{"admin": admin, "permissions": out})
 }
 
 // ChangePassword updates the calling admin's own password.

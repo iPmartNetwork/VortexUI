@@ -171,6 +171,7 @@ func NewRouter(d Deps) *echo.Echo {
 
 	// Self-service account actions: any authenticated admin manages their own 2FA.
 	account := authed.Group("/account")
+	account.GET("", d.Handlers.GetAccount)
 	account.POST("/password", d.Handlers.ChangePassword)
 	account.POST("/2fa/setup", d.Handlers.SetupTOTP)
 	account.POST("/2fa/confirm", d.Handlers.ConfirmTOTP)

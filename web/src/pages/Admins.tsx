@@ -3,6 +3,7 @@ import { useAdmins, useDeleteAdmin, useRoles } from "@/api/admin-hooks";
 import { Badge, Button, Card } from "@/components/ui";
 import { CreateAdminModal } from "@/components/CreateAdminModal";
 import { CreateRoleModal } from "@/components/CreateRoleModal";
+import { EditAdminModal } from "@/components/EditAdminModal";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import type { Admin } from "@/api/types";
@@ -15,6 +16,9 @@ export function Admins() {
   const toast = useToast();
   const [adminOpen, setAdminOpen] = useState(false);
   const [roleOpen, setRoleOpen] = useState(false);
+  const [editAdmin, setEditAdmin] = useState<Admin | null>(null);
+
+  const roleName = (id: string | null) => roles.data?.roles.find((r) => r.id === id)?.name ?? "—";
 
   async function remove(a: Admin) {
     const ok = await confirm({ title: `Delete admin ${a.username}?`, confirmLabel: "Delete", destructive: true });
@@ -31,6 +35,7 @@ export function Admins() {
     <div className="space-y-8">
       <CreateAdminModal open={adminOpen} onClose={() => setAdminOpen(false)} />
       <CreateRoleModal open={roleOpen} onClose={() => setRoleOpen(false)} />
+      <EditAdminModal admin={editAdmin} onClose={() => setEditAdmin(null)} />
 
       <div>
         <div className="mb-4 flex items-center justify-between">
@@ -43,6 +48,7 @@ export function Admins() {
               <tr>
                 <th className="px-5 py-3 font-medium">Username</th>
                 <th className="px-5 py-3 font-medium">Access</th>
+                <th className="px-5 py-3 font-medium">Role</th>
                 <th className="px-5 py-3 font-medium">2FA</th>
                 <th className="px-5 py-3"></th>
               </tr>
@@ -52,10 +58,14 @@ export function Admins() {
                 <tr key={a.id} className="border-b last:border-0 hover:bg-muted/40">
                   <td className="px-5 py-3 font-medium">{a.username}</td>
                   <td className="px-5 py-3">
-                    {a.sudo ? <Badge color="active">sudo</Badge> : <Badge>role-based</Badge>}
+                    {a.sudo ? <Badge color="active">sudo</Badge> : <Badge>reseller</Badge>}
                   </td>
+                  <td className="px-5 py-3 text-muted-foreground">{a.sudo ? "—" : roleName(a.role_id)}</td>
                   <td className="px-5 py-3 text-muted-foreground">{a.totp_enabled ? "on" : "off"}</td>
                   <td className="px-5 py-3 text-right">
+                    {!a.sudo && (
+                      <Button variant="ghost" onClick={() => setEditAdmin(a)}>Edit</Button>
+                    )}
                     <Button variant="ghost" className="text-destructive" onClick={() => remove(a)}>
                       Delete
                     </Button>
@@ -86,7 +96,7 @@ export function Admins() {
             </Card>
           ))}
           {roles.data?.roles.length === 0 && (
-            <p className="text-sm text-muted-foreground">No roles yet — create one for non-sudo admins.</p>
+            <p className="text-sm text-muted-foreground">No roles yet — create a reseller role first.</p>
           )}
         </div>
       </div>

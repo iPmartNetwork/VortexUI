@@ -11,6 +11,7 @@ import { NodeLogsModal } from "@/components/NodeLogsModal";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
+import { useAuth } from "@/auth/auth";
 import { cn } from "@/lib/utils";
 
 /* ─── Gauge ─── */
@@ -46,7 +47,7 @@ function timeAgoShort(iso: string | null): string {
 
 /* ─── Node Card (rich + actions) ─── */
 function NodeCard({
-  n, onInbounds, onLogs, onEdit, onDelete, onRestart, onStop, onStart, onUpdateGeo,
+  n, onInbounds, onLogs, onEdit, onDelete, onRestart, onStop, onStart, onUpdateGeo, canManage,
 }: {
   n: Node;
   onInbounds: () => void;
@@ -57,6 +58,7 @@ function NodeCard({
   onStop: () => void;
   onStart: () => void;
   onUpdateGeo: () => void;
+  canManage: boolean;
 }) {
   // Online = fresh heartbeat AND core running, matching the Overview's NODES
   // ONLINE count. A node the panel has never reached (no last_seen) stays
@@ -118,17 +120,19 @@ function NodeCard({
       <div className="flex flex-wrap items-center gap-1 border-t border-border/40 px-3 py-2.5">
         <Button variant="ghost" size="sm" onClick={onInbounds}>Inbounds</Button>
         <Button variant="ghost" size="sm" onClick={onLogs}>Logs</Button>
-        {online ? (
+        {canManage && (online ? (
           <Button variant="ghost" size="sm" className="text-warning" onClick={onStop}>Stop</Button>
         ) : (
           <Button variant="ghost" size="sm" className="text-success" onClick={onStart}>Start</Button>
+        ))}
+        {canManage && <Button variant="ghost" size="sm" onClick={onRestart}>Restart</Button>}
+        {canManage && <Button variant="ghost" size="sm" onClick={onUpdateGeo} title="Refresh Iran geoip/geosite routing data">Update Geo</Button>}
+        {canManage && (
+          <div className="ms-auto flex gap-1">
+            <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
+            <Button variant="ghost" size="sm" className="text-danger" onClick={onDelete}>Delete</Button>
+          </div>
         )}
-        <Button variant="ghost" size="sm" onClick={onRestart}>Restart</Button>
-        <Button variant="ghost" size="sm" onClick={onUpdateGeo} title="Refresh Iran geoip/geosite routing data">Update Geo</Button>
-        <div className="ms-auto flex gap-1">
-          <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
-          <Button variant="ghost" size="sm" className="text-danger" onClick={onDelete}>Delete</Button>
-        </div>
       </div>
     </Card>
   );
@@ -136,6 +140,8 @@ function NodeCard({
 
 /* ═══════ Nodes Page ═══════ */
 export function Nodes() {
+  const { can } = useAuth();
+  const canManage = can("node:write");
   const { data, isLoading } = useNodes();
   const del = useDeleteNode();
   const restart = useRestartCore();
@@ -176,7 +182,7 @@ export function Nodes() {
       <NodeLogsModal node={logging} onClose={() => setLogging(null)} />
 
       <PageHeader title={t("nodes.title")} subtitle={`${data?.nodes.length ?? 0} registered`}>
-        <Button onClick={() => setCreateOpen(true)}>{t("nodes.new")}</Button>
+        {canManage && <Button onClick={() => setCreateOpen(true)}>{t("nodes.new")}</Button>}
       </PageHeader>
 
       {isLoading && <div className="text-sm text-fg-muted">{t("common.loading")}</div>}
@@ -194,6 +200,7 @@ export function Nodes() {
             onStart={() => restart.mutateAsync(n.id).then(() => toast.success("Core started")).catch(() => toast.error("Start failed"))}
             onStop={() => doStop(n)}
             onUpdateGeo={() => doUpdateGeo(n)}
+            canManage={canManage}
           />
         ))}
       </div>
