@@ -139,6 +139,9 @@ func (s *AdminService) CreateSubAdmin(ctx context.Context, in CreateSubAdminInpu
 	if parent.Sudo {
 		return nil, errors.New("sudo cannot be sub-admin parent")
 	}
+	if !parent.AllowSubResellers {
+		return nil, errors.New("sub-reseller creation is disabled for this account")
+	}
 	admin, _, err := s.Create(ctx, CreateAdminInput{
 		Username: in.Username, Password: in.Password, Sudo: false, RoleID: &in.RoleID,
 		UserQuota: in.UserQuota, TrafficQuota: in.TrafficQuota, TrafficQuotaMode: in.TrafficQuotaMode,

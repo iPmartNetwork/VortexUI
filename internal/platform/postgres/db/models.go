@@ -37,6 +37,9 @@ type Admin struct {
 	IpViolationSuspendThreshold int32
 	SuspendGraceMinutes         int32
 	QuotaBreachedAt             pgtype.Timestamptz
+	AllowSubResellers           bool
+	AllowUserBackup             bool
+	ResellerSettings            []byte
 	LastLogin                   pgtype.Timestamptz
 	CreatedAt                   pgtype.Timestamptz
 }

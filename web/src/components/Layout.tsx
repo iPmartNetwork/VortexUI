@@ -175,7 +175,7 @@ export function Layout() {
   const visibleSections = buildNavSections(sudo)
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => canAccessRoute(item.to, sudo, permissions)),
+      items: section.items.filter((item) => canAccessRoute(item.to, sudo, permissions, session?.admin.reseller_settings)),
     }))
     .filter((section) => section.items.length > 0);
 

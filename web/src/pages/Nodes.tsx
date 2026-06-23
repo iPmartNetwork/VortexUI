@@ -116,24 +116,24 @@ function NodeCard({
         </div>
       </div>
 
-      {/* Action buttons — separated by border */}
+      {/* Action buttons — read-only resellers see stats only */}
+      {canManage && (
       <div className="flex flex-wrap items-center gap-1 border-t border-border/40 px-3 py-2.5">
         <Button variant="ghost" size="sm" onClick={onInbounds}>Inbounds</Button>
         <Button variant="ghost" size="sm" onClick={onLogs}>Logs</Button>
-        {canManage && (online ? (
+        {online ? (
           <Button variant="ghost" size="sm" className="text-warning" onClick={onStop}>Stop</Button>
         ) : (
           <Button variant="ghost" size="sm" className="text-success" onClick={onStart}>Start</Button>
-        ))}
-        {canManage && <Button variant="ghost" size="sm" onClick={onRestart}>Restart</Button>}
-        {canManage && <Button variant="ghost" size="sm" onClick={onUpdateGeo} title="Refresh Iran geoip/geosite routing data">Update Geo</Button>}
-        {canManage && (
-          <div className="ms-auto flex gap-1">
-            <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
-            <Button variant="ghost" size="sm" className="text-danger" onClick={onDelete}>Delete</Button>
-          </div>
         )}
+        <Button variant="ghost" size="sm" onClick={onRestart}>Restart</Button>
+        <Button variant="ghost" size="sm" onClick={onUpdateGeo} title="Refresh Iran geoip/geosite routing data">Update Geo</Button>
+        <div className="ms-auto flex gap-1">
+          <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
+          <Button variant="ghost" size="sm" className="text-danger" onClick={onDelete}>Delete</Button>
+        </div>
       </div>
+      )}
     </Card>
   );
 }
@@ -208,7 +208,9 @@ export function Nodes() {
       {data?.nodes.length === 0 && (
         <Card className="flex flex-col items-center gap-3 py-16 text-center">
           <Server size={32} className="text-fg-subtle" />
-          <p className="text-sm text-fg-muted">{t("nodes.none")}</p>
+          <p className="text-sm text-fg-muted">
+            {canManage ? t("nodes.none") : "No nodes assigned to your account yet — ask the main admin to allow nodes for you."}
+          </p>
         </Card>
       )}
     </div>

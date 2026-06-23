@@ -70,6 +70,11 @@ type Admin struct {
 	SuspendGraceMinutes         int        `json:"suspend_grace_minutes"`
 	QuotaBreachedAt             *time.Time `json:"-"`
 
+	// Feature flags (sudo-controlled for resellers).
+	AllowSubResellers bool            `json:"allow_sub_resellers"`
+	AllowUserBackup   bool            `json:"allow_user_backup"`
+	ResellerSettings  map[string]bool `json:"reseller_settings,omitempty"`
+
 	LastLogin *time.Time `json:"last_login,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
 }

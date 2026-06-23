@@ -36,6 +36,9 @@ CREATE TABLE admins (
     ip_violation_suspend_threshold INT NOT NULL DEFAULT 0,
     suspend_grace_minutes INT NOT NULL DEFAULT 60,
     quota_breached_at    TIMESTAMPTZ,
+    allow_sub_resellers  BOOLEAN NOT NULL DEFAULT FALSE,
+    allow_user_backup    BOOLEAN NOT NULL DEFAULT FALSE,
+    reseller_settings    JSONB NOT NULL DEFAULT '{}',
     last_login          TIMESTAMPTZ,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );

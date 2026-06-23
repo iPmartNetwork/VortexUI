@@ -60,6 +60,7 @@ export function useUpdateAdmin() {
       policy_max_data_limit?: number; policy_max_expire_days?: number;
       policy_allow_bulk_delete?: boolean; policy_allow_bulk_create?: boolean;
       auto_suspend_enabled?: boolean; ip_violation_suspend_threshold?: number; suspend_grace_minutes?: number;
+      allow_sub_resellers?: boolean; allow_user_backup?: boolean; reseller_settings?: Record<string, boolean>;
     } }) =>
       api<{ admin: Admin }>(`/api/admins/${args.id}`, { method: "PUT", body: args.input }),
     onSuccess: () => {

@@ -188,6 +188,7 @@ func NewRouter(d Deps) *echo.Echo {
 	account.GET("/quota", d.Handlers.GetAccountQuota)
 	account.GET("/dashboard", d.Handlers.GetResellerDashboard)
 	account.GET("/export/users", d.Handlers.ExportAccountUsers)
+	account.GET("/backup/users", d.Handlers.ExportAccountUsersBackup, RequirePermission(d.Auth, domain.PermUserRead))
 	account.GET("/wallet", d.Handlers.GetAccountWallet)
 	account.GET("/sub-admins", d.Handlers.ListSubAdmins)
 	account.POST("/sub-admins", d.Handlers.CreateSubAdmin)

@@ -17,7 +17,7 @@ import { useI18n } from "@/i18n/i18n";
 import { formatBytes } from "@/lib/utils";
 
 export function ResellerAccount() {
-  const { sudo } = useAuth();
+  const { sudo, session } = useAuth();
   const { t } = useI18n();
   const toast = useToast();
   const wallet = useAccountWallet();
@@ -95,6 +95,8 @@ export function ResellerAccount() {
     }
   }
 
+  const allowSubResellers = !!session?.admin.allow_sub_resellers;
+
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader title={t("reseller.account.title")} subtitle={t("reseller.account.subtitle")} />
@@ -162,6 +164,7 @@ export function ResellerAccount() {
             </tbody>
           </table>
         </Card>
+        {allowSubResellers && (
         <Card className="space-y-3 p-5">
           <div className="text-sm font-medium">{t("reseller.account.createSubReseller")}</div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -169,13 +172,14 @@ export function ResellerAccount() {
             <Input type="password" placeholder={t("reseller.account.ph.password")} value={subForm.password} onChange={(e) => setSubForm({ ...subForm, password: e.target.value })} />
             <select className="input" value={subForm.role_id} onChange={(e) => setSubForm({ ...subForm, role_id: e.target.value })}>
               <option value="">{t("reseller.account.selectRole")}</option>
-              {roles.data?.roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {(roles.data?.roles ?? []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
             <Input type="number" placeholder={t("reseller.account.ph.userQuota")} value={subForm.user_quota} onChange={(e) => setSubForm({ ...subForm, user_quota: Number(e.target.value) })} />
             <Input type="number" placeholder={t("reseller.account.ph.trafficQuota")} value={subForm.traffic_quota} onChange={(e) => setSubForm({ ...subForm, traffic_quota: Number(e.target.value) })} />
           </div>
           <Button onClick={onCreateSub} disabled={createSub.isPending}>{t("common.create")}</Button>
         </Card>
+        )}
       </section>
 
       <section className="space-y-3">
@@ -183,10 +187,38 @@ export function ResellerAccount() {
         {branding && (
           <Card className="grid gap-3 p-5 sm:grid-cols-2">
             <Input placeholder={t("reseller.account.ph.panelTitle")} value={branding.panel_title} onChange={(e) => setBranding({ ...branding, panel_title: e.target.value })} />
-            <Input placeholder={t("reseller.account.ph.logoUrl")} value={branding.logo_url} onChange={(e) => setBranding({ ...branding, logo_url: e.target.value })} />
-            <Input placeholder={t("reseller.account.ph.accentColor")} value={branding.accent_color} onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })} />
+            <div className="space-y-2">
+              <label className="block text-xs text-muted-foreground">{t("reseller.account.ph.logoUrl")}</label>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="block w-full text-sm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || file.size > 512_000) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setBranding({ ...branding, logo_url: String(reader.result ?? "") });
+                  reader.readAsDataURL(file);
+                }}
+              />
+              {branding.logo_url && (
+                <img src={branding.logo_url} alt="" className="h-12 max-w-[160px] rounded border object-contain" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs text-muted-foreground">{t("reseller.account.ph.accentColor")}</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={/^#[0-9a-fA-F]{6}$/.test(branding.accent_color) ? branding.accent_color : "#6366f1"}
+                  onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
+                  className="h-10 w-14 cursor-pointer rounded border bg-transparent"
+                />
+                <Input value={branding.accent_color} onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })} />
+              </div>
+            </div>
             <Input placeholder={t("reseller.account.ph.portalSlug")} value={branding.portal_slug ?? ""} onChange={(e) => setBranding({ ...branding, portal_slug: e.target.value })} />
-            <Input className="sm:col-span-2" placeholder={t("reseller.account.ph.footerText")} value={branding.footer_text} onChange={(e) => setBranding({ ...branding, footer_text: e.target.value })} />
+            <Input className="sm:col-span-2" placeholder={t("reseller.account.ph.footerText")} value={branding.footer_text} disabled readOnly />
             <Button onClick={onSaveBranding} disabled={saveBranding.isPending}>{t("reseller.account.saveBranding")}</Button>
           </Card>
         )}

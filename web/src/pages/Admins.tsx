@@ -214,7 +214,7 @@ export function Admins() {
           <Button variant="ghost" onClick={() => setRoleOpen(true)}>{t("reseller.admins.newRole")}</Button>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {roles.data?.roles.map((r) => (
+          {(roles.data?.roles ?? []).map((r) => (
             <Card key={r.id} className="space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="font-medium">{r.name}</div>
@@ -224,7 +224,7 @@ export function Admins() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-1">
-                {r.permissions.map((p) => (
+                {(r.permissions ?? []).map((p) => (
                   <span key={p} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
                     {p}
                   </span>

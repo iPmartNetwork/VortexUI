@@ -210,6 +210,9 @@ type UpdateAdminInput struct {
 	AutoSuspendEnabled          *bool
 	IPViolationSuspendThreshold *int
 	SuspendGraceMinutes         *int
+	AllowSubResellers           *bool
+	AllowUserBackup             *bool
+	ResellerSettings            *map[string]bool
 }
 
 // Update applies changes to an admin. Demoting the last sudo admin is refused so
@@ -265,6 +268,15 @@ func (s *AdminService) Update(ctx context.Context, id uuid.UUID, in UpdateAdminI
 	}
 	if in.SuspendGraceMinutes != nil {
 		a.SuspendGraceMinutes = *in.SuspendGraceMinutes
+	}
+	if in.AllowSubResellers != nil {
+		a.AllowSubResellers = *in.AllowSubResellers
+	}
+	if in.AllowUserBackup != nil {
+		a.AllowUserBackup = *in.AllowUserBackup
+	}
+	if in.ResellerSettings != nil {
+		a.ResellerSettings = *in.ResellerSettings
 	}
 	if err := s.admins.Update(ctx, a); err != nil {
 		return nil, err

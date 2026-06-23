@@ -4,9 +4,24 @@ import type { Admin } from "@/api/types";
 import { AdminInboundPicker } from "@/components/AdminInboundPicker";
 import { AdminNodePicker } from "@/components/AdminNodePicker";
 import { AdminPlanPicker } from "@/components/AdminPlanPicker";
+import { DEFAULT_RESELLER_SETTINGS, RESELLER_SETTING_KEYS, mergeResellerSettings, type ResellerSettingKey } from "@/auth/permissions";
 import { useI18n } from "@/i18n/i18n";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
+
+const SETTING_LABELS: Record<ResellerSettingKey, string> = {
+  appearance: "Appearance",
+  password: "Change password",
+  totp: "Two-factor auth",
+  api_tokens: "API tokens",
+  backup: "Backup & restore",
+  config_template: "Subscription template",
+  sub_update: "Subscription auto-update",
+  ip_guard: "IP guard",
+  branding: "Custom branding",
+  auto_backup: "Auto backup",
+  update: "Update checker",
+};
 
 export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClose: () => void }) {
   const { t } = useI18n();
@@ -29,6 +44,9 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
   const [autoSuspend, setAutoSuspend] = useState(true);
   const [ipViolationThreshold, setIpViolationThreshold] = useState("");
   const [suspendGraceMinutes, setSuspendGraceMinutes] = useState("");
+  const [allowSubResellers, setAllowSubResellers] = useState(false);
+  const [allowUserBackup, setAllowUserBackup] = useState(false);
+  const [resellerSettings, setResellerSettings] = useState(DEFAULT_RESELLER_SETTINGS);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -44,6 +62,9 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
     setAutoSuspend(admin.auto_suspend_enabled !== false);
     setIpViolationThreshold(admin.ip_violation_suspend_threshold ? String(admin.ip_violation_suspend_threshold) : "");
     setSuspendGraceMinutes(admin.suspend_grace_minutes ? String(admin.suspend_grace_minutes) : "60");
+    setAllowSubResellers(!!admin.allow_sub_resellers);
+    setAllowUserBackup(!!admin.allow_user_backup);
+    setResellerSettings(mergeResellerSettings(admin.reseller_settings));
     setError("");
   }, [admin]);
 
@@ -86,6 +107,9 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
           auto_suspend_enabled: autoSuspend,
           ip_violation_suspend_threshold: ipViolationThreshold ? Number(ipViolationThreshold) : 0,
           suspend_grace_minutes: suspendGraceMinutes ? Number(suspendGraceMinutes) : 60,
+          allow_sub_resellers: allowSubResellers,
+          allow_user_backup: allowUserBackup,
+          reseller_settings: resellerSettings,
         },
       });
       onClose();
@@ -104,7 +128,7 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
             {t("reseller.editAdmin.role")}
             <Select className="mt-1" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
               <option value="">{t("reseller.editAdmin.selectRole")}</option>
-              {roles.data?.roles.map((r) => (
+              {(roles.data?.roles ?? []).map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </Select>
@@ -147,6 +171,30 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
             <div className="grid grid-cols-2 gap-2">
               <Input placeholder={t("reseller.editAdmin.ipViolations")} value={ipViolationThreshold} onChange={(e) => setIpViolationThreshold(e.target.value)} inputMode="numeric" />
               <Input placeholder={t("reseller.editAdmin.quotaGrace")} value={suspendGraceMinutes} onChange={(e) => setSuspendGraceMinutes(e.target.value)} inputMode="numeric" />
+            </div>
+          </div>
+          <div className="rounded-md border p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground">Reseller capabilities</p>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={allowSubResellers} onChange={(e) => setAllowSubResellers(e.target.checked)} />
+              Allow creating sub-resellers
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={allowUserBackup} onChange={(e) => setAllowUserBackup(e.target.checked)} />
+              Allow backup of own users only
+            </label>
+            <p className="pt-1 text-[10px] text-muted-foreground">Settings page sections</p>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {RESELLER_SETTING_KEYS.map((key) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={resellerSettings[key]}
+                    onChange={(e) => setResellerSettings({ ...resellerSettings, [key]: e.target.checked })}
+                  />
+                  {SETTING_LABELS[key]}
+                </label>
+              ))}
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

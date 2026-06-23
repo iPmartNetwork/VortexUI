@@ -3,6 +3,7 @@ package port
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/vortexui/vortexui/internal/domain"
 )
 
@@ -12,7 +13,7 @@ type AnalyticsRepository interface {
 	GeoBreakdown(ctx context.Context, q SeriesQuery) ([]domain.GeoTrafficPoint, error)
 
 	// TopUsers returns the top N users by traffic usage.
-	TopUsers(ctx context.Context, limit int) ([]domain.UserTrafficRank, error)
+	TopUsers(ctx context.Context, limit int, adminID *uuid.UUID) ([]domain.UserTrafficRank, error)
 
 	// PeakHours returns traffic aggregated by hour-of-day for a time range.
 	PeakHours(ctx context.Context, q SeriesQuery) ([]domain.PeakHour, error)
