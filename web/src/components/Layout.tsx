@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/auth";
+import { canAccessRoute } from "@/auth/permissions";
 import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
 import { useLiveEvents } from "@/api/live";
@@ -130,7 +131,7 @@ function IconButton({ onClick, label, children, className }: { onClick: () => vo
 }
 
 export function Layout() {
-  const { logout } = useAuth();
+  const { logout, sudo, permissions } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { resolved, toggle } = useTheme();
@@ -154,6 +155,13 @@ export function Layout() {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
   }
 
+  const visibleSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => canAccessRoute(item.to, sudo, permissions)),
+    }))
+    .filter((section) => section.items.length > 0);
+
   const sidebarContent = (
     <>
       {/* Logo */}
@@ -170,7 +178,7 @@ export function Layout() {
 
       {/* Navigation — collapsible sections */}
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-        {navSections.map((section) => {
+        {visibleSections.map((section) => {
           const isOpen = openSections[section.id] ?? false;
           const hasActive = section.items.some(item => location.pathname.startsWith(item.to));
 

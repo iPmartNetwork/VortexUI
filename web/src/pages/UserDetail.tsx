@@ -10,10 +10,13 @@ import { UsageChart } from "@/components/UsageChart";
 import { CopyField } from "@/components/CopyField";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
+import { useAuth } from "@/auth/auth";
 import { formatBytes } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 
 export function UserDetail() {
+  const { can } = useAuth();
+  const canWrite = can("user:write");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
@@ -71,10 +74,12 @@ export function UserDetail() {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={doReset}><RotateCcw size={14} /> Reset</Button>
-          <Button variant="outline" size="sm" className="text-danger" onClick={doRevoke}><KeyRound size={14} /> Revoke</Button>
-        </div>
+        {canWrite && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={doReset}><RotateCcw size={14} /> Reset</Button>
+            <Button variant="outline" size="sm" className="text-danger" onClick={doRevoke}><KeyRound size={14} /> Revoke</Button>
+          </div>
+        )}
       </div>
 
       {/* Stats row */}

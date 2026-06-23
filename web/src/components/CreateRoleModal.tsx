@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCreateRole } from "@/api/admin-hooks";
 import { ALL_PERMISSIONS } from "@/api/types";
+import { RESELLER_PERMISSIONS } from "@/auth/permissions";
 import { Button, Input } from "./ui";
 import { Modal } from "./Modal";
 
@@ -30,7 +31,12 @@ export function CreateRoleModal({ open, onClose }: { open: boolean; onClose: () 
       <form onSubmit={submit} className="space-y-3">
         <Input placeholder="Role name (e.g. reseller)" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         <div>
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Permissions</p>
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground">Permissions</p>
+            <Button type="button" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setPerms([...RESELLER_PERMISSIONS])}>
+              Reseller preset
+            </Button>
+          </div>
           <div className="grid grid-cols-2 gap-1 rounded-md border p-2">
             {ALL_PERMISSIONS.map((p) => (
               <label key={p} className="flex items-center gap-2 text-sm">

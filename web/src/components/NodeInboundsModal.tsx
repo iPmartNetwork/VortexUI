@@ -9,6 +9,7 @@ import { JsonCodeEditor } from "./JsonCodeEditor";
 import { SubHostsModal } from "./SubHostsModal";
 import { useToast } from "./toast";
 import { useI18n } from "@/i18n/i18n";
+import { useAuth } from "@/auth/auth";
 
 // Static fallbacks used only until the per-core capability matrix
 // (GET /api/capabilities) loads, so the form still works before the fetch
@@ -59,6 +60,8 @@ const DEFAULT_INBOUND_TEMPLATE = {
 };
 
 export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClose: () => void }) {
+  const { can } = useAuth();
+  const canWrite = can("inbound:write");
   const list = useNodeInbounds(node?.id ?? null);
   const caps = useCapabilities().data;
   const create = useCreateInbound();
@@ -241,18 +244,25 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
               <span className={`h-2 w-2 shrink-0 rounded-full ${ib.enabled ? "bg-success" : "bg-fg-subtle"}`} title={ib.enabled ? "Enabled" : "Disabled"} />
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <Button variant="ghost" size="sm" onClick={() => toggleEnable(ib)} title={ib.enabled ? "Disable" : "Enable"}>
-                {ib.enabled ? "🟢" : "⏸"}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => startEdit(ib)}>Edit</Button>
+              {canWrite && (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => toggleEnable(ib)} title={ib.enabled ? "Disable" : "Enable"}>
+                    {ib.enabled ? "🟢" : "⏸"}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => startEdit(ib)}>Edit</Button>
+                </>
+              )}
               <Button variant="ghost" size="sm" onClick={() => setHostsFor(ib)} title={t("hosts.title")}>{t("hosts.button")}</Button>
-              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => del.mutate(ib.id)}>Remove</Button>
+              {canWrite && (
+                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => del.mutate(ib.id)}>Remove</Button>
+              )}
             </div>
           </div>
         ))}
         {list.data?.inbounds?.length === 0 && <p className="py-2 text-sm text-muted-foreground">No inbounds on this node yet.</p>}
       </div>
 
+      {canWrite && (
       <div className="mt-4 flex gap-5 border-t border-border/60 pt-3 text-sm">
         {(["basics", "json"] as const).map((tk) => (
           <button
@@ -265,8 +275,9 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
           </button>
         ))}
       </div>
+      )}
 
-      {tab === "json" ? (
+      {canWrite && (tab === "json" ? (
         <div className="mt-3 space-y-3">
           <p className="text-xs text-fg-muted">Paste a full Xray/sing-box inbound object. tag, protocol and port are read from it; the whole object is stored as a raw override.</p>
           <JsonCodeEditor value={jsonText} onChange={setJsonText} rows={14} />
@@ -342,7 +353,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
           </Button>
         </div>
       </form>
-      )}
+      ))}
     </Modal>
     <SubHostsModal inbound={hostsFor} onClose={() => setHostsFor(null)} />
     </>

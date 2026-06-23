@@ -15,9 +15,12 @@ import { UserUsageModal } from "@/components/UserUsageModal";
 import { UserSubModal } from "@/components/UserSubModal";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
+import { useAuth } from "@/auth/auth";
 import { formatBytes } from "@/lib/utils";
 
 export function Users() {
+  const { can } = useAuth();
+  const canWrite = can("user:write");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(0);
@@ -113,12 +116,12 @@ export function Users() {
           value={search}
           onChange={(e) => onSearch(e.target.value)}
         />
-        <Button variant="outline" onClick={() => setImportOpen(true)}><Download size={15} /> {t("users.import")}</Button>
-        <Button variant="outline" onClick={() => setBulkOpen(true)}><Layers size={15} /> {t("users.bulk")}</Button>
-        <Button onClick={() => setModalOpen(true)}>{t("users.new")}</Button>
+        <Button variant="outline" onClick={() => setImportOpen(true)} disabled={!canWrite}><Download size={15} /> {t("users.import")}</Button>
+        <Button variant="outline" onClick={() => setBulkOpen(true)} disabled={!canWrite}><Layers size={15} /> {t("users.bulk")}</Button>
+        <Button onClick={() => setModalOpen(true)} disabled={!canWrite}>{t("users.new")}</Button>
       </PageHeader>
 
-      {selected.size > 0 && (
+      {canWrite && selected.size > 0 && (
         <div className="card flex items-center gap-3 px-5 py-3">
           <span className="text-sm font-medium text-fg">{selected.size} selected</span>
           <div className="ms-auto flex gap-2">
@@ -142,7 +145,9 @@ export function Users() {
             <thead className="border-b text-start text-fg-muted">
               <tr>
                 <th className="px-3 py-3 w-10">
-                  <input type="checkbox" className="rounded" checked={selected.size === (data?.users.length ?? 0) && selected.size > 0} onChange={(e) => setSelected(e.target.checked ? new Set(data!.users.map(u => u.id)) : new Set())} />
+                  {canWrite && (
+                    <input type="checkbox" className="rounded" checked={selected.size === (data?.users.length ?? 0) && selected.size > 0} onChange={(e) => setSelected(e.target.checked ? new Set(data!.users.map(u => u.id)) : new Set())} />
+                  )}
                 </th>
                 <th className="px-5 py-3 text-start"><SortHeader label={t("users.username")} active={sortKey === "username"} dir={sortKey === "username" ? sortDir : null} onClick={() => toggleSort("username")} /></th>
                 <th className="px-5 py-3 text-start"><SortHeader label={t("common.status")} active={sortKey === "status"} dir={sortKey === "status" ? sortDir : null} onClick={() => toggleSort("status")} /></th>
@@ -155,7 +160,9 @@ export function Users() {
               {sortedUsers.map((u) => (
                 <tr key={u.id} className="border-b last:border-0 hover:bg-muted/40">
                   <td className="px-3 py-3">
-                    <input type="checkbox" className="rounded" checked={selected.has(u.id)} onChange={(e) => { const s = new Set(selected); e.target.checked ? s.add(u.id) : s.delete(u.id); setSelected(s); }} />
+                    {canWrite && (
+                      <input type="checkbox" className="rounded" checked={selected.has(u.id)} onChange={(e) => { const s = new Set(selected); e.target.checked ? s.add(u.id) : s.delete(u.id); setSelected(s); }} />
+                    )}
                   </td>
                   <td className="px-5 py-3 font-medium">
                     <button onClick={() => nav(`/users/${u.id}`)} className="text-fg hover:text-primary transition">{u.username}</button>
@@ -177,12 +184,16 @@ export function Users() {
                       <Button variant="ghost" size="sm" onClick={() => setViewing(u)} title={t("users.usage")}>
                         <BarChart3 size={16} />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(u)} title={t("common.edit")}>
-                        <Pencil size={16} />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(u)} title={t("common.delete")}>
-                        <Trash2 size={16} />
-                      </Button>
+                      {canWrite && (
+                        <>
+                          <Button variant="ghost" size="sm" onClick={() => setEditing(u)} title={t("common.edit")}>
+                            <Pencil size={16} />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(u)} title={t("common.delete")}>
+                            <Trash2 size={16} />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

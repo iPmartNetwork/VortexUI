@@ -58,10 +58,13 @@ func NewAdminService(admins AdminStore) *AdminService {
 // CreateAdminInput describes a new operator. The password is hashed here and the
 // plaintext is never stored or returned.
 type CreateAdminInput struct {
-	Username   string
-	Password   string
-	Sudo       bool
-	EnableTOTP bool
+	Username     string
+	Password     string
+	Sudo         bool
+	EnableTOTP   bool
+	RoleID       *uuid.UUID // required when Sudo is false
+	UserQuota    int
+	TrafficQuota int64
 }
 
 // Create provisions an admin, refusing to clobber an existing username. When
@@ -70,6 +73,16 @@ type CreateAdminInput struct {
 func (s *AdminService) Create(ctx context.Context, in CreateAdminInput) (admin *domain.Admin, totpURL string, err error) {
 	if in.Username == "" || in.Password == "" {
 		return nil, "", errors.New("username and password are required")
+	}
+	if !in.Sudo {
+		if in.RoleID == nil {
+			return nil, "", errors.New("role is required for non-sudo admins")
+		}
+		if _, err := s.admins.GetRole(ctx, *in.RoleID); errors.Is(err, domain.ErrNotFound) {
+			return nil, "", errors.New("role not found")
+		} else if err != nil {
+			return nil, "", fmt.Errorf("load role: %w", err)
+		}
 	}
 	if _, err := s.admins.GetByUsername(ctx, in.Username); err == nil {
 		return nil, "", ErrAdminExists
@@ -86,7 +99,12 @@ func (s *AdminService) Create(ctx context.Context, in CreateAdminInput) (admin *
 		Username:     in.Username,
 		PasswordHash: hash,
 		Sudo:         in.Sudo,
+		UserQuota:    in.UserQuota,
+		TrafficQuota: in.TrafficQuota,
 		CreatedAt:    s.now(),
+	}
+	if !in.Sudo {
+		a.RoleID = in.RoleID
 	}
 	if in.EnableTOTP {
 		secret, url, err := auth.GenerateTOTP("VortexUI", in.Username)
@@ -198,6 +216,31 @@ func (s *AdminService) CreateRole(ctx context.Context, name string, perms []doma
 // ListRoles returns all roles.
 func (s *AdminService) ListRoles(ctx context.Context) ([]*domain.Role, error) {
 	return s.admins.ListRoles(ctx)
+}
+
+// Permissions returns the effective permission set for an admin. Sudo admins
+// receive every known permission; role-based admins receive their role's bundle.
+func (s *AdminService) Permissions(ctx context.Context, id uuid.UUID) ([]domain.Permission, error) {
+	admin, err := s.admins.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if admin.Sudo {
+		return []domain.Permission{
+			domain.PermUserRead, domain.PermUserWrite,
+			domain.PermNodeRead, domain.PermNodeWrite,
+			domain.PermInboundRead, domain.PermInboundWrite,
+			domain.PermAdminManage, domain.PermSystemRead,
+		}, nil
+	}
+	if admin.RoleID == nil {
+		return nil, nil
+	}
+	role, err := s.admins.GetRole(ctx, *admin.RoleID)
+	if err != nil {
+		return nil, err
+	}
+	return role.Permissions, nil
 }
 
 // ChangePassword lets an admin change their own password after proving the

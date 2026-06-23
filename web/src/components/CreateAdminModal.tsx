@@ -28,16 +28,20 @@ export function CreateAdminModal({ open, onClose }: { open: boolean; onClose: ()
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!sudo && !roleId) {
+      setError("Select a role for resellers");
+      return;
+    }
     try {
       await create.mutateAsync({
         username, password, sudo,
-        role_id: sudo ? null : roleId || null,
+        role_id: sudo ? null : roleId,
         user_quota: userQuota ? Number(userQuota) : 0,
         traffic_quota: trafficQuota ? Number(trafficQuota) * 1024 * 1024 * 1024 : 0,
       });
       close();
     } catch {
-      setError("Could not create admin (username taken?)");
+      setError("Could not create admin (username taken or missing role?)");
     }
   }
 
@@ -54,8 +58,8 @@ export function CreateAdminModal({ open, onClose }: { open: boolean; onClose: ()
           <>
             <label className="block text-xs text-muted-foreground">
               Role
-              <Select className="mt-1" value={roleId} onChange={(e) => setRoleId(e.target.value)}>
-                <option value="">No role (read-only)</option>
+              <Select className="mt-1" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
+                <option value="">Select role…</option>
                 {roles.data?.roles.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}

@@ -14,9 +14,14 @@ import (
 )
 
 // stubAdminRepo records created admins and answers lookups from that map.
-type stubAdminRepo struct{ byName map[string]*domain.Admin }
+type stubAdminRepo struct {
+	byName map[string]*domain.Admin
+	roles  map[uuid.UUID]*domain.Role
+}
 
-func newStubAdminRepo() *stubAdminRepo { return &stubAdminRepo{byName: map[string]*domain.Admin{}} }
+func newStubAdminRepo() *stubAdminRepo {
+	return &stubAdminRepo{byName: map[string]*domain.Admin{}, roles: map[uuid.UUID]*domain.Role{}}
+}
 
 func (s *stubAdminRepo) Create(_ context.Context, a *domain.Admin) error {
 	s.byName[a.Username] = a
@@ -37,7 +42,12 @@ func (s *stubAdminRepo) GetByID(_ context.Context, id uuid.UUID) (*domain.Admin,
 	return nil, domain.ErrNotFound
 }
 func (s *stubAdminRepo) Update(context.Context, *domain.Admin) error              { return nil }
-func (s *stubAdminRepo) GetRole(context.Context, uuid.UUID) (*domain.Role, error) { return nil, nil }
+func (s *stubAdminRepo) GetRole(_ context.Context, id uuid.UUID) (*domain.Role, error) {
+	if r, ok := s.roles[id]; ok {
+		return r, nil
+	}
+	return nil, domain.ErrNotFound
+}
 func (s *stubAdminRepo) List(context.Context) ([]*domain.Admin, error) {
 	out := make([]*domain.Admin, 0, len(s.byName))
 	for _, a := range s.byName {
@@ -65,6 +75,25 @@ func (s *stubAdminRepo) CountSudo(context.Context) (int, error) {
 func (s *stubAdminRepo) CreateRole(context.Context, *domain.Role) error    { return nil }
 func (s *stubAdminRepo) ListRoles(context.Context) ([]*domain.Role, error) { return nil, nil }
 
+func TestAdminCreateRequiresRoleForReseller(t *testing.T) {
+	repo := newStubAdminRepo()
+	roleID := uuid.New()
+	repo.roles[roleID] = &domain.Role{ID: roleID, Name: "reseller", Permissions: []domain.Permission{domain.PermUserRead}}
+	svc := NewAdminService(repo)
+	ctx := context.Background()
+
+	if _, _, err := svc.Create(ctx, CreateAdminInput{Username: "r1", Password: "pw"}); err == nil {
+		t.Fatal("expected error when non-sudo admin has no role")
+	}
+	a, _, err := svc.Create(ctx, CreateAdminInput{Username: "r1", Password: "pw", RoleID: &roleID, UserQuota: 10})
+	if err != nil {
+		t.Fatalf("create reseller: %v", err)
+	}
+	if a.RoleID == nil || *a.RoleID != roleID || a.UserQuota != 10 {
+		t.Fatalf("reseller fields not saved: %+v", a)
+	}
+}
+
 func TestAdminCreate(t *testing.T) {
 	repo := newStubAdminRepo()
 	svc := NewAdminService(repo)
@@ -90,10 +119,10 @@ func TestAdminCreateRejectsDuplicate(t *testing.T) {
 	svc := NewAdminService(repo)
 	ctx := context.Background()
 
-	if _, _, err := svc.Create(ctx, CreateAdminInput{Username: "root", Password: "pw"}); err != nil {
+	if _, _, err := svc.Create(ctx, CreateAdminInput{Username: "root", Password: "pw", Sudo: true}); err != nil {
 		t.Fatalf("first create: %v", err)
 	}
-	if _, _, err := svc.Create(ctx, CreateAdminInput{Username: "root", Password: "other"}); !errors.Is(err, ErrAdminExists) {
+	if _, _, err := svc.Create(ctx, CreateAdminInput{Username: "root", Password: "other", Sudo: true}); !errors.Is(err, ErrAdminExists) {
 		t.Errorf("duplicate err = %v, want ErrAdminExists", err)
 	}
 }
@@ -184,7 +213,7 @@ func TestTOTPSelfEnrollmentFlow(t *testing.T) {
 
 func TestAdminCreateWithTOTP(t *testing.T) {
 	svc := NewAdminService(newStubAdminRepo())
-	a, url, err := svc.Create(context.Background(), CreateAdminInput{Username: "2fa", Password: "pw", EnableTOTP: true})
+	a, url, err := svc.Create(context.Background(), CreateAdminInput{Username: "2fa", Password: "pw", Sudo: true, EnableTOTP: true})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}

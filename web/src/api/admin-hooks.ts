@@ -25,6 +25,26 @@ export function useDeleteAdmin() {
   });
 }
 
+export function useUpdateAdmin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; input: { password?: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number } }) =>
+      api<{ admin: Admin }>(`/api/admins/${args.id}`, { method: "PUT", body: args.input }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admins"] });
+      qc.invalidateQueries({ queryKey: ["account"] });
+    },
+  });
+}
+
+export function useAccount() {
+  return useQuery({
+    queryKey: ["account"],
+    queryFn: () => api<{ admin: Admin; permissions: string[] }>("/api/account"),
+    retry: false,
+  });
+}
+
 // --- roles ---
 
 export function useRoles() {

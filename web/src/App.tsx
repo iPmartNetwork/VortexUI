@@ -44,7 +44,8 @@ import { PortalPlans } from "@/pages/portal/PortalPlans";
 import { PortalTickets } from "@/pages/portal/PortalTickets";
 
 function Protected({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
