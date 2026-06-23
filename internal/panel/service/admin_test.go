@@ -88,7 +88,7 @@ func TestAdminCreateRequiresRoleForReseller(t *testing.T) {
 	repo := newStubAdminRepo()
 	roleID := uuid.New()
 	repo.roles[roleID] = &domain.Role{ID: roleID, Name: "reseller", Permissions: []domain.Permission{domain.PermUserRead}}
-	svc := NewAdminService(repo)
+	svc := NewAdminService(repo, nil)
 	ctx := context.Background()
 
 	if _, _, err := svc.Create(ctx, CreateAdminInput{Username: "r1", Password: "pw"}); err == nil {
@@ -105,7 +105,7 @@ func TestAdminCreateRequiresRoleForReseller(t *testing.T) {
 
 func TestAdminCreate(t *testing.T) {
 	repo := newStubAdminRepo()
-	svc := NewAdminService(repo)
+	svc := NewAdminService(repo, nil)
 	ctx := context.Background()
 
 	a, url, err := svc.Create(ctx, CreateAdminInput{Username: "root", Password: "pw", Sudo: true})
@@ -125,7 +125,7 @@ func TestAdminCreate(t *testing.T) {
 
 func TestAdminCreateRejectsDuplicate(t *testing.T) {
 	repo := newStubAdminRepo()
-	svc := NewAdminService(repo)
+	svc := NewAdminService(repo, nil)
 	ctx := context.Background()
 
 	if _, _, err := svc.Create(ctx, CreateAdminInput{Username: "root", Password: "pw", Sudo: true}); err != nil {
@@ -138,7 +138,7 @@ func TestAdminCreateRejectsDuplicate(t *testing.T) {
 
 func TestAdminUpdateGuardsLastSudo(t *testing.T) {
 	repo := newStubAdminRepo()
-	svc := NewAdminService(repo)
+	svc := NewAdminService(repo, nil)
 	ctx := context.Background()
 
 	root, _, _ := svc.Create(ctx, CreateAdminInput{Username: "root", Password: "pw", Sudo: true})
@@ -163,7 +163,7 @@ func TestAdminUpdateGuardsLastSudo(t *testing.T) {
 
 func TestAdminUpdateRehashesPassword(t *testing.T) {
 	repo := newStubAdminRepo()
-	svc := NewAdminService(repo)
+	svc := NewAdminService(repo, nil)
 	ctx := context.Background()
 	a, _, _ := svc.Create(ctx, CreateAdminInput{Username: "u", Password: "old", Sudo: true})
 
@@ -178,7 +178,7 @@ func TestAdminUpdateRehashesPassword(t *testing.T) {
 
 func TestTOTPSelfEnrollmentFlow(t *testing.T) {
 	repo := newStubAdminRepo()
-	svc := NewAdminService(repo)
+	svc := NewAdminService(repo, nil)
 	ctx := context.Background()
 	admin, _, _ := svc.Create(ctx, CreateAdminInput{Username: "u", Password: "pw", Sudo: true})
 
@@ -221,7 +221,7 @@ func TestTOTPSelfEnrollmentFlow(t *testing.T) {
 }
 
 func TestAdminCreateWithTOTP(t *testing.T) {
-	svc := NewAdminService(newStubAdminRepo())
+	svc := NewAdminService(newStubAdminRepo(), nil)
 	a, url, err := svc.Create(context.Background(), CreateAdminInput{Username: "2fa", Password: "pw", Sudo: true, EnableTOTP: true})
 	if err != nil {
 		t.Fatalf("create: %v", err)

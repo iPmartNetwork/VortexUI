@@ -73,7 +73,7 @@ export function CreateAdminModal({ open, onClose }: { open: boolean; onClose: ()
               <Input placeholder="User quota (0=unlimited)" value={userQuota} onChange={(e) => setUserQuota(e.target.value)} inputMode="numeric" />
               <Input placeholder="Traffic quota (GB, 0=unlimited)" value={trafficQuota} onChange={(e) => setTrafficQuota(e.target.value)} inputMode="numeric" />
             </div>
-            <p className="text-[10px] text-fg-subtle">Reseller limits: max users this admin can create, and max traffic per user (GB).</p>
+            <p className="text-[10px] text-fg-subtle">Reseller limits: max accounts and total traffic pool (GB) assignable across users.</p>
             <AdminInboundPicker selected={inboundIds} onChange={setInboundIds} />
           </>
         )}

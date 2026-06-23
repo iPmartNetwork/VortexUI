@@ -37,7 +37,7 @@ func runAdmin(ctx context.Context, args []string) error {
 	}
 	defer store.Close()
 
-	svc := service.NewAdminService(store.Admins())
+	svc := service.NewAdminService(store.Admins(), store.Users())
 	admin, totpURL, err := svc.Create(ctx, service.CreateAdminInput{
 		Username:   *username,
 		Password:   *password,

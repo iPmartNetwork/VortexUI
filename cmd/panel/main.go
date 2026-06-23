@@ -218,7 +218,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	outboundSvc := service.NewOutboundService(store.Outbounds(), syncSvc)
 	routingSvc := service.NewRoutingService(store.Routing(), syncSvc)
 	balancerSvc := service.NewBalancerService(store.Balancers(), syncSvc)
-	adminSvc := service.NewAdminService(admins)
+	adminSvc := service.NewAdminService(admins, users)
 	overviewSvc := service.NewOverviewService(users, nodes)
 	backupSvc := service.NewBackupService(nodes, store.Inbounds(), store.Outbounds(), store.Routing(), store.Balancers(), users, store.Backup())
 

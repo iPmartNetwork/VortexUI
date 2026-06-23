@@ -270,6 +270,31 @@ func (h *Handlers) GetAccount(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"admin": admin, "permissions": out})
 }
 
+// GetAccountQuota returns the calling admin's reseller quota usage.
+func (h *Handlers) GetAccountQuota(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	usage, err := h.Admins.QuotaUsage(c.Request().Context(), claims.AdminID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "quota failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"usage": usage})
+}
+
+// ListResellerQuotaUsage returns quota usage for all resellers (sudo).
+func (h *Handlers) ListResellerQuotaUsage(c echo.Context) error {
+	usage, err := h.Admins.ListResellerQuotaUsage(c.Request().Context())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	if usage == nil {
+		usage = []*domain.AdminQuotaUsage{}
+	}
+	return c.JSON(http.StatusOK, echo.Map{"usage": usage})
+}
+
 // ChangePassword updates the calling admin's own password.
 func (h *Handlers) ChangePassword(c echo.Context) error {
 	claims := claimsFrom(c)

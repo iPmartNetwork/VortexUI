@@ -66,6 +66,28 @@ func (q *Queries) AddUserInbound(ctx context.Context, arg AddUserInboundParams) 
 	return err
 }
 
+const adminUserStats = `-- name: AdminUserStats :one
+SELECT
+    count(*)::bigint AS user_count,
+    COALESCE(SUM(used_traffic), 0)::bigint AS traffic_used,
+    COALESCE(SUM(data_limit), 0)::bigint AS traffic_allocated
+FROM users
+WHERE admin_id = $1
+`
+
+type AdminUserStatsRow struct {
+	UserCount        int64
+	TrafficUsed      int64
+	TrafficAllocated int64
+}
+
+func (q *Queries) AdminUserStats(ctx context.Context, adminID pgtype.UUID) (AdminUserStatsRow, error) {
+	row := q.db.QueryRow(ctx, adminUserStats, adminID)
+	var i AdminUserStatsRow
+	err := row.Scan(&i.UserCount, &i.TrafficUsed, &i.TrafficAllocated)
+	return i, err
+}
+
 const clearUserInbounds = `-- name: ClearUserInbounds :exec
 DELETE FROM user_inbounds WHERE user_id = $1
 `

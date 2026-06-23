@@ -158,6 +158,7 @@ func NewRouter(d Deps) *echo.Echo {
 	// Admin + role management, gated behind the admin:manage permission (sudo bypasses).
 	admins := authed.Group("/admins", RequirePermission(d.Auth, domain.PermAdminManage))
 	admins.GET("", d.Handlers.ListAdmins)
+	admins.GET("/usage", d.Handlers.ListResellerQuotaUsage)
 	admins.POST("", d.Handlers.CreateAdmin)
 	admins.PUT("/:id", d.Handlers.UpdateAdmin)
 	admins.GET("/:id/inbounds", d.Handlers.GetAdminInbounds)
@@ -175,6 +176,7 @@ func NewRouter(d Deps) *echo.Echo {
 	// Self-service account actions: any authenticated admin manages their own 2FA.
 	account := authed.Group("/account")
 	account.GET("", d.Handlers.GetAccount)
+	account.GET("/quota", d.Handlers.GetAccountQuota)
 	account.POST("/password", d.Handlers.ChangePassword)
 	account.POST("/2fa/setup", d.Handlers.SetupTOTP)
 	account.POST("/2fa/confirm", d.Handlers.ConfirmTOTP)
