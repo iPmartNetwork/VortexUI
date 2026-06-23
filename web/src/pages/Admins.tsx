@@ -39,8 +39,8 @@ export function Admins() {
   const [editAdmin, setEditAdmin] = useState<Admin | null>(null);
   const [editRole, setEditRole] = useState<Role | null>(null);
 
-  const roleName = (id: string | null) => roles.data?.roles.find((r) => r.id === id)?.name ?? "—";
-  const usageFor = (adminId: string) => quotaUsage.data?.usage.find((u) => u.admin_id === adminId);
+  const roleName = (id: string | null) => (roles.data?.roles ?? []).find((r) => r.id === id)?.name ?? "—";
+  const usageFor = (adminId: string) => (quotaUsage.data?.usage ?? []).find((u) => u.admin_id === adminId);
 
   async function loginAs(a: Admin) {
     try {
@@ -110,7 +110,7 @@ export function Admins() {
           <Button onClick={() => setAdminOpen(true)}>{t("reseller.admins.newAdmin")}</Button>
         </div>
 
-        {quotaUsage.data && quotaUsage.data.usage.length > 0 && (
+        {(quotaUsage.data?.usage?.length ?? 0) > 0 && (
           <Card className="mb-6 p-0">
             <div className="border-b px-5 py-3 text-sm font-semibold">{t("reseller.admins.quotaUsage")}</div>
             <table className="w-full text-sm">
@@ -125,7 +125,7 @@ export function Admins() {
                 </tr>
               </thead>
               <tbody>
-                {quotaUsage.data.usage.map((u) => (
+                {(quotaUsage.data?.usage ?? []).map((u) => (
                   <tr key={u.admin_id} className="border-b last:border-0">
                     <td className="px-5 py-3 font-medium">{u.username}</td>
                     <td className="px-5 py-3 text-muted-foreground">
@@ -162,7 +162,7 @@ export function Admins() {
               </tr>
             </thead>
             <tbody>
-              {admins.data?.admins.map((a) => (
+              {(admins.data?.admins ?? []).map((a) => (
                 <tr key={a.id} className="border-b last:border-0 hover:bg-muted/40">
                   <td className="px-5 py-3 font-medium">
                     {a.username}
@@ -232,7 +232,7 @@ export function Admins() {
               </div>
             </Card>
           ))}
-          {roles.data?.roles.length === 0 && (
+          {(roles.data?.roles ?? []).length === 0 && roles.isSuccess && (
             <p className="text-sm text-muted-foreground">{t("reseller.admins.noRoles")}</p>
           )}
         </div>

@@ -75,7 +75,7 @@ export function CreateAdminModal({ open, onClose }: { open: boolean; onClose: ()
               Role
               <Select className="mt-1" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
                 <option value="">Select role…</option>
-                {roles.data?.roles.map((r) => (
+                {(roles.data?.roles ?? []).map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </Select>
