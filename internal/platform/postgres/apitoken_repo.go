@@ -12,14 +12,6 @@ import (
 // APITokenRepo persists API automation tokens.
 type APITokenRepo struct{ q *db.Queries }
 
-// ResolvedToken is the auth context a token maps to (its owning admin).
-type ResolvedToken struct {
-	ID      uuid.UUID
-	AdminID uuid.UUID
-	Sudo    bool
-	RoleID  *uuid.UUID
-}
-
 // Resolve implements auth.TokenResolver for vtx_ API tokens.
 func (r *APITokenRepo) Resolve(ctx context.Context, hash string) (uuid.UUID, bool, *uuid.UUID, uuid.UUID, error) {
 	row, err := r.q.ResolveAPIToken(ctx, hash)
@@ -27,14 +19,6 @@ func (r *APITokenRepo) Resolve(ctx context.Context, hash string) (uuid.UUID, boo
 		return uuid.Nil, false, nil, uuid.Nil, err
 	}
 	return row.AdminID, row.Sudo, uuidToPtr(row.RoleID), row.ID, nil
-}
-
-func (r *APITokenRepo) resolveToken(ctx context.Context, hash string) (ResolvedToken, error) {
-	row, err := r.q.ResolveAPIToken(ctx, hash)
-	if err != nil {
-		return ResolvedToken{}, err
-	}
-	return ResolvedToken{ID: row.ID, AdminID: row.AdminID, Sudo: row.Sudo, RoleID: uuidToPtr(row.RoleID)}, nil
 }
 
 func (r *APITokenRepo) Insert(ctx context.Context, id uuid.UUID, name, hash string, adminID uuid.UUID) error {

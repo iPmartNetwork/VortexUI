@@ -119,11 +119,8 @@ func (w *ResellerAutoSuspender) checkQuota(ctx context.Context, st AdminSuspendS
 	if err != nil {
 		return
 	}
-	exhausted := false
-	if admin.UserQuota > 0 && usage.UserCount >= int64(admin.UserQuota) {
-		exhausted = true
-	}
-	if admin.TrafficQuota > 0 {
+	exhausted := admin.UserQuota > 0 && usage.UserCount >= int64(admin.UserQuota)
+	if !exhausted && admin.TrafficQuota > 0 {
 		used := usage.TrafficAllocated
 		if admin.TrafficQuotaMode == domain.TrafficQuotaConsumed {
 			used = usage.TrafficUsed

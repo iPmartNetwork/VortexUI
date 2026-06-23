@@ -166,7 +166,7 @@ export function Admins() {
                 <tr key={a.id} className="border-b last:border-0 hover:bg-muted/40">
                   <td className="px-5 py-3 font-medium">
                     {a.username}
-                    {a.suspended && <Badge color="expired" className="ms-2">{t("reseller.admins.suspended")}</Badge>}
+                    {a.suspended && <span className="ms-2"><Badge color="expired">{t("reseller.admins.suspended")}</Badge></span>}
                   </td>
                   <td className="px-5 py-3">
                     {a.sudo ? <Badge color="active">{t("reseller.admins.sudo")}</Badge> : <Badge>{t("reseller.admins.reseller")}</Badge>}
