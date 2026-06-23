@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { useRoles, useUpdateAdmin } from "@/api/admin-hooks";
+import { useAdminInbounds, useRoles, useUpdateAdmin } from "@/api/admin-hooks";
 import type { Admin } from "@/api/types";
+import { AdminInboundPicker } from "@/components/AdminInboundPicker";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 
 export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClose: () => void }) {
   const update = useUpdateAdmin();
   const roles = useRoles();
+  const assigned = useAdminInbounds(admin?.id ?? null);
   const [roleId, setRoleId] = useState("");
   const [userQuota, setUserQuota] = useState("");
   const [trafficQuota, setTrafficQuota] = useState("");
+  const [inboundIds, setInboundIds] = useState<string[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -19,6 +22,10 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
     setTrafficQuota(admin.traffic_quota ? String(Math.round(admin.traffic_quota / (1024 ** 3))) : "");
     setError("");
   }, [admin]);
+
+  useEffect(() => {
+    if (assigned.data) setInboundIds(assigned.data.inbound_ids ?? []);
+  }, [assigned.data]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,6 +43,7 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
           role_id: roleId,
           user_quota: userQuota ? Number(userQuota) : 0,
           traffic_quota: trafficQuota ? Number(trafficQuota) * 1024 * 1024 * 1024 : 0,
+          inbound_ids: inboundIds,
         },
       });
       onClose();
@@ -61,6 +69,7 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
             <Input placeholder="User quota (0=unlimited)" value={userQuota} onChange={(e) => setUserQuota(e.target.value)} inputMode="numeric" />
             <Input placeholder="Traffic quota (GB, 0=unlimited)" value={trafficQuota} onChange={(e) => setTrafficQuota(e.target.value)} inputMode="numeric" />
           </div>
+          <AdminInboundPicker selected={inboundIds} onChange={setInboundIds} />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>

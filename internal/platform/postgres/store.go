@@ -63,7 +63,7 @@ func (s *Store) APITokens() *APITokenRepo { return &APITokenRepo{q: s.q} }
 func (s *Store) Traffic() *TrafficRepo { return &TrafficRepo{q: s.q} }
 
 // Admins returns the admin repository.
-func (s *Store) Admins() *AdminRepo { return &AdminRepo{q: s.q} }
+func (s *Store) Admins() *AdminRepo { return &AdminRepo{q: s.q, pool: s.pool} }
 
 // Audit returns the audit-log repository.
 func (s *Store) Audit() *AuditRepo { return &AuditRepo{q: s.q} }

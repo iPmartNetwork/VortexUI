@@ -11,9 +11,12 @@ export function useAdmins() {
 export function useCreateAdmin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { username: string; password: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number }) =>
+    mutationFn: (input: { username: string; password: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number; inbound_ids?: string[] }) =>
       api<{ admin: Admin }>("/api/admins", { method: "POST", body: input }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admins"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admins"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-all"] });
+    },
   });
 }
 
@@ -28,12 +31,21 @@ export function useDeleteAdmin() {
 export function useUpdateAdmin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: string; input: { password?: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number } }) =>
+    mutationFn: (args: { id: string; input: { password?: string; sudo: boolean; role_id?: string | null; user_quota?: number; traffic_quota?: number; inbound_ids?: string[] } }) =>
       api<{ admin: Admin }>(`/api/admins/${args.id}`, { method: "PUT", body: args.input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admins"] });
       qc.invalidateQueries({ queryKey: ["account"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-all"] });
     },
+  });
+}
+
+export function useAdminInbounds(adminId: string | null) {
+  return useQuery({
+    queryKey: ["admin-inbounds", adminId],
+    queryFn: () => api<{ inbound_ids: string[] }>(`/api/admins/${adminId}/inbounds`),
+    enabled: !!adminId,
   });
 }
 

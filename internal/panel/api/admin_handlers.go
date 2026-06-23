@@ -19,6 +19,7 @@ type createAdminRequest struct {
 	RoleID       *uuid.UUID `json:"role_id"`
 	UserQuota    int        `json:"user_quota"`
 	TrafficQuota int64      `json:"traffic_quota"`
+	InboundIDs   []string   `json:"inbound_ids"`
 }
 
 // CreateAdmin provisions a new operator. The otpauth URL (if 2FA enabled) is
@@ -31,6 +32,7 @@ func (h *Handlers) CreateAdmin(c echo.Context) error {
 	admin, totpURL, err := h.Admins.Create(c.Request().Context(), service.CreateAdminInput{
 		Username: req.Username, Password: req.Password, Sudo: req.Sudo, EnableTOTP: req.EnableTOTP,
 		RoleID: req.RoleID, UserQuota: req.UserQuota, TrafficQuota: req.TrafficQuota,
+		InboundIDs: mustParseInboundIDs(req.InboundIDs),
 	})
 	if errors.Is(err, service.ErrAdminExists) {
 		return echo.NewHTTPError(http.StatusConflict, "admin already exists")
@@ -61,6 +63,7 @@ type updateAdminRequest struct {
 	TrafficQuota int64      `json:"traffic_quota"`
 	RoleID       *uuid.UUID `json:"role_id"`
 	DisableTOTP  bool       `json:"disable_totp"`
+	InboundIDs   *[]string  `json:"inbound_ids"`
 }
 
 // UpdateAdmin edits an operator. Demoting the last sudo admin is refused.
@@ -73,9 +76,18 @@ func (h *Handlers) UpdateAdmin(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
+	var inboundIDs *[]uuid.UUID
+	if req.InboundIDs != nil {
+		parsed, perr := parseUUIDs(*req.InboundIDs)
+		if perr != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
+		}
+		inboundIDs = &parsed
+	}
 	admin, err := h.Admins.Update(c.Request().Context(), id, service.UpdateAdminInput{
 		Password: req.Password, Sudo: req.Sudo, UserQuota: req.UserQuota,
 		TrafficQuota: req.TrafficQuota, RoleID: req.RoleID, DisableTOTP: req.DisableTOTP,
+		InboundIDs: inboundIDs,
 	})
 	if errors.Is(err, service.ErrLastSudo) {
 		return echo.NewHTTPError(http.StatusConflict, "cannot demote the last sudo admin")
@@ -87,6 +99,43 @@ func (h *Handlers) UpdateAdmin(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "update failed")
 	}
 	return c.JSON(http.StatusOK, echo.Map{"admin": admin})
+}
+
+// GetAdminInbounds returns the inbound allowlist for a reseller admin.
+func (h *Handlers) GetAdminInbounds(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	admin, err := h.Admins.Get(c.Request().Context(), id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "admin not found")
+	} else if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
+	}
+	if admin.Sudo {
+		return c.JSON(http.StatusOK, echo.Map{"inbound_ids": []string{}})
+	}
+	ids, err := h.Admins.InboundIDsForAdmin(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	out := make([]string, len(ids))
+	for i, inID := range ids {
+		out[i] = inID.String()
+	}
+	return c.JSON(http.StatusOK, echo.Map{"inbound_ids": out})
+}
+
+func mustParseInboundIDs(ss []string) []uuid.UUID {
+	if len(ss) == 0 {
+		return nil
+	}
+	ids, err := parseUUIDs(ss)
+	if err != nil {
+		return nil
+	}
+	return ids
 }
 
 // DeleteAdmin removes an operator. Self-deletion and removing the last sudo admin

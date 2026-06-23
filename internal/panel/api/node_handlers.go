@@ -241,7 +241,8 @@ func (h *Handlers) CreateInbound(c echo.Context) error {
 	return c.JSON(http.StatusCreated, resp)
 }
 
-// ListInbounds returns the inbounds for a node (?node_id=...).
+// ListInbounds returns the inbounds for a node (?node_id=...). Resellers only
+// see inbounds on their admin allowlist.
 func (h *Handlers) ListInbounds(c echo.Context) error {
 	nodeID, err := uuid.Parse(c.QueryParam("node_id"))
 	if err != nil {
@@ -250,6 +251,23 @@ func (h *Handlers) ListInbounds(c echo.Context) error {
 	ins, err := h.Inbounds.ListByNode(c.Request().Context(), nodeID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		allowed, aerr := h.Admins.InboundIDsForAdmin(c.Request().Context(), claims.AdminID)
+		if aerr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+		}
+		allow := make(map[uuid.UUID]struct{}, len(allowed))
+		for _, id := range allowed {
+			allow[id] = struct{}{}
+		}
+		filtered := ins[:0]
+		for _, in := range ins {
+			if _, ok := allow[in.ID]; ok {
+				filtered = append(filtered, in)
+			}
+		}
+		ins = filtered
 	}
 	return c.JSON(http.StatusOK, echo.Map{"inbounds": ins})
 }

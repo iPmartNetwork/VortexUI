@@ -133,6 +133,9 @@ func (h *Handlers) CreateUser(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
 	}
+	if err := h.validateInboundAccess(c, inboundIDs); err != nil {
+		return err
+	}
 	// Tag the user with the creating admin (reseller ownership).
 	adminID := creatorAdminID(c)
 	u, err := h.Users.Create(c.Request().Context(), service.CreateUserInput{
@@ -190,6 +193,9 @@ func (h *Handlers) BulkCreateUsers(c echo.Context) error {
 	inboundIDs, err := parseUUIDs(req.InboundIDs)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
+	}
+	if err := h.validateInboundAccess(c, inboundIDs); err != nil {
+		return err
 	}
 	start := req.Start
 	if start == 0 {
@@ -273,6 +279,9 @@ func (h *Handlers) ImportUsers(c echo.Context) error {
 	inboundIDs, perr := parseUUIDs(req.InboundIDs)
 	if perr != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid inbound id")
+	}
+	if err := h.validateInboundAccess(c, inboundIDs); err != nil {
+		return err
 	}
 
 	created := make([]*domain.User, 0, len(parsed))
@@ -449,6 +458,9 @@ func (h *Handlers) UpdateUser(c echo.Context) error {
 		inboundIDs = parsed
 		if inboundIDs == nil {
 			inboundIDs = []uuid.UUID{} // non-nil empty = clear all bindings
+		}
+		if err := h.validateInboundAccess(c, inboundIDs); err != nil {
+			return err
 		}
 	}
 	u, err := h.Users.Update(c.Request().Context(), id, service.UpdateUserInput{
@@ -743,6 +755,18 @@ func (h *Handlers) assertUserOwned(c echo.Context, id uuid.UUID) (*domain.User, 
 		}
 	}
 	return u, nil
+}
+
+// validateInboundAccess ensures resellers only bind users to their allowlist.
+func (h *Handlers) validateInboundAccess(c echo.Context, inboundIDs []uuid.UUID) error {
+	claims := claimsFrom(c)
+	if claims == nil || claims.Sudo {
+		return nil
+	}
+	if err := h.Admins.ValidateInboundAccess(c.Request().Context(), claims.AdminID, inboundIDs); err != nil {
+		return echo.NewHTTPError(http.StatusForbidden, "inbound not allowed for your account")
+	}
+	return nil
 }
 
 func parseUUIDs(ss []string) ([]uuid.UUID, error) {

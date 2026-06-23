@@ -12,6 +12,47 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addAdminInbound = `-- name: AddAdminInbound :exec
+INSERT INTO admin_inbounds (admin_id, inbound_id) VALUES ($1, $2)
+ON CONFLICT DO NOTHING
+`
+
+type AddAdminInboundParams struct {
+	AdminID   uuid.UUID
+	InboundID uuid.UUID
+}
+
+func (q *Queries) AddAdminInbound(ctx context.Context, arg AddAdminInboundParams) error {
+	_, err := q.db.Exec(ctx, addAdminInbound, arg.AdminID, arg.InboundID)
+	return err
+}
+
+const clearAdminInbounds = `-- name: ClearAdminInbounds :exec
+DELETE FROM admin_inbounds WHERE admin_id = $1
+`
+
+func (q *Queries) ClearAdminInbounds(ctx context.Context, adminID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearAdminInbounds, adminID)
+	return err
+}
+
+const countAdminInboundAccess = `-- name: CountAdminInboundAccess :one
+SELECT count(*)::bigint FROM admin_inbounds
+WHERE admin_id = $1 AND inbound_id = ANY($2::uuid[])
+`
+
+type CountAdminInboundAccessParams struct {
+	AdminID    uuid.UUID
+	InboundIds []uuid.UUID
+}
+
+func (q *Queries) CountAdminInboundAccess(ctx context.Context, arg CountAdminInboundAccessParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminInboundAccess, arg.AdminID, arg.InboundIds)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countSudoAdmins = `-- name: CountSudoAdmins :one
 SELECT count(*) FROM admins WHERE sudo = TRUE
 `
@@ -180,6 +221,30 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]Admin, error) {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listInboundIDsForAdmin = `-- name: ListInboundIDsForAdmin :many
+SELECT inbound_id FROM admin_inbounds WHERE admin_id = $1
+`
+
+func (q *Queries) ListInboundIDsForAdmin(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listInboundIDsForAdmin, adminID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var inbound_id uuid.UUID
+		if err := rows.Scan(&inbound_id); err != nil {
+			return nil, err
+		}
+		items = append(items, inbound_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
