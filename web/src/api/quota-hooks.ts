@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ensureArray } from "@/lib/utils";
 import { api, getToken } from "./client";
 
 export interface AdminQuotaUsage {
@@ -24,7 +25,10 @@ export function useAccountQuota() {
 export function useResellerQuotaUsage() {
   return useQuery({
     queryKey: ["reseller-quota-usage"],
-    queryFn: () => api<{ usage: AdminQuotaUsage[] }>("/api/admins/usage"),
+    queryFn: async () => {
+      const res = await api<{ usage?: AdminQuotaUsage[] | null }>("/api/admins/usage");
+      return { usage: ensureArray(res.usage) };
+    },
   });
 }
 

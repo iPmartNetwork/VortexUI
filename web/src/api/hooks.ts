@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ensureArray } from "@/lib/utils";
 import { api } from "./client";
 import type { CreateUserInput, ListUsersResponse, Node, User } from "./types";
 
@@ -310,12 +311,13 @@ export function useAllInbounds() {
   return useQuery({
     queryKey: ["inbounds-all"],
     queryFn: async (): Promise<InboundOption[]> => {
-      const { nodes } = await api<{ nodes: Node[] }>("/api/nodes");
+      const { nodes } = await api<{ nodes?: Node[] | null }>("/api/nodes");
+      const nodeList = ensureArray(nodes);
       const lists = await Promise.all(
-        nodes.map((n) => api<{ inbounds: { id: string; tag: string; protocol: string }[] }>("/api/inbounds", { query: { node_id: n.id } })),
+        nodeList.map((n) => api<{ inbounds: { id: string; tag: string; protocol: string }[] }>("/api/inbounds", { query: { node_id: n.id } })),
       );
       return lists.flatMap((l, i) =>
-        (l.inbounds ?? []).map((ib) => ({ id: ib.id, tag: ib.tag, protocol: ib.protocol, nodeName: nodes[i].name })),
+        ensureArray(l.inbounds).map((ib) => ({ id: ib.id, tag: ib.tag, protocol: ib.protocol, nodeName: nodeList[i].name })),
       );
     },
   });

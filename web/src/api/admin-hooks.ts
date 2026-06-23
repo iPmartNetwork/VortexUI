@@ -1,11 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ensureArray } from "@/lib/utils";
 import { api } from "./client";
 import type { Admin, Role } from "./types";
+
+function normalizeRole(role: Role): Role {
+  return { ...role, permissions: ensureArray(role.permissions) };
+}
 
 // --- admins ---
 
 export function useAdmins() {
-  return useQuery({ queryKey: ["admins"], queryFn: () => api<{ admins: Admin[] }>("/api/admins") });
+  return useQuery({
+    queryKey: ["admins"],
+    queryFn: async () => {
+      const res = await api<{ admins?: Admin[] | null }>("/api/admins");
+      return { admins: ensureArray(res.admins) };
+    },
+  });
 }
 
 export function useCreateAdmin() {
@@ -74,7 +85,10 @@ export function useUpdateAdmin() {
 export function useAdminInbounds(adminId: string | null) {
   return useQuery({
     queryKey: ["admin-inbounds", adminId],
-    queryFn: () => api<{ inbound_ids: string[] }>(`/api/admins/${adminId}/inbounds`),
+    queryFn: async () => {
+      const res = await api<{ inbound_ids?: string[] | null }>(`/api/admins/${adminId}/inbounds`);
+      return { inbound_ids: ensureArray(res.inbound_ids) };
+    },
     enabled: !!adminId,
   });
 }
@@ -82,7 +96,10 @@ export function useAdminInbounds(adminId: string | null) {
 export function useAdminNodes(adminId: string | null) {
   return useQuery({
     queryKey: ["admin-nodes", adminId],
-    queryFn: () => api<{ node_ids: string[] }>(`/api/admins/${adminId}/nodes`),
+    queryFn: async () => {
+      const res = await api<{ node_ids?: string[] | null }>(`/api/admins/${adminId}/nodes`);
+      return { node_ids: ensureArray(res.node_ids) };
+    },
     enabled: !!adminId,
   });
 }
@@ -90,7 +107,10 @@ export function useAdminNodes(adminId: string | null) {
 export function useAdminPlans(adminId: string | null) {
   return useQuery({
     queryKey: ["admin-plans", adminId],
-    queryFn: () => api<{ plan_ids: string[] }>(`/api/admins/${adminId}/plans`),
+    queryFn: async () => {
+      const res = await api<{ plan_ids?: string[] | null }>(`/api/admins/${adminId}/plans`);
+      return { plan_ids: ensureArray(res.plan_ids) };
+    },
     enabled: !!adminId,
   });
 }
@@ -106,7 +126,13 @@ export function useAccount() {
 // --- roles ---
 
 export function useRoles() {
-  return useQuery({ queryKey: ["roles"], queryFn: () => api<{ roles: Role[] }>("/api/roles") });
+  return useQuery({
+    queryKey: ["roles"],
+    queryFn: async () => {
+      const res = await api<{ roles?: Role[] | null }>("/api/roles");
+      return { roles: ensureArray(res.roles).map(normalizeRole) };
+    },
+  });
 }
 
 export function useCreateRole() {

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, clearToken, getToken, setToken } from "@/api/client";
 import type { Admin } from "@/api/types";
+import { ensureArray } from "@/lib/utils";
 import { hasPermission } from "./permissions";
 
 interface Session {
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api<{ admin: Admin; permissions: string[]; impersonator_id?: string | null }>("/api/account");
       setSession({
         admin: res.admin,
-        permissions: new Set(res.permissions),
+        permissions: new Set(ensureArray(res.permissions)),
         impersonatorId: res.impersonator_id ?? null,
       });
     } catch {
@@ -62,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const account = await api<{ admin: Admin; permissions: string[]; impersonator_id?: string | null }>("/api/account");
     setSession({
       admin: account.admin,
-      permissions: new Set(account.permissions),
+      permissions: new Set(ensureArray(account.permissions)),
       impersonatorId: account.impersonator_id ?? null,
     });
     setLoading(false);

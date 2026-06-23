@@ -67,6 +67,9 @@ func (h *Handlers) ListAdmins(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
 	}
+	if admins == nil {
+		admins = []*domain.Admin{}
+	}
 	return c.JSON(http.StatusOK, echo.Map{"admins": admins})
 }
 
@@ -401,6 +404,14 @@ func (h *Handlers) ListRoles(c echo.Context) error {
 	roles, err := h.Admins.ListRoles(c.Request().Context())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	if roles == nil {
+		roles = []*domain.Role{}
+	}
+	for _, r := range roles {
+		if r != nil && r.Permissions == nil {
+			r.Permissions = []domain.Permission{}
+		}
 	}
 	return c.JSON(http.StatusOK, echo.Map{"roles": roles})
 }
