@@ -46,6 +46,12 @@ and full i18n across all eight panel languages.
 - **Reseller UI i18n** — dashboard, account, quota alerts, Admins, and Edit Admin
   modal translated in EN, FA, TR, AR, RU, ZH, JA, and ES.
 
+### Fixed
+- **Reseller SQL migrations** — add missing `-- +goose Up` / `-- +goose Down` directives
+  to migrations `0021`–`0023` so native panel installs apply schema updates on startup.
+- **Native update** — `vortexui update` rebuilds the panel with `go build -a` so embedded
+  migrations are always re-baked into the binary.
+
 ### Database
 - Migrations `0021_reseller_enhancements.sql`, `0022_reseller_advanced.sql`,
   `0023_reseller_policy_suspend.sql`.
