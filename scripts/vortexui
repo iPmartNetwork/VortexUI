@@ -127,7 +127,8 @@ c_update() {
     node)
       ( cd "$DIR" && go build -o /usr/local/bin/vortex-node ./cmd/node ) && systemctl restart vortexui-node ;;
     native)
-      ( cd "$DIR" && go build -o /usr/local/bin/vortex-panel ./cmd/panel && go build -o /usr/local/bin/vortex-node ./cmd/node )
+      # -a ensures embedded SQL migrations are re-baked into the panel binary.
+      ( cd "$DIR" && go build -a -o /usr/local/bin/vortex-panel ./cmd/panel && go build -o /usr/local/bin/vortex-node ./cmd/node )
       ( cd "$DIR/web" && npm ci && npm run build && mkdir -p /var/www/vortexui && cp -r dist/* /var/www/vortexui/ )
       systemctl restart vortexui-panel caddy ;;
     *)      $COMPOSE up -d --build ;;
