@@ -35,6 +35,33 @@ env_set()  {
 }
 public_host() { curl -fsS4 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1; }
 
+# Install or refresh the node agent binary. Nodes are usually installed from a
+# GitHub release tarball (no Go toolchain); fall back to source build only when
+# Go is available.
+install_node_binary() {
+  local arch sarch rel
+  arch="$(uname -m)"
+  case "$arch" in x86_64|amd64) sarch=amd64 ;; aarch64|arm64) sarch=arm64 ;; *)
+    echo "${r}unsupported architecture: $arch${n}" >&2; return 1 ;; esac
+  rel="$(curl -fsSL https://api.github.com/repos/iPmartNetwork/VortexUI/releases/latest \
+    | grep -oE '"tag_name": *"v[0-9.]+"' | head -1 | grep -oE 'v[0-9.]+' || true)"
+  if [ -n "$rel" ] && curl -fL -o /tmp/vortexui-node.tgz \
+      "https://github.com/iPmartNetwork/VortexUI/releases/download/${rel}/vortexui-node-linux-${sarch}.tar.gz" 2>/dev/null; then
+    tar -xzf /tmp/vortexui-node.tgz -C /tmp
+    install -m 0755 "/tmp/vortexui-node-linux-${sarch}" /usr/local/bin/vortex-node
+    rm -f /tmp/vortexui-node.tgz "/tmp/vortexui-node-linux-${sarch}"
+    return 0
+  fi
+  if command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]; then
+    export PATH="$PATH:/usr/local/go/bin"
+    ( cd "$DIR" && go build -o /usr/local/bin/vortex-node ./cmd/node )
+    return 0
+  fi
+  echo "${r}node update failed: no release binary and Go is not installed${n}" >&2
+  echo "  ${d}Nodes are normally installed without Go. Download a release binary manually or set VORTEXUI_GO_URL and re-run update.${n}" >&2
+  return 1
+}
+
 # Rewrite the native Caddyfile from the current .env and reload.
 write_caddy_native() {
   local site email; site="$(env_get SITE_ADDRESS)"; email="$(env_get ACME_EMAIL)"
@@ -125,10 +152,11 @@ c_update() {
   install -m 0755 "$DIR/scripts/vortexui" /usr/local/bin/vortexui 2>/dev/null || true
   case "$MODE" in
     node)
-      ( cd "$DIR" && go build -o /usr/local/bin/vortex-node ./cmd/node ) && systemctl restart vortexui-node ;;
+      install_node_binary && systemctl restart vortexui-node ;;
     native)
       # -a ensures embedded SQL migrations are re-baked into the panel binary.
-      ( cd "$DIR" && go build -a -o /usr/local/bin/vortex-panel ./cmd/panel && go build -o /usr/local/bin/vortex-node ./cmd/node )
+      export PATH="$PATH:/usr/local/go/bin"
+      ( cd "$DIR" && go build -a -o /usr/local/bin/vortex-panel ./cmd/panel && install_node_binary )
       ( cd "$DIR/web" && npm ci && npm run build && mkdir -p /var/www/vortexui && cp -r dist/* /var/www/vortexui/ )
       systemctl restart vortexui-panel caddy ;;
     *)      $COMPOSE up -d --build ;;
