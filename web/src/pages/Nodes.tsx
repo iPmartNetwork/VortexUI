@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Cpu, Globe, HardDrive, MemoryStick, Server, Signal } from "lucide-react";
-import { useDeleteNode, useNodes } from "@/api/hooks";
+import { Cpu, Copy, Globe, HardDrive, MemoryStick, Server, Signal } from "lucide-react";
+import { useDeleteNode, useNodeDebugBundle, useNodes } from "@/api/hooks";
 import { useRestartCore, useStopCore, useUpdateGeo } from "@/api/policy-hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button, Card, PageHeader } from "@/components/ui";
-import { CreateNodeModal } from "@/components/CreateNodeModal";
+import { CreateNodeModal, diagColor, diagLabel } from "@/components/CreateNodeModal";
 import { EditNodeModal } from "@/components/EditNodeModal";
 import { NodeInboundsModal } from "@/components/NodeInboundsModal";
 import { NodeLogsModal } from "@/components/NodeLogsModal";
@@ -47,7 +47,7 @@ function timeAgoShort(iso: string | null): string {
 
 /* ─── Node Card (rich + actions) ─── */
 function NodeCard({
-  n, onInbounds, onLogs, onEdit, onDelete, onRestart, onStop, onStart, onUpdateGeo, canManage,
+  n, onInbounds, onLogs, onEdit, onDelete, onRestart, onStop, onStart, onUpdateGeo, onCopyDebug, canManage,
 }: {
   n: Node;
   onInbounds: () => void;
@@ -58,6 +58,7 @@ function NodeCard({
   onStop: () => void;
   onStart: () => void;
   onUpdateGeo: () => void;
+  onCopyDebug: () => void;
   canManage: boolean;
 }) {
   // Online = fresh heartbeat AND core running, matching the Overview's NODES
@@ -108,6 +109,13 @@ function NodeCard({
         {/* Version footer */}
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px]">
           <Badge color={online ? "running" : "down"}>{n.core}</Badge>
+          {!online && n.diagnostics && n.diagnostics.code !== "ok" && (
+            <span title={n.diagnostics.message}>
+              <Badge color={diagColor(n.diagnostics.code)}>
+                {diagLabel(n.diagnostics.code)}
+              </Badge>
+            </span>
+          )}
           {n.core_version && <span className="rounded-md bg-surface-2/60 px-2 py-0.5 font-mono text-fg-muted">{n.core_version}</span>}
           {n.agent_version && <span className="text-fg-subtle">agent {n.agent_version}</span>}
           <span className="ms-auto flex items-center gap-1 text-[11px] font-semibold text-fg">
@@ -121,6 +129,11 @@ function NodeCard({
       <div className="flex flex-wrap items-center gap-1 border-t border-border/40 px-3 py-2.5">
         <Button variant="ghost" size="sm" onClick={onInbounds}>Inbounds</Button>
         <Button variant="ghost" size="sm" onClick={onLogs}>Logs</Button>
+        {!online && (
+          <Button variant="ghost" size="sm" onClick={onCopyDebug} title="Copy debug bundle for support">
+            <Copy size={12} className="me-1" />Debug
+          </Button>
+        )}
         {online ? (
           <Button variant="ghost" size="sm" className="text-warning" onClick={onStop}>Stop</Button>
         ) : (
@@ -147,6 +160,7 @@ export function Nodes() {
   const restart = useRestartCore();
   const stop = useStopCore();
   const updateGeo = useUpdateGeo();
+  const debug = useNodeDebugBundle();
   const confirm = useConfirm();
   const toast = useToast();
   const { t } = useI18n();
@@ -171,6 +185,16 @@ export function Nodes() {
       updateGeo.mutateAsync(n.id)
         .then((r) => toast.success(`Geo updated (${Math.round((r.geoip_bytes + r.geosite_bytes) / 1024)} KB)`))
         .catch(() => toast.error("Geo update failed"));
+    }
+  }
+
+  async function copyDebug(n: Node) {
+    try {
+      const res = await debug.mutateAsync(n.id);
+      await navigator.clipboard.writeText(res.debug_text);
+      toast.success("Debug bundle copied");
+    } catch {
+      toast.error("Could not copy debug bundle");
     }
   }
 
@@ -200,6 +224,7 @@ export function Nodes() {
             onStart={() => restart.mutateAsync(n.id).then(() => toast.success("Core started")).catch(() => toast.error("Start failed"))}
             onStop={() => doStop(n)}
             onUpdateGeo={() => doUpdateGeo(n)}
+            onCopyDebug={() => copyDebug(n)}
             canManage={canManage}
           />
         ))}

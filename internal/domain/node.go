@@ -25,6 +25,24 @@ const (
 	NodeDisabled     NodeStatus = "disabled"
 )
 
+// NodeDiagCode classifies why a node is unreachable or unhealthy for the UI.
+type NodeDiagCode string
+
+const (
+	NodeDiagOK          NodeDiagCode = "ok"
+	NodeDiagUnreachable NodeDiagCode = "unreachable"
+	NodeDiagMTLS        NodeDiagCode = "mtls_fail"
+	NodeDiagCoreDown    NodeDiagCode = "core_down"
+	NodeDiagUnknown     NodeDiagCode = "unknown"
+)
+
+// NodeDiagnostics is the live connectivity snapshot surfaced by the hub/API.
+type NodeDiagnostics struct {
+	Code      NodeDiagCode `json:"code"`
+	Message   string       `json:"message,omitempty"`
+	CheckedAt *time.Time   `json:"checked_at,omitempty"`
+}
+
 // Node is a remote server running a CoreDriver, managed over gRPC + mTLS.
 type Node struct {
 	ID      uuid.UUID  `json:"id"`
@@ -46,7 +64,9 @@ type Node struct {
 	Health    NodeHealth `json:"health"`
 	CoreVer   string     `json:"core_version,omitempty"`
 	AgentVer  string     `json:"agent_version,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
+	// Diagnostics explains disconnects (mTLS mismatch, unreachable agent, core down).
+	Diagnostics *NodeDiagnostics `json:"diagnostics,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
 }
 
 // NodeHealth is the resource snapshot pushed by an agent heartbeat.

@@ -52,7 +52,7 @@ import { setToken } from "@/api/client";
 import type { TKey, Lang } from "@/i18n/dict";
 
 // PANEL_VERSION is the fallback shown until the backend version is fetched.
-const PANEL_VERSION = "1.2.5";
+const PANEL_VERSION = "1.2.6";
 
 // Grouped navigation with collapsible sections
 interface NavItem { to: string; key: TKey; icon: React.ElementType }

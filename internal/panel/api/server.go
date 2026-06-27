@@ -110,10 +110,13 @@ func NewRouter(d Deps) *echo.Echo {
 	users.DELETE("/:id", d.Handlers.DeleteUser, RequirePermission(d.Auth, domain.PermUserWrite))
 
 	nodes := authed.Group("/nodes")
+	nodes.GET("/enrollment", d.Handlers.GetNodeEnrollment, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.GET("", d.Handlers.ListNodes, RequirePermission(d.Auth, domain.PermNodeRead))
 	nodes.GET("/:id", d.Handlers.GetNode, RequirePermission(d.Auth, domain.PermNodeRead))
 	nodes.GET("/:id/logs", d.Handlers.GetNodeLogs, RequirePermission(d.Auth, domain.PermNodeRead))
 	nodes.GET("/:id/status", d.Handlers.GetNodeStatus, RequirePermission(d.Auth, domain.PermNodeRead))
+	nodes.GET("/:id/debug", d.Handlers.GetNodeDebugBundle, RequirePermission(d.Auth, domain.PermNodeRead))
+	nodes.POST("/:id/test", d.Handlers.TestNodeConnection, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.POST("/:id/restart", d.Handlers.RestartNodeCore, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.POST("/:id/geo-update", d.Handlers.UpdateNodeGeo, RequirePermission(d.Auth, domain.PermNodeWrite))
 	nodes.POST("/:id/stop", d.Handlers.StopNodeCore, RequirePermission(d.Auth, domain.PermNodeWrite))

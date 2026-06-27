@@ -209,9 +209,47 @@ func (h *Hub) Status(nodeID uuid.UUID) (domain.NodeStatus, domain.NodeHealth, er
 	if err != nil {
 		return "", domain.NodeHealth{}, err
 	}
-	mn.mu.Lock()
-	defer mn.mu.Unlock()
-	return mn.status, mn.health, nil
+	st, hl, _ := mn.snapshot()
+	return st, hl, nil
+}
+
+// Live returns the hub's live status, health, and diagnostics for one node.
+func (h *Hub) Live(nodeID uuid.UUID) (domain.NodeStatus, domain.NodeHealth, domain.NodeDiagnostics, bool) {
+	mn, err := h.managed(nodeID)
+	if err != nil {
+		return "", domain.NodeHealth{}, domain.NodeDiagnostics{}, false
+	}
+	st, hl, d := mn.snapshot()
+	return st, hl, d, true
+}
+
+// TestConnect dials a node once and returns connectivity diagnostics without
+// altering the managed connection cache.
+func (h *Hub) TestConnect(ctx context.Context, node *domain.Node) domain.NodeDiagnostics {
+	if h.opts.Dialer == nil {
+		now := time.Now()
+		return domain.NodeDiagnostics{Code: domain.NodeDiagUnknown, Message: "dialer not configured", CheckedAt: &now}
+	}
+	conn, err := h.opts.Dialer(node)
+	if err != nil {
+		return classifyDialError(err)
+	}
+	defer func() { _ = conn.Close() }()
+	hctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	health, err := conn.Health(hctx)
+	if err != nil {
+		return classifyDialError(err)
+	}
+	if !health.CoreRunning {
+		now := time.Now()
+		return domain.NodeDiagnostics{
+			Code:      domain.NodeDiagCoreDown,
+			Message:   "agent reachable but proxy core is not running",
+			CheckedAt: &now,
+		}
+	}
+	return classifyDialError(nil)
 }
 
 // OnlineStats returns one node's live per-user connection counts.

@@ -152,14 +152,17 @@ c_update() {
   install -m 0755 "$DIR/scripts/vortexui" /usr/local/bin/vortexui 2>/dev/null || true
   case "$MODE" in
     node)
-      install_node_binary && systemctl restart vortexui-node ;;
+      install_node_binary && systemctl restart vortexui-node
+      echo "${g}✓ node updated${n} — run ${b}vortexui doctor${n} to verify certs and agent port." ;;
     native)
       # -a ensures embedded SQL migrations are re-baked into the panel binary.
       export PATH="$PATH:/usr/local/go/bin"
       ( cd "$DIR" && go build -a -o /usr/local/bin/vortex-panel ./cmd/panel && install_node_binary )
       ( cd "$DIR/web" && npm ci && npm run build && mkdir -p /var/www/vortexui && cp -r dist/* /var/www/vortexui/ )
-      systemctl restart vortexui-panel caddy ;;
-    *)      $COMPOSE up -d --build ;;
+      systemctl restart vortexui-panel caddy
+      echo "${g}✓ panel updated${n} — run ${b}vortexui doctor${n} to verify services, DB, and certs." ;;
+    *)      $COMPOSE up -d --build
+      echo "${g}✓ stack updated${n} — run ${b}vortexui doctor${n} for a quick health check." ;;
   esac
 }
 
@@ -231,6 +234,71 @@ c_node_bundle() {
   echo "  ${d}On the new node: run the installer, choose Node, then paste it when prompted.${n}"
   echo
   tar -C "$cdir" -czf - ca.crt node.crt node.key | base64 -w0; echo
+  echo
+  echo "  ${d}Panel CA fingerprint (verify on the node after install):${n}"
+  openssl x509 -in "$cdir/ca.crt" -noout -fingerprint -sha256 2>/dev/null | sed 's/sha256 Fingerprint=//' || true
+}
+
+# Run connectivity and service checks; prints actionable hints on failure.
+c_doctor() {
+  local ok=0 fail=0 warn=0
+  pass() { echo "  ${g}✓${n} $1"; ok=$((ok+1)); }
+  fail_msg() { echo "  ${r}✗${n} $1"; fail=$((fail+1)); }
+  warn_msg() { echo "  ${y}!${n} $1"; warn=$((warn+1)); }
+
+  echo
+  echo "  ${b}VortexUI doctor${n} ${d}(${MODE} install at $DIR)${n}"
+  echo "  ${d}────────────────────────────────${n}"
+
+  case "$MODE" in
+    node)
+      [ -f /etc/vortexui/node.env ] && pass "node.env present" || fail_msg "missing /etc/vortexui/node.env"
+      [ -x /usr/local/bin/vortex-node ] && pass "vortex-node binary" || fail_msg "vortex-node missing"
+      for f in ca.crt node.crt node.key; do
+        [ -f "/etc/vortexui/certs/$f" ] && pass "cert $f" || fail_msg "missing /etc/vortexui/certs/$f"
+      done
+      if [ -f /etc/vortexui/certs/ca.crt ]; then
+        echo "     ${d}CA fingerprint:${n} $(openssl x509 -in /etc/vortexui/certs/ca.crt -noout -fingerprint -sha256 2>/dev/null | sed 's/sha256 Fingerprint=//')"
+      fi
+      systemctl is-active --quiet vortexui-node && pass "vortexui-node service running" || fail_msg "vortexui-node not running (systemctl status vortexui-node)"
+      ss -tln 2>/dev/null | grep -q ':50051' && pass "agent listening on :50051" || fail_msg "nothing listening on :50051"
+      core="$(grep '^VORTEX_CORE=' /etc/vortexui/node.env 2>/dev/null | cut -d= -f2-)"
+      core="${core:-xray}"
+      cbin="$(grep '^VORTEX_CORE_BIN=' /etc/vortexui/node.env 2>/dev/null | cut -d= -f2-)"
+      cbin="${cbin:-/usr/local/bin/$core}"
+      [ -x "$cbin" ] && pass "core binary ($core)" || fail_msg "core binary missing: $cbin"
+      ;;
+    native)
+      [ -f "$PANEL_ENV" ] && pass "panel.env present" || fail_msg "missing $PANEL_ENV"
+      [ -x "$PANEL_BIN" ] && pass "vortex-panel binary" || fail_msg "vortex-panel missing"
+      cdir="$DIR/deploy/certs"
+      for f in ca.crt panel.crt panel.key node.crt node.key; do
+        [ -f "$cdir/$f" ] && pass "cert $f" || fail_msg "missing $cdir/$f"
+      done
+      if [ -f "$cdir/ca.crt" ]; then
+        echo "     ${d}Panel CA fingerprint:${n} $(openssl x509 -in "$cdir/ca.crt" -noout -fingerprint -sha256 2>/dev/null | sed 's/sha256 Fingerprint=//')"
+      fi
+      systemctl is-active --quiet vortexui-panel && pass "vortexui-panel running" || fail_msg "vortexui-panel not running"
+      systemctl is-active --quiet caddy && pass "caddy running" || warn_msg "caddy not running"
+      ss -tln 2>/dev/null | grep -q ':8080' && pass "panel API on :8080" || fail_msg "panel API not listening on :8080"
+      $DEPS ps 2>/dev/null | grep -qE 'postgres|db' && pass "postgres container up" || fail_msg "postgres container down ($DEPS ps)"
+      $DEPS ps 2>/dev/null | grep -q redis && pass "redis container up" || warn_msg "redis container down"
+      curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1 && pass "GET /health OK" || fail_msg "GET /health failed"
+      ;;
+    *)
+      $COMPOSE ps 2>/dev/null | grep -q panel && pass "compose stack up" || fail_msg "compose stack not running"
+      curl -fsS http://127.0.0.1:"$(env_get WEB_PORT)"/health >/dev/null 2>&1 && pass "GET /health OK" || warn_msg "GET /health failed (check WEB_PORT in .env)"
+      ;;
+  esac
+
+  echo
+  echo "  ${d}Summary:${n} ${g}$ok passed${n}, ${r}$fail failed${n}, ${y}$warn warnings${n}"
+  if [ "$fail" -gt 0 ]; then
+    echo "  ${y}Tip:${n} for node mTLS issues, compare CA fingerprints on panel and node."
+    echo "       Panel: ${b}vortexui node-bundle${n}  ·  Node: ${b}openssl x509 -in /etc/vortexui/certs/ca.crt -noout -fingerprint -sha256${n}"
+    return 1
+  fi
+  return 0
 }
 
 c_uninstall() {
@@ -268,6 +336,7 @@ vortexui — manage the VortexUI stack (${MODE} install)
   vortexui update              pull latest and rebuild
   vortexui admin ...           run 'panel admin' (e.g. admin create --username U --password P --sudo)
   vortexui node-bundle         print an mTLS enrollment bundle for a new node
+  vortexui doctor              check certs, services, ports, and connectivity
   vortexui settings            show URL / port / status
   vortexui uninstall           remove the stack (DELETES data)
 EOF
@@ -283,12 +352,12 @@ menu() {
     echo "   ${b}3)${n} Restart          ${b}4)${n} Status"
     echo "   ${b}5)${n} Logs             ${b}6)${n} Update"
     if [ "$MODE" = node ]; then
-      echo "   ${b}11)${n} ${r}Uninstall${n}      ${b}0)${n} Exit"
+      echo "   ${b}14)${n} Doctor           ${b}11)${n} ${r}Uninstall${n}      ${b}0)${n} Exit"
     else
       echo "   ${b}7)${n} Create admin     ${b}8)${n} Change web port"
       echo "   ${b}9)${n} Domain / SSL     ${b}10)${n} Settings / URL"
       echo "   ${b}12)${n} Switch core      ${b}13)${n} Node enroll bundle"
-      echo "   ${b}11)${n} ${r}Uninstall${n}       ${b}0)${n} Exit"
+      echo "   ${b}14)${n} Doctor           ${b}11)${n} ${r}Uninstall${n}       ${b}0)${n} Exit"
     fi
     echo
     read -r -p "  choose: " choice
@@ -306,6 +375,7 @@ menu() {
       11) c_uninstall; exit 0 ;;
       12) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_switch_core ;;
       13) [ "$MODE" = node ] && echo "  ${y}n/a on a node${n}" || c_node_bundle ;;
+      14) c_doctor ;;
       0) exit 0 ;;
       *) echo "  ${y}invalid choice${n}" ;;
     esac
@@ -326,6 +396,7 @@ case "$cmd" in
   settings)           show_settings ;;
   core)               c_switch_core ;;
   node-bundle)        c_node_bundle ;;
+  doctor)             c_doctor ;;
   uninstall)          c_uninstall ;;
   menu)               menu ;;
   -h|--help|help)     usage ;;

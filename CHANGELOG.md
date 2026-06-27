@@ -6,6 +6,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-06-17
+
+Node operations release: enrollment wizard, live connectivity diagnostics, and CLI
+health checks for panel and node installs.
+
+### Added
+- **Node enrollment wizard** — four-step UI to copy the mTLS bundle, install on a
+  remote server, register the node, and run an on-demand connectivity test.
+- **Node health diagnostics** — hub classifies disconnects as mTLS failure,
+  unreachable agent, or core down; badges and debug bundle on the Nodes page.
+- **Enrollment API** — `GET /api/nodes/enrollment`, `POST /api/nodes/:id/test`,
+  and `GET /api/nodes/:id/debug` for bundle delivery and support bundles.
+- **`vortexui doctor`** — CLI checks for certs, services, ports, and `/health`
+  on panel, node, and docker installs; suggested after `vortexui update`.
+
 ## [1.2.5] - 2026-06-17
 
 Reseller platform release: scoped allowlists, quota modes, wallet and sub-reseller
@@ -346,7 +361,8 @@ First stable release.
 
 ---
 
-[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.5...HEAD
+[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.6...HEAD
+[1.2.6]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.3...v1.2.5
 [1.2.3]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.0...v1.2.3
 [1.2.0]: https://github.com/iPmartNetwork/VortexUI/compare/v1.1.0...v1.2.0
