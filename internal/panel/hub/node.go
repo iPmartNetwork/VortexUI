@@ -20,6 +20,8 @@ type managedNode struct {
 	status    domain.NodeStatus
 	health    domain.NodeHealth
 	reachable bool // agent gRPC reachable; tracks the (re)connect edge
+	lastErr   string
+	diag      domain.NodeDiagnostics
 
 	cancel context.CancelFunc
 }
@@ -60,6 +62,7 @@ func (m *managedNode) ensureConn() (NodeConn, error) {
 
 	conn, err := m.hub.opts.Dialer(m.node)
 	if err != nil {
+		m.setDiagFromErr(err)
 		return nil, err
 	}
 	m.mu.Lock()
@@ -140,6 +143,7 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 	cancel()
 	if err != nil {
 		m.hub.log.Warn("health check failed", "node", m.node.Name, "err", err)
+		m.setDiagFromErr(err)
 		m.dropConn()
 		m.markUnhealthy(ctx)
 		return
@@ -155,6 +159,8 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 	if !nowHealthy {
 		m.status = domain.NodeError
 	}
+	m.diag = deriveDiag(m.status, h, "")
+	m.lastErr = ""
 	m.mu.Unlock()
 
 	if m.hub.opts.Nodes != nil {
@@ -190,6 +196,9 @@ func (m *managedNode) markUnhealthy(ctx context.Context) {
 	m.status = domain.NodeDisconnected
 	m.health.CoreRunning = false
 	m.reachable = false // next successful poll will re-trigger a resync
+	if m.diag.Code == "" {
+		m.diag = deriveDiag(m.status, m.health, m.lastErr)
+	}
 	m.mu.Unlock()
 	if wasHealthy {
 		m.triggerFailover(ctx)
@@ -212,4 +221,22 @@ func targetName(n *domain.Node) string {
 		return "<none available>"
 	}
 	return n.Name
+}
+
+func (m *managedNode) setDiagFromErr(err error) {
+	d := classifyDialError(err)
+	m.mu.Lock()
+	m.diag = d
+	m.lastErr = err.Error()
+	m.mu.Unlock()
+}
+
+func (m *managedNode) snapshot() (domain.NodeStatus, domain.NodeHealth, domain.NodeDiagnostics) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d := m.diag
+	if d.Code == "" {
+		d = deriveDiag(m.status, m.health, m.lastErr)
+	}
+	return m.status, m.health, d
 }

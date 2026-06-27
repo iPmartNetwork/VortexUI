@@ -17,6 +17,7 @@ import (
 	"github.com/vortexui/vortexui/internal/auth"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/logbuf"
+	"github.com/vortexui/vortexui/internal/panel/hub"
 	"github.com/vortexui/vortexui/internal/panel/port"
 	"github.com/vortexui/vortexui/internal/panel/service"
 	"github.com/vortexui/vortexui/internal/payment"
@@ -33,6 +34,8 @@ type Handlers struct {
 	SubSettings SubUpdateIntervalSource // optional; nil -> hardcoded 12h interval
 	Geo       *service.GeoService // optional; nil disables per-user geo recording
 	Nodes     *service.NodeService
+	Hub       *hub.Hub                   // optional; enriches node list with live diagnostics
+	Enrollment *service.EnrollmentService // optional; node enrollment bundle API
 	Inbounds  *service.InboundService
 	Outbounds *service.OutboundService
 	Routing   *service.RoutingService

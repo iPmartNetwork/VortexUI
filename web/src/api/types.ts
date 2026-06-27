@@ -35,6 +35,20 @@ export interface NodeHealth {
   connections: number;
 }
 
+export type NodeDiagCode = "ok" | "unreachable" | "mtls_fail" | "core_down" | "unknown";
+
+export interface NodeDiagnostics {
+  code: NodeDiagCode;
+  message?: string;
+  checked_at?: string | null;
+}
+
+export interface EnrollmentBundle {
+  bundle: string;
+  ca_fingerprint: string;
+  cert_dir: string;
+}
+
 export interface Node {
   id: string;
   name: string;
@@ -47,6 +61,7 @@ export interface Node {
   geo_block?: string[];
   last_seen: string | null;
   health: NodeHealth;
+  diagnostics?: NodeDiagnostics;
   core_version?: string;
   agent_version?: string;
   created_at: string;

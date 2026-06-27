@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ensureArray } from "@/lib/utils";
 import { api } from "./client";
-import type { CreateUserInput, ListUsersResponse, Node, User } from "./types";
+import type { CreateUserInput, EnrollmentBundle, ListUsersResponse, Node, NodeDiagnostics, User } from "./types";
 
 // --- panel version ---
 
@@ -171,6 +171,26 @@ export function useDeleteNode() {
       qc.invalidateQueries({ queryKey: ["nodes"] });
       qc.invalidateQueries({ queryKey: ["inbounds-all"] });
     },
+  });
+}
+
+export function useNodeEnrollment() {
+  return useQuery({
+    queryKey: ["nodes", "enrollment"],
+    queryFn: () => api<EnrollmentBundle>("/api/nodes/enrollment"),
+    enabled: false,
+  });
+}
+
+export function useTestNodeConnection() {
+  return useMutation({
+    mutationFn: (id: string) => api<{ diagnostics: NodeDiagnostics }>(`/api/nodes/${id}/test`, { method: "POST" }),
+  });
+}
+
+export function useNodeDebugBundle() {
+  return useMutation({
+    mutationFn: (id: string) => api<{ debug_text: string }>(`/api/nodes/${id}/debug`),
   });
 }
 

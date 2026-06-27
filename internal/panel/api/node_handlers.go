@@ -63,6 +63,9 @@ func (h *Handlers) ListNodes(c echo.Context) error {
 		}
 		nodes = filtered
 	}
+	for _, n := range nodes {
+		enrichNode(n, h)
+	}
 	return c.JSON(http.StatusOK, echo.Map{"nodes": nodes})
 }
 
@@ -79,6 +82,7 @@ func (h *Handlers) GetNode(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
 	}
+	enrichNode(n, h)
 	return c.JSON(http.StatusOK, n)
 }
 
@@ -153,6 +157,7 @@ func (h *Handlers) GetNodeStatus(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, "node not found")
 	}
+	enrichNode(n, h)
 	return c.JSON(http.StatusOK, echo.Map{
 		"id":            n.ID,
 		"name":          n.Name,
