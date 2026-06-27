@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/auth/auth";
 import { Badge, Button, Card, Input, PageHeader } from "@/components/ui";
 import { WalletTopUpModal } from "@/components/WalletTopUpModal";
+import { WalletRechargeSection } from "@/components/WalletRechargeSection";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { formatBytes } from "@/lib/utils";
@@ -155,6 +156,8 @@ export function ResellerAccount() {
           </Card>
         )}
       </section>
+
+      <WalletRechargeSection />
 
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-lg font-semibold"><Users size={18} /> {t("reseller.account.subResellers")}</h2>

@@ -57,6 +57,11 @@ type Panel struct {
 	// resolve subscription-fetch IPs to countries for the "Traffic by Country"
 	// analytics. Empty = feature disabled (degrades gracefully).
 	GeoIPDB string
+
+	// Optional payment gateways for plan sales and reseller wallet top-ups.
+	ZarinPalMerchantID   string
+	NowPaymentsAPIKey    string
+	NowPaymentsIPNSecret string
 }
 
 // Node holds node-agent configuration. The agent is a gRPC *server* (the panel
@@ -128,6 +133,9 @@ func LoadPanel() (*Panel, error) {
 		SingboxV2RayAPI:  envBool("VORTEX_SINGBOX_V2RAY_API", true),
 		ShareAutoLimit:   envBool("VORTEX_SHARE_AUTOLIMIT", false),
 		GeoIPDB:          env("VORTEX_GEOIP_DB", ""),
+		ZarinPalMerchantID:   os.Getenv("VORTEX_ZARINPAL_MERCHANT_ID"),
+		NowPaymentsAPIKey:    os.Getenv("VORTEX_NOWPAYMENTS_API_KEY"),
+		NowPaymentsIPNSecret: os.Getenv("VORTEX_NOWPAYMENTS_IPN_SECRET"),
 	}
 	if c.CoreBin == "" {
 		c.CoreBin = c.Core // resolve from PATH by core name

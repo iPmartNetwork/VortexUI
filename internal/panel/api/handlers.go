@@ -58,6 +58,7 @@ type Handlers struct {
 	Throttle  *LoginThrottle // optional; nil disables login brute-force protection
 	Events    EventStream    // optional; nil disables the SSE live-events endpoint
 	Issuer    *auth.Issuer   // JWT issuer for impersonation flows
+	WalletBilling *service.WalletBillingService // optional; nil disables wallet billing
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a

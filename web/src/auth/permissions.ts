@@ -61,6 +61,7 @@ export const ROUTE_PERMISSIONS: Record<string, readonly string[]> = {
   "/analytics": ["system:read"],
   "/users": ["user:read"],
   "/plans": ["user:read"],
+  "/wallet-billing": ["admin:manage"],
   "/orders": ["user:read"],
   "/family-groups": ["user:write"],
   "/smart-quota": ["admin:manage"],

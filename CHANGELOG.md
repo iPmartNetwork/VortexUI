@@ -27,6 +27,9 @@ health checks for panel and node installs.
 - **Reseller wallet UI (minimal)** — sudo can top up reseller wallets from Admins;
   resellers export wallet ledger as CSV (statement); parent resellers can top up
   sub-reseller wallets; `GET /api/account/wallet/export`.
+- **Reseller wallet billing** — wallet packages (multi-currency); ZarinPal and
+  NowPayments online top-up; card-to-card and crypto with TX ID / screenshot;
+  sudo approval queue; billing settings for card and crypto addresses.
 
 ### Fixed
 - **`vortexui doctor`** — health check now hits `/api/health` (was `/health`);

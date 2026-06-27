@@ -86,6 +86,7 @@ function buildNavSections(sudo: boolean): NavSection[] {
         { to: "/family-groups", key: "nav.familyGroups", icon: Users2 },
         { to: "/plans", key: "nav.plans", icon: Network },
         { to: "/orders", key: "nav.orders", icon: History },
+        { to: "/wallet-billing", key: "nav.walletBilling", icon: Wallet },
         { to: "/smart-quota", key: "nav.smartQuota", icon: Gauge },
         { to: "/quota-notifications", key: "nav.quotaNotify", icon: Bell },
         { to: "/reseller-quota-alerts", key: "nav.resellerQuotaAlerts", icon: Bell },
