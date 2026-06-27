@@ -25,6 +25,11 @@ health checks for panel and node installs.
   automatic CA comparison on connectivity test; Telegram/webhook alert after 5+ minutes
   disconnected; migration count check in `vortexui doctor` (native panel).
 
+### Fixed
+- **`vortexui doctor`** — health check now hits `/api/health` (was `/health`);
+  migration check warns on extra DB records instead of false-failing when
+  `goose_db_version` count exceeds embedded SQL files.
+
 ## [1.2.5] - 2026-06-17
 
 Reseller platform release: scoped allowlists, quota modes, wallet and sub-reseller
