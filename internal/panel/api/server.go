@@ -40,6 +40,7 @@ type Deps struct {
 	IPLimit    *IPLimitHandlers
 	SubSettings *SubSettingsHandlers
 	Monitor    *MonitorHandlers
+	WalletBilling *WalletBillingHandlers
 	Issuer     *auth.Issuer
 	PanelAuth  Authenticator
 	Auth       *service.AuthService
@@ -194,6 +195,10 @@ func NewRouter(d Deps) *echo.Echo {
 	account.GET("/backup/users", d.Handlers.ExportAccountUsersBackup, RequirePermission(d.Auth, domain.PermUserRead))
 	account.GET("/wallet", d.Handlers.GetAccountWallet)
 	account.GET("/wallet/export", d.Handlers.ExportAccountWallet)
+	account.GET("/wallet/packages", d.Handlers.ListAccountWalletPackages)
+	account.GET("/wallet/payment-info", d.Handlers.GetAccountPaymentInfo)
+	account.GET("/wallet/deposits", d.Handlers.ListAccountWalletDeposits)
+	account.POST("/wallet/deposits", d.Handlers.InitAccountWalletDeposit)
 	account.GET("/sub-admins", d.Handlers.ListSubAdmins)
 	account.POST("/sub-admins", d.Handlers.CreateSubAdmin)
 	account.GET("/branding", d.Handlers.GetAccountBranding)
@@ -221,10 +226,25 @@ func NewRouter(d Deps) *echo.Echo {
 	orders := authed.Group("/orders")
 	orders.GET("", d.Handlers.ListOrders, RequirePermission(d.Auth, domain.PermUserRead))
 
+	// Wallet billing (sudo)
+	if d.WalletBilling != nil {
+		billing := authed.Group("/billing", RequirePermission(d.Auth, domain.PermAdminManage))
+		billing.GET("/settings", d.WalletBilling.GetBillingSettings)
+		billing.PUT("/settings", d.WalletBilling.UpdateBillingSettings)
+		billing.GET("/deposits", d.WalletBilling.ListWalletDeposits)
+		billing.POST("/deposits/:id/review", d.WalletBilling.ReviewWalletDeposit)
+		wp := billing.Group("/wallet-packages")
+		wp.GET("", d.WalletBilling.ListWalletPackages)
+		wp.POST("", d.WalletBilling.CreateWalletPackage)
+		wp.PUT("/:id", d.WalletBilling.UpdateWalletPackage)
+		wp.DELETE("/:id", d.WalletBilling.DeleteWalletPackage)
+	}
+
 	// Public payment endpoints (no auth — user self-purchase)
 	e.GET("/api/shop/plans", d.Handlers.PublicPlans)
 	e.POST("/api/shop/purchase", d.Handlers.InitPurchase)
 	e.GET("/api/payment/callback", d.Handlers.PaymentCallback)
+	e.GET("/api/payment/wallet/callback", d.Handlers.WalletDepositCallback)
 	e.POST("/api/payment/ipn/nowpayments", d.Handlers.NowPaymentsIPN)
 	e.GET("/api/portal/branding", d.Handlers.PublicPortalBranding)
 

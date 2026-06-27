@@ -80,6 +80,9 @@ func (s *Store) Tickets() *TicketRepo { return &TicketRepo{pool: s.pool} }
 // Plans returns the plan/order repository.
 func (s *Store) Plans() *PlanRepo { return &PlanRepo{pool: s.pool} }
 
+// WalletBilling returns the wallet billing repository.
+func (s *Store) WalletBilling() *WalletBillingRepo { return &WalletBillingRepo{pool: s.pool} }
+
 // Analytics returns the analytics repository.
 func (s *Store) Analytics() *AnalyticsRepo { return &AnalyticsRepo{pool: s.pool} }
 

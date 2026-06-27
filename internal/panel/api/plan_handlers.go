@@ -278,7 +278,7 @@ type PlanServiceInterface interface {
 
 // NowPaymentsIPN handles async IPN webhook from NowPayments.
 func (h *Handlers) NowPaymentsIPN(c echo.Context) error {
-	if h.Plans == nil {
+	if h.Plans == nil && h.WalletBilling == nil {
 		return c.NoContent(http.StatusOK)
 	}
 	// Read and parse IPN body
@@ -290,8 +290,16 @@ func (h *Handlers) NowPaymentsIPN(c echo.Context) error {
 		return c.NoContent(http.StatusOK)
 	}
 	if payload.PaymentStatus == "finished" || payload.PaymentStatus == "confirmed" {
-		// Find order by gateway_id and fulfill
-		// This is best-effort — if the redirect already fulfilled it, this is a no-op
+		// Wallet deposit via NowPayments
+		if h.WalletBilling != nil {
+			if err := h.WalletBilling.CompleteDepositByGatewayID(c.Request().Context(), payload.PaymentID); err == nil {
+				return c.NoContent(http.StatusOK)
+			}
+		}
+		// Plan order via NowPayments
+		if h.Plans == nil {
+			return c.NoContent(http.StatusOK)
+		}
 		orders, _ := h.Plans.ListOrders(c.Request().Context(), nil)
 		for _, o := range orders {
 			if o.GatewayID == payload.PaymentID && o.Status == domain.OrderPending {

@@ -18,6 +18,7 @@ import { Audit } from "@/pages/Audit";
 import { Logs } from "@/pages/Logs";
 import { Settings } from "@/pages/Settings";
 import { Plans } from "@/pages/Plans";
+import { WalletBilling } from "@/pages/WalletBilling";
 import { Orders } from "@/pages/Orders";
 import { Evasion } from "@/pages/Evasion";
 import { Monitor } from "@/pages/Monitor";
@@ -76,6 +77,7 @@ export function App() {
         <Route path="/balancers" element={<Balancers />} />
         <Route path="/admins" element={<Admins />} />
         <Route path="/plans" element={<Plans />} />
+        <Route path="/wallet-billing" element={<WalletBilling />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/evasion" element={<Evasion />} />
         <Route path="/monitor" element={<Monitor />} />

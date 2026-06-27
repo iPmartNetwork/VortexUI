@@ -25,6 +25,7 @@ import (
 	"github.com/vortexui/vortexui/internal/panel/api"
 	"github.com/vortexui/vortexui/internal/panel/hub"
 	"github.com/vortexui/vortexui/internal/panel/service"
+	"github.com/vortexui/vortexui/internal/payment"
 	"github.com/vortexui/vortexui/internal/platform/postgres"
 	"github.com/vortexui/vortexui/internal/platform/redis"
 	"github.com/vortexui/vortexui/internal/stats"
@@ -311,6 +312,18 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	panelAuth := &auth.PanelAuth{JWT: issuer, Tokens: store.APITokens()}
 	enrollSvc := &service.EnrollmentService{CAPath: cfg.TLSCA}
 
+	var zarinPal *payment.ZarinPal
+	if cfg.ZarinPalMerchantID != "" {
+		zarinPal = payment.NewZarinPal(cfg.ZarinPalMerchantID)
+		log.Info("ZarinPal gateway enabled")
+	}
+	var nowPayments *payment.NowPayments
+	if cfg.NowPaymentsAPIKey != "" {
+		nowPayments = payment.NewNowPayments(cfg.NowPaymentsAPIKey)
+		log.Info("NowPayments gateway enabled")
+	}
+	walletBillingSvc := service.NewWalletBillingService(store.WalletBilling(), adminSvc, zarinPal, nowPayments)
+
 	router := api.NewRouter(api.Deps{
 		Version: version,
 		Handlers: &api.Handlers{
@@ -320,6 +333,9 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Outbounds: outboundSvc, Routing: routingSvc, Balancers: balancerSvc,
 			Overview: overviewSvc, Backup: backupSvc,
 			Plans:    planSvc,
+			ZarinPal: zarinPal,
+			NowPayments: nowPayments,
+			WalletBilling: walletBillingSvc,
 			Online: online, Logs: logBuf, Audit: store.Audit(),
 			Repo: users, Traffic: traffic,
 			NodeRepo: nodes, WireGuard: wgSvc,
@@ -354,6 +370,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		IPLimit:     &api.IPLimitHandlers{IPLimit: ipLimitSvc},
 		SubSettings: &api.SubSettingsHandlers{Svc: subSettingsSvc},
 		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Users: users, Monitor: monitorAdapter{store.Monitor()}},
+		WalletBilling: &api.WalletBillingHandlers{Svc: walletBillingSvc},
 		Issuer:      issuer,
 		PanelAuth:   panelAuth,
 		Auth:        authSvc,
