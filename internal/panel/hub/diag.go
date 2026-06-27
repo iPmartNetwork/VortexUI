@@ -9,9 +9,19 @@ import (
 )
 
 func classifyDialError(err error) domain.NodeDiagnostics {
+	return buildDiagnostics(err, false)
+}
+
+func buildDiagnostics(err error, networkOK bool) domain.NodeDiagnostics {
 	now := time.Now()
 	if err == nil {
-		return domain.NodeDiagnostics{Code: domain.NodeDiagOK, Message: "connected", CheckedAt: &now}
+		return domain.NodeDiagnostics{
+			Code:             domain.NodeDiagOK,
+			Message:          "connected",
+			NetworkReachable: networkOK,
+			CAMatch:          true,
+			CheckedAt:        &now,
+		}
 	}
 	msg := err.Error()
 	lower := strings.ToLower(msg)
@@ -22,9 +32,11 @@ func classifyDialError(err error) domain.NodeDiagnostics {
 		strings.Contains(lower, "unknown authority"),
 		strings.Contains(lower, "tls"):
 		return domain.NodeDiagnostics{
-			Code:      domain.NodeDiagMTLS,
-			Message:   "mTLS handshake failed — node certs likely from a different panel install",
-			CheckedAt: &now,
+			Code:             domain.NodeDiagMTLS,
+			Message:          "mTLS handshake failed — node certs likely from a different panel install",
+			NetworkReachable: networkOK,
+			CAMatch:          false,
+			CheckedAt:        &now,
 		}
 	case strings.Contains(lower, "connection refused"),
 		strings.Contains(lower, "no route to host"),
@@ -33,29 +45,51 @@ func classifyDialError(err error) domain.NodeDiagnostics {
 		strings.Contains(lower, "timeout"),
 		strings.Contains(lower, "deadline exceeded"):
 		return domain.NodeDiagnostics{
-			Code:      domain.NodeDiagUnreachable,
-			Message:   msg,
-			CheckedAt: &now,
+			Code:             domain.NodeDiagUnreachable,
+			Message:          msg,
+			NetworkReachable: networkOK,
+			CAMatch:          false,
+			CheckedAt:        &now,
 		}
 	default:
-		return domain.NodeDiagnostics{Code: domain.NodeDiagUnknown, Message: msg, CheckedAt: &now}
+		return domain.NodeDiagnostics{
+			Code:             domain.NodeDiagUnknown,
+			Message:          msg,
+			NetworkReachable: networkOK,
+			CAMatch:          false,
+			CheckedAt:        &now,
+		}
 	}
 }
 
-func deriveDiag(status domain.NodeStatus, health domain.NodeHealth, lastErr string) domain.NodeDiagnostics {
+func deriveDiag(status domain.NodeStatus, health domain.NodeHealth, lastErr string, networkOK bool) domain.NodeDiagnostics {
 	now := time.Now()
 	if status == domain.NodeConnected && health.CoreRunning {
-		return domain.NodeDiagnostics{Code: domain.NodeDiagOK, Message: "connected", CheckedAt: &now}
+		return domain.NodeDiagnostics{
+			Code:             domain.NodeDiagOK,
+			Message:          "connected",
+			NetworkReachable: true,
+			CAMatch:          true,
+			CheckedAt:        &now,
+		}
 	}
 	if status == domain.NodeConnected && !health.CoreRunning {
 		return domain.NodeDiagnostics{
-			Code:      domain.NodeDiagCoreDown,
-			Message:   "agent reachable but proxy core is not running",
-			CheckedAt: &now,
+			Code:             domain.NodeDiagCoreDown,
+			Message:          "agent reachable but proxy core is not running",
+			NetworkReachable: true,
+			CAMatch:          true,
+			CheckedAt:        &now,
 		}
 	}
 	if lastErr != "" {
-		return classifyDialError(errors.New(lastErr))
+		return buildDiagnostics(errors.New(lastErr), networkOK)
 	}
-	return domain.NodeDiagnostics{Code: domain.NodeDiagUnreachable, Message: "not connected", CheckedAt: &now}
+	return domain.NodeDiagnostics{
+		Code:             domain.NodeDiagUnreachable,
+		Message:          "not connected",
+		NetworkReachable: networkOK,
+		CAMatch:          false,
+		CheckedAt:        &now,
+	}
 }

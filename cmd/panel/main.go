@@ -152,6 +152,20 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	// Event bus + optional outbound notifiers (webhook, Telegram). Subscribers
 	// start first so no event is missed once the loops below begin publishing.
 	bus := events.New(log)
+	h.SetOnDisconnectAlert(func(_ context.Context, node *domain.Node, diag domain.NodeDiagnostics, since time.Duration) {
+		bus.Publish(events.Event{
+			Type:     events.NodeDisconnectAlert,
+			NodeID:   node.ID.String(),
+			NodeName: node.Name,
+			Message:  diag.Message,
+			Data: map[string]any{
+				"diagnostics":   string(diag.Code),
+				"since_minutes": since.Minutes(),
+				"network_ok":    diag.NetworkReachable,
+				"ca_match":      diag.CAMatch,
+			},
+		})
+	})
 	if cfg.WebhookURL != "" {
 		wh := notify.NewWebhook(cfg.WebhookURL, cfg.WebhookSecret, log)
 		go wh.Run(ctx, bus.Subscribe(256))

@@ -38,10 +38,21 @@ const (
 
 // NodeDiagnostics is the live connectivity snapshot surfaced by the hub/API.
 type NodeDiagnostics struct {
-	Code      NodeDiagCode `json:"code"`
-	Message   string       `json:"message,omitempty"`
-	CheckedAt *time.Time   `json:"checked_at,omitempty"`
+	Code             NodeDiagCode `json:"code"`
+	Message          string       `json:"message,omitempty"`
+	NetworkReachable bool         `json:"network_reachable,omitempty"`
+	CAMatch          bool         `json:"ca_match,omitempty"`
+	CheckedAt        *time.Time   `json:"checked_at,omitempty"`
 }
+
+// NodeEnrollmentPhase tracks remote node onboarding progress in the UI.
+type NodeEnrollmentPhase string
+
+const (
+	NodePhasePending   NodeEnrollmentPhase = "pending"
+	NodePhaseConnected NodeEnrollmentPhase = "connected"
+	NodePhaseSynced    NodeEnrollmentPhase = "synced"
+)
 
 // Node is a remote server running a CoreDriver, managed over gRPC + mTLS.
 type Node struct {
@@ -65,8 +76,9 @@ type Node struct {
 	CoreVer   string     `json:"core_version,omitempty"`
 	AgentVer  string     `json:"agent_version,omitempty"`
 	// Diagnostics explains disconnects (mTLS mismatch, unreachable agent, core down).
-	Diagnostics *NodeDiagnostics `json:"diagnostics,omitempty"`
-	CreatedAt time.Time          `json:"created_at"`
+	Diagnostics     *NodeDiagnostics     `json:"diagnostics,omitempty"`
+	EnrollmentPhase NodeEnrollmentPhase  `json:"enrollment_phase,omitempty"`
+	CreatedAt       time.Time            `json:"created_at"`
 }
 
 // NodeHealth is the resource snapshot pushed by an agent heartbeat.

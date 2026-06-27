@@ -27,6 +27,7 @@ const (
 	UserExpiryWarning Type = "user.expiry_warning"
 	NodeDown          Type = "node.down" // became unhealthy/unreachable
 	NodeUp            Type = "node.up"   // (re)connected
+	NodeDisconnectAlert Type = "node.disconnect_alert" // unreachable > 5 min
 	AdminQuotaWarning Type = "admin.quota_warning"
 )
 

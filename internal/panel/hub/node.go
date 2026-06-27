@@ -21,7 +21,10 @@ type managedNode struct {
 	health    domain.NodeHealth
 	reachable bool // agent gRPC reachable; tracks the (re)connect edge
 	lastErr   string
+	lastNetOK bool
 	diag      domain.NodeDiagnostics
+	disconnectedAt      time.Time
+	disconnectAlertSent bool
 
 	cancel context.CancelFunc
 }
@@ -159,8 +162,11 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 	if !nowHealthy {
 		m.status = domain.NodeError
 	}
-	m.diag = deriveDiag(m.status, h, "")
+	m.diag = deriveDiag(m.status, h, "", true)
 	m.lastErr = ""
+	m.lastNetOK = true
+	m.disconnectedAt = time.Time{}
+	m.disconnectAlertSent = false
 	m.mu.Unlock()
 
 	if m.hub.opts.Nodes != nil {
@@ -197,8 +203,9 @@ func (m *managedNode) markUnhealthy(ctx context.Context) {
 	m.health.CoreRunning = false
 	m.reachable = false // next successful poll will re-trigger a resync
 	if m.diag.Code == "" {
-		m.diag = deriveDiag(m.status, m.health, m.lastErr)
+		m.diag = deriveDiag(m.status, m.health, m.lastErr, m.lastNetOK)
 	}
+	m.maybeAlertDisconnect(ctx)
 	m.mu.Unlock()
 	if wasHealthy {
 		m.triggerFailover(ctx)
@@ -224,10 +231,15 @@ func targetName(n *domain.Node) string {
 }
 
 func (m *managedNode) setDiagFromErr(err error) {
-	d := classifyDialError(err)
+	netOK := probeNetwork(context.Background(), m.node.Address)
+	d := buildDiagnostics(err, netOK)
 	m.mu.Lock()
 	m.diag = d
 	m.lastErr = err.Error()
+	m.lastNetOK = netOK
+	if m.disconnectedAt.IsZero() {
+		m.disconnectedAt = time.Now()
+	}
 	m.mu.Unlock()
 }
 
@@ -236,7 +248,24 @@ func (m *managedNode) snapshot() (domain.NodeStatus, domain.NodeHealth, domain.N
 	defer m.mu.Unlock()
 	d := m.diag
 	if d.Code == "" {
-		d = deriveDiag(m.status, m.health, m.lastErr)
+		d = deriveDiag(m.status, m.health, m.lastErr, m.lastNetOK)
 	}
 	return m.status, m.health, d
+}
+
+func (m *managedNode) maybeAlertDisconnect(ctx context.Context) {
+	if m.hub.disconnectAlert() == nil {
+		return
+	}
+	if m.disconnectAlertSent || m.disconnectedAt.IsZero() {
+		return
+	}
+	if time.Since(m.disconnectedAt) < 5*time.Minute {
+		return
+	}
+	m.disconnectAlertSent = true
+	node := m.node
+	diag := m.diag
+	since := time.Since(m.disconnectedAt)
+	go m.hub.disconnectAlert()(ctx, node, diag, since)
 }

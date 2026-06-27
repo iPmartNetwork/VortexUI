@@ -20,6 +20,10 @@ health checks for panel and node installs.
   and `GET /api/nodes/:id/debug` for bundle delivery and support bundles.
 - **`vortexui doctor`** — CLI checks for certs, services, ports, and `/health`
   on panel, node, and docker installs; suggested after `vortexui update`.
+- **Enrollment polish** — QR code alongside bundle copy; enrollment phases
+  (`pending` / `connected` / `synced`); TCP vs mTLS badges (`Network OK`, `CA match`);
+  automatic CA comparison on connectivity test; Telegram/webhook alert after 5+ minutes
+  disconnected; migration count check in `vortexui doctor` (native panel).
 
 ## [1.2.5] - 2026-06-17
 

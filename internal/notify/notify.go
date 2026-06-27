@@ -36,6 +36,13 @@ func describe(e events.Event) string {
 		return fmt.Sprintf("🔴 Node down: %s", e.NodeName)
 	case events.NodeUp:
 		return fmt.Sprintf("🟢 Node up: %s", e.NodeName)
+	case events.NodeDisconnectAlert:
+		mins, _ := e.Data["since_minutes"].(float64)
+		code, _ := e.Data["diagnostics"].(string)
+		if e.Message != "" {
+			return fmt.Sprintf("🔴 Node disconnected >%.0fm: %s — %s (%s)", mins, e.NodeName, e.Message, code)
+		}
+		return fmt.Sprintf("🔴 Node disconnected >%.0fm: %s (%s)", mins, e.NodeName, code)
 	case events.AdminQuotaWarning:
 		admin, _ := e.Data["admin"].(string)
 		metric, _ := e.Data["metric"].(string)

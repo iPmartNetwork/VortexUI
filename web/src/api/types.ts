@@ -40,8 +40,12 @@ export type NodeDiagCode = "ok" | "unreachable" | "mtls_fail" | "core_down" | "u
 export interface NodeDiagnostics {
   code: NodeDiagCode;
   message?: string;
+  network_reachable?: boolean;
+  ca_match?: boolean;
   checked_at?: string | null;
 }
+
+export type NodeEnrollmentPhase = "pending" | "connected" | "synced";
 
 export interface EnrollmentBundle {
   bundle: string;
@@ -62,6 +66,7 @@ export interface Node {
   last_seen: string | null;
   health: NodeHealth;
   diagnostics?: NodeDiagnostics;
+  enrollment_phase?: NodeEnrollmentPhase;
   core_version?: string;
   agent_version?: string;
   created_at: string;

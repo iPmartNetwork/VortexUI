@@ -4,7 +4,7 @@ import { useDeleteNode, useNodeDebugBundle, useNodes } from "@/api/hooks";
 import { useRestartCore, useStopCore, useUpdateGeo } from "@/api/policy-hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button, Card, PageHeader } from "@/components/ui";
-import { CreateNodeModal, diagColor, diagLabel } from "@/components/CreateNodeModal";
+import { CreateNodeModal, diagColor, diagLabel, phaseLabel } from "@/components/CreateNodeModal";
 import { EditNodeModal } from "@/components/EditNodeModal";
 import { NodeInboundsModal } from "@/components/NodeInboundsModal";
 import { NodeLogsModal } from "@/components/NodeLogsModal";
@@ -109,12 +109,20 @@ function NodeCard({
         {/* Version footer */}
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px]">
           <Badge color={online ? "running" : "down"}>{n.core}</Badge>
+          {n.enrollment_phase && n.enrollment_phase !== "synced" && (
+            <Badge color={n.enrollment_phase === "connected" ? "on_hold" : "muted"}>
+              {phaseLabel(n.enrollment_phase)}
+            </Badge>
+          )}
           {!online && n.diagnostics && n.diagnostics.code !== "ok" && (
             <span title={n.diagnostics.message}>
               <Badge color={diagColor(n.diagnostics.code)}>
                 {diagLabel(n.diagnostics.code)}
               </Badge>
             </span>
+          )}
+          {!online && n.diagnostics?.network_reachable && n.diagnostics.code === "mtls_fail" && (
+            <Badge color="running">Network OK</Badge>
           )}
           {n.core_version && <span className="rounded-md bg-surface-2/60 px-2 py-0.5 font-mono text-fg-muted">{n.core_version}</span>}
           {n.agent_version && <span className="text-fg-subtle">agent {n.agent_version}</span>}
