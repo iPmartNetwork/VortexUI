@@ -12,7 +12,7 @@ interface LiveEvent {
 
 const EVENT_TYPES = [
   "user.created", "user.deleted", "user.limited", "user.expired",
-  "user.reset", "user.ip_limit", "node.down", "node.up",
+  "user.reset", "user.ip_limit", "node.down", "node.up", "node.disconnect_alert",
 ];
 
 // useLiveEvents opens an SSE connection to the panel's event stream and reacts
@@ -43,6 +43,11 @@ export function useLiveEvents() {
           qc.invalidateQueries({ queryKey: ["nodes"] });
           qc.invalidateQueries({ queryKey: ["overview"] });
           toast.success(`Node up: ${e.node_name ?? "?"}`);
+          break;
+        case "node.disconnect_alert":
+          qc.invalidateQueries({ queryKey: ["nodes"] });
+          qc.invalidateQueries({ queryKey: ["overview"] });
+          toast.error(`Node disconnected >5m: ${e.node_name ?? "?"}`);
           break;
         case "user.ip_limit":
           qc.invalidateQueries({ queryKey: ["users"] });

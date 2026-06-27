@@ -284,6 +284,15 @@ c_doctor() {
       $DEPS ps 2>/dev/null | grep -qE 'postgres|db' && pass "postgres container up" || fail_msg "postgres container down ($DEPS ps)"
       $DEPS ps 2>/dev/null | grep -q redis && pass "redis container up" || warn_msg "redis container down"
       curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1 && pass "GET /health OK" || fail_msg "GET /health failed"
+      mig_files=$(find "$DIR/migrations" -maxdepth 1 -name '*.sql' 2>/dev/null | wc -l | tr -d ' ')
+      mig_db=$($DEPS exec -T db psql -U vortex -d vortex -tAc "SELECT COUNT(*) FROM goose_db_version" 2>/dev/null | tr -d ' ')
+      if [ -n "$mig_files" ] && [ -n "$mig_db" ] && [ "$mig_files" = "$mig_db" ]; then
+        pass "DB migrations applied ($mig_db)"
+      elif [ -n "$mig_db" ]; then
+        fail_msg "migration mismatch (db=$mig_db, embedded=$mig_files) — restart panel to apply"
+      else
+        warn_msg "could not verify DB migrations"
+      fi
       ;;
     *)
       $COMPOSE ps 2>/dev/null | grep -q panel && pass "compose stack up" || fail_msg "compose stack not running"

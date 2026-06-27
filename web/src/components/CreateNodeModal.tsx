@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, Loader2 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useCreateNode, useNodeEnrollment, useTestNodeConnection } from "@/api/hooks";
-import type { NodeDiagnostics } from "@/api/types";
+import type { NodeDiagnostics, NodeEnrollmentPhase } from "@/api/types";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 import { useToast } from "./toast";
@@ -28,6 +29,14 @@ function diagColor(code: NodeDiagnostics["code"]): string {
   }
 }
 
+function phaseLabel(p: NodeEnrollmentPhase): string {
+  switch (p) {
+    case "synced": return "Synced";
+    case "connected": return "Connected";
+    default: return "Pending";
+  }
+}
+
 export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const create = useCreateNode();
   const enroll = useNodeEnrollment();
@@ -41,6 +50,9 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
   const [error, setError] = useState("");
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [diag, setDiag] = useState<NodeDiagnostics | null>(null);
+  const [phase, setPhase] = useState<NodeEnrollmentPhase>("pending");
+  const [panelCA, setPanelCA] = useState("");
+  const [caMatch, setCaMatch] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -56,6 +68,9 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
     setError("");
     setCreatedId(null);
     setDiag(null);
+    setPhase("pending");
+    setPanelCA("");
+    setCaMatch(null);
     setCopied(false);
     onClose();
   }
@@ -86,15 +101,20 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
     const nodeId = id ?? createdId;
     if (!nodeId) return;
     setDiag(null);
+    setCaMatch(null);
     try {
       const res = await test.mutateAsync(nodeId);
       setDiag(res.diagnostics);
+      setPanelCA(res.panel_ca_fingerprint ?? enroll.data?.ca_fingerprint ?? "");
+      setCaMatch(res.ca_match ?? res.diagnostics.ca_match ?? null);
+      if (res.enrollment_phase) setPhase(res.enrollment_phase);
     } catch {
       setDiag({ code: "unknown", message: "Test request failed" });
     }
   }
 
   const bundle = enroll.data;
+  const bundleLarge = (bundle?.bundle.length ?? 0) > 2400;
 
   return (
     <Modal open={open} onClose={close} title="Add node" className="max-w-lg">
@@ -114,7 +134,7 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
       {step === 0 && (
         <div className="space-y-3">
           <p className="text-sm text-fg-muted">
-            Copy the enrollment bundle. You will paste it on the new server during install (option 2).
+            Copy the enrollment bundle or scan the QR on the new server during install (option 2).
           </p>
           {enroll.isFetching && (
             <div className="flex items-center gap-2 text-sm text-fg-muted">
@@ -127,6 +147,14 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
               <div className="rounded-xl bg-surface-2/50 p-3">
                 <div className="text-[10px] font-semibold uppercase text-fg-subtle">Panel CA fingerprint</div>
                 <div className="mt-1 break-all font-mono text-[11px] text-fg" dir="ltr">{bundle.ca_fingerprint}</div>
+              </div>
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-surface-2/40 p-4">
+                <QRCodeSVG value={bundle.bundle} size={bundleLarge ? 200 : 160} level="L" />
+                {bundleLarge && (
+                  <p className="text-center text-[10px] text-fg-subtle">
+                    Large bundle — prefer Copy if the QR does not scan.
+                  </p>
+                )}
               </div>
               <Button type="button" variant="outline" className="w-full" onClick={copyBundle}>
                 {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -149,9 +177,9 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
           <ol className="list-decimal space-y-2 ps-4">
             <li>SSH into the new server and run the VortexUI installer.</li>
             <li>Choose <strong>Node</strong> when prompted.</li>
-            <li>Paste the enrollment bundle when asked (option 2).</li>
+            <li>Paste the bundle or scan the QR when asked (option 2).</li>
             <li>Ensure port <span className="font-mono">50051</span> is open to the panel.</li>
-            <li>On the node, verify CA fingerprint: <span className="font-mono text-[11px]">openssl x509 -in /etc/vortexui/certs/ca.crt -noout -fingerprint -sha256</span></li>
+            <li>On the node, verify CA fingerprint matches the panel value shown in step 1.</li>
           </ol>
           <p className="text-[10px] text-fg-subtle">After install, run <span className="font-mono">vortexui doctor</span> on the node to verify certs and the agent.</p>
           <div className="flex justify-between gap-2 pt-1">
@@ -189,17 +217,40 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
           )}
           {diag && (
             <div className="rounded-xl bg-surface-2/50 p-3 space-y-2">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase ring-1 ring-inset ${
                   diag.code === "ok" ? "bg-success/12 text-success ring-success/20" : "bg-danger/12 text-danger ring-danger/20"
                 }`}>
                   {diagLabel(diag.code)}
                 </span>
+                <span className="inline-flex rounded-full bg-surface-2/80 px-2.5 py-0.5 text-[11px] font-semibold uppercase text-fg-muted">
+                  {phaseLabel(phase)}
+                </span>
+                {diag.network_reachable && (
+                  <span className="inline-flex rounded-full bg-success/12 px-2.5 py-0.5 text-[11px] font-semibold uppercase text-success ring-1 ring-inset ring-success/20">
+                    Network OK
+                  </span>
+                )}
+                {caMatch === true && (
+                  <span className="inline-flex rounded-full bg-success/12 px-2.5 py-0.5 text-[11px] font-semibold uppercase text-success ring-1 ring-inset ring-success/20">
+                    CA match
+                  </span>
+                )}
+                {caMatch === false && (
+                  <span className="inline-flex rounded-full bg-danger/12 px-2.5 py-0.5 text-[11px] font-semibold uppercase text-danger ring-1 ring-inset ring-danger/20">
+                    CA mismatch
+                  </span>
+                )}
               </div>
+              {panelCA && (
+                <p className="text-[10px] text-fg-subtle" dir="ltr">
+                  Panel CA: <span className="font-mono">{panelCA}</span>
+                </p>
+              )}
               {diag.message && <p className="text-xs text-fg-muted">{diag.message}</p>}
               {diag.code === "mtls_fail" && (
                 <p className="text-[10px] text-fg-subtle">
-                  Re-copy certs from the panel (<span className="font-mono">vortexui node-bundle</span>) and restart <span className="font-mono">vortexui-node</span>.
+                  Network may be OK but certs differ — re-copy from the panel (<span className="font-mono">vortexui node-bundle</span>) and restart <span className="font-mono">vortexui-node</span>.
                 </p>
               )}
             </div>
@@ -216,4 +267,4 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
   );
 }
 
-export { diagLabel, diagColor };
+export { diagLabel, diagColor, phaseLabel };

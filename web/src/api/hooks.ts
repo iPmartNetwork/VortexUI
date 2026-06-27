@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ensureArray } from "@/lib/utils";
 import { api } from "./client";
-import type { CreateUserInput, EnrollmentBundle, ListUsersResponse, Node, NodeDiagnostics, User } from "./types";
+import type { CreateUserInput, EnrollmentBundle, ListUsersResponse, Node, NodeDiagnostics, NodeEnrollmentPhase, User } from "./types";
 
 // --- panel version ---
 
@@ -184,7 +184,13 @@ export function useNodeEnrollment() {
 
 export function useTestNodeConnection() {
   return useMutation({
-    mutationFn: (id: string) => api<{ diagnostics: NodeDiagnostics }>(`/api/nodes/${id}/test`, { method: "POST" }),
+    mutationFn: (id: string) =>
+      api<{
+        diagnostics: NodeDiagnostics;
+        panel_ca_fingerprint?: string;
+        ca_match?: boolean;
+        enrollment_phase?: NodeEnrollmentPhase;
+      }>(`/api/nodes/${id}/test`, { method: "POST" }),
   });
 }
 

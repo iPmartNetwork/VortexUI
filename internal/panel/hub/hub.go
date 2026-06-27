@@ -45,6 +45,10 @@ type Dialer func(node *domain.Node) (NodeConn, error)
 // service) performs the actual user migration; the hub only detects and routes.
 type FailoverFunc func(ctx context.Context, failed *domain.Node, target *domain.Node)
 
+// DisconnectAlertFunc fires once when a node stays unreachable for a prolonged
+// period (default 5 minutes), carrying the latest diagnostics snapshot.
+type DisconnectAlertFunc func(ctx context.Context, node *domain.Node, diag domain.NodeDiagnostics, since time.Duration)
+
 // ReadyFunc is invoked when a node's agent becomes reachable (initial connect or
 // after a reconnect). The higher layer uses it to push the node's full desired
 // config, so a restarted node is repopulated automatically.
@@ -57,6 +61,7 @@ type Options struct {
 	Ingest         func(domain.TrafficDelta) // usually stats.Aggregator.Ingest
 	OnFailover     FailoverFunc
 	OnConnect      ReadyFunc // called when a node (re)connects; usually a resync
+	OnDisconnectAlert DisconnectAlertFunc
 	HealthInterval time.Duration
 	Logger         *slog.Logger
 }
@@ -70,6 +75,7 @@ type Hub struct {
 
 	failoverFn FailoverFunc // guarded by mu; settable post-construction
 	onConnect  ReadyFunc    // guarded by mu; settable post-construction
+	onDisconnectAlert DisconnectAlertFunc
 }
 
 // New builds a Hub, applying defaults.
@@ -128,6 +134,22 @@ func (h *Hub) connectHook() ReadyFunc {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.onConnect
+}
+
+// SetOnDisconnectAlert wires prolonged-disconnect notifications (Telegram/webhook).
+func (h *Hub) SetOnDisconnectAlert(fn DisconnectAlertFunc) {
+	if fn == nil {
+		return
+	}
+	h.mu.Lock()
+	h.onDisconnectAlert = fn
+	h.mu.Unlock()
+}
+
+func (h *Hub) disconnectAlert() DisconnectAlertFunc {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.onDisconnectAlert
 }
 
 // Register brings a node under management: it dials, then starts the traffic and
@@ -226,30 +248,43 @@ func (h *Hub) Live(nodeID uuid.UUID) (domain.NodeStatus, domain.NodeHealth, doma
 // TestConnect dials a node once and returns connectivity diagnostics without
 // altering the managed connection cache.
 func (h *Hub) TestConnect(ctx context.Context, node *domain.Node) domain.NodeDiagnostics {
+	netOK := probeNetwork(ctx, node.Address)
 	if h.opts.Dialer == nil {
 		now := time.Now()
-		return domain.NodeDiagnostics{Code: domain.NodeDiagUnknown, Message: "dialer not configured", CheckedAt: &now}
+		return domain.NodeDiagnostics{
+			Code: domain.NodeDiagUnknown, Message: "dialer not configured",
+			NetworkReachable: netOK, CAMatch: false, CheckedAt: &now,
+		}
+	}
+	if !netOK {
+		now := time.Now()
+		return domain.NodeDiagnostics{
+			Code: domain.NodeDiagUnreachable, Message: "TCP port unreachable from panel",
+			NetworkReachable: false, CAMatch: false, CheckedAt: &now,
+		}
 	}
 	conn, err := h.opts.Dialer(node)
 	if err != nil {
-		return classifyDialError(err)
+		return buildDiagnostics(err, true)
 	}
 	defer func() { _ = conn.Close() }()
 	hctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
 	health, err := conn.Health(hctx)
 	if err != nil {
-		return classifyDialError(err)
+		return buildDiagnostics(err, true)
 	}
 	if !health.CoreRunning {
 		now := time.Now()
 		return domain.NodeDiagnostics{
-			Code:      domain.NodeDiagCoreDown,
-			Message:   "agent reachable but proxy core is not running",
-			CheckedAt: &now,
+			Code:             domain.NodeDiagCoreDown,
+			Message:          "agent reachable but proxy core is not running",
+			NetworkReachable: true,
+			CAMatch:          true,
+			CheckedAt:        &now,
 		}
 	}
-	return classifyDialError(nil)
+	return buildDiagnostics(nil, true)
 }
 
 // OnlineStats returns one node's live per-user connection counts.
