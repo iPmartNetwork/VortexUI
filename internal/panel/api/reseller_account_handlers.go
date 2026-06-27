@@ -1,8 +1,11 @@
 package api
 
 import (
+	"encoding/csv"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -22,6 +25,36 @@ func (h *Handlers) GetAccountWallet(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "wallet failed")
 	}
 	return c.JSON(http.StatusOK, echo.Map{"wallet": wallet, "ledger": ledger})
+}
+
+// ExportAccountWallet returns a CSV statement of wallet ledger entries (invoice-style).
+func (h *Handlers) ExportAccountWallet(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	wallet, ledger, err := h.Admins.WalletView(c.Request().Context(), claims.AdminID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "wallet failed")
+	}
+	c.Response().Header().Set("Content-Type", "text/csv; charset=utf-8")
+	c.Response().Header().Set("Content-Disposition", `attachment; filename="wallet-statement.csv"`)
+	w := csv.NewWriter(c.Response())
+	_ = w.Write([]string{"exported_at", time.Now().UTC().Format(time.RFC3339)})
+	_ = w.Write([]string{"traffic_balance_bytes", strconv.FormatInt(wallet.TrafficBytes, 10)})
+	_ = w.Write([]string{"user_credits_balance", strconv.Itoa(wallet.UserCredits)})
+	_ = w.Write(nil)
+	_ = w.Write([]string{"created_at", "delta_traffic_bytes", "delta_users", "reason"})
+	for _, e := range ledger {
+		_ = w.Write([]string{
+			e.CreatedAt.UTC().Format(time.RFC3339),
+			strconv.FormatInt(e.DeltaTraffic, 10),
+			strconv.Itoa(e.DeltaUsers),
+			e.Reason,
+		})
+	}
+	w.Flush()
+	return nil
 }
 
 type topUpWalletRequest struct {

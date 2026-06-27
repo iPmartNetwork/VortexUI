@@ -24,6 +24,9 @@ health checks for panel and node installs.
   (`pending` / `connected` / `synced`); TCP vs mTLS badges (`Network OK`, `CA match`);
   automatic CA comparison on connectivity test; Telegram/webhook alert after 5+ minutes
   disconnected; migration count check in `vortexui doctor` (native panel).
+- **Reseller wallet UI (minimal)** — sudo can top up reseller wallets from Admins;
+  resellers export wallet ledger as CSV (statement); parent resellers can top up
+  sub-reseller wallets; `GET /api/account/wallet/export`.
 
 ### Fixed
 - **`vortexui doctor`** — health check now hits `/api/health` (was `/health`);

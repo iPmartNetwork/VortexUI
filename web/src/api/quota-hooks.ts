@@ -13,6 +13,8 @@ export interface AdminQuotaUsage {
   traffic_used: number;
   traffic_allocated: number;
   traffic_remaining: number | null;
+  wallet_traffic_bytes?: number;
+  wallet_user_credits?: number;
 }
 
 export function useAccountQuota() {

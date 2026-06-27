@@ -193,6 +193,7 @@ func NewRouter(d Deps) *echo.Echo {
 	account.GET("/export/users", d.Handlers.ExportAccountUsers)
 	account.GET("/backup/users", d.Handlers.ExportAccountUsersBackup, RequirePermission(d.Auth, domain.PermUserRead))
 	account.GET("/wallet", d.Handlers.GetAccountWallet)
+	account.GET("/wallet/export", d.Handlers.ExportAccountWallet)
 	account.GET("/sub-admins", d.Handlers.ListSubAdmins)
 	account.POST("/sub-admins", d.Handlers.CreateSubAdmin)
 	account.GET("/branding", d.Handlers.GetAccountBranding)

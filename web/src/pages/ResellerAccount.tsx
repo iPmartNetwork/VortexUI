@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Wallet, Users, Palette, Webhook } from "lucide-react";
 import { useRoles } from "@/api/admin-hooks";
 import {
+  exportAccountWalletStatement,
   useAccountBranding,
   useAccountWallet,
   useAccountWebhook,
@@ -12,6 +13,7 @@ import {
 } from "@/api/reseller-hooks";
 import { useAuth } from "@/auth/auth";
 import { Badge, Button, Card, Input, PageHeader } from "@/components/ui";
+import { WalletTopUpModal } from "@/components/WalletTopUpModal";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { formatBytes } from "@/lib/utils";
@@ -41,6 +43,7 @@ export function ResellerAccount() {
     traffic_quota: 0,
     traffic_quota_mode: "allocated",
   });
+  const [walletTopUp, setWalletTopUp] = useState<{ id: string; username: string } | null>(null);
 
   useEffect(() => {
     if (brandingQ.data?.branding) setBranding(brandingQ.data.branding);
@@ -99,10 +102,24 @@ export function ResellerAccount() {
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {walletTopUp && (
+        <WalletTopUpModal
+          open
+          adminId={walletTopUp.id}
+          username={walletTopUp.username}
+          onClose={() => setWalletTopUp(null)}
+        />
+      )}
       <PageHeader title={t("reseller.account.title")} subtitle={t("reseller.account.subtitle")} />
 
       <section className="space-y-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold"><Wallet size={18} /> {t("reseller.account.wallet")}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-semibold"><Wallet size={18} /> {t("reseller.account.wallet")}</h2>
+          <Button variant="ghost" size="sm" onClick={exportAccountWalletStatement}>
+            {t("reseller.account.exportStatement")}
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">{t("reseller.account.walletHint")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Card className="p-5">
             <div className="text-xs text-muted-foreground">{t("reseller.account.trafficCredits")}</div>
@@ -148,6 +165,7 @@ export function ResellerAccount() {
                 <th className="px-4 py-2">{t("reseller.account.colUsername")}</th>
                 <th className="px-4 py-2">{t("reseller.account.colUserQuota")}</th>
                 <th className="px-4 py-2">{t("reseller.account.colTrafficQuota")}</th>
+                {allowSubResellers && <th className="px-4 py-2"></th>}
               </tr>
             </thead>
             <tbody>
@@ -156,10 +174,17 @@ export function ResellerAccount() {
                   <td className="px-4 py-2 font-medium">{a.username}</td>
                   <td className="px-4 py-2">{a.user_quota || "∞"}</td>
                   <td className="px-4 py-2">{a.traffic_quota ? formatBytes(a.traffic_quota, false) : "∞"}</td>
+                  {allowSubResellers && (
+                    <td className="px-4 py-2 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setWalletTopUp({ id: a.id, username: a.username })}>
+                        {t("reseller.account.topUpSub")}
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {(subAdmins.data?.admins ?? []).length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-4 text-muted-foreground">{t("reseller.account.noSubResellers")}</td></tr>
+                <tr><td colSpan={allowSubResellers ? 4 : 3} className="px-4 py-4 text-muted-foreground">{t("reseller.account.noSubResellers")}</td></tr>
               )}
             </tbody>
           </table>

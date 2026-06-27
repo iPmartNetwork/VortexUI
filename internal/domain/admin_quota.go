@@ -21,4 +21,6 @@ type AdminQuotaUsage struct {
 	TrafficUsed      int64     `json:"traffic_used"`
 	TrafficAllocated int64     `json:"traffic_allocated"`
 	TrafficRemaining *int64    `json:"traffic_remaining"` // nil when unlimited
+	WalletTraffic    int64     `json:"wallet_traffic_bytes"`
+	WalletUsers      int       `json:"wallet_user_credits"`
 }

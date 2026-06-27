@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "./client";
+import { api, getToken } from "./client";
 
 export interface WalletLedgerEntry {
   id: string;
@@ -114,4 +114,10 @@ export function useStopImpersonation() {
   return useMutation({
     mutationFn: () => api<{ token: string }>("/api/account/stop-impersonate", { method: "POST" }),
   });
+}
+
+export function exportAccountWalletStatement() {
+  const token = getToken();
+  if (!token) return;
+  window.open(`/api/account/wallet/export?access_token=${encodeURIComponent(token)}`, "_blank");
 }

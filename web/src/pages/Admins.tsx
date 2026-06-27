@@ -9,6 +9,7 @@ import { CreateAdminModal } from "@/components/CreateAdminModal";
 import { CreateRoleModal } from "@/components/CreateRoleModal";
 import { EditAdminModal } from "@/components/EditAdminModal";
 import { EditRoleModal } from "@/components/EditRoleModal";
+import { WalletTopUpModal } from "@/components/WalletTopUpModal";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
@@ -38,6 +39,7 @@ export function Admins() {
   const [roleOpen, setRoleOpen] = useState(false);
   const [editAdmin, setEditAdmin] = useState<Admin | null>(null);
   const [editRole, setEditRole] = useState<Role | null>(null);
+  const [walletTopUp, setWalletTopUp] = useState<{ id: string; username: string } | null>(null);
 
   const roleName = (id: string | null) => roles.data?.roles.find((r) => r.id === id)?.name ?? "—";
   const usageFor = (adminId: string) => quotaUsage.data?.usage.find((u) => u.admin_id === adminId);
@@ -121,6 +123,14 @@ export function Admins() {
       {roleOpen && <CreateRoleModal open onClose={() => setRoleOpen(false)} />}
       {editAdmin && <EditAdminModal admin={editAdmin} onClose={() => setEditAdmin(null)} />}
       {editRole && <EditRoleModal role={editRole} onClose={() => setEditRole(null)} />}
+      {walletTopUp && (
+        <WalletTopUpModal
+          open
+          adminId={walletTopUp.id}
+          username={walletTopUp.username}
+          onClose={() => setWalletTopUp(null)}
+        />
+      )}
 
       <div>
         <div className="mb-4 flex items-center justify-between">
@@ -139,6 +149,7 @@ export function Admins() {
                   <th className="px-5 py-3 font-medium">{t("reseller.admins.colAssigned")}</th>
                   <th className="px-5 py-3 font-medium">{t("reseller.admins.colConsumed")}</th>
                   <th className="px-5 py-3 font-medium">{t("reseller.admins.colPoolLeft")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.admins.colWallet")}</th>
                   <th className="px-5 py-3 font-medium"></th>
                 </tr>
               </thead>
@@ -155,7 +166,13 @@ export function Admins() {
                     <td className="px-5 py-3 text-muted-foreground">
                       {u.traffic_remaining != null ? formatBytes(u.traffic_remaining, false) : "∞"}
                     </td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {formatBytes(u.wallet_traffic_bytes ?? 0, false)} · {u.wallet_user_credits ?? 0}
+                    </td>
                     <td className="px-5 py-3 text-right space-x-1">
+                      <Button variant="ghost" size="sm" onClick={() => setWalletTopUp({ id: u.admin_id, username: u.username })}>
+                        {t("reseller.admins.walletTopUp")}
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, 50)}>{t("reseller.admins.addUsers")}</Button>
                       <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, undefined, 10)}>{t("reseller.admins.addTraffic10")}</Button>
                       <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, undefined, 50)}>{t("reseller.admins.addTraffic50")}</Button>
@@ -201,6 +218,11 @@ export function Admins() {
                   <td className="px-5 py-3 text-right space-x-1">
                     {sudo && !a.sudo && (
                       <Button variant="ghost" onClick={() => loginAs(a)}>{t("reseller.admins.loginAs")}</Button>
+                    )}
+                    {sudo && !a.sudo && (
+                      <Button variant="ghost" onClick={() => setWalletTopUp({ id: a.id, username: a.username })}>
+                        {t("reseller.admins.walletTopUp")}
+                      </Button>
                     )}
                     {!a.sudo && (
                       <Button variant="ghost" onClick={() => setEditAdmin(a)}>{t("common.edit")}</Button>
