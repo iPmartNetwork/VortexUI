@@ -572,6 +572,8 @@ func (s *AdminService) quotaUsageFor(ctx context.Context, admin *domain.Admin) (
 		UserQuota:        admin.UserQuota,
 		TrafficQuota:     admin.TrafficQuota,
 		TrafficQuotaMode: string(admin.TrafficQuotaMode),
+		WalletTraffic:    admin.WalletTrafficBytes,
+		WalletUsers:      admin.WalletUserCredits,
 	}
 	if s.users != nil {
 		stats, err := s.users.StatsForAdmin(ctx, admin.ID)
