@@ -35,6 +35,7 @@ export interface WalletDeposit {
   traffic_bytes: number;
   user_credits: number;
   tx_id?: string;
+  crypto_coin?: string;
   proof_image?: string;
   reseller_note?: string;
   admin_note?: string;
@@ -89,6 +90,7 @@ export function useInitWalletDeposit() {
     mutationFn: (body: {
       package_id: string;
       method: string;
+      crypto_coin?: string;
       tx_id?: string;
       proof_image?: string;
       reseller_note?: string;
@@ -154,5 +156,6 @@ export function formatPrice(amount: number, currency: string) {
   const cur = currency.toUpperCase();
   if (cur === "IRR") return `${amount.toLocaleString()} Toman`;
   if (cur === "USD") return `$${(amount / 100).toFixed(2)}`;
-  return `${amount} ${cur}`;
+  if (cur.startsWith("USDT")) return `${amount.toLocaleString()} ${currency}`;
+  return `${amount.toLocaleString()} ${cur}`;
 }

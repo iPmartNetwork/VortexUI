@@ -214,6 +214,7 @@ func (h *Handlers) InitAccountWalletDeposit(c echo.Context) error {
 		PackageID    string `json:"package_id"`
 		Method       string `json:"method"`
 		TxID         string `json:"tx_id"`
+		CryptoCoin   string `json:"crypto_coin"`
 		ProofImage   string `json:"proof_image"`
 		ResellerNote string `json:"reseller_note"`
 	}
@@ -230,6 +231,7 @@ func (h *Handlers) InitAccountWalletDeposit(c echo.Context) error {
 		PackageID:    pkgID,
 		Method:       domain.WalletDepositMethod(req.Method),
 		TxID:         req.TxID,
+		CryptoCoin:   req.CryptoCoin,
 		ProofImage:   req.ProofImage,
 		ResellerNote: req.ResellerNote,
 		CallbackBase: callbackBase,
