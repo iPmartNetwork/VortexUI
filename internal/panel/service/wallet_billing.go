@@ -123,6 +123,7 @@ type InitWalletDepositInput struct {
 	PackageID    uuid.UUID
 	Method       domain.WalletDepositMethod
 	TxID         string
+	CryptoCoin   string
 	ProofImage   string
 	ResellerNote string
 	CallbackBase string // scheme://host for payment redirect
@@ -221,6 +222,12 @@ func (s *WalletBillingService) InitDeposit(ctx context.Context, in InitWalletDep
 	case domain.WalletDepositCardToCard, domain.WalletDepositCrypto:
 		txID := strings.TrimSpace(in.TxID)
 		proof := strings.TrimSpace(in.ProofImage)
+		coin := strings.TrimSpace(in.CryptoCoin)
+		if in.Method == domain.WalletDepositCrypto {
+			if coin == "" {
+				return nil, errors.New("crypto coin is required")
+			}
+		}
 		if txID == "" && proof == "" {
 			return nil, errors.New("tx_id or proof_image is required")
 		}
@@ -228,6 +235,7 @@ func (s *WalletBillingService) InitDeposit(ctx context.Context, in InitWalletDep
 			return nil, errors.New("proof image too large (max 500KB)")
 		}
 		deposit.TxID = txID
+		deposit.CryptoCoin = coin
 		deposit.ProofImage = proof
 		if err := s.repo.CreateDeposit(ctx, deposit); err != nil {
 			return nil, err

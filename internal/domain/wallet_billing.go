@@ -66,6 +66,7 @@ type WalletDeposit struct {
 	UserCredits   int               `json:"user_credits"`
 	GatewayID     string              `json:"gateway_id,omitempty"`
 	TxID          string              `json:"tx_id,omitempty"`
+	CryptoCoin    string              `json:"crypto_coin,omitempty"`
 	ProofImage    string              `json:"proof_image,omitempty"`
 	ResellerNote  string              `json:"reseller_note,omitempty"`
 	AdminNote     string              `json:"admin_note,omitempty"`

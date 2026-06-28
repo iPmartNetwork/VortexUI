@@ -17,7 +17,7 @@ import (
 type WalletBillingRepo struct{ pool *pgxpool.Pool }
 
 const depositCols = `d.id, d.admin_id, a.username, d.package_id, p.name, d.method, d.status,
-	d.amount, d.currency, d.traffic_bytes, d.user_credits, d.gateway_id, d.tx_id,
+	d.amount, d.currency, d.traffic_bytes, d.user_credits, d.gateway_id, d.tx_id, d.crypto_coin,
 	d.proof_image, d.reseller_note, d.admin_note, d.reviewer_id, d.reviewed_at, d.paid_at, d.created_at`
 
 func (r *WalletBillingRepo) scanDeposit(row pgx.Row) (*domain.WalletDeposit, error) {
@@ -27,7 +27,7 @@ func (r *WalletBillingRepo) scanDeposit(row pgx.Row) (*domain.WalletDeposit, err
 	var reviewedAt, paidAt pgtype.Timestamptz
 	if err := row.Scan(
 		&d.ID, &d.AdminID, &d.AdminUsername, &pkgID, &pkgName, &d.Method, &d.Status,
-		&d.Amount, &d.Currency, &d.TrafficBytes, &d.UserCredits, &d.GatewayID, &d.TxID,
+		&d.Amount, &d.Currency, &d.TrafficBytes, &d.UserCredits, &d.GatewayID, &d.TxID, &d.CryptoCoin,
 		&d.ProofImage, &d.ResellerNote, &d.AdminNote, &reviewerID, &reviewedAt, &paidAt, &d.CreatedAt,
 	); err != nil {
 		return nil, err
@@ -162,21 +162,21 @@ func (r *WalletBillingRepo) UpdateBillingSettings(ctx context.Context, s *domain
 func (r *WalletBillingRepo) CreateDeposit(ctx context.Context, d *domain.WalletDeposit) error {
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO wallet_deposits (id, admin_id, package_id, method, status, amount, currency,
-			traffic_bytes, user_credits, gateway_id, tx_id, proof_image, reseller_note, admin_note,
+			traffic_bytes, user_credits, gateway_id, tx_id, crypto_coin, proof_image, reseller_note, admin_note,
 			reviewer_id, reviewed_at, paid_at, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
 		d.ID, d.AdminID, d.PackageID, d.Method, d.Status, d.Amount, d.Currency,
-		d.TrafficBytes, d.UserCredits, d.GatewayID, d.TxID, d.ProofImage, d.ResellerNote, d.AdminNote,
+		d.TrafficBytes, d.UserCredits, d.GatewayID, d.TxID, d.CryptoCoin, d.ProofImage, d.ResellerNote, d.AdminNote,
 		d.ReviewerID, d.ReviewedAt, d.PaidAt, d.CreatedAt)
 	return err
 }
 
 func (r *WalletBillingRepo) UpdateDeposit(ctx context.Context, d *domain.WalletDeposit) error {
 	_, err := r.pool.Exec(ctx, `
-		UPDATE wallet_deposits SET status=$2, gateway_id=$3, tx_id=$4, proof_image=$5,
-			reseller_note=$6, admin_note=$7, reviewer_id=$8, reviewed_at=$9, paid_at=$10
+		UPDATE wallet_deposits SET status=$2, gateway_id=$3, tx_id=$4, crypto_coin=$5, proof_image=$6,
+			reseller_note=$7, admin_note=$8, reviewer_id=$9, reviewed_at=$10, paid_at=$11
 		WHERE id=$1`,
-		d.ID, d.Status, d.GatewayID, d.TxID, d.ProofImage, d.ResellerNote, d.AdminNote,
+		d.ID, d.Status, d.GatewayID, d.TxID, d.CryptoCoin, d.ProofImage, d.ResellerNote, d.AdminNote,
 		d.ReviewerID, d.ReviewedAt, d.PaidAt)
 	return err
 }

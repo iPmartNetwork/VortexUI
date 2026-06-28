@@ -18,9 +18,10 @@ import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { formatBytes } from "@/lib/utils";
+import { CryptoAddressEditor, PackageCurrencyPicker } from "@/components/CryptoCurrencySelector";
+import { mergeCryptoAddresses } from "@/lib/crypto-currencies";
 
 const METHODS = ["zarinpal", "card_to_card", "crypto", "nowpayments"] as const;
-const CURRENCIES = ["IRR", "USD", "USDT"] as const;
 
 export function WalletBilling() {
   const { t } = useI18n();
@@ -44,8 +45,7 @@ export function WalletBilling() {
     card_holder: "",
     card_bank: "",
     manual_instructions: "",
-    usdt_trc20: "",
-    btc: "",
+    crypto_addresses: mergeCryptoAddresses(),
   });
 
   useEffect(() => {
@@ -56,8 +56,7 @@ export function WalletBilling() {
       card_holder: s.card_holder,
       card_bank: s.card_bank,
       manual_instructions: s.manual_instructions,
-      usdt_trc20: s.crypto_addresses?.["USDT-TRC20"] ?? "",
-      btc: s.crypto_addresses?.BTC ?? "",
+      crypto_addresses: mergeCryptoAddresses(s.crypto_addresses),
     });
   }, [settings.data]);
 
@@ -80,10 +79,7 @@ export function WalletBilling() {
         card_holder: form.card_holder,
         card_bank: form.card_bank,
         manual_instructions: form.manual_instructions,
-        crypto_addresses: {
-          "USDT-TRC20": form.usdt_trc20,
-          BTC: form.btc,
-        },
+        crypto_addresses: form.crypto_addresses,
       });
       toast.success(t("billing.settingsSaved"));
     } catch {
@@ -169,11 +165,14 @@ export function WalletBilling() {
 
       {tab === "settings" && (
         <Card className="grid gap-3 p-5 sm:grid-cols-2">
+          <div className="sm:col-span-2 text-sm font-medium">{t("billing.cardToCard")}</div>
           <Input placeholder={t("billing.cardNumber")} value={form.card_number} onChange={(e) => setForm({ ...form, card_number: e.target.value })} />
           <Input placeholder={t("billing.cardHolder")} value={form.card_holder} onChange={(e) => setForm({ ...form, card_holder: e.target.value })} />
           <Input placeholder={t("billing.cardBank")} value={form.card_bank} onChange={(e) => setForm({ ...form, card_bank: e.target.value })} />
-          <Input placeholder="USDT-TRC20" value={form.usdt_trc20} onChange={(e) => setForm({ ...form, usdt_trc20: e.target.value })} />
-          <Input placeholder="BTC" value={form.btc} onChange={(e) => setForm({ ...form, btc: e.target.value })} />
+          <CryptoAddressEditor
+            addresses={form.crypto_addresses}
+            onChange={(crypto_addresses) => setForm({ ...form, crypto_addresses })}
+          />
           <Input className="sm:col-span-2" placeholder={t("billing.manualInstructions")} value={form.manual_instructions} onChange={(e) => setForm({ ...form, manual_instructions: e.target.value })} />
           <Button onClick={onSaveSettings} disabled={saveSettings.isPending}>{t("common.save")}</Button>
         </Card>
@@ -184,6 +183,7 @@ export function WalletBilling() {
           <div className="space-y-3 text-sm">
             <div><strong>{reviewDeposit.admin_username}</strong> · {reviewDeposit.package_name}</div>
             <div>{formatPrice(reviewDeposit.amount, reviewDeposit.currency)} · {reviewDeposit.method}</div>
+            {reviewDeposit.crypto_coin && <div>{t("billing.colCrypto")}: <Badge>{reviewDeposit.crypto_coin}</Badge></div>}
             {reviewDeposit.tx_id && <div>TX: <code>{reviewDeposit.tx_id}</code></div>}
             {reviewDeposit.reseller_note && <div>{reviewDeposit.reseller_note}</div>}
             {reviewDeposit.proof_image && (
@@ -246,9 +246,10 @@ function PackageModal({
           <Input type="number" placeholder="GB" value={trafficGb} onChange={(e) => setTrafficGb(e.target.value)} />
           <Input type="number" placeholder={t("billing.userCredits")} value={userCredits} onChange={(e) => setUserCredits(e.target.value)} />
           <Input type="number" placeholder={t("billing.price")} value={price} onChange={(e) => setPrice(e.target.value)} />
-          <select className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <div className="col-span-2">
+            <div className="mb-1 text-xs text-muted-foreground">{t("billing.pkgCurrency")}</div>
+            <PackageCurrencyPicker value={currency} onChange={setCurrency} />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {METHODS.map((m) => (
