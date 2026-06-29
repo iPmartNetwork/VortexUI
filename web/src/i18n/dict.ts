@@ -564,6 +564,38 @@ const en = {
   "cleanip.copied": "Copied IP",
   "cleanip.empty": "No results yet. Paste candidate IPs and start a scan.",
   "cleanip.hint": "Copy a clean IP and paste it into a subscription host's address (Feature 1).",
+
+  "nav.resellerPayment": "Payment Config",
+  "nav.pendingOrders": "Pending Orders",
+
+  "resellerPayment.title": "Payment Configuration",
+  "resellerPayment.subtitle": "Configure payment methods for your users",
+  "resellerPayment.hint": "These settings determine what payment options YOUR users see when purchasing plans.",
+  "resellerPayment.cardNumber": "Card Number",
+  "resellerPayment.cardHolder": "Card Holder",
+  "resellerPayment.cardBank": "Card Bank",
+  "resellerPayment.cryptoAddresses": "Crypto Addresses",
+  "resellerPayment.addCrypto": "Add address",
+  "resellerPayment.zarinpalMerchant": "ZarinPal Merchant ID",
+  "resellerPayment.manualInstructions": "Manual Instructions",
+  "resellerPayment.enabledMethods": "Enabled Payment Methods",
+  "resellerPayment.saved": "Payment settings saved",
+  "resellerPayment.saveFailed": "Could not save payment settings",
+
+  "pendingOrders.title": "Pending Orders",
+  "pendingOrders.subtitle": "Review and approve pending orders from your users",
+  "pendingOrders.colUsername": "Username",
+  "pendingOrders.colAmount": "Amount",
+  "pendingOrders.colGateway": "Gateway",
+  "pendingOrders.colTxId": "Transaction ID",
+  "pendingOrders.colDate": "Date",
+  "pendingOrders.approved": "Order approved — user extended.",
+  "pendingOrders.rejected": "Order rejected",
+  "pendingOrders.reviewFailed": "Review failed",
+  "pendingOrders.confirmReject": "Reject this order?",
+  "pendingOrders.empty": "No pending orders.",
+
+  "portal.gatewayNote": "Available methods depend on your provider's configuration.",
 } as const;
 
 const fa: Record<string, string> = {

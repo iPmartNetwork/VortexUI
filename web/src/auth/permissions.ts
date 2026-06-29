@@ -67,6 +67,8 @@ export const ROUTE_PERMISSIONS: Record<string, readonly string[]> = {
   "/smart-quota": ["admin:manage"],
   "/quota-notifications": ["admin:manage"],
   "/reseller-quota-alerts": ["admin:manage"],
+  "/reseller-payment": ["system:read"],
+  "/pending-orders": ["user:read"],
   "/referrals": ["admin:manage"],
   "/tickets": ["user:write"],
   "/nodes": ["node:read"],

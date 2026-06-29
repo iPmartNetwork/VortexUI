@@ -41,6 +41,8 @@ import { Federation } from "@/pages/Federation";
 import { DeepLinks } from "@/pages/DeepLinks";
 import { QuotaNotifications } from "@/pages/QuotaNotifications";
 import { IPLimit } from "@/pages/IPLimit";
+import { ResellerPaymentSettings } from "@/pages/ResellerPaymentSettings";
+import { PendingOrders } from "@/pages/PendingOrders";
 import { PortalLogin } from "@/pages/portal/PortalLogin";
 import { PortalLayout } from "@/pages/portal/PortalLayout";
 import { PortalDashboard } from "@/pages/portal/PortalDashboard";
@@ -101,6 +103,8 @@ export function App() {
         <Route path="/deep-links" element={<DeepLinks />} />
         <Route path="/quota-notifications" element={<QuotaNotifications />} />
         <Route path="/reseller-quota-alerts" element={<ResellerQuotaAlerts />} />
+        <Route path="/reseller-payment" element={<ResellerPaymentSettings />} />
+        <Route path="/pending-orders" element={<PendingOrders />} />
         <Route path="/audit" element={<Audit />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/settings" element={<Settings />} />

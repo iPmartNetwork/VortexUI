@@ -111,8 +111,10 @@ export function PortalPlans() {
                 <Select value={gateway} onChange={(e) => setGateway(e.target.value)}>
                   <option value="" disabled>Select gateway...</option>
                   {p.price_toman > 0 && <option value="zarinpal">ZarinPal (تومان)</option>}
+                  {p.price_toman > 0 && <option value="card_to_card">Card to Card (کارت به کارت)</option>}
                   {p.price_usd > 0 && <option value="crypto">Crypto (USD)</option>}
                 </Select>
+                <p className="text-[11px] text-fg-subtle">Available methods depend on your provider's configuration.</p>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
