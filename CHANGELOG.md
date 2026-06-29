@@ -32,6 +32,10 @@ health checks for panel and node installs.
   sudo approval queue; billing settings for card and crypto addresses.
 
 ### Fixed
+- **Reseller wallet quota stacking** — wallet purchases now add additively onto the
+  reseller's main quota (`TrafficQuota` + `UserQuota`) immediately on admin approval /
+  payment completion, applied on top of the existing allowance instead of being held
+  until the previous balance is consumed.
 - **`vortexui doctor`** — health check now hits `/api/health` (was `/health`);
   migration check warns on extra DB records instead of false-failing when
   `goose_db_version` count exceeds embedded SQL files.
