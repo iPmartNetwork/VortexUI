@@ -59,6 +59,7 @@ type Handlers struct {
 	Events    EventStream    // optional; nil disables the SSE live-events endpoint
 	Issuer    *auth.Issuer   // JWT issuer for impersonation flows
 	WalletBilling *service.WalletBillingService // optional; nil disables wallet billing
+	ResellerPayment *service.ResellerPaymentService // optional; per-reseller payment config
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a

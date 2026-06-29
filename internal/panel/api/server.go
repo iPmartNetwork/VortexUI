@@ -233,6 +233,8 @@ func NewRouter(d Deps) *echo.Echo {
 
 	orders := authed.Group("/orders")
 	orders.GET("", d.Handlers.ListOrders, RequirePermission(d.Auth, domain.PermUserRead))
+	orders.GET("/pending", d.Handlers.ListPendingOrders, RequirePermission(d.Auth, domain.PermUserRead))
+	orders.POST("/:id/review", d.Handlers.ReviewOrder, RequirePermission(d.Auth, domain.PermUserWrite))
 
 	// Wallet billing (sudo)
 	if d.WalletBilling != nil {

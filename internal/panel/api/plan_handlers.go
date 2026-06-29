@@ -121,10 +121,13 @@ func (h *Handlers) ListOrders(c echo.Context) error {
 // --- Payment (public purchase flow) ---
 
 type purchaseRequest struct {
-	PlanID   string `json:"plan_id"`
-	Username string `json:"username"`  // for new users
-	SubToken string `json:"sub_token"` // for existing user renewal (optional)
-	Gateway  string `json:"gateway"`   // "zarinpal" | "nowpayments"
+	PlanID     string `json:"plan_id"`
+	Username   string `json:"username"`   // for new users
+	SubToken   string `json:"sub_token"`  // for existing user renewal (optional)
+	Gateway    string `json:"gateway"`    // "zarinpal" | "nowpayments" | "card_to_card" | "crypto"
+	TxID       string `json:"tx_id"`      // manual methods: transaction ID
+	ProofImage string `json:"proof_image"` // manual methods: base64 image of receipt
+	CryptoCoin string `json:"crypto_coin"` // crypto method: which coin (btc, usdt, etc.)
 }
 
 // InitPurchase creates an order and returns the payment redirect URL.
@@ -143,78 +146,174 @@ func (h *Handlers) InitPurchase(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "plan not found")
 	}
 
-	// Select gateway
-	var gw payment.Gateway
-	var amount int64
-	var currency string
-	switch req.Gateway {
-	case "zarinpal":
-		if h.ZarinPal == nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "zarinpal not configured")
-		}
-		gw = h.ZarinPal
-		amount = plan.PriceToman
-		currency = "IRR"
-	case "nowpayments", "crypto":
-		if h.NowPayments == nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "crypto payments not configured")
-		}
-		gw = h.NowPayments
-		amount = int64(plan.PriceUSD * 100) // cents
-		currency = "USD"
-	default:
-		return echo.NewHTTPError(http.StatusBadRequest, "unknown gateway (zarinpal or nowpayments)")
-	}
-
 	// Resolve existing user for renewal (sub_token) or validate new-user input.
 	var userID *uuid.UUID
+	var adminID *uuid.UUID
 	if req.SubToken != "" {
-		// Renewal for an existing user: look up by subscription token.
 		u, err := h.Repo.GetBySubToken(c.Request().Context(), req.SubToken)
 		if err != nil || u == nil {
 			return echo.NewHTTPError(http.StatusNotFound, "user not found for this token")
 		}
 		userID = &u.ID
+		adminID = u.AdminID
 	} else if req.Username == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "must provide username (new user) or sub_token (renewal)")
 	}
 
-	// Create order
-	order := &domain.Order{
-		ID:        uuid.New(),
-		PlanID:    planID,
-		UserID:    userID,
-		Username:  req.Username,
-		Status:    domain.OrderPending,
-		Gateway:   req.Gateway,
-		Amount:    amount,
-		Currency:  currency,
-		CreatedAt: time.Now(),
-	}
-	if err := h.Plans.CreateOrder(c.Request().Context(), order); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "create order failed")
+	// Load per-reseller payment config (if user belongs to a reseller).
+	var resellerCfg *domain.ResellerPaymentConfig
+	if adminID != nil && h.ResellerPayment != nil {
+		cfg, err := h.ResellerPayment.GetPaymentConfig(c.Request().Context(), *adminID)
+		if err == nil && cfg != nil {
+			resellerCfg = cfg
+		}
 	}
 
-	// Initiate payment
-	callbackURL := c.Scheme() + "://" + c.Request().Host + "/api/payment/callback?order_id=" + order.ID.String()
-	resp, err := gw.CreatePayment(c.Request().Context(), payment.PaymentRequest{
-		Amount:      amount,
-		Description: "VortexUI Plan: " + plan.Name,
-		CallbackURL: callbackURL,
-	})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadGateway, "payment gateway error: "+err.Error())
+	// Handle gateway selection.
+	switch req.Gateway {
+	case "card_to_card":
+		// Manual card-to-card: create order as pending, no gateway contact.
+		txID := req.TxID
+		if txID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "tx_id is required for card_to_card")
+		}
+		order := &domain.Order{
+			ID:        uuid.New(),
+			PlanID:    planID,
+			UserID:    userID,
+			AdminID:   adminID,
+			Username:  req.Username,
+			Status:    domain.OrderPending,
+			Gateway:   "card_to_card",
+			GatewayID: txID,
+			Amount:    plan.PriceToman,
+			Currency:  "IRR",
+			CreatedAt: time.Now(),
+		}
+		if err := h.Plans.CreateOrder(c.Request().Context(), order); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "create order failed")
+		}
+		return c.JSON(http.StatusOK, echo.Map{
+			"order_id": order.ID,
+			"status":   "pending_review",
+		})
+
+	case "crypto":
+		// Manual crypto: create order as pending, store coin:txid in GatewayID.
+		txID := req.TxID
+		coin := req.CryptoCoin
+		if txID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "tx_id is required for crypto")
+		}
+		if coin == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "crypto_coin is required")
+		}
+		gatewayID := coin + ":" + txID
+		order := &domain.Order{
+			ID:        uuid.New(),
+			PlanID:    planID,
+			UserID:    userID,
+			AdminID:   adminID,
+			Username:  req.Username,
+			Status:    domain.OrderPending,
+			Gateway:   "crypto",
+			GatewayID: gatewayID,
+			Amount:    int64(plan.PriceUSD * 100),
+			Currency:  "USD",
+			CreatedAt: time.Now(),
+		}
+		if err := h.Plans.CreateOrder(c.Request().Context(), order); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "create order failed")
+		}
+		return c.JSON(http.StatusOK, echo.Map{
+			"order_id": order.ID,
+			"status":   "pending_review",
+		})
+
+	case "zarinpal":
+		// Online ZarinPal: use per-reseller merchant if configured.
+		var gw payment.Gateway
+		if resellerCfg != nil && resellerCfg.ZarinpalMerchantID != "" {
+			gw = payment.NewZarinPal(resellerCfg.ZarinpalMerchantID)
+		} else if h.ZarinPal != nil {
+			gw = h.ZarinPal
+		} else {
+			return echo.NewHTTPError(http.StatusBadRequest, "zarinpal not configured")
+		}
+		amount := plan.PriceToman
+		order := &domain.Order{
+			ID:        uuid.New(),
+			PlanID:    planID,
+			UserID:    userID,
+			AdminID:   adminID,
+			Username:  req.Username,
+			Status:    domain.OrderPending,
+			Gateway:   "zarinpal",
+			Amount:    amount,
+			Currency:  "IRR",
+			CreatedAt: time.Now(),
+		}
+		if err := h.Plans.CreateOrder(c.Request().Context(), order); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "create order failed")
+		}
+		callbackURL := c.Scheme() + "://" + c.Request().Host + "/api/payment/callback?order_id=" + order.ID.String()
+		resp, err := gw.CreatePayment(c.Request().Context(), payment.PaymentRequest{
+			Amount:      amount,
+			Description: "VortexUI Plan: " + plan.Name,
+			CallbackURL: callbackURL,
+		})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadGateway, "payment gateway error: "+err.Error())
+		}
+		order.GatewayID = resp.Authority
+		_ = h.Plans.UpdateOrder(c.Request().Context(), order)
+		return c.JSON(http.StatusOK, echo.Map{
+			"order_id":     order.ID,
+			"redirect_url": resp.RedirectURL,
+			"gateway_id":   resp.Authority,
+		})
+
+	case "nowpayments":
+		// Online NowPayments (crypto gateway).
+		if h.NowPayments == nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "crypto payments not configured")
+		}
+		amount := int64(plan.PriceUSD * 100)
+		order := &domain.Order{
+			ID:        uuid.New(),
+			PlanID:    planID,
+			UserID:    userID,
+			AdminID:   adminID,
+			Username:  req.Username,
+			Status:    domain.OrderPending,
+			Gateway:   "nowpayments",
+			Amount:    amount,
+			Currency:  "USD",
+			CreatedAt: time.Now(),
+		}
+		if err := h.Plans.CreateOrder(c.Request().Context(), order); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "create order failed")
+		}
+		callbackURL := c.Scheme() + "://" + c.Request().Host + "/api/payment/callback?order_id=" + order.ID.String()
+		resp, err := h.NowPayments.CreatePayment(c.Request().Context(), payment.PaymentRequest{
+			Amount:      amount,
+			Description: "VortexUI Plan: " + plan.Name,
+			CallbackURL: callbackURL,
+		})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadGateway, "payment gateway error: "+err.Error())
+		}
+		order.GatewayID = resp.Authority
+		_ = h.Plans.UpdateOrder(c.Request().Context(), order)
+		return c.JSON(http.StatusOK, echo.Map{
+			"order_id":     order.ID,
+			"redirect_url": resp.RedirectURL,
+			"gateway_id":   resp.Authority,
+		})
+
+	default:
+		return echo.NewHTTPError(http.StatusBadRequest, "unknown gateway (zarinpal, nowpayments, card_to_card, crypto)")
 	}
-
-	// Save gateway authority
-	order.GatewayID = resp.Authority
-	_ = h.Plans.UpdateOrder(c.Request().Context(), order)
-
-	return c.JSON(http.StatusOK, echo.Map{
-		"order_id":     order.ID,
-		"redirect_url": resp.RedirectURL,
-		"gateway_id":   resp.Authority,
-	})
 }
 
 // PaymentCallback handles the gateway redirect after payment.
@@ -328,4 +427,95 @@ func (h *Handlers) NowPaymentsIPN(c echo.Context) error {
 		}
 	}
 	return c.NoContent(http.StatusOK)
+}
+
+// --- Order Review (reseller approves/rejects manual payments) ---
+
+type reviewOrderRequest struct {
+	Action string `json:"action"` // "approve" | "reject"
+	Note   string `json:"note"`
+}
+
+// ReviewOrder lets a reseller approve or reject a manual payment order.
+// POST /api/orders/:id/review
+func (h *Handlers) ReviewOrder(c echo.Context) error {
+	orderID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid order id")
+	}
+	var req reviewOrderRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if req.Action != "approve" && req.Action != "reject" {
+		return echo.NewHTTPError(http.StatusBadRequest, "action must be approve or reject")
+	}
+
+	order, err := h.Plans.GetOrder(c.Request().Context(), orderID)
+	if err != nil || order == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "order not found")
+	}
+	if order.Status != domain.OrderPending {
+		return echo.NewHTTPError(http.StatusBadRequest, "order is not pending")
+	}
+
+	// Gate: caller must be the order's admin (reseller) or sudo.
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
+	}
+	if !claims.Sudo {
+		if order.AdminID == nil || *order.AdminID != claims.AdminID {
+			return echo.NewHTTPError(http.StatusForbidden, "you do not own this order")
+		}
+	}
+
+	switch req.Action {
+	case "approve":
+		now := time.Now()
+		order.Status = domain.OrderPaid
+		order.PaidAt = &now
+		if err := h.Plans.UpdateOrder(c.Request().Context(), order); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "update order failed")
+		}
+		if err := h.Plans.FulfillOrder(c.Request().Context(), order.ID); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "fulfillment failed: "+err.Error())
+		}
+		return c.JSON(http.StatusOK, echo.Map{"status": "approved", "order_id": order.ID})
+
+	case "reject":
+		order.Status = domain.OrderCancelled
+		if err := h.Plans.UpdateOrder(c.Request().Context(), order); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "update order failed")
+		}
+		return c.JSON(http.StatusOK, echo.Map{"status": "rejected", "order_id": order.ID})
+	}
+
+	return echo.NewHTTPError(http.StatusBadRequest, "invalid action")
+}
+
+// ListPendingOrders returns orders pending review, scoped to the calling admin.
+// GET /api/orders/pending
+func (h *Handlers) ListPendingOrders(c echo.Context) error {
+	orders, err := h.Plans.ListOrders(c.Request().Context(), nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
+	}
+
+	var pending []*domain.Order
+	for _, o := range orders {
+		if o.Status != domain.OrderPending {
+			continue
+		}
+		if claims.Sudo {
+			pending = append(pending, o)
+		} else if o.AdminID != nil && *o.AdminID == claims.AdminID {
+			pending = append(pending, o)
+		}
+	}
+	return c.JSON(http.StatusOK, echo.Map{"orders": pending})
 }

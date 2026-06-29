@@ -337,6 +337,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			ZarinPal: zarinPal,
 			NowPayments: nowPayments,
 			WalletBilling: walletBillingSvc,
+			ResellerPayment: resellerPaymentSvc,
 			Online: online, Logs: logBuf, Audit: store.Audit(),
 			Repo: users, Traffic: traffic,
 			NodeRepo: nodes, WireGuard: wgSvc,

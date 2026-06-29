@@ -31,11 +31,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .buy-btn{padding:10px 20px;border-radius:10px;border:none;font-size:.8rem;font-weight:600;cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));transition:opacity .2s}
 .buy-btn:hover{opacity:.85}
 .buy-btn:disabled{opacity:.5;cursor:not-allowed}
+.buy-btn.secondary{background:linear-gradient(135deg,var(--success),#16a34a)}
+.buy-btn.crypto-btn{background:linear-gradient(135deg,var(--warning),#d97706)}
 .back-link{display:block;text-align:center;margin-top:24px;font-size:.8rem;color:var(--fg2);text-decoration:none}
 .back-link:hover{color:var(--accent)}
 .footer{text-align:center;padding:24px 0;font-size:.65rem;color:var(--fg2)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 24px;border-radius:8px;font-size:.8rem;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99}
 .toast.show{opacity:1}
+.manual-section{margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;display:none}
+.manual-section.active{display:block}
+.manual-section label{display:block;font-size:.75rem;color:var(--fg2);margin-bottom:4px;margin-top:8px}
+.manual-section input,.manual-section select{width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:.8rem}
+.manual-section .info-box{padding:8px;background:var(--bg);border-radius:8px;font-size:.75rem;color:var(--fg2);margin-top:8px;word-break:break-all}
+.manual-section .submit-btn{margin-top:12px;width:100%;padding:10px;border-radius:10px;border:none;font-size:.8rem;font-weight:600;cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.pending-msg{margin-top:12px;padding:12px;background:rgba(34,197,94,.1);border:1px solid var(--success);border-radius:10px;text-align:center;font-size:.8rem;color:var(--success);display:none}
+.pending-msg.show{display:block}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
 </head>
@@ -49,7 +59,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
   <div class="plans-grid">
     {{range .Plans}}
-    <div class="plan-card">
+    <div class="plan-card" id="plan-{{.ID}}">
       <div class="plan-name">{{.Name}}</div>
       {{if .Description}}<div class="plan-desc">{{.Description}}</div>{{end}}
       <div class="plan-details">
@@ -73,29 +83,80 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         {{if gt .PriceUSD 0.0}}<span class="price-tag">${{printf "%.2f" .PriceUSD}} USD</span>{{end}}
       </div>
       <div class="plan-actions">
-        {{if gt .PriceToman 0}}
+        {{if $.HasZarinpal}}{{if gt .PriceToman 0}}
         <button class="buy-btn" onclick="purchase('{{.ID}}','zarinpal')">Pay with ZarinPal</button>
+        {{end}}{{end}}
+        {{if $.HasCardToCard}}{{if gt .PriceToman 0}}
+        <button class="buy-btn secondary" onclick="showManual('{{.ID}}','card_to_card')">Card-to-Card</button>
+        {{end}}{{end}}
+        {{if $.HasCrypto}}{{if gt .PriceUSD 0.0}}
+        <button class="buy-btn crypto-btn" onclick="showManual('{{.ID}}','crypto')">Pay with Crypto</button>
+        {{end}}{{end}}
+      </div>
+
+      <!-- Card-to-Card manual section -->
+      <div class="manual-section" id="manual-card-{{.ID}}">
+        {{if $.CardNumber}}
+        <div class="info-box">
+          <strong>Transfer to:</strong><br>
+          Card: {{$.CardNumber}}<br>
+          {{if $.CardHolder}}Holder: {{$.CardHolder}}<br>{{end}}
+          {{if $.CardBank}}Bank: {{$.CardBank}}<br>{{end}}
+          {{if $.ManualInstructions}}<br>{{$.ManualInstructions}}{{end}}
+        </div>
         {{end}}
-        {{if gt .PriceUSD 0.0}}
-        <button class="buy-btn" onclick="purchase('{{.ID}}','crypto')">Pay with Crypto</button>
+        <label>Transaction ID / Reference Number</label>
+        <input type="text" id="txid-card-{{.ID}}" placeholder="Enter your transaction ID">
+        <button class="submit-btn" onclick="submitManual('{{.ID}}','card_to_card')">Submit Payment</button>
+      </div>
+
+      <!-- Crypto manual section -->
+      <div class="manual-section" id="manual-crypto-{{.ID}}">
+        {{if $.CryptoAddresses}}
+        <div class="info-box">
+          <strong>Send to one of these addresses:</strong><br>
+          {{range $coin, $addr := $.CryptoAddresses}}
+          <strong>{{$coin}}:</strong> {{$addr}}<br>
+          {{end}}
+        </div>
         {{end}}
+        <label>Coin</label>
+        <select id="coin-{{.ID}}">
+          {{range $coin, $addr := $.CryptoAddresses}}
+          <option value="{{$coin}}">{{$coin}}</option>
+          {{end}}
+        </select>
+        <label>Transaction ID (TxHash)</label>
+        <input type="text" id="txid-crypto-{{.ID}}" placeholder="Enter transaction hash">
+        <button class="submit-btn" onclick="submitManual('{{.ID}}','crypto')">Submit Payment</button>
+      </div>
+
+      <div class="pending-msg" id="pending-{{.ID}}">
+        Payment submitted! Your reseller will review and confirm it shortly.
       </div>
     </div>
     {{end}}
   </div>
 
-  <a href="/sub/{{$.Token}}/info" class="back-link">← Back to subscription info</a>
-  <div class="footer">© 2026 iPmart Network. All rights reserved.</div>
+  <a href="/sub/{{$.Token}}/info" class="back-link">&larr; Back to subscription info</a>
+  <div class="footer">&copy; 2026 iPmart Network. All rights reserved.</div>
 </div>
 
 <div class="toast" id="toast">Redirecting to payment...</div>
 <script>
-function purchase(planID, gateway) {
-  const btn = event.target;
-  btn.disabled = true;
-  btn.textContent = 'Processing...';
-  const toast = document.getElementById('toast');
+function showManual(planID, method) {
+  // Hide all manual sections for this plan first
+  document.getElementById('manual-card-'+planID).classList.remove('active');
+  document.getElementById('manual-crypto-'+planID).classList.remove('active');
+  if (method === 'card_to_card') {
+    document.getElementById('manual-card-'+planID).classList.add('active');
+  } else if (method === 'crypto') {
+    document.getElementById('manual-crypto-'+planID).classList.add('active');
+  }
+}
 
+function purchase(planID, gateway) {
+  const toast = document.getElementById('toast');
   fetch('/api/shop/purchase', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -112,15 +173,46 @@ function purchase(planID, gateway) {
       window.location.href = data.redirect_url;
     } else {
       alert(data.message || 'Purchase failed');
-      btn.disabled = false;
-      btn.textContent = gateway === 'zarinpal' ? 'Pay with ZarinPal' : 'Pay with Crypto';
     }
   })
-  .catch(() => {
-    alert('Network error, please try again');
-    btn.disabled = false;
-    btn.textContent = gateway === 'zarinpal' ? 'Pay with ZarinPal' : 'Pay with Crypto';
-  });
+  .catch(() => alert('Network error, please try again'));
+}
+
+function submitManual(planID, method) {
+  var body = {
+    plan_id: planID,
+    sub_token: '{{$.Token}}',
+    gateway: method
+  };
+  if (method === 'card_to_card') {
+    var txid = document.getElementById('txid-card-'+planID).value.trim();
+    if (!txid) { alert('Please enter your transaction ID'); return; }
+    body.tx_id = txid;
+  } else if (method === 'crypto') {
+    var txid = document.getElementById('txid-crypto-'+planID).value.trim();
+    var coin = document.getElementById('coin-'+planID).value;
+    if (!txid) { alert('Please enter the transaction hash'); return; }
+    if (!coin) { alert('Please select a coin'); return; }
+    body.tx_id = txid;
+    body.crypto_coin = coin;
+  }
+
+  fetch('/api/shop/purchase', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === 'pending_review') {
+      document.getElementById('manual-card-'+planID).classList.remove('active');
+      document.getElementById('manual-crypto-'+planID).classList.remove('active');
+      document.getElementById('pending-'+planID).classList.add('show');
+    } else {
+      alert(data.message || 'Submission failed');
+    }
+  })
+  .catch(() => alert('Network error, please try again'));
 }
 </script>
 </body>
