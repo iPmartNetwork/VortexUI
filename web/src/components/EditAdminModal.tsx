@@ -121,84 +121,86 @@ export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClos
   const title = t("reseller.editAdmin.title").replace("{name}", admin?.username ?? "admin");
 
   return (
-    <Modal open={!!admin} onClose={onClose} title={title}>
+    <Modal open={!!admin} onClose={onClose} title={title} className="max-w-2xl flex flex-col max-h-[90vh]">
       {admin && !admin.sudo && (
-        <form onSubmit={submit} className="space-y-3">
-          <label className="block text-xs text-muted-foreground">
-            {t("reseller.editAdmin.role")}
-            <Select className="mt-1" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
-              <option value="">{t("reseller.editAdmin.selectRole")}</option>
-              {(roles.data?.roles ?? []).map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </Select>
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <Input placeholder={t("reseller.editAdmin.userQuota")} value={userQuota} onChange={(e) => setUserQuota(e.target.value)} inputMode="numeric" />
-            <Input placeholder={t("reseller.editAdmin.trafficQuota")} value={trafficQuota} onChange={(e) => setTrafficQuota(e.target.value)} inputMode="numeric" />
-          </div>
-          <label className="block text-xs text-muted-foreground">
-            {t("reseller.editAdmin.trafficMode")}
-            <Select className="mt-1" value={trafficMode} onChange={(e) => setTrafficMode(e.target.value)}>
-              <option value="allocated">{t("reseller.editAdmin.allocated")}</option>
-              <option value="consumed">{t("reseller.editAdmin.consumed")}</option>
-            </Select>
-          </label>
-          <AdminInboundPicker selected={inboundIds} onChange={setInboundIds} />
-          <AdminNodePicker selected={nodeIds} onChange={setNodeIds} />
-          <AdminPlanPicker selected={planIds} onChange={setPlanIds} />
-          <div className="rounded-md border p-3 space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground">{t("reseller.editAdmin.policyLimits")}</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder={t("reseller.editAdmin.maxDataLimit")} value={policyMaxGB} onChange={(e) => setPolicyMaxGB(e.target.value)} inputMode="numeric" />
-              <Input placeholder={t("reseller.editAdmin.maxExpire")} value={policyMaxExpireDays} onChange={(e) => setPolicyMaxExpireDays(e.target.value)} inputMode="numeric" />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={allowBulkCreate} onChange={(e) => setAllowBulkCreate(e.target.checked)} />
-              {t("reseller.editAdmin.allowBulkCreate")}
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={allowBulkDelete} onChange={(e) => setAllowBulkDelete(e.target.checked)} />
-              {t("reseller.editAdmin.allowBulkDelete")}
-            </label>
-          </div>
-          <div className="rounded-md border p-3 space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground">{t("reseller.editAdmin.autoSuspend")}</p>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={autoSuspend} onChange={(e) => setAutoSuspend(e.target.checked)} />
-              {t("reseller.editAdmin.enableAutoSuspend")}
+        <form onSubmit={submit} className="flex flex-col overflow-hidden">
+          <div className="overflow-y-auto space-y-3 pr-1">
+            <label className="block text-xs text-muted-foreground">
+              {t("reseller.editAdmin.role")}
+              <Select className="mt-1" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
+                <option value="">{t("reseller.editAdmin.selectRole")}</option>
+                {(roles.data?.roles ?? []).map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </Select>
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <Input placeholder={t("reseller.editAdmin.ipViolations")} value={ipViolationThreshold} onChange={(e) => setIpViolationThreshold(e.target.value)} inputMode="numeric" />
-              <Input placeholder={t("reseller.editAdmin.quotaGrace")} value={suspendGraceMinutes} onChange={(e) => setSuspendGraceMinutes(e.target.value)} inputMode="numeric" />
+              <Input placeholder={t("reseller.editAdmin.userQuota")} value={userQuota} onChange={(e) => setUserQuota(e.target.value)} inputMode="numeric" />
+              <Input placeholder={t("reseller.editAdmin.trafficQuota")} value={trafficQuota} onChange={(e) => setTrafficQuota(e.target.value)} inputMode="numeric" />
             </div>
-          </div>
-          <div className="rounded-md border p-3 space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground">Reseller capabilities</p>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={allowSubResellers} onChange={(e) => setAllowSubResellers(e.target.checked)} />
-              Allow creating sub-resellers
+            <label className="block text-xs text-muted-foreground">
+              {t("reseller.editAdmin.trafficMode")}
+              <Select className="mt-1" value={trafficMode} onChange={(e) => setTrafficMode(e.target.value)}>
+                <option value="allocated">{t("reseller.editAdmin.allocated")}</option>
+                <option value="consumed">{t("reseller.editAdmin.consumed")}</option>
+              </Select>
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={allowUserBackup} onChange={(e) => setAllowUserBackup(e.target.checked)} />
-              Allow backup of own users only
-            </label>
-            <p className="pt-1 text-[10px] text-muted-foreground">Settings page sections</p>
-            <div className="grid gap-1 sm:grid-cols-2">
-              {RESELLER_SETTING_KEYS.map((key) => (
-                <label key={key} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={resellerSettings[key]}
-                    onChange={(e) => setResellerSettings({ ...resellerSettings, [key]: e.target.checked })}
-                  />
-                  {SETTING_LABELS[key]}
-                </label>
-              ))}
+            <AdminInboundPicker selected={inboundIds} onChange={setInboundIds} />
+            <AdminNodePicker selected={nodeIds} onChange={setNodeIds} />
+            <AdminPlanPicker selected={planIds} onChange={setPlanIds} />
+            <div className="rounded-md border p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">{t("reseller.editAdmin.policyLimits")}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder={t("reseller.editAdmin.maxDataLimit")} value={policyMaxGB} onChange={(e) => setPolicyMaxGB(e.target.value)} inputMode="numeric" />
+                <Input placeholder={t("reseller.editAdmin.maxExpire")} value={policyMaxExpireDays} onChange={(e) => setPolicyMaxExpireDays(e.target.value)} inputMode="numeric" />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={allowBulkCreate} onChange={(e) => setAllowBulkCreate(e.target.checked)} />
+                {t("reseller.editAdmin.allowBulkCreate")}
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={allowBulkDelete} onChange={(e) => setAllowBulkDelete(e.target.checked)} />
+                {t("reseller.editAdmin.allowBulkDelete")}
+              </label>
             </div>
+            <div className="rounded-md border p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">{t("reseller.editAdmin.autoSuspend")}</p>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={autoSuspend} onChange={(e) => setAutoSuspend(e.target.checked)} />
+                {t("reseller.editAdmin.enableAutoSuspend")}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder={t("reseller.editAdmin.ipViolations")} value={ipViolationThreshold} onChange={(e) => setIpViolationThreshold(e.target.value)} inputMode="numeric" />
+                <Input placeholder={t("reseller.editAdmin.quotaGrace")} value={suspendGraceMinutes} onChange={(e) => setSuspendGraceMinutes(e.target.value)} inputMode="numeric" />
+              </div>
+            </div>
+            <div className="rounded-md border p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">Reseller capabilities</p>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={allowSubResellers} onChange={(e) => setAllowSubResellers(e.target.checked)} />
+                Allow creating sub-resellers
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={allowUserBackup} onChange={(e) => setAllowUserBackup(e.target.checked)} />
+                Allow backup of own users only
+              </label>
+              <p className="pt-1 text-[10px] text-muted-foreground">Settings page sections</p>
+              <div className="grid gap-1 sm:grid-cols-2">
+                {RESELLER_SETTING_KEYS.map((key) => (
+                  <label key={key} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={resellerSettings[key]}
+                      onChange={(e) => setResellerSettings({ ...resellerSettings, [key]: e.target.checked })}
+                    />
+                    {SETTING_LABELS[key]}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="sticky bottom-0 flex justify-end gap-2 pt-3 border-t border-border/40 bg-bg-elevated mt-3">
             <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={update.isPending}>
               {update.isPending ? t("reseller.editAdmin.saving") : t("common.save")}
