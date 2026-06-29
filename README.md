@@ -20,7 +20,7 @@
 
   <br />
   
-  [Features](#-features) · [What's New in 1.2.5](#-whats-new-in-125) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+  [Features](#-features) · [What's New in 1.2.7](#-whats-new-in-127) · [What's New in 1.2.6](#-whats-new-in-126) · [What's New in 1.2.5](#-whats-new-in-125) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 </div>
 
 ---
@@ -45,6 +45,7 @@
 - **Subscription Hosts** — per-inbound CDN/SNI/host overrides in share links
 - **Family/group subscriptions** (shared data pool)
 - **Smart Quota** — progressive speed reduction instead of hard-cut
+- **Self-service shop** (per-reseller plans + card/crypto/ZarinPal)
 - **Referral system** — invite codes with rewards
 - Config templates (custom Clash/sing-box routing)
 - QR codes + deep links (`vortex://` scheme)
@@ -89,7 +90,7 @@
 
 ### 🔐 Auth & Admin
 - JWT + TOTP 2FA
-- RBAC + **full reseller platform** (wallet, sub-resellers, whitelabel, webhooks, policy limits, auto-suspend)
+- RBAC + **full reseller platform** (wallet, per-reseller plans/payments, sub-resellers, whitelabel, webhooks, policy limits, auto-suspend)
 - API tokens (PAT)
 - Login brute-force protection
 - Account-sharing guard
@@ -114,6 +115,48 @@
 </td>
 </tr>
 </table>
+
+---
+
+## 🆕 What's New in 1.2.7
+
+<div align="center">
+
+**Per-reseller commerce · owned plans · payment proof · self-service renewal**
+
+</div>
+
+| Feature | Description |
+|---------|-------------|
+| **Self-service renewal** | Users purchase plans from `/sub/:token/shop`; traffic + duration stack additively onto current balance |
+| **Per-reseller payment config** | Each reseller sets their own card number, crypto addresses, and ZarinPal merchant; gated by "billing" setting |
+| **Per-reseller owned plans** | Resellers create plans with custom pricing; users only see their reseller's plans in shop |
+| **Payment proof upload** | Card-to-card requires receipt image (فیش); crypto accepts TX hash + transfer screenshot |
+| **Pending order review** | Admins see proof thumbnails, approve or reject manual payments |
+| **Manual payment methods** | Card-to-card + crypto alongside ZarinPal in both server-side shop and React portal |
+| **Plan ownership** | Resellers can create/delete their own plans (user:write); cross-reseller purchase blocked |
+| **Scrollable Edit Admin** | Modal properly scrolls with sticky save button |
+
+---
+
+## 🆕 What's New in 1.2.6
+
+<div align="center">
+
+**Node enrollment wizard · wallet billing · reseller wallet top-up · diagnostics · doctor CLI**
+
+</div>
+
+| Feature | Description |
+|---------|-------------|
+| **Node enrollment wizard** | Four-step UI: copy mTLS bundle → install → register → connectivity test |
+| **Node health diagnostics** | Classify disconnects (mTLS failure / unreachable / core down); badges + debug bundle |
+| **`vortexui doctor`** | CLI checks certs, services, ports, and `/health` for panel/node/docker installs |
+| **Reseller wallet billing** | Multi-currency packages, ZarinPal + NowPayments online top-up, card-to-card and crypto with TX ID |
+| **Wallet deposit approval** | Sudo approval queue for manual deposits; crypto coin picker (TRX, TON, USDT-BEP20, LTC, BNB) |
+| **Wallet quota stacking** | Approved purchases immediately add to reseller's main quota (no reserve mode) |
+| **Wallet UI** | Top-up from Admins page, CSV ledger export, parent → sub-reseller top-up |
+| **Enrollment polish** | QR code, phase badges, TCP vs mTLS status, CA comparison, Telegram disconnect alert |
 
 ---
 
@@ -262,7 +305,7 @@ See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup deta
 
 </div>
 
-| | VortexUI 1.2.5 | 3x-ui | Marzban | Hiddify |
+| | VortexUI 1.2.7 | 3x-ui | Marzban | Hiddify |
 |:--|:--:|:--:|:--:|:--:|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |
@@ -285,6 +328,8 @@ See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup deta
 | **CDN/Relay chains** | ✅ visual builder | ❌ | ❌ | ❌ |
 | **Analytics (geo)** | ✅ + CSV export | ❌ | ❌ | ❌ |
 | **Reseller platform** | ✅ wallet, sub-resellers, whitelabel | Partial | ✅ | Partial |
+| **Payment gateways** | ✅ ZarinPal + crypto + card-to-card | ❌ | ❌ | ❌ |
+| **Self-service shop** | ✅ per-reseller | ❌ | ❌ | ✅ |
 | **Notifications** | Webhook + TG + portal | TG | ✅ | TG |
 | **Languages** | 8 | 13 | 3 | 5 |
 | **Backend** | Go | Go | Python | Python |
@@ -448,6 +493,11 @@ make run-panel          # start panel
 - [x] Command palette + keyboard shortcuts
 - [x] Dashboard widgets + onboarding tour
 - [x] Mobile-first portal
+- [x] Per-reseller payment configuration (v1.2.7)
+- [x] Per-reseller owned plans (v1.2.7)
+- [x] Payment proof/receipt uploads (v1.2.7)
+- [x] Node enrollment wizard (v1.2.6)
+- [x] Reseller wallet billing (v1.2.6)
 
 </details>
 
