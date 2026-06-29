@@ -1,154 +1,319 @@
-# 13. Protocols & Configuration
+# Protocols & Configuration
 
-> Full English JSON examples: [`docs/protocols.md`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/protocols.md)
-
-!!! tip "Tip"
-    Under heavy censorship: **VLESS + REALITY + Vision** — generate keys from the UI.
+!!! info "Capability Matrix"
+    The panel exposes a live per-protocol capability matrix (`GET /api/capabilities`)
+    as the single source of truth. The inbound editor only offers combinations the
+    selected node's core actually supports.
 
 ---
 
-## VLESS
+## Protocol Overview
 
-### VLESS + TCP + REALITY (recommended for censorship)
+| Protocol | Core | Inbound | Outbound | Transport | Security |
+|----------|------|:-------:|:--------:|-----------|----------|
+| VLESS | Both | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, xHTTP, mKCP | None, TLS, REALITY |
+| VMess | Both | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, mKCP | None, TLS |
+| Trojan | Both | ✅ | ✅ | TCP, WS, gRPC, mKCP | TLS, REALITY |
+| Shadowsocks | Both | ✅ | ✅ | TCP (+ SS-2022 multi-user) | None |
+| Hysteria2 | sing-box | ✅ | ✅ | UDP (QUIC) | TLS |
+| TUIC | sing-box | ✅ | ✅ | UDP (QUIC) | TLS |
+| WireGuard | sing-box | ✅ | ✅ | UDP | Native |
+| Hysteria (v1) | sing-box | ✅ | — | UDP | TLS |
+| ShadowTLS | sing-box | ✅ | ✅ | TCP | TLS |
+| AnyTLS | sing-box | ✅ | — | TCP | TLS |
+| Naive | sing-box | ✅ | — | — | TLS (mandatory) |
+| SOCKS | Both | ✅ | ✅ | — (raw TCP) | plaintext |
+| HTTP | Both | ✅ | ✅ | — (raw TCP) | plaintext |
+| Dokodemo | Xray | ✅ | — | — (raw TCP/UDP) | plaintext |
 
-| Field | Value |
-|-------|-------|
+---
+
+## Per-Protocol Configuration
+
+### VLESS + REALITY (Recommended)
+
+The gold standard for censorship resistance. REALITY eliminates the need for a TLS certificate.
+
+```mermaid
+graph LR
+    Client[Client] -->|TLS 1.3 + REALITY| Node[Node]
+    Node -->|Freedom| Internet[Internet]
+```
+
+**Inbound config:**
+
+| Field | Example |
+|-------|---------|
 | Protocol | `vless` |
 | Port | `443` |
-| Network | `tcp` |
+| Transport | `tcp` |
 | Security | `reality` |
-| Flow | `xtls-rprx-vision` |
-| SNI | `www.microsoft.com` |
+| Dest (target) | `www.google.com:443` |
+| Server Names | `www.google.com` |
+| Private Key | Auto-generated |
+| Short IDs | Auto-generated (up to 8) |
+| Flow | `xtls-rprx-vision` (for TCP) |
 
-**UI:** Nodes → Inbounds → Add → Generate REALITY keys
+!!! tip
+    Use the **Reality Scanner** to find the best SNI domains for your server location.
 
-### VLESS + WebSocket + TLS (CDN)
+### VMess + WebSocket + TLS
 
-| Field | Value |
-|-------|-------|
-| Network | `ws` |
+Classic setup compatible with CDN fronting (Cloudflare):
+
+| Field | Example |
+|-------|---------|
+| Protocol | `vmess` |
+| Port | `443` |
+| Transport | `ws` |
+| Path | `/vmws` |
 | Security | `tls` |
-| Path | `/vless-ws` |
+| SNI | `cdn.example.com` |
+
+Works behind Cloudflare with WebSocket enabled on the domain.
+
+### Trojan + gRPC + TLS
+
+High-performance option with multiplexing:
+
+| Field | Example |
+|-------|---------|
+| Protocol | `trojan` |
+| Port | `443` |
+| Transport | `grpc` |
+| Service Name | `trojangrpc` |
+| Security | `tls` |
 | SNI | `your-domain.com` |
 
-Cloudflare: orange cloud proxy + WebSocket enabled.
+### Shadowsocks 2022 (Multi-User)
 
-### VLESS + gRPC + TLS
+Modern Shadowsocks with per-user keys:
 
-| Network | `grpc` |
-| Path | service name (e.g. `vless-grpc`) |
-
-### VLESS + HTTPUpgrade + TLS
-
-| Network | `httpupgrade` |
-| Path | `/vless-hu` |
-
----
-
-## VMess
-
-| Setup | Network | Security |
-|-------|---------|----------|
-| CDN | `ws` | `tls` |
-| Simple | `tcp` | `none` |
-| Multiplex | `grpc` | `tls` |
-
----
-
-## Trojan
-
-| Setup | Network |
+| Field | Example |
 |-------|---------|
-| Direct TLS | `tcp` |
-| CDN | `ws` |
-| gRPC | `grpc` |
+| Protocol | `shadowsocks` |
+| Port | `8388` |
+| Method | `2022-blake3-aes-128-gcm` |
+| Server Key | Auto-generated |
+| Security | `none` (SS handles its own encryption) |
 
----
+Each user gets a derived key — no shared password.
 
-## Shadowsocks
+### Hysteria2
 
-| Type | Cipher |
-|------|--------|
-| SS2022 | `2022-blake3-aes-128-gcm` |
-| Classic | `aes-256-gcm`, `chacha20-ietf-poly1305` |
+QUIC-based protocol with built-in congestion control. Excellent for lossy networks:
 
----
-
-## Hysteria2 (sing-box only)
-
-| Field | Value |
-|-------|-------|
-| Core | `singbox` |
+| Field | Example |
+|-------|---------|
 | Protocol | `hysteria2` |
-| Port | UDP (e.g. 443) |
-| TLS | required |
+| Port | `4443` |
+| Security | `tls` (mandatory) |
+| Up/Down bandwidth | Client-reported for congestion control |
+| Obfs type | `salamander` (optional) |
+| Obfs password | Shared secret |
 
----
+!!! note
+    Hysteria2 requires sing-box core. Not available on Xray nodes.
 
-## TUIC (sing-box only)
+### TUIC
 
-| Field | Value |
-|-------|-------|
+QUIC-based UDP relay with zero-RTT:
+
+| Field | Example |
+|-------|---------|
 | Protocol | `tuic` |
-| Congestion | `bbr` |
+| Port | `4444` |
+| Security | `tls` (mandatory) |
+| Congestion | `bbr` or `cubic` |
+| UUID | Per-user authentication |
+
+### WireGuard
+
+Native WireGuard tunnel via sing-box:
+
+| Field | Example |
+|-------|---------|
+| Protocol | `wireguard` |
+| Port | `51820` |
+| Private Key | Server private key |
+| Peer public keys | Per-user public keys |
+| Allowed IPs | `0.0.0.0/0, ::/0` |
+| MTU | `1280` |
+
+### Naive (NaiveProxy)
+
+HTTP/2 or HTTP/3 proxy disguised as normal HTTPS traffic:
+
+| Field | Example |
+|-------|---------|
+| Protocol | `naive` |
+| Port | `443` |
+| Security | `tls` (mandatory) |
+| Username/Password | Per-user credentials |
+
+!!! warning
+    Naive requires sing-box core and **mandates TLS**. Cannot run without a valid certificate.
+
+### ShadowTLS
+
+TLS camouflage — makes traffic look like a normal TLS connection to a popular website:
+
+| Field | Example |
+|-------|---------|
+| Protocol | `shadowtls` |
+| Port | `443` |
+| Version | `3` (recommended) |
+| Handshake server | `www.microsoft.com:443` |
+| Password | Shared secret |
 
 ---
 
-## WireGuard
+## Capability Matrix (Xray vs sing-box)
 
-WireGuard inbound on sing-box — peer per user or shared.
+### Xray-core
 
----
+| Category | Supported |
+|----------|-----------|
+| Protocols | vless, vmess, trojan, shadowsocks, socks, http, dokodemo |
+| Transports | tcp, ws, grpc, httpupgrade, http/h2, xhttp, mkcp |
+| Security | none, tls, reality |
+| Special | xtls-rprx-vision flow, xhttp mode selector, mKCP headers |
 
-## Outbound Examples
+### sing-box
 
-### Direct
+| Category | Supported |
+|----------|-----------|
+| Protocols | vless, vmess, trojan, shadowsocks, hysteria2, tuic, wireguard, hysteria, shadowtls, anytls, naive, socks, http |
+| Transports | tcp, ws, grpc, httpupgrade, http/h2, quic |
+| Security | none, tls, reality (limited) |
+| Special | QUIC-based protocols, multiplex, brutal congestion |
 
-```json
-{ "tag": "direct", "protocol": "freedom" }
-```
+### Protocols Without Stream Transport
 
-### Block
+| Protocol | Core | Transport | Security |
+|----------|------|-----------|----------|
+| SOCKS | Both | raw TCP | plaintext |
+| HTTP | Both | raw TCP | plaintext |
+| Naive | sing-box | — | TLS (mandatory) |
+| Dokodemo | Xray | raw TCP/UDP | plaintext |
+| WireGuard | sing-box | UDP | native |
+| Hysteria2 | sing-box | UDP (QUIC) | TLS |
+| TUIC | sing-box | UDP (QUIC) | TLS |
 
-```json
-{ "tag": "block", "protocol": "blackhole" }
-```
-
----
-
-## Routing Examples
-
-### Iran direct, rest via proxy
-
-```json
-{
-  "rules": [
-    { "type": "field", "domain": ["geosite:ir"], "outboundTag": "direct" },
-    { "type": "field", "ip": ["geoip:ir"], "outboundTag": "direct" },
-    { "type": "field", "network": "tcp,udp", "outboundTag": "proxy" }
-  ]
-}
-```
-
----
-
-## REALITY Key Generation
-
-```bash
-curl -X POST -H "Authorization: Bearer $TOKEN" \
-  https://panel.example.com/api/reality/keypair
-```
-
-Or from the UI: **Generate** button in the inbound form.
+!!! warning
+    SOCKS and HTTP inbounds are **plaintext** — only expose on trusted networks or behind a local relay.
 
 ---
 
-## Practical Tips
+## Transport Details
 
-| Scenario | Recommendation |
-|----------|----------------|
-| Heavy censorship | VLESS+REALITY+Vision |
-| CDN | VLESS/VMess+WS+TLS |
-| UDP blocked | TCP-based protocols |
-| High speed | REALITY or XTLS-Vision |
-| Mobile in Iran | Fragment evasion profile |
+### TCP
+
+Default transport. Supports optional HTTP camouflage header (Xray).
+
+### WebSocket (WS)
+
+HTTP upgrade to WebSocket. CDN-compatible (Cloudflare, etc.).
+
+| Setting | Description |
+|---------|-------------|
+| Path | URL path (e.g. `/ws`) |
+| Host | HTTP Host header |
+| Max early data | Bytes in first WS frame (0-RTT) |
+
+### gRPC
+
+HTTP/2 based. High performance with multiplexing.
+
+| Setting | Description |
+|---------|-------------|
+| Service name | gRPC service path |
+| Multi-mode | Enable multi-stream mode |
+
+### HTTPUpgrade
+
+HTTP/1.1 upgrade (like WS but simpler). Supported by both cores.
+
+| Setting | Description |
+|---------|-------------|
+| Path | URL path |
+| Host | HTTP Host header |
+
+### xHTTP (Xray only)
+
+Advanced HTTP transport with multiple modes:
+
+| Mode | Description |
+|------|-------------|
+| `auto` | Auto-detect best mode |
+| `packet-up` | Packet framing for upload |
+| `stream-up` | Streaming upload |
+
+### mKCP (Xray only)
+
+UDP-based transport with FEC (Forward Error Correction). Good for lossy networks.
+
+| Setting | Description |
+|---------|-------------|
+| Header type | `none`, `srtp`, `utp`, `wechat-video`, `dtls`, `wireguard` |
+| Seed | Obfuscation seed |
+| MTU | Maximum transmission unit |
+
+### QUIC (sing-box only)
+
+Native QUIC transport for Hysteria/TUIC protocols.
+
+---
+
+## Security Layers
+
+### None
+
+No encryption on the transport layer. Protocol handles its own encryption (e.g. VMess, Shadowsocks).
+
+### TLS
+
+Standard TLS 1.2/1.3. Requires a valid certificate (auto-provisioned via Caddy, or manually configured).
+
+| Setting | Description |
+|---------|-------------|
+| SNI | Server name indication |
+| ALPN | Application-layer protocol (`h2`, `http/1.1`) |
+| Certificate | Auto (ACME) or manual (file path) |
+| Min version | `1.2` or `1.3` |
+| Fingerprint | uTLS impersonation |
+
+### REALITY
+
+TLS 1.3 imitation without needing a real certificate. The server impersonates a legitimate website.
+
+| Setting | Description |
+|---------|-------------|
+| Dest | Target server to impersonate |
+| Server Names | Allowed SNI values |
+| Private Key | X25519 server key |
+| Short IDs | Client authentication IDs |
+| Spider X | Path for active probing evasion |
+
+---
+
+## Subscription Output Formats
+
+| Format | Content-Type | Description |
+|--------|-------------|-------------|
+| `base64` | `text/plain` | V2Ray-compatible base64 share links |
+| `clash` | `text/yaml` | Clash Meta YAML config |
+| `singbox` | `application/json` | sing-box client JSON |
+| `xray` | `application/json` | Raw Xray/V2Ray JSON |
+| `outline` | `text/plain` | `ss://` links for Outline |
+| `links` | `text/plain` | One share link per line |
+
+Auto-detection from User-Agent:
+
+| Client | Detected format |
+|--------|----------------|
+| Clash / ClashX / Clash Meta | `clash` |
+| sing-box | `singbox` |
+| Outline | `outline` |
+| v2rayNG / V2RayN | `base64` |
+| Other | `base64` |

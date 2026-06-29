@@ -1,133 +1,149 @@
-# 3. First Steps
+# First Steps
 
-!!! tip "Tip"
-    Complete this workflow in **5 minutes**: node → inbound → user → subscription → test.
-
----
-
-## Logging In
-
-1. Open the install URL in your browser (e.g. `https://panel.example.com`)
-2. Sign in with the admin username and password created during installation
-3. If 2FA is enabled, enter the 6-digit authenticator code
-
-### Create a new admin (CLI)
-
-```bash
-# Docker
-docker compose -f deploy/compose.yml exec panel \
-  /usr/local/bin/panel admin create --username admin2 --password 'pass' --sudo
-
-# Native
-./bin/panel admin create --username admin2 --password 'pass' --sudo
-
-# Or via vortexui
-vortexui admin
-```
+!!! info "Estimated Time"
+    From login to a working subscription link: **5 minutes**.
 
 ---
 
-## Initial Workflow (5 Minutes)
+## 1. Login & Secure Your Account
 
-```mermaid
-flowchart LR
-    A["1. Check node"] --> B["2. Create inbound"]
-    B --> C["3. Create user"]
-    C --> D["4. Get subscription"]
-    D --> E["5. Test in client"]
-```
+1. Navigate to your panel URL (e.g. `https://panel.example.com`)
+2. Log in with the admin credentials you created during installation
+3. **Change your password** immediately: Settings → Profile → Change Password
 
-### Step 1: Check the node
+### Enable TOTP 2FA
 
-- Menu → **Nodes**
-- The `local` node (or added node) should be **green** with Core Running
-- Review CPU/RAM/Disk and connection count
+1. Go to **Settings → Two-Factor Authentication**
+2. Click **Enable** — scan the QR code with Google Authenticator or any TOTP app
+3. Enter the 6-digit code to confirm
+4. Store your recovery codes securely
 
-### Step 2: Create an inbound
-
-1. On the node → **Inbounds**
-2. **Add Inbound**
-3. Quick VLESS + REALITY example:
-
-| Field | Value |
-|-------|-------|
-| Protocol | `vless` |
-| Port | `443` |
-| Network | `tcp` |
-| Security | `reality` |
-| Flow | `xtls-rprx-vision` |
-| SNI | `www.microsoft.com` |
-
-4. In the REALITY section click **Generate** (private/public key pair)
-5. Save — the core hot-reloads the config
-
-> Protocol details: [Chapter 13 — Protocols](./13-protocols-config.md)
-
-### Step 3: Create a user
-
-1. Menu → **Users** → **New User**
-2. Suggested fields:
-
-| Field | Example |
-|-------|---------|
-| Username | `testuser` |
-| Data limit | `50 GB` |
-| Expire | 30 days |
-| Device limit | `3` |
-| Inbounds | Select the inbound you created |
-
-3. **Save**
-
-### Step 4: Get subscription
-
-1. In the user list → **Subscription** icon (or QR)
-2. Copy the links below:
-
-| Format | Use case |
-|--------|----------|
-| Base64 | v2rayNG, Nekoray |
-| Clash | Clash Meta / Mihomo |
-| sing-box | sing-box client |
-| QR Code | Mobile scan |
-
-3. Public user page: `https://panel.example.com/sub/info/{token}` — traffic chart and QR
-
-### Step 5: Test
-
-1. Import the link in your client
-2. Connect
-3. In the panel → **Users** → Usage — traffic should increase (live SSE)
+!!! warning
+    Without 2FA, anyone with your password has full panel access. Enable it before exposing the panel to the internet.
 
 ---
 
-## Recommended Initial Settings
+## 2. Add Your First Node
 
-| Setting | Path | Why |
-|---------|------|-----|
-| Change password | Settings → Password | Security |
-| Enable 2FA | Settings → 2FA | Account protection |
-| Iran Geo | Nodes → Update Geo | IR routing |
-| Webhook/TG | env + restart | Event notifications |
-| Backup | Settings → Backup | Disaster recovery |
+=== "Local Node (Single Server)"
+
+    If your panel and proxy core run on the same machine:
+
+    1. Go to **Nodes → Add Node**
+    2. Select **Local Node**
+    3. Choose a core: **Xray-core** or **sing-box**
+    4. Click **Create**
+    5. The node starts automatically and shows "Online"
+
+=== "Remote Node (Enrollment Wizard)"
+
+    For a separate server:
+
+    1. Go to **Nodes → Add Node**
+    2. Select **Remote Node**
+    3. The wizard shows a one-line install command — copy it
+    4. SSH into your remote server and paste the command
+    5. Wait for the agent to connect — the node appears as "Online"
+
+!!! tip
+    The enrollment wizard handles certificate exchange, core installation, and service registration. No manual certificate management needed.
 
 ---
 
-## Import Users from Another Panel
+## 3. Create Your First Inbound
 
-**Users → Import** — supported sources:
-- **3x-ui** (JSON export)
-- **Marzban** (JSON export)
+A quick VLESS + REALITY setup (recommended for censorship-resistant connections):
 
-Users are migrated with UUID and quota; inbounds must be mapped separately.
+1. Go to **Inbounds → Add Inbound**
+2. Configure:
+
+    | Field | Value |
+    |-------|-------|
+    | Protocol | VLESS |
+    | Node | Your node |
+    | Port | `443` |
+    | Transport | TCP |
+    | Security | REALITY |
+    | Dest (SNI) | `www.google.com:443` (or use Reality Scanner) |
+    | Server Names | `www.google.com` |
+    | Short IDs | Auto-generated (or enter your own) |
+
+3. Click **Create**
+
+!!! tip "Reality Scanner"
+    Use **Security → Reality Scanner** to find the best SNI domains for your server location. Pick the highest-scoring result for low latency and stable connections.
 
 ---
 
-## UI Shortcuts
+## 4. Create Your First User
 
-| Action | Path |
-|--------|------|
-| Dark/light theme | Sidebar → moon/sun icon |
-| Language | Settings → Language |
-| Search users | Users → search box |
-| Node logs | Nodes → Logs |
-| Live events | Automatic — toast in corner |
+1. Go to **Users → New User**
+2. Fill in:
+
+    | Field | Value |
+    |-------|-------|
+    | Username | `testuser` |
+    | Data limit | `50 GB` (or `0` for unlimited) |
+    | Expire | 30 days from now |
+    | Device limit | `3` |
+    | Inbounds | Select your VLESS inbound |
+
+3. Click **Create**
+4. The user's subscription token is generated automatically
+
+---
+
+## 5. Test the Subscription Link
+
+1. From the user list, click the user's name to open their detail page
+2. Copy the **Subscription Link** (or scan the QR code)
+3. Import into your client app:
+
+=== "v2rayNG (Android)"
+
+    1. Open v2rayNG → tap **+** → **Import config from clipboard**
+    2. Or scan the QR code directly
+
+=== "Clash Meta (Desktop/Mobile)"
+
+    ```
+    https://panel.example.com/sub/<token>?format=clash
+    ```
+    Add as a subscription URL in Clash.
+
+=== "sing-box (iOS/Android)"
+
+    ```
+    https://panel.example.com/sub/<token>?format=singbox
+    ```
+    Add as a remote profile.
+
+4. Connect and verify traffic flows — check the user's usage in the panel
+
+---
+
+## 6. Enable Notifications
+
+Set up Telegram notifications to stay informed:
+
+1. Go to **Settings → Notifications → Telegram**
+2. Enter your **Bot Token** (create one via [@BotFather](https://t.me/BotFather))
+3. Enter your **Admin Chat ID** (get it from [@userinfobot](https://t.me/userinfobot))
+4. Click **Test** to verify delivery
+5. Enable desired events:
+    - User created/expired/limited
+    - Node offline
+    - Quota threshold reached
+    - Backup completed
+
+---
+
+## What's Next?
+
+You now have a working VortexUI setup with one node, one inbound, and one user. From here:
+
+- **[Dashboard](04-dashboard.md)** — explore real-time monitoring
+- **[User Management](05-user-management.md)** — bulk operations, quotas, portal
+- **[Node Management](06-node-management.md)** — add more nodes, configure auto-migration
+- **[Plans & Payments](09-plans-payments.md)** — set up self-service plan purchases
+- **[Security](08-security-administration.md)** — configure anti-censorship features
