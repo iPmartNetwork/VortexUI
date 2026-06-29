@@ -39,10 +39,44 @@ func (h *Handlers) SubscriptionShop(c echo.Context) error {
 		}
 	}
 
+	// Load per-reseller payment config.
 	data := shopPageData{
 		Username: user.Username,
 		Token:    token,
 		Plans:    enabled,
+	}
+
+	if user.AdminID != nil && h.ResellerPayment != nil {
+		cfg, err := h.ResellerPayment.GetPaymentConfig(c.Request().Context(), *user.AdminID)
+		if err == nil && cfg != nil {
+			data.EnabledMethods = cfg.EnabledMethods
+			data.CardNumber = cfg.CardNumber
+			data.CardHolder = cfg.CardHolder
+			data.CardBank = cfg.CardBank
+			data.CryptoAddresses = cfg.CryptoAddresses
+			data.ManualInstructions = cfg.ManualInstructions
+			// Compute convenience flags.
+			for _, m := range cfg.EnabledMethods {
+				switch m {
+				case "zarinpal":
+					data.HasZarinpal = cfg.ZarinpalMerchantID != "" || h.ZarinPal != nil
+				case "card_to_card":
+					data.HasCardToCard = cfg.CardNumber != ""
+				case "crypto":
+					data.HasCrypto = len(cfg.CryptoAddresses) > 0
+				}
+			}
+		}
+	} else {
+		// No reseller config: fall back to global gateways.
+		if h.ZarinPal != nil {
+			data.HasZarinpal = true
+			data.EnabledMethods = append(data.EnabledMethods, "zarinpal")
+		}
+		if h.NowPayments != nil {
+			data.HasCrypto = true
+			data.EnabledMethods = append(data.EnabledMethods, "nowpayments")
+		}
 	}
 
 	c.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -50,9 +84,18 @@ func (h *Handlers) SubscriptionShop(c echo.Context) error {
 }
 
 type shopPageData struct {
-	Username string
-	Token    string
-	Plans    []*domain.Plan
+	Username           string
+	Token              string
+	Plans              []*domain.Plan
+	EnabledMethods     []string
+	CardNumber         string
+	CardHolder         string
+	CardBank           string
+	CryptoAddresses    map[string]string
+	ManualInstructions string
+	HasZarinpal        bool
+	HasCardToCard      bool
+	HasCrypto          bool
 }
 
 var shopTmpl = template.Must(template.New("shop").Funcs(template.FuncMap{
