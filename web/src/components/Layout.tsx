@@ -39,6 +39,8 @@ import {
   Ban,
   ChevronDown,
   Wallet,
+  CreditCard,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/auth";
@@ -65,6 +67,8 @@ function buildNavSections(sudo: boolean): NavSection[] {
     items: [
       { to: "/reseller-dashboard", key: "nav.resellerDashboard", icon: Gauge },
       { to: "/reseller-account", key: "nav.resellerAccount", icon: Wallet },
+      { to: "/reseller-payment", key: "nav.resellerPayment", icon: CreditCard },
+      { to: "/pending-orders", key: "nav.pendingOrders", icon: ClipboardList },
     ],
   };
 
