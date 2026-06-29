@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.7] - 2026-06-17
+
+### Added
+- **Self-service plan renewal** — end-users can purchase a plan from their subscription page to extend their existing account. Traffic and duration stack additively onto the current balance (no new account created, no usage reset). New server-rendered shop page at `/sub/:token/shop` with gateway selection (ZarinPal / Crypto). Payment result page at `/payment/result`.
+
+### Fixed
+- Portal "Purchase" button now properly initiates payment (was previously broken — GET to POST endpoint).
+- Subscription info "View Plans & Purchase" link now opens the shop page (was linking to raw JSON).
+
 ## [1.2.6] - 2026-06-17
 
 Node operations release: enrollment wizard, live connectivity diagnostics, and CLI
@@ -380,7 +389,8 @@ First stable release.
 
 ---
 
-[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.6...HEAD
+[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.7...HEAD
+[1.2.7]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.3...v1.2.5
 [1.2.3]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.0...v1.2.3
