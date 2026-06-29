@@ -21,6 +21,7 @@ const SETTING_LABELS: Record<ResellerSettingKey, string> = {
   branding: "Custom branding",
   auto_backup: "Auto backup",
   update: "Update checker",
+  billing: "Payment settings",
 };
 
 export function EditAdminModal({ admin, onClose }: { admin: Admin | null; onClose: () => void }) {

@@ -20,6 +20,7 @@ export const RESELLER_SETTING_KEYS = [
   "branding",
   "auto_backup",
   "update",
+  "billing",
 ] as const;
 
 export type ResellerSettingKey = (typeof RESELLER_SETTING_KEYS)[number];
@@ -36,6 +37,7 @@ export const DEFAULT_RESELLER_SETTINGS: Record<ResellerSettingKey, boolean> = {
   branding: false,
   auto_backup: false,
   update: false,
+  billing: false,
 };
 
 export function mergeResellerSettings(stored?: Record<string, boolean> | null): Record<ResellerSettingKey, boolean> {
@@ -104,6 +106,9 @@ export function canAccessRoute(
 ): boolean {
   if (sudo) return true;
   if (path === "/settings" && !anyResellerSettingEnabled(resellerSettings)) {
+    return false;
+  }
+  if ((path === "/reseller-payment" || path === "/pending-orders") && !resellerSettingEnabled(resellerSettings, "billing")) {
     return false;
   }
   const need = ROUTE_PERMISSIONS[path];

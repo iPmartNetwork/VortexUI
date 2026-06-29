@@ -10,9 +10,10 @@ import (
 // purchase. It bundles data limit, duration, price, and optionally inbound
 // bindings into a one-click purchase.
 type Plan struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description,omitempty"`
+	ID          uuid.UUID  `json:"id"`
+	AdminID     *uuid.UUID `json:"admin_id,omitempty"` // owning admin/reseller (creator)
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
 
 	// Subscription parameters applied when a user purchases this plan.
 	DataLimit     int64         `json:"data_limit"`     // bytes; 0 = unlimited

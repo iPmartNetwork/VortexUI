@@ -228,8 +228,8 @@ func NewRouter(d Deps) *echo.Echo {
 	// Plans + Orders (admin)
 	plans := authed.Group("/plans")
 	plans.GET("", d.Handlers.ListPlans, RequirePermission(d.Auth, domain.PermUserRead))
-	plans.POST("", d.Handlers.CreatePlan, RequirePermission(d.Auth, domain.PermAdminManage))
-	plans.DELETE("/:id", d.Handlers.DeletePlan, RequirePermission(d.Auth, domain.PermAdminManage))
+	plans.POST("", d.Handlers.CreatePlan, RequirePermission(d.Auth, domain.PermUserWrite))
+	plans.DELETE("/:id", d.Handlers.DeletePlan, RequirePermission(d.Auth, domain.PermUserWrite))
 
 	orders := authed.Group("/orders")
 	orders.GET("", d.Handlers.ListOrders, RequirePermission(d.Auth, domain.PermUserRead))

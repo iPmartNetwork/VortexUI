@@ -96,6 +96,10 @@ function buildNavSections(sudo: boolean): NavSection[] {
         { to: "/reseller-quota-alerts", key: "nav.resellerQuotaAlerts", icon: Bell },
         { to: "/referrals", key: "nav.referrals", icon: Gift },
         { to: "/tickets", key: "nav.tickets", icon: LifeBuoy },
+        ...(sudo ? [
+          { to: "/reseller-payment", key: "nav.resellerPayment", icon: CreditCard },
+          { to: "/pending-orders", key: "nav.pendingOrders", icon: ClipboardList },
+        ] as NavItem[] : []),
       ],
     },
   {

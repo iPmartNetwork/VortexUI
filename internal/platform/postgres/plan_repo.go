@@ -17,7 +17,7 @@ import (
 type PlanRepo struct{ pool *pgxpool.Pool }
 
 const planCols = `id, name, description, data_limit, duration_days, device_limit,
-	reset_strategy, inbound_ids, price_toman, price_usd, max_users, enabled, created_at`
+	reset_strategy, inbound_ids, price_toman, price_usd, max_users, enabled, created_at, admin_id`
 
 const orderCols = `id, user_id, admin_id, plan_id, username, status, gateway,
 	gateway_id, amount, currency, created_at, paid_at`
@@ -32,13 +32,18 @@ func marshalUUIDs(ids []uuid.UUID) ([]byte, error) {
 func scanPlan(row pgx.Row) (*domain.Plan, error) {
 	var p domain.Plan
 	var idsJSON []byte
+	var adminID pgtype.UUID
 	if err := row.Scan(&p.ID, &p.Name, &p.Description, &p.DataLimit, &p.Duration,
 		&p.DeviceLimit, &p.ResetStrategy, &idsJSON, &p.PriceToman, &p.PriceUSD,
-		&p.MaxUsers, &p.Enabled, &p.CreatedAt); err != nil {
+		&p.MaxUsers, &p.Enabled, &p.CreatedAt, &adminID); err != nil {
 		return nil, err
 	}
 	if len(idsJSON) > 0 {
 		_ = json.Unmarshal(idsJSON, &p.InboundIDs)
+	}
+	if adminID.Valid {
+		a := uuid.UUID(adminID.Bytes)
+		p.AdminID = &a
 	}
 	return &p, nil
 }
@@ -73,10 +78,10 @@ func (r *PlanRepo) CreatePlan(ctx context.Context, p *domain.Plan) error {
 	}
 	_, err = r.pool.Exec(ctx, `
 		INSERT INTO plans (id, name, description, data_limit, duration_days, device_limit,
-			reset_strategy, inbound_ids, price_toman, price_usd, max_users, enabled, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+			reset_strategy, inbound_ids, price_toman, price_usd, max_users, enabled, created_at, admin_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
 		p.ID, p.Name, p.Description, p.DataLimit, p.Duration, p.DeviceLimit,
-		p.ResetStrategy, idsJSON, p.PriceToman, p.PriceUSD, p.MaxUsers, p.Enabled, p.CreatedAt)
+		p.ResetStrategy, idsJSON, p.PriceToman, p.PriceUSD, p.MaxUsers, p.Enabled, p.CreatedAt, p.AdminID)
 	return err
 }
 
