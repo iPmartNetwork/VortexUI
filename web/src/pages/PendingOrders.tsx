@@ -56,6 +56,7 @@ export function PendingOrders() {
               <th className="px-4 py-3 font-medium">{t("pendingOrders.colAmount")}</th>
               <th className="px-4 py-3 font-medium">{t("pendingOrders.colGateway")}</th>
               <th className="px-4 py-3 font-medium">{t("pendingOrders.colTxId")}</th>
+              <th className="px-4 py-3 font-medium">Proof</th>
               <th className="px-4 py-3 font-medium">{t("pendingOrders.colDate")}</th>
               <th className="px-4 py-3 font-medium">{t("common.actions")}</th>
             </tr>
@@ -72,6 +73,15 @@ export function PendingOrders() {
                 </td>
                 <td className="px-4 py-3 text-xs text-fg-subtle font-mono max-w-[140px] truncate" title={o.gateway_id}>
                   {o.gateway_id || "—"}
+                </td>
+                <td className="px-4 py-3">
+                  {o.proof_image ? (
+                    <a href={o.proof_image} target="_blank" rel="noopener noreferrer">
+                      <img src={o.proof_image} alt="Receipt" className="h-10 w-10 rounded object-cover border border-border/40 hover:opacity-80 transition" />
+                    </a>
+                  ) : (
+                    <span className="text-fg-subtle text-xs">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs text-fg-subtle">
                   {new Date(o.created_at).toLocaleDateString()}
@@ -102,7 +112,7 @@ export function PendingOrders() {
             ))}
             {(!orders.data?.orders || orders.data.orders.length === 0) && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-fg-muted">
+                <td colSpan={7} className="px-4 py-8 text-center text-fg-muted">
                   {t("pendingOrders.empty")}
                 </td>
               </tr>

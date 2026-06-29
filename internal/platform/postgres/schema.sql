@@ -756,3 +756,23 @@ CREATE TABLE reseller_payment_config (
     manual_instructions TEXT NOT NULL DEFAULT '',
     enabled_methods     JSONB NOT NULL DEFAULT '[]'
 );
+
+-- Orders table (purchase orders for plans)
+CREATE TABLE orders (
+    id          UUID PRIMARY KEY,
+    user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+    admin_id    UUID REFERENCES admins(id) ON DELETE SET NULL,
+    plan_id     UUID NOT NULL REFERENCES plans(id),
+    username    TEXT NOT NULL DEFAULT '',
+    status      TEXT NOT NULL DEFAULT 'pending',
+    gateway     TEXT NOT NULL DEFAULT '',
+    gateway_id  TEXT NOT NULL DEFAULT '',
+    amount      BIGINT NOT NULL DEFAULT 0,
+    currency    TEXT NOT NULL DEFAULT 'IRR',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    paid_at     TIMESTAMPTZ,
+    proof_image TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX idx_orders_user ON orders(user_id);
+CREATE INDEX idx_orders_status ON orders(status);

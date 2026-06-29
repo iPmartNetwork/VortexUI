@@ -105,8 +105,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           {{if $.ManualInstructions}}<br>{{$.ManualInstructions}}{{end}}
         </div>
         {{end}}
-        <label>Transaction ID / Reference Number</label>
-        <input type="text" id="txid-card-{{.ID}}" placeholder="Enter your transaction ID">
+        <label>Upload receipt image (فیش واریز)</label>
+        <input type="file" accept="image/*" id="proof-card-{{.ID}}" onchange="previewProof(this, 'card', '{{.ID}}')">
+        <img id="preview-card-{{.ID}}" style="display:none;max-width:100%;margin-top:8px;border-radius:8px">
+        <label>Reference number (optional)</label>
+        <input type="text" id="txid-card-{{.ID}}" placeholder="Reference number (optional)">
         <button class="submit-btn" onclick="submitManual('{{.ID}}','card_to_card')">Submit Payment</button>
       </div>
 
@@ -126,8 +129,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           <option value="{{$coin}}">{{$coin}}</option>
           {{end}}
         </select>
-        <label>Transaction ID (TxHash)</label>
+        <label>Transaction Hash (TX ID)</label>
         <input type="text" id="txid-crypto-{{.ID}}" placeholder="Enter transaction hash">
+        <label>Upload transfer screenshot</label>
+        <input type="file" accept="image/*" id="proof-crypto-{{.ID}}" onchange="previewProof(this, 'crypto', '{{.ID}}')">
+        <img id="preview-crypto-{{.ID}}" style="display:none;max-width:100%;margin-top:8px;border-radius:8px">
         <button class="submit-btn" onclick="submitManual('{{.ID}}','crypto')">Submit Payment</button>
       </div>
 
@@ -144,6 +150,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <div class="toast" id="toast">Redirecting to payment...</div>
 <script>
+function previewProof(input, method, planID) {
+  var file = input.files[0];
+  if (!file) return;
+  var img = document.getElementById('preview-'+method+'-'+planID);
+  var reader = new FileReader();
+  reader.onload = function(e) { img.src = e.target.result; img.style.display = 'block'; };
+  reader.readAsDataURL(file);
+}
+
 function showManual(planID, method) {
   // Hide all manual sections for this plan first
   document.getElementById('manual-card-'+planID).classList.remove('active');
@@ -184,10 +199,40 @@ function submitManual(planID, method) {
     sub_token: '{{$.Token}}',
     gateway: method
   };
+
+  function doSubmit() {
+    fetch('/api/shop/purchase', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.status === 'pending_review') {
+        document.getElementById('manual-card-'+planID).classList.remove('active');
+        document.getElementById('manual-crypto-'+planID).classList.remove('active');
+        document.getElementById('pending-'+planID).classList.add('show');
+      } else {
+        alert(data.message || 'Submission failed');
+      }
+    })
+    .catch(function() { alert('Network error, please try again'); });
+  }
+
   if (method === 'card_to_card') {
     var txid = document.getElementById('txid-card-'+planID).value.trim();
-    if (!txid) { alert('Please enter your transaction ID'); return; }
-    body.tx_id = txid;
+    var fileInput = document.getElementById('proof-card-'+planID);
+    body.tx_id = txid || 'receipt';
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) { body.proof_image = e.target.result; doSubmit(); };
+      reader.readAsDataURL(fileInput.files[0]);
+      return;
+    } else if (!txid) {
+      alert('Please upload a receipt image or enter a reference number');
+      return;
+    }
+    doSubmit();
   } else if (method === 'crypto') {
     var txid = document.getElementById('txid-crypto-'+planID).value.trim();
     var coin = document.getElementById('coin-'+planID).value;
@@ -195,24 +240,15 @@ function submitManual(planID, method) {
     if (!coin) { alert('Please select a coin'); return; }
     body.tx_id = txid;
     body.crypto_coin = coin;
-  }
-
-  fetch('/api/shop/purchase', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(body)
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.status === 'pending_review') {
-      document.getElementById('manual-card-'+planID).classList.remove('active');
-      document.getElementById('manual-crypto-'+planID).classList.remove('active');
-      document.getElementById('pending-'+planID).classList.add('show');
-    } else {
-      alert(data.message || 'Submission failed');
+    var fileInput = document.getElementById('proof-crypto-'+planID);
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) { body.proof_image = e.target.result; doSubmit(); };
+      reader.readAsDataURL(fileInput.files[0]);
+      return;
     }
-  })
-  .catch(() => alert('Network error, please try again'));
+    doSubmit();
+  }
 }
 </script>
 </body>
