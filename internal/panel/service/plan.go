@@ -48,6 +48,7 @@ type CreatePlanInput struct {
 	PriceToman    int64
 	PriceUSD      float64
 	MaxUsers      int
+	AdminID       *uuid.UUID
 }
 
 // CreatePlan persists a new subscription plan.
@@ -67,6 +68,7 @@ func (s *PlanService) CreatePlan(ctx context.Context, in CreatePlanInput) (*doma
 		PriceToman:    in.PriceToman,
 		PriceUSD:      in.PriceUSD,
 		MaxUsers:      in.MaxUsers,
+		AdminID:       in.AdminID,
 		Enabled:       true,
 		CreatedAt:     s.now(),
 	}

@@ -120,6 +120,7 @@ CREATE INDEX idx_admin_inbounds_inbound ON admin_inbounds (inbound_id);
 
 CREATE TABLE plans (
     id             UUID PRIMARY KEY,
+    admin_id       UUID REFERENCES admins(id) ON DELETE CASCADE,
     name           TEXT NOT NULL,
     description    TEXT NOT NULL DEFAULT '',
     data_limit     BIGINT NOT NULL DEFAULT 0,
@@ -133,6 +134,8 @@ CREATE TABLE plans (
     enabled        BOOLEAN NOT NULL DEFAULT TRUE,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_plans_admin ON plans(admin_id);
 
 CREATE TABLE admin_plans (
     admin_id UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,

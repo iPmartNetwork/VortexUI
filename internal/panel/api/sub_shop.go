@@ -34,7 +34,10 @@ func (h *Handlers) SubscriptionShop(c echo.Context) error {
 	}
 	var enabled []*domain.Plan
 	for _, p := range plans {
-		if p.Enabled {
+		if !p.Enabled {
+			continue
+		}
+		if user.AdminID != nil && p.AdminID != nil && *p.AdminID == *user.AdminID {
 			enabled = append(enabled, p)
 		}
 	}

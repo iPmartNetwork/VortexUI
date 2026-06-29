@@ -33,6 +33,10 @@ func (h *Handlers) CreatePlan(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
+	}
 	ids, _ := parseUUIDs(req.InboundIDs)
 	p, err := h.Plans.CreatePlan(c.Request().Context(), service.CreatePlanInput{
 		Name:          req.Name,
@@ -45,6 +49,7 @@ func (h *Handlers) CreatePlan(c echo.Context) error {
 		PriceToman:    req.PriceToman,
 		PriceUSD:      req.PriceUSD,
 		MaxUsers:      req.MaxUsers,
+		AdminID:       &claims.AdminID,
 	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
@@ -57,22 +62,10 @@ func (h *Handlers) ListPlans(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
 	}
-	if claims := claimsFrom(c); claims != nil && !claims.Sudo && h.Admins != nil {
-		ids := make([]uuid.UUID, len(plans))
-		for i, p := range plans {
-			ids[i] = p.ID
-		}
-		allowed, aerr := h.Admins.FilterPlanIDs(c.Request().Context(), claims.AdminID, ids)
-		if aerr != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
-		}
-		allow := make(map[uuid.UUID]struct{}, len(allowed))
-		for _, id := range allowed {
-			allow[id] = struct{}{}
-		}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
 		filtered := plans[:0]
 		for _, p := range plans {
-			if _, ok := allow[p.ID]; ok {
+			if p.AdminID != nil && *p.AdminID == claims.AdminID {
 				filtered = append(filtered, p)
 			}
 		}
@@ -85,6 +78,15 @@ func (h *Handlers) DeletePlan(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	plan, err := h.Plans.GetPlan(c.Request().Context(), id)
+	if err != nil || plan == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "plan not found")
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		if plan.AdminID == nil || *plan.AdminID != claims.AdminID {
+			return echo.NewHTTPError(http.StatusForbidden, "you do not own this plan")
+		}
 	}
 	if err := h.Plans.DeletePlan(c.Request().Context(), id); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "delete failed")
@@ -167,6 +169,12 @@ func (h *Handlers) InitPurchase(c echo.Context) error {
 		if err == nil && cfg != nil {
 			resellerCfg = cfg
 		}
+	}
+
+	// Guard against cross-reseller purchases: a user may only buy plans owned by
+	// their own reseller.
+	if plan.AdminID != nil && adminID != nil && *plan.AdminID != *adminID {
+		return echo.NewHTTPError(http.StatusForbidden, "this plan is not available for your account")
 	}
 
 	// Handle gateway selection.
@@ -367,11 +375,33 @@ func (h *Handlers) PublicPlans(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
 	}
-	// Filter to enabled only
+	// Build the set of sudo admin IDs so the public storefront only exposes the
+	// main panel's plans, not reseller-owned ones.
+	sudoSet := map[uuid.UUID]struct{}{}
+	if h.Admins != nil {
+		if admins, aerr := h.Admins.List(c.Request().Context()); aerr == nil {
+			for _, a := range admins {
+				if a.Sudo {
+					sudoSet[a.ID] = struct{}{}
+				}
+			}
+		}
+	}
+	// Filter to enabled plans owned by a sudo admin. If we couldn't resolve any
+	// sudo admins, fall back to all enabled plans so nothing breaks.
 	var enabled []*domain.Plan
 	for _, p := range plans {
-		if p.Enabled {
+		if !p.Enabled {
+			continue
+		}
+		if len(sudoSet) == 0 {
 			enabled = append(enabled, p)
+			continue
+		}
+		if p.AdminID != nil {
+			if _, ok := sudoSet[*p.AdminID]; ok {
+				enabled = append(enabled, p)
+			}
 		}
 	}
 	return c.JSON(http.StatusOK, echo.Map{"plans": enabled})
