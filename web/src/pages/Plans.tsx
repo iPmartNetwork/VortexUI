@@ -121,24 +121,48 @@ function CreatePlanModal({ open, onClose }: { open: boolean; onClose: () => void
   return (
     <Modal open={open} onClose={onClose} title="New Plan">
       <form onSubmit={submit} className="space-y-3">
-        <Input placeholder="Plan name" value={f.name} onChange={(e) => setF(s => ({...s, name: e.target.value}))} required />
-        <Input placeholder="Description (optional)" value={f.description} onChange={(e) => setF(s => ({...s, description: e.target.value}))} />
-        <div className="grid grid-cols-2 gap-2">
-          <Input placeholder="Data (GB)" value={f.data_limit} onChange={(e) => setF(s => ({...s, data_limit: e.target.value}))} inputMode="numeric" />
-          <Input placeholder="Duration (days)" value={f.duration_days} onChange={(e) => setF(s => ({...s, duration_days: e.target.value}))} inputMode="numeric" />
+        <div>
+          <label className="block text-[11px] font-medium text-fg-muted mb-1">Plan name</label>
+          <Input placeholder="Plan name" value={f.name} onChange={(e) => setF(s => ({...s, name: e.target.value}))} required />
+        </div>
+        <div>
+          <label className="block text-[11px] font-medium text-fg-muted mb-1">Description</label>
+          <Input placeholder="Description (optional)" value={f.description} onChange={(e) => setF(s => ({...s, description: e.target.value}))} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Input placeholder="Device limit" value={f.device_limit} onChange={(e) => setF(s => ({...s, device_limit: e.target.value}))} inputMode="numeric" />
-          <Select value={f.reset_strategy} onChange={(e) => setF(s => ({...s, reset_strategy: e.target.value}))}>
-            <option value="no_reset">No reset</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </Select>
+          <div>
+            <label className="block text-[11px] font-medium text-fg-muted mb-1">Data limit (GB)</label>
+            <Input placeholder="Data (GB)" value={f.data_limit} onChange={(e) => setF(s => ({...s, data_limit: e.target.value}))} inputMode="numeric" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-fg-muted mb-1">Duration (days)</label>
+            <Input placeholder="Duration (days)" value={f.duration_days} onChange={(e) => setF(s => ({...s, duration_days: e.target.value}))} inputMode="numeric" />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Input placeholder="Price (Toman)" value={f.price_toman} onChange={(e) => setF(s => ({...s, price_toman: e.target.value}))} inputMode="numeric" />
-          <Input placeholder="Price (USD)" value={f.price_usd} onChange={(e) => setF(s => ({...s, price_usd: e.target.value}))} inputMode="decimal" />
+          <div>
+            <label className="block text-[11px] font-medium text-fg-muted mb-1">Device limit (0 = unlimited)</label>
+            <Input placeholder="Device limit" value={f.device_limit} onChange={(e) => setF(s => ({...s, device_limit: e.target.value}))} inputMode="numeric" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-fg-muted mb-1">Reset strategy</label>
+            <Select value={f.reset_strategy} onChange={(e) => setF(s => ({...s, reset_strategy: e.target.value}))}>
+              <option value="no_reset">No reset</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </Select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[11px] font-medium text-fg-muted mb-1">Price — Toman (0 = free)</label>
+            <Input placeholder="Price (Toman)" value={f.price_toman} onChange={(e) => setF(s => ({...s, price_toman: e.target.value}))} inputMode="numeric" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-fg-muted mb-1">Price — USD (0 = free)</label>
+            <Input placeholder="Price (USD)" value={f.price_usd} onChange={(e) => setF(s => ({...s, price_usd: e.target.value}))} inputMode="decimal" />
+          </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
