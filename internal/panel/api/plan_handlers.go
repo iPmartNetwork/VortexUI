@@ -122,8 +122,9 @@ func (h *Handlers) ListOrders(c echo.Context) error {
 
 type purchaseRequest struct {
 	PlanID   string `json:"plan_id"`
-	Username string `json:"username"` // for new users
-	Gateway  string `json:"gateway"`  // "zarinpal" | "nowpayments"
+	Username string `json:"username"`  // for new users
+	SubToken string `json:"sub_token"` // for existing user renewal (optional)
+	Gateway  string `json:"gateway"`   // "zarinpal" | "nowpayments"
 }
 
 // InitPurchase creates an order and returns the payment redirect URL.
@@ -165,10 +166,24 @@ func (h *Handlers) InitPurchase(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "unknown gateway (zarinpal or nowpayments)")
 	}
 
+	// Resolve existing user for renewal (sub_token) or validate new-user input.
+	var userID *uuid.UUID
+	if req.SubToken != "" {
+		// Renewal for an existing user: look up by subscription token.
+		u, err := h.Repo.GetBySubToken(c.Request().Context(), req.SubToken)
+		if err != nil || u == nil {
+			return echo.NewHTTPError(http.StatusNotFound, "user not found for this token")
+		}
+		userID = &u.ID
+	} else if req.Username == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "must provide username (new user) or sub_token (renewal)")
+	}
+
 	// Create order
 	order := &domain.Order{
 		ID:        uuid.New(),
 		PlanID:    planID,
+		UserID:    userID,
 		Username:  req.Username,
 		Status:    domain.OrderPending,
 		Gateway:   req.Gateway,

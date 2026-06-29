@@ -74,6 +74,7 @@ func NewRouter(d Deps) *echo.Echo {
 	e.GET("/sub/:token/info", d.Handlers.SubscriptionInfoPage)
 	e.GET("/sub/:token/usage", d.Handlers.SubscriptionUsage)
 	e.GET("/sub/:token/wireguard", d.Handlers.SubscribeWireGuard)
+	e.GET("/sub/:token/shop", d.Handlers.SubscriptionShop)
 
 	// Authenticated subtree. The audit middleware records every mutating request.
 	authed := api.Group("", RequireAuth(d.PanelAuth), RequireActiveAdmin(d.Handlers.Admins), Audit(d.Audit))
@@ -247,6 +248,7 @@ func NewRouter(d Deps) *echo.Echo {
 	e.GET("/api/payment/wallet/callback", d.Handlers.WalletDepositCallback)
 	e.POST("/api/payment/ipn/nowpayments", d.Handlers.NowPaymentsIPN)
 	e.GET("/api/portal/branding", d.Handlers.PublicPortalBranding)
+	e.GET("/payment/result", d.Handlers.PaymentResult)
 
 	// Update checker (admin)
 	authed.GET("/update/check", d.Handlers.CheckUpdate, RequirePermission(d.Auth, domain.PermAdminManage))

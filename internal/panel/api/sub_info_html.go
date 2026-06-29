@@ -136,7 +136,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="card">
     <div class="card-title">Renew / Upgrade</div>
     <div style="text-align:center;padding:10px 0">
-      <a href="/api/shop/plans" target="_blank" style="display:inline-block;padding:10px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:10px;text-decoration:none;font-size:.8rem;font-weight:600">View Plans & Purchase</a>
+      <a href="/sub/{{.Token}}/shop" style="display:inline-block;padding:10px 24px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:10px;text-decoration:none;font-size:.8rem;font-weight:600">View Plans & Purchase</a>
     </div>
   </div>
 
