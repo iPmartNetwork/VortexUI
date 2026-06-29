@@ -6,14 +6,62 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.2.7] - 2026-06-17
+## [1.2.7] - 2026-06-29
+
+Major reseller commerce release: per-reseller payment configuration, per-reseller
+owned plans, self-service renewal, and payment proof/receipt uploads.
 
 ### Added
-- **Self-service plan renewal** — end-users can purchase a plan from their subscription page to extend their existing account. Traffic and duration stack additively onto the current balance (no new account created, no usage reset). New server-rendered shop page at `/sub/:token/shop` with gateway selection (ZarinPal / Crypto). Payment result page at `/payment/result`.
+- **Self-service plan renewal** — end-users can purchase plans from their subscription
+  page (`/sub/:token/shop`) to extend existing accounts. Traffic and duration stack
+  additively (no reset, no new account). Payment result page at `/payment/result`.
+- **Per-reseller payment configuration** — each reseller configures their own card
+  number, crypto wallet addresses, and ZarinPal merchant ID from the panel. Sudo can
+  also configure payment settings (since sudo sells to direct users). Gated by a new
+  "billing" reseller setting that sudo grants per-reseller.
+- **Per-reseller owned plans** — resellers create their own plans with their own
+  pricing. Plans are scoped to their creator; a reseller's users only see that
+  reseller's plans in the shop. Sudo's users see sudo's plans. New `admin_id` column
+  on the `plans` table with migration `0028`.
+- **Payment proof/receipt upload** — card-to-card purchases require a receipt image
+  (فیش واریز); crypto purchases accept TX ID + optional transfer screenshot. Proof
+  stored as base64 data URL on the order. Admins see clickable thumbnails in the
+  Pending Orders review page. New `proof_image` column on `orders` (migration `0029`).
+- **Manual payment methods in shop** — card-to-card and crypto options alongside
+  ZarinPal in the server-side shop page and React portal, with per-method forms:
+  file upload for card-to-card, TX hash + screenshot for crypto, auto-redirect for
+  ZarinPal.
+- **Pending Orders review page** — admins/resellers approve or reject manual payment
+  orders (card-to-card, crypto) with proof image display.
+- **Payment settings nav visibility** — "Payment Settings" checkbox in Edit Admin
+  modal's Settings sections; payment nav items visible to sudo in the Users section
+  and to resellers when billing is enabled.
+- **Plan permission changes** — resellers (with `user:write`) can now create and
+  delete their own plans (ownership enforced); previously required `admin:manage`.
+
+### Changed
+- `POST /api/plans` and `DELETE /api/plans/:id` permissions changed from
+  `admin:manage` to `user:write` (ownership enforced in handlers).
+- `PublicPlans` endpoint now returns only enabled plans owned by sudo admins.
+- `SubscriptionShop` now filters plans by the user's owning admin.
+- `InitPurchase` validates plan ownership against the user's admin (cross-reseller
+  purchase blocked).
+- Card-to-card in `InitPurchase` no longer requires `tx_id` if `proof_image` is
+  provided.
 
 ### Fixed
-- Portal "Purchase" button now properly initiates payment (was previously broken — GET to POST endpoint).
-- Subscription info "View Plans & Purchase" link now opens the shop page (was linking to raw JSON).
+- Portal "Purchase" button now properly initiates payment (was GET to POST endpoint).
+- Subscription info "View Plans & Purchase" link now opens the shop page.
+- Edit Admin modal scrollable with sticky save button (no longer requires shrinking
+  the browser window).
+- Plan form labels now clearly indicate what each field is (data limit in GB, duration
+  in days, etc.).
+
+### Database
+- Migration `0027_reseller_payment_config.sql` — `reseller_payment_config` table.
+- Migration `0028_plan_admin_id.sql` — `admin_id` column + index on `plans`, backfill
+  to primary sudo admin.
+- Migration `0029_order_proof_image.sql` — `proof_image` TEXT column on `orders`.
 
 ## [1.2.6] - 2026-06-17
 
