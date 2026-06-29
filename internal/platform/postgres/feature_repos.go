@@ -2046,3 +2046,62 @@ func (r *IPLimitRepo) ListEvents(ctx context.Context, limit int) ([]*domain.IPLi
 	}
 	return results, rows.Err()
 }
+
+
+// --- ResellerPaymentRepo ---
+
+// ResellerPaymentRepo manages per-reseller payment configuration.
+type ResellerPaymentRepo struct{ pool *pgxpool.Pool }
+
+// Get loads the payment config for an admin. Returns nil (not an error) when no row exists.
+func (r *ResellerPaymentRepo) Get(ctx context.Context, adminID uuid.UUID) (*domain.ResellerPaymentConfig, error) {
+	var cfg domain.ResellerPaymentConfig
+	var cryptoJSON, methodsJSON []byte
+	err := r.pool.QueryRow(ctx,
+		`SELECT admin_id, card_number, card_holder, card_bank, crypto_addresses,
+		        zarinpal_merchant_id, manual_instructions, enabled_methods
+		 FROM reseller_payment_config WHERE admin_id = $1`, adminID).
+		Scan(&cfg.AdminID, &cfg.CardNumber, &cfg.CardHolder, &cfg.CardBank,
+			&cryptoJSON, &cfg.ZarinpalMerchantID, &cfg.ManualInstructions, &methodsJSON)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(cryptoJSON, &cfg.CryptoAddresses); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(methodsJSON, &cfg.EnabledMethods); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// Upsert inserts or updates the payment config for an admin.
+func (r *ResellerPaymentRepo) Upsert(ctx context.Context, cfg *domain.ResellerPaymentConfig) error {
+	cryptoJSON, err := json.Marshal(cfg.CryptoAddresses)
+	if err != nil {
+		return err
+	}
+	methodsJSON, err := json.Marshal(cfg.EnabledMethods)
+	if err != nil {
+		return err
+	}
+	_, err = r.pool.Exec(ctx,
+		`INSERT INTO reseller_payment_config
+		   (admin_id, card_number, card_holder, card_bank, crypto_addresses,
+		    zarinpal_merchant_id, manual_instructions, enabled_methods)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		 ON CONFLICT (admin_id) DO UPDATE SET
+		   card_number = EXCLUDED.card_number,
+		   card_holder = EXCLUDED.card_holder,
+		   card_bank = EXCLUDED.card_bank,
+		   crypto_addresses = EXCLUDED.crypto_addresses,
+		   zarinpal_merchant_id = EXCLUDED.zarinpal_merchant_id,
+		   manual_instructions = EXCLUDED.manual_instructions,
+		   enabled_methods = EXCLUDED.enabled_methods`,
+		cfg.AdminID, cfg.CardNumber, cfg.CardHolder, cfg.CardBank,
+		cryptoJSON, cfg.ZarinpalMerchantID, cfg.ManualInstructions, methodsJSON)
+	return err
+}

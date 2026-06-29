@@ -153,3 +153,6 @@ func (s *Store) UserGeo() *UserGeoRepo { return &UserGeoRepo{pool: s.pool} }
 
 // WireGuardPeers returns the WireGuard per-user peer repository.
 func (s *Store) WireGuardPeers() *WireGuardPeerRepo { return &WireGuardPeerRepo{pool: s.pool} }
+
+// ResellerPayment returns the per-reseller payment config repository.
+func (s *Store) ResellerPayment() *ResellerPaymentRepo { return &ResellerPaymentRepo{pool: s.pool} }

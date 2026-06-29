@@ -323,6 +323,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		log.Info("NowPayments gateway enabled")
 	}
 	walletBillingSvc := service.NewWalletBillingService(store.WalletBilling(), adminSvc, zarinPal, nowPayments)
+	resellerPaymentSvc := service.NewResellerPaymentService(store.ResellerPayment())
 
 	router := api.NewRouter(api.Deps{
 		Version: version,
@@ -371,6 +372,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		SubSettings: &api.SubSettingsHandlers{Svc: subSettingsSvc},
 		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Users: users, Monitor: monitorAdapter{store.Monitor()}},
 		WalletBilling: &api.WalletBillingHandlers{Svc: walletBillingSvc},
+		PaymentConfig: &api.PaymentConfigHandlers{Svc: resellerPaymentSvc, Admins: adminSvc},
 		Issuer:      issuer,
 		PanelAuth:   panelAuth,
 		Auth:        authSvc,

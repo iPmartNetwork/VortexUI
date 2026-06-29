@@ -41,6 +41,7 @@ type Deps struct {
 	SubSettings *SubSettingsHandlers
 	Monitor    *MonitorHandlers
 	WalletBilling *WalletBillingHandlers
+	PaymentConfig *PaymentConfigHandlers
 	Issuer     *auth.Issuer
 	PanelAuth  Authenticator
 	Auth       *service.AuthService
@@ -211,6 +212,12 @@ func NewRouter(d Deps) *echo.Echo {
 	account.POST("/2fa/setup", d.Handlers.SetupTOTP)
 	account.POST("/2fa/confirm", d.Handlers.ConfirmTOTP)
 	account.POST("/2fa/disable", d.Handlers.DisableTOTP)
+
+	// Per-reseller payment configuration (gated by "billing" reseller setting).
+	if d.PaymentConfig != nil {
+		account.GET("/payment-config", d.PaymentConfig.GetPaymentConfig)
+		account.PUT("/payment-config", d.PaymentConfig.SavePaymentConfig)
+	}
 
 	// API Tokens (Personal Access Tokens)
 	tokens := authed.Group("/tokens")
