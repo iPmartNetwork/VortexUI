@@ -1,190 +1,286 @@
-# 2. Kurulum
+# Kurulum
 
-!!! important "Önemli"
-    Kurulumdan önce **80 ve 443 portlarını** (HTTPS) ve alan adı DNS'ini hazırlayın.
-
----
-
-## Ön Koşullar
-
-| Öğe | Docker (önerilen) | Native |
-|------|:--------------------:|:------:|
-| İşletim sistemi | Linux (Ubuntu 22.04+) | Linux |
-| RAM | 2 GB minimum | 2 GB+ |
-| CPU | 1 vCPU | 1+ |
-| Disk | 10 GB | 10 GB |
-| Docker + Compose v2 | ✅ | Yalnızca DB/Redis |
-| Go 1.26 | — | ✅ (otomatik kurulur) |
-| Portlar | 80, 443 (+ inbound'lar) | aynı |
+!!! success "Önerilen"
+    Çalışan bir panele en hızlı ulaşmak için **tek satır kurulum betiğini** kullanın. Bağımlılıkları, veritabanı kurulumunu, HTTPS'yi ve systemd servislerini otomatik olarak yönetir.
 
 ---
 
-## Yöntem 1: Tek Satır Kurulum (Önerilen)
+## Gereksinimler
+
+| Gereksinim | Minimum | Önerilen |
+|------------|---------|----------|
+| İşletim Sistemi | Ubuntu 20.04 / Debian 11 | Ubuntu 22.04+ / Debian 12 |
+| RAM | 1 GB | 2 GB+ |
+| Disk | 10 GB | 20 GB+ (TimescaleDB trafik verileriyle büyür) |
+| CPU | 1 vCPU | 2+ vCPU |
+| Go (yerel derleme için) | 1.26 | 1.26 |
+| Docker (konteyner kurulumu) | 24.0+ | En son kararlı sürüm |
+| Alan Adı | İsteğe bağlı | Önerilen (HTTPS + abonelikler için) |
+
+---
+
+## Tek Satır Kurulum
 
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
 ```
 
-Kurulum betiği **etkileşimlidir** ve iki ana soru sorar:
+Kurulum betiği şunları yapacaktır:
 
-### 1. Kurulum yöntemi
+1. İşletim sisteminizi ve mimarinizi algılar
+2. Bağımlılıkları kurar (PostgreSQL, Redis, Caddy)
+3. VortexUI'yı indirir ve derler
+4. Veritabanı göçlerini çalıştırır
+5. Bir sudo yönetici hesabı oluşturur (etkileşimli istem)
+6. Systemd servislerini yapılandırır
+7. Caddy ile HTTPS ayarlar (alan adı verilmişse)
 
-| Seçenek | Açıklama |
-|--------|-------------|
-| **Docker Compose** *(önerilen)* | Tam yığın konteynerlerde: web · panel · node · PostgreSQL · Redis |
-| **Native (systemd)** | Go ikili dosyası servis olarak; DB/Redis Docker'da; SPA Caddy ile |
-
-### 2. Panel erişimi
-
-| Seçenek | Açıklama |
-|--------|-------------|
-| **Alan adı + HTTPS** | Caddy Let's Encrypt sertifikası alır — 80 ve 443 portları açık olmalı |
-| **IP + HTTP** | Özel port (ör. 8080) |
-
-### Etkileşimsiz kurulum (betik/CI)
-
-```bash
-VORTEXUI_METHOD=docker \
-VORTEXUI_NONINTERACTIVE=1 \
-VORTEXUI_ADMIN_USER=admin \
-VORTEXUI_ADMIN_PASS='your-strong-password' \
-bash install.sh
-```
-
-### Kurulum çıktısı
-
-- Kurulum yolu: `/opt/vortexui` (`VORTEXUI_DIR` ile geçersiz kılınabilir)
-- `/usr/local/bin` içinde `vortexui` komutu
-- Ortam dosyası: `deploy/.env` (JWT, DB şifresi, alan adı)
-- mTLS sertifikaları: `deploy/certs/`
-- Panel URL'si + ilk admin kimlik bilgileri terminalde yazdırılır
+Tamamlandığında panele `https://alan-adiniz.com` veya `http://sunucu-ip:8080` adresinden erişebilirsiniz.
 
 ---
 
-## Yöntem 2: Manuel Docker Compose
+## Docker Compose
 
-```bash
-git clone https://github.com/iPmartNetwork/VortexUI && cd VortexUI
+=== "Hızlı Başlangıç"
 
-# Generate secrets
-echo "JWT_SECRET=$(openssl rand -hex 32)" >> deploy/.env
-echo "DB_PASSWORD=$(openssl rand -hex 16)" >> deploy/.env
-echo "SITE_ADDRESS=panel.example.com" >> deploy/.env
-echo "ACME_EMAIL=admin@example.com" >> deploy/.env
+    ```bash
+    git clone https://github.com/iPmartNetwork/VortexUI.git
+    cd VortexUI/deploy
+    cp ../.env.example .env
+    # .env dosyasını ayarlarınıza göre düzenleyin
+    docker compose up -d
+    ```
 
-make certs
-docker compose --env-file deploy/.env -f deploy/compose.yml up -d --build
+=== "Üretim (Caddy HTTPS ile)"
 
-# Create admin
-docker compose -f deploy/compose.yml exec panel \
-  /usr/local/bin/panel admin create --username admin --password 'change-me' --sudo
-```
+    ```bash
+    git clone https://github.com/iPmartNetwork/VortexUI.git
+    cd VortexUI/deploy
+    cp ../.env.example .env
+    ```
 
-### Yığın servisleri
+    `.env` dosyasını düzenleyin:
+    ```env
+    VORTEX_DOMAIN=panel.example.com
+    VORTEX_ADMIN_USER=admin
+    VORTEX_ADMIN_PASS=guvenli-sifreniz
+    VORTEX_JWT_SECRET=rastgele-32-byte-dize
+    VORTEX_DB_URL=postgres://vortex:pass@db:5432/vortex?sslmode=disable
+    VORTEX_REDIS_URL=redis://redis:6379/0
+    ```
 
-| Servis | Rol |
-|---------|------|
-| `db` | PostgreSQL 16 + TimescaleDB |
-| `redis` | Redis 7 |
-| `panel` | API + local node (host network) |
-| `web` | Caddy + SPA (HTTPS) |
+    Ardından:
+    ```bash
+    docker compose up -d
+    ```
 
----
-
-## Yöntem 3: Native Kurulum (Geliştirme/Gelişmiş)
-
-```bash
-git clone https://github.com/iPmartNetwork/VortexUI && cd VortexUI
-
-docker compose up -d          # PostgreSQL + Redis
-cp .env.example .env
-# Fill VORTEX_JWT_SECRET with: openssl rand -hex 32
-
-make build
-make certs
-make run-panel
-
-# Another terminal — create admin
-./bin/panel admin create --username admin --password 'your-password' --sudo
-```
-
-Frontend (geliştirme):
-
-```bash
-cd web && npm install && npm run dev
-```
+`deploy/compose.yml` şunları içerir: panel, web ön yüzü, PostgreSQL + TimescaleDB, Redis ve Caddy.
 
 ---
 
-## Node Agent Kurulumu (Çok Sunuculu)
+## Yerel Derleme
 
-Çok node'lu bir filo için, her ayrı sunucuda:
+=== "Ubuntu/Debian"
+
+    ```bash
+    # Go 1.26 kurulumu
+    sudo snap install go --classic
+    go version  # go1.26.x göstermelidir
+
+    # Bağımlılıkları kurun
+    sudo apt update && sudo apt install -y postgresql redis-server
+
+    # Klonlayın ve derleyin
+    git clone https://github.com/iPmartNetwork/VortexUI.git
+    cd VortexUI
+    go build -o vortexui ./cmd/panel
+
+    # Göçleri çalıştırın
+    ./vortexui migrate
+
+    # Yönetici oluşturun
+    ./vortexui admin create --username admin --password sifreniz --sudo
+
+    # Başlatın
+    ./vortexui serve
+    ```
+
+=== "Diğer Linux"
+
+    ```bash
+    # Resmi tarball'dan Go 1.26 kurulumu
+    wget https://go.dev/dl/go1.26.linux-amd64.tar.gz
+    sudo tar -C /usr/local -xzf go1.26.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+
+    # Ardından Ubuntu ile aynı klonlama/derleme adımlarını izleyin
+    ```
+
+!!! warning "Go Sürümü"
+    VortexUI **Go 1.26** veya üstünü gerektirir. Daha eski sürümler derleme hatası verecektir.
+
+---
+
+## Düğüm Ajanı Kurulumu
+
+Düğüm ajanı uzak sunucularda çalışır ve panel ile gRPC + mTLS üzerinden iletişim kurar.
+
+=== "Kayıt Sihirbazı (Önerilen)"
+
+    1. Panel arayüzünde **Düğümler → Düğüm Ekle** bölümüne gidin
+    2. Kayıt sihirbazı tek satırlık bir kurulum komutu oluşturur
+    3. Uzak sunucunuza SSH ile bağlanıp komutu yapıştırın
+    4. Ajan otomatik olarak kayıt olur, sertifika değişimini yapar ve raporlamaya başlar
+
+=== "Manuel Kurulum"
+
+    ```bash
+    # Uzak sunucuda
+    bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install-node.sh)
+    ```
+
+    Şunlar sorulacaktır:
+    - Panel adresi (örn. `https://panel.example.com`)
+    - Düğüm kayıt tokeni (panel arayüzünde oluşturulur)
+
+=== "Docker Düğüm"
+
+    ```bash
+    docker run -d --name vortex-node \
+      -e PANEL_ADDR=https://panel.example.com \
+      -e NODE_TOKEN=kayit-tokeniniz \
+      --network host \
+      ghcr.io/ipmartnetwork/vortexui-node:latest
+    ```
+
+---
+
+## Yerel Düğüm (Tek Sunucu)
+
+Yalnızca bir sunucuya ihtiyacınız varsa **yerel düğümü** kullanın — proxy çekirdeği panel ile birlikte süreç içinde çalışır. Ayrı ajan gerekmez.
+
+1. Kurulum sırasında yerel düğüm sorulduğunda "Evet" seçin
+2. Veya sonradan: **Düğümler → Düğüm Ekle → Yerel**
+3. Çekirdek seçin (Xray veya sing-box)
+4. Panel çekirdek sürecini doğrudan yönetir
+
+!!! tip
+    Yerel düğüm tek sunucu kurulumları için idealdir. Çoklu sunucu dağıtımları için kayıt sihirbazı ile uzak düğümler kullanın.
+
+---
+
+## Ortam Değişkenleri
+
+| Değişken | Açıklama | Varsayılan |
+|----------|----------|------------|
+| `VORTEX_DOMAIN` | Panel alan adı (HTTPS için) | — |
+| `VORTEX_LISTEN` | API dinleme adresi | `:8080` |
+| `VORTEX_DB_URL` | PostgreSQL bağlantı dizesi | `postgres://localhost/vortex` |
+| `VORTEX_REDIS_URL` | Redis bağlantı dizesi | `redis://localhost:6379/0` |
+| `VORTEX_JWT_SECRET` | JWT imzalama anahtarı (≥32 byte) | — (zorunlu) |
+| `VORTEX_ADMIN_USER` | İlk yönetici kullanıcı adı | — |
+| `VORTEX_ADMIN_PASS` | İlk yönetici şifresi | — |
+| `VORTEX_TELEGRAM_TOKEN` | Telegram bot tokeni | — |
+| `VORTEX_TELEGRAM_ADMIN` | Bildirimler için yönetici sohbet ID'si | — |
+| `VORTEX_ZARINPAL_MERCHANT` | ZarinPal satıcı ID'si | — |
+| `VORTEX_NOWPAYMENTS_KEY` | NowPayments API anahtarı | — |
+| `VORTEX_NOWPAYMENTS_IPN_SECRET` | NowPayments IPN HMAC gizli anahtarı | — |
+| `VORTEX_BACKUP_CRON` | Yedekleme zamanlaması (cron ifadesi) | — |
+| `VORTEX_BACKUP_TELEGRAM` | Yedekleri Telegram'a gönder | `false` |
+| `VORTEX_BACKUP_S3_BUCKET` | Yedeklemeler için S3 kovası | — |
+| `VORTEX_METRICS_ENABLED` | Prometheus metriklerini etkinleştir | `false` |
+| `VORTEX_METRICS_LISTEN` | Metrik uç noktası adresi | `:9090` |
+| `VORTEX_SHARE_AUTOLIMIT` | Hesap paylaşım tespitinde otomatik limit | `false` |
+
+---
+
+## CLI Yönetimi
+
+`vortexui` ikili dosyası etkileşimli bir menü sunar:
 
 ```bash
-VORTEX_NODE_LISTEN=:50051 \
-VORTEX_CORE=xray \
-VORTEX_CORE_BIN=/usr/local/bin/xray \
-VORTEX_TLS_CERT=node.crt \
-VORTEX_TLS_KEY=node.key \
-VORTEX_TLS_CA=ca.crt \
-./bin/node
+vortexui
 ```
 
-Ardından panelde: **Nodes → Add Node** — adresi ve mTLS sertifikasını kaydedin.
-
----
-
-## Local Node
-
-Ayrı bir agent olmadan tek sunuculu kurulum için:
-
-```env
-VORTEX_LOCAL_NODE=true
-VORTEX_LOCAL_NODE_NAME=local
-VORTEX_LOCAL_NODE_HOST=your-public-ip-or-domain
-VORTEX_CORE=xray
-VORTEX_CORE_BIN=/usr/local/bin/xray
+```
+╔══════════════════════════════════════╗
+║          VortexUI Yönetimi           ║
+╠══════════════════════════════════════╣
+║  1) Paneli başlat                    ║
+║  2) Paneli durdur                    ║
+║  3) Paneli yeniden başlat            ║
+║  4) Durum                            ║
+║  5) Günlükler (canlı)               ║
+║  6) Güncelle                         ║
+║  7) Yönetici yönetimi                ║
+║  8) Yedekleme                        ║
+║  9) Doktor (tanılama)                ║
+║  0) Çıkış                            ║
+╚══════════════════════════════════════╝
 ```
 
-Docker Compose'ta bu varsayılan olarak etkindir.
+Temel komutlar:
 
----
-
-## Önemli Ortam Değişkenleri
-
-| Değişken | Varsayılan | Açıklama |
-|----------|---------|-------------|
-| `VORTEX_HTTP_ADDR` | `:8080` | Panel HTTP adresi |
-| `VORTEX_DATABASE_URL` | — | **Gerekli** — PostgreSQL |
-| `VORTEX_JWT_SECRET` | — | **Gerekli** — minimum 32 bayt |
-| `VORTEX_REDIS_URL` | `redis://localhost:6379/0` | Redis |
-| `VORTEX_LOCAL_NODE` | `false` | In-process node |
-| `VORTEX_SHARE_AUTOLIMIT` | `false` | Hesap paylaşımında otomatik sınırlama |
-| `VORTEX_WEBHOOK_URL` | — | Bildirim webhook'u |
-| `VORTEX_TELEGRAM_TOKEN` | — | Telegram bot token'ı |
-| `VORTEX_CF_API_TOKEN` | — | Cloudflare DNS otomasyonu |
-
-Tam liste: [`.env.example`](https://github.com/iPmartNetwork/VortexUI/blob/master/.env.example)
-
----
-
-## Kurulum Sonrası Sağlık Kontrolü
-
-```bash
-vortexui status
-curl -s http://127.0.0.1:8080/api/health
-```
-
-Beklenen yanıt: `{"status":"ok"}`
+| Komut | Eylem |
+|-------|-------|
+| `vortexui update` | Son sürümü çek ve yeniden başlat |
+| `vortexui admin create` | Yeni yönetici oluştur |
+| `vortexui admin reset-password` | Yönetici şifresini sıfırla |
+| `vortexui backup` | Anında yedekleme oluştur |
+| `vortexui doctor` | Tanılama çalıştır (DB, Redis, düğümler, portlar) |
+| `vortexui migrate` | Bekleyen veritabanı göçlerini çalıştır |
 
 ---
 
 ## Güncelleme
 
-```bash
-vortexui update
-# or
-cd /opt/vortexui && git pull && docker compose -f deploy/compose.yml up -d --build
-```
+=== "Otomatik Güncelleme (Önerilen)"
 
-Kurulum betiğini yeniden çalıştırmak **güvenlidir** — sırlar ve DB verileri korunur.
+    ```bash
+    vortexui update
+    ```
+
+    Bu komut son sürümü çeker, yeniden derler, göçleri çalıştırır ve yeniden başlatır.
+
+=== "Manuel Güncelleme (Panel Sunucusu)"
+
+    ```bash
+    cd /opt/VortexUI  # veya klonladığınız konum
+    git pull origin master
+    go build -o vortexui ./cmd/panel
+    ./vortexui migrate
+    sudo systemctl restart vortexui
+    ```
+
+=== "Manuel Güncelleme (Düğüm Sunucuları)"
+
+    ```bash
+    cd /opt/VortexUI-node
+    git pull origin master
+    go build -o vortex-node ./cmd/node
+    sudo systemctl restart vortex-node
+    ```
+
+=== "Docker Güncelleme"
+
+    ```bash
+    cd /opt/VortexUI/deploy
+    docker compose pull
+    docker compose up -d
+    ```
+
+---
+
+## Kurulum Sonrası Doğrulama
+
+Kurulumdan sonra her şeyin çalıştığını doğrulayın:
+
+1. **Panel erişilebilir** — tarayıcıda `https://alan-adiniz.com` adresini açın
+2. **Giriş çalışıyor** — yönetici kimlik bilgilerinizle oturum açın
+3. **Veritabanı bağlı** — Ayarlar → Sistem Bilgisi'ni kontrol edin
+4. **Düğüm çevrimiçi** — yerel düğüm kullanıyorsanız Düğümler sayfasında "Çevrimiçi" göründüğünü doğrulayın
+5. **Tanılama çalıştırın** — `vortexui doctor` tüm bileşenleri kontrol eder
+
+!!! tip "Sağlık Uç Noktası"
+    Panel `GET /api/health` uç noktasını sunar — bileşen durumu ile `200 OK` döndürür.
+    Harici izleme için kullanın (UptimeRobot, Prometheus blackbox, vb.).
