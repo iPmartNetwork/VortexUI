@@ -284,6 +284,12 @@ func (s *WalletBillingService) ReviewDeposit(ctx context.Context, reviewerID, de
 		if err := s.admins.TopUpWallet(ctx, reviewerID, deposit.AdminID, deposit.TrafficBytes, deposit.UserCredits, reason); err != nil {
 			return nil, err
 		}
+		// Purchases stack onto the reseller's main quota (TrafficQuota/UserQuota)
+		// immediately on approval — additive, no reserve/deferral. The wallet
+		// credit above is kept as-is; this is an additional grant.
+		if err := s.creditMainQuota(ctx, deposit.AdminID, deposit.TrafficBytes, deposit.UserCredits); err != nil {
+			return nil, err
+		}
 	} else {
 		deposit.Status = domain.WalletDepositRejected
 	}
@@ -336,7 +342,33 @@ func (s *WalletBillingService) CompleteOnlineDeposit(ctx context.Context, deposi
 	if deposit.PackageName != "" {
 		reason = deposit.PackageName + " (" + reason + ")"
 	}
-	return s.admins.TopUpWallet(ctx, deposit.AdminID, deposit.AdminID, deposit.TrafficBytes, deposit.UserCredits, reason)
+	if err := s.admins.TopUpWallet(ctx, deposit.AdminID, deposit.AdminID, deposit.TrafficBytes, deposit.UserCredits, reason); err != nil {
+		return err
+	}
+	// Purchases stack onto the reseller's main quota (TrafficQuota/UserQuota)
+	// immediately on completion — additive, no reserve/deferral. The wallet
+	// credit above is kept as-is; this is an additional grant.
+	return s.creditMainQuota(ctx, deposit.AdminID, deposit.TrafficBytes, deposit.UserCredits)
+}
+
+// creditMainQuota stacks a finalized purchase additively onto the reseller's
+// main quota (Admin.TrafficQuota += traffic, Admin.UserQuota += userCredits).
+// It is a no-op when there is nothing to add. AdjustQuota refuses sudo admins;
+// since the wallet credit has already succeeded, a sudo target is skipped
+// gracefully rather than failing the whole approval/completion. Any other error
+// is propagated.
+func (s *WalletBillingService) creditMainQuota(ctx context.Context, adminID uuid.UUID, trafficBytes int64, userCredits int) error {
+	if trafficBytes <= 0 && userCredits <= 0 {
+		return nil
+	}
+	if _, err := s.admins.AdjustQuota(ctx, adminID, userCredits, trafficBytes); err != nil {
+		if err.Error() == "cannot adjust sudo admin quota" {
+			// Sudo admins have no pool quota to stack onto — skip gracefully.
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *WalletBillingService) CompleteDepositByGatewayID(ctx context.Context, gatewayID string) error {
