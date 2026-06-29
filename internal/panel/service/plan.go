@@ -106,20 +106,41 @@ func (s *PlanService) FulfillOrder(ctx context.Context, orderID uuid.UUID) error
 		return err
 	}
 
-	// If order has a user, update their limits. Otherwise create a new user.
+	// If order has a user, apply additive renewal: stack data and extend expiry
+	// on top of the user's current subscription rather than replacing it. This
+	// lets existing users renew or upgrade without losing remaining quota.
 	if order.UserID != nil {
-		// Extend existing user
 		u, err := s.users.users.GetByID(ctx, *order.UserID)
 		if err != nil {
 			return err
 		}
-		u.DataLimit = plan.DataLimit
-		u.DeviceLimit = plan.DeviceLimit
-		u.ResetStrategy = plan.ResetStrategy
-		u.UsedTraffic = 0
-		expire := s.now().Add(time.Duration(plan.Duration) * 24 * time.Hour)
+
+		// Add purchased traffic to remaining limit (stack on existing).
+		u.DataLimit += plan.DataLimit
+
+		// Extend expiry: if user is still active (not expired), add duration on
+		// top of current expire; if expired, start from now. Never shrink.
+		now := s.now()
+		base := now
+		if u.ExpireAt != nil && u.ExpireAt.After(now) {
+			base = *u.ExpireAt
+		}
+		expire := base.Add(time.Duration(plan.Duration) * 24 * time.Hour)
 		u.ExpireAt = &expire
+
+		// Do NOT reset UsedTraffic — user keeps their current usage accounting.
+
+		// Update device limit and reset strategy to the new plan's values.
+		if plan.DeviceLimit > 0 {
+			u.DeviceLimit = plan.DeviceLimit
+		}
+		if plan.ResetStrategy != "" {
+			u.ResetStrategy = plan.ResetStrategy
+		}
+
+		// Reactivate if expired/limited.
 		u.Status = domain.UserStatusActive
+
 		return s.users.users.Update(ctx, u)
 	}
 

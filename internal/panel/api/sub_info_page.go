@@ -99,6 +99,7 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 
 	data := subInfoData{
 		Username:      u.Username,
+		Token:         token,
 		Status:        string(u.Status),
 		UsedGB:        fmt.Sprintf("%.2f", usedGB),
 		LimitGB:       fmt.Sprintf("%.2f", limitGB),
@@ -128,6 +129,7 @@ func (h *Handlers) SubscriptionInfoPage(c echo.Context) error {
 
 type subInfoData struct {
 	Username    string
+	Token       string
 	Status      string
 	UsedGB      string
 	LimitGB     string
