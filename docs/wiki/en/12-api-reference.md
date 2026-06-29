@@ -1,167 +1,277 @@
-# 12. API Reference
+# API Reference
 
-!!! note "Note"
-    Full spec: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) — all endpoints and RBAC.
-
----
-
-## OpenAPI
-
-Full specification: [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml)
-
-### Interactive viewing
-
-```bash
-npx @redocly/cli preview-docs docs/openapi.yaml
-```
-
-```bash
-docker run -p 8081:8080 \
-  -e SWAGGER_JSON=/spec/openapi.yaml \
-  -v "$PWD/docs:/spec" \
-  swaggerapi/swagger-ui
-```
+!!! info "OpenAPI Spec"
+    Full OpenAPI 3.0 specification available at
+    [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml).
 
 ---
 
 ## Authentication
 
-### Login
+### JWT Login
 
 ```bash
-curl -X POST https://panel.example.com/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"secret","totp":"123456"}'
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "your-password",
+  "totp_code": "123456"  // optional, if 2FA enabled
+}
 ```
 
-Response: `{ "token": "eyJ..." }`
+Response:
 
-### Usage
-
-```http
-Authorization: Bearer eyJ...
+```json
+{
+  "access_token": "eyJhbG...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
 ```
 
-### Public endpoints (no JWT)
+Use the token in subsequent requests:
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/health` | Health check |
-| `GET /sub/{token}` | Subscription |
-| `GET /sub/info/{token}` | User HTML page |
-| `POST /api/payment/ipn/*` | Payment webhooks |
+```
+Authorization: Bearer <access_token>
+```
+
+### API Tokens (PAT)
+
+For automation, create a Personal Access Token:
+
+1. **Settings → API Tokens → Create**
+2. Use like a JWT: `Authorization: Bearer <PAT>`
+
+PATs don't expire unless configured to, and can be revoked individually.
 
 ---
 
-## Main Endpoints
+## Base URL & Versioning
 
-### Account
+```
+https://panel.example.com/api/
+```
 
-| Method | Path | Permission |
-|--------|------|------------|
-| POST | `/api/login` | public |
-| POST | `/api/account/password` | authenticated |
-| POST | `/api/account/2fa/setup` | authenticated |
-| POST | `/api/account/2fa/confirm` | authenticated |
-| POST | `/api/account/2fa/disable` | authenticated |
+All endpoints are under `/api/`. No version prefix — the API is forward-compatible.
 
-### Overview & Logs
+---
 
-| Method | Path |
-|--------|------|
-| GET | `/api/overview` |
-| GET | `/api/logs` |
-| GET | `/api/events/stream` |
+## Key Endpoints
+
+### Auth
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Login, get JWT |
+| POST | `/api/auth/refresh` | Refresh token |
+| GET | `/api/auth/me` | Current admin info |
 
 ### Users
 
-| Method | Path |
-|--------|------|
-| GET/POST | `/api/users` |
-| GET/PATCH/DELETE | `/api/users/{id}` |
-| GET | `/api/users/{id}/sub` |
-| GET | `/api/users/{id}/online` |
-| POST | `/api/users/{id}/reset` |
-| POST | `/api/users/{id}/revoke-sub` |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/users` | List users (pagination, filters) |
+| POST | `/api/users` | Create user |
+| GET | `/api/users/:id` | Get user detail |
+| PUT | `/api/users/:id` | Update user |
+| DELETE | `/api/users/:id` | Delete user |
+| POST | `/api/users/:id/reset-traffic` | Reset traffic counter |
+| POST | `/api/users/:id/revoke-sub` | Revoke subscription token |
+| GET | `/api/users/:id/usage` | Usage history |
 
-### Nodes & Inbounds
+### Nodes
 
-| Method | Path |
-|--------|------|
-| GET/POST | `/api/nodes` |
-| GET/PATCH/DELETE | `/api/nodes/{id}` |
-| GET | `/api/nodes/{id}/logs` |
-| POST | `/api/nodes/{id}/geo-update` |
-| GET/POST | `/api/inbounds` |
-| GET/PATCH/DELETE | `/api/inbounds/{id}` |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/nodes` | List nodes |
+| POST | `/api/nodes` | Create node |
+| GET | `/api/nodes/:id` | Get node detail |
+| PUT | `/api/nodes/:id` | Update node |
+| DELETE | `/api/nodes/:id` | Delete node |
+| POST | `/api/nodes/:id/restart` | Restart node core |
+| GET | `/api/nodes/:id/health` | Health status |
+| GET | `/api/nodes/:id/stats` | Live statistics |
 
-### Network Policy
+### Inbounds
 
-| Method | Path |
-|--------|------|
-| GET/POST | `/api/outbounds` |
-| GET/PATCH/DELETE | `/api/outbounds/{id}` |
-| GET/POST | `/api/routing` |
-| GET/PATCH/DELETE | `/api/routing/{id}` |
-| GET/POST | `/api/balancers` |
-| GET/PATCH/DELETE | `/api/balancers/{id}` |
-| POST | `/api/reality/keypair` |
-
-### Admin & Backup
-
-| Method | Path |
-|--------|------|
-| GET/POST | `/api/admins` |
-| GET/PATCH/DELETE | `/api/admins/{id}` |
-| GET/POST | `/api/roles` |
-| GET | `/api/backup` |
-| POST | `/api/backup/restore` |
-| GET/POST/DELETE | `/api/tokens` |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/inbounds` | List inbounds |
+| POST | `/api/inbounds` | Create inbound |
+| PUT | `/api/inbounds/:id` | Update inbound |
+| DELETE | `/api/inbounds/:id` | Delete inbound |
+| GET | `/api/capabilities` | Per-protocol capability matrix |
 
 ### Plans
 
-| Method | Path |
-|--------|------|
-| GET/POST | `/api/plans` |
-| GET/PATCH/DELETE | `/api/plans/{id}` |
-| GET | `/api/orders` |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/plans` | List plans (scoped to admin) |
+| POST | `/api/plans` | Create plan |
+| PUT | `/api/plans/:id` | Update plan |
+| DELETE | `/api/plans/:id` | Delete plan |
+
+### Orders
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/orders` | List orders |
+| GET | `/api/orders/:id` | Get order detail |
+| POST | `/api/orders/:id/approve` | Approve pending order |
+| POST | `/api/orders/:id/reject` | Reject pending order |
+
+### Payment Configuration
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/payment-config` | Get payment config |
+| PUT | `/api/payment-config` | Update payment config |
+
+### Admins & Reseller
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admins` | List admins |
+| POST | `/api/admins` | Create admin |
+| PUT | `/api/admins/:id` | Update admin |
+| POST | `/api/admins/:id/quota-adjust` | Adjust reseller quota |
+| POST | `/api/admins/:id/unsuspend` | Clear suspension |
+| POST | `/api/admins/:id/impersonate` | Issue reseller token |
+
+### Reseller Account
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/account/dashboard` | Reseller dashboard stats |
+| GET | `/api/account/export/users` | CSV export of owned users |
+| GET | `/api/account/wallet` | Wallet + ledger |
+| GET/PUT | `/api/account/branding` | Whitelabel settings |
+| GET/PUT | `/api/account/webhook` | Outbound webhook config |
+| GET/POST | `/api/account/sub-admins` | Sub-reseller management |
+
+### System
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check |
+| GET | `/api/stats` | System statistics |
+| GET | `/api/audit` | Audit log |
+| POST | `/api/backup` | Trigger backup |
+| GET | `/api/settings` | Panel settings |
+| PUT | `/api/settings` | Update settings |
+
+### Subscriptions (Public)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/sub/{token}` | User subscription (auto-format) |
+| GET | `/sub/{token}?format=clash` | Clash YAML |
+| GET | `/sub/{token}?format=singbox` | sing-box JSON |
+| GET | `/sub/{token}?format=xray` | Xray JSON |
+| GET | `/sub/{token}?format=outline` | Outline links |
+| GET | `/sub/{token}?format=links` | Plain share links |
+| GET | `/sub/info/{token}` | User info HTML page |
+| GET | `/sub/{token}/shop` | Self-service shop |
 
 ---
 
-## RBAC Permissions
+## Example Requests
 
-Each mutation route requires a permission, for example:
-
-- `users.read`, `users.write`, `users.delete`
-- `nodes.read`, `nodes.write`
-- `inbounds.write`, `routing.write`
-- `admins.write`, `backup.restore`
-
-Both PAT and JWT reflect the bearer's role permissions.
-
----
-
-## Example: Create a User
+### Login
 
 ```bash
-TOKEN="eyJ..."
+curl -X POST https://panel.example.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"secret"}'
+```
 
+### Create User
+
+```bash
 curl -X POST https://panel.example.com/api/users \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "api-user",
+    "username": "newuser",
     "data_limit": 53687091200,
-    "expire_at": "2026-07-17T00:00:00Z",
+    "expire_at": "2025-03-01T00:00:00Z",
     "device_limit": 3,
-    "inbound_ids": ["inbound-uuid-here"]
+    "inbound_ids": ["uuid-1", "uuid-2"]
+  }'
+```
+
+### List Plans
+
+```bash
+curl https://panel.example.com/api/plans \
+  -H "Authorization: Bearer <token>"
+```
+
+### Purchase (Portal)
+
+```bash
+curl -X POST https://panel.example.com/api/portal/purchase \
+  -H "Authorization: Bearer <sub_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "plan_id": "uuid",
+    "payment_method": "card",
+    "proof_image": "base64_encoded_image",
+    "reference_number": "123456789"
   }'
 ```
 
 ---
 
-## Client Generation
+## Pagination
 
-```bash
-npx openapi-typescript docs/openapi.yaml -o web/src/api/types.ts
+List endpoints support pagination:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `page` | Page number (1-indexed) | 1 |
+| `per_page` | Items per page | 20 |
+| `sort` | Sort field | `created_at` |
+| `order` | `asc` or `desc` | `desc` |
+
+Response includes pagination metadata:
+
+```json
+{
+  "data": [...],
+  "total": 150,
+  "page": 1,
+  "per_page": 20,
+  "total_pages": 8
+}
 ```
+
+---
+
+## Error Responses
+
+All errors follow a consistent format:
+
+```json
+{
+  "error": {
+    "code": "USER_NOT_FOUND",
+    "message": "User with the specified ID does not exist",
+    "status": 404
+  }
+}
+```
+
+Common HTTP status codes:
+
+| Code | Meaning |
+|------|---------|
+| 400 | Bad request (validation error) |
+| 401 | Unauthorized (invalid/expired token) |
+| 403 | Forbidden (insufficient permissions) |
+| 404 | Resource not found |
+| 409 | Conflict (duplicate username, etc.) |
+| 429 | Rate limited |
+| 500 | Internal server error |

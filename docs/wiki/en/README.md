@@ -1,15 +1,41 @@
 # VortexUI Documentation
 
 <div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.2rem;">Next-generation proxy management panel</strong><br/>
-  <em>Core-agnostic · User-centric · Real-time · Anti-censorship</em>
+  <strong style="font-size: 1.4rem;">VortexUI v1.2.7</strong><br/>
+  <em style="font-size: 1.1rem;">Next-generation proxy management panel — core-agnostic, user-centric, real-time, anti-censorship</em>
 </div>
 
 ---
 
-Welcome to the official VortexUI documentation. This site covers everything from
-installation to advanced operations for **VortexUI v1.2.0** — the most feature-rich
-release yet, with **17 major features** and **24 UX improvements**.
+<div class="grid cards" markdown>
+
+- :material-account-group: **Self-Service Portal & Shop**
+
+    End-users login with their sub token, view usage, purchase plans from their reseller's shop, and open support tickets.
+
+- :material-cash-register: **Per-Reseller Plans & Payments**
+
+    Each reseller defines their own plans, pricing, and payment methods — card-to-card, crypto, or ZarinPal gateway.
+
+- :material-shield-lock: **Anti-Censorship Suite**
+
+    TLS Tricks, probing protection, fingerprint validation, decoy websites, DoH, WARP+, evasion profiles.
+
+- :material-server-network: **Intelligent Node Fleet**
+
+    Enrollment wizard, auto-migration, health diagnostics, mTLS, live monitoring, Cloudflare DNS automation.
+
+- :material-chart-areaspline: **Advanced Analytics**
+
+    Geo-IP breakdown, top users, peak hours, world map heatmap, CSV export, real-time gauges.
+
+- :material-sitemap: **Reseller Platform**
+
+    Wallet billing, sub-resellers, whitelabel branding, webhooks, policy limits, auto-suspend, scoped allowlists.
+
+</div>
+
+---
 
 !!! tip "Quick Install"
     ```bash
@@ -19,60 +45,25 @@ release yet, with **17 major features** and **24 UX improvements**.
 
 ---
 
-## What's in v1.2.0
-
-<div class="grid cards" markdown>
-
-- :material-account-group: **Self-Service Portal**
-
-    End-users login with their sub token, view usage, purchase renewals, and open support tickets.
-
-- :material-radar: **Reality Scanner**
-
-    Built-in TLS probe — discover optimal SNIs for REALITY with latency scoring.
-
-- :material-speedometer: **Smart Quota**
-
-    Progressive speed reduction instead of hard-cut. Configurable tiers per ISP.
-
-- :material-shield-lock: **Anti-Censorship Suite**
-
-    TLS Tricks (ISP profiles), probing protection, fingerprint validation, decoy websites, DoH.
-
-- :material-sitemap: **Federation**
-
-    Connect multiple panels. Sync users and nodes. Single sign-on across your fleet.
-
-- :material-chart-areaspline: **Advanced Analytics**
-
-    Geo-IP breakdown, top users, peak hours, world map heatmap, CSV export.
-
-</div>
-
----
-
 ## Documentation Map
 
 | Section | What you'll learn |
 |---------|-------------------|
-| [Introduction](01-introduction.md) | Architecture, core concepts, comparison with other panels |
-| [Installation](02-installation.md) | One-line install, Docker, native, node agent setup |
-| [First Steps](03-first-steps.md) | Create first admin, add node, add users, verify |
-| [Dashboard](04-dashboard.md) | Overview page, real-time charts, system gauges, widgets |
-| [Users](05-user-management.md) | CRUD, quotas, families, referrals, portal, subscriptions |
-| [Nodes](06-node-management.md) | Fleet management, auto-migration, health monitoring |
-| [Network](07-network-policy.md) | Outbounds, routing, balancers, relay chains, SNI routing |
-| [Security](08-security-administration.md) | TLS tricks, probing protection, fingerprint, decoy, DoH |
-| [Plans & Payments](09-plans-payments.md) | Plan system, gateways, orders, self-service purchase |
-| [Notifications](10-notifications.md) | Webhooks, Telegram, quota alerts, notification center |
-| [Settings](11-settings-backup.md) | Branding, backup, federation, deep links, updates |
-| [API Reference](12-api-reference.md) | OpenAPI 3.0, authentication, endpoints |
-| [Protocols](13-protocols-config.md) | VLESS, VMess, Trojan, SS, Hysteria2, TUIC, WireGuard |
-| [Operations](14-operations-maintenance.md) | HTTPS, SSE, GeoIP, monitoring, scaling |
-| [Troubleshooting](15-troubleshooting-faq.md) | Common issues, FAQ, debug tips |
-| [v1.2.0 Features](16-v120-features.md) | Portal, scanner, smart quota, anti-censorship suite |
-| [v1.2.5 Features](18-v125-features.md) | Reseller platform: wallet, sub-resellers, whitelabel, webhooks, policy, auto-suspend |
-| [v1.2.3 Features](17-v123-features.md) | Subscription hosts, new sub formats, routing packs, clean-IP scanner, IP-limit, new protocols |
+| [Introduction](01-introduction.md) | Architecture, feature overview, comparison, supported protocols |
+| [Installation](02-installation.md) | One-line install, Docker, native build, node agent setup |
+| [First Steps](03-first-steps.md) | Login, add node, create inbound, add user, verify |
+| [Dashboard](04-dashboard.md) | Widgets, analytics, monitor, command palette |
+| [Users](05-user-management.md) | CRUD, quotas, subscriptions, portal, shop, families, referrals |
+| [Nodes](06-node-management.md) | Enrollment, health, auto-migration, monitoring, DNS automation |
+| [Network](07-network-policy.md) | Outbounds, routing packs, CDN chains, load balancers, federation |
+| [Security](08-security-administration.md) | RBAC, reseller platform, TLS tricks, probing protection, IP-limit |
+| [Plans & Payments](09-plans-payments.md) | Per-reseller plans, payment config, shop, wallet billing, orders |
+| [Notifications](10-notifications.md) | Webhooks, Telegram, quota alerts, SSE events |
+| [Settings](11-settings-backup.md) | Branding, whitelabel, backup, deep links, updates |
+| [API Reference](12-api-reference.md) | Authentication, endpoints, OpenAPI spec |
+| [Protocols](13-protocols-config.md) | 14 protocols, transports, security layers, capability matrix |
+| [Operations](14-operations-maintenance.md) | HTTPS, Prometheus, scaling, database, performance |
+| [Troubleshooting](15-troubleshooting-faq.md) | Common issues, debug tips, FAQ |
 
 ---
 
@@ -82,17 +73,18 @@ release yet, with **17 major features** and **24 UX improvements**.
 flowchart TB
     subgraph Clients["Clients"]
         Browser["Browser / PWA"]
-        Portal["User Portal"]
+        Portal["User Portal & Shop"]
         ProxyApp["Clash / sing-box / v2rayNG"]
     end
     subgraph Web["Web Layer"]
         Caddy["Caddy — HTTPS + SPA + DoH"]
     end
     subgraph Panel["Control Plane"]
-        API["Panel API — Go 1.22+"]
+        API["Panel API — Go 1.26"]
         SSE["SSE — Live Events"]
         Scanner["Reality Scanner"]
         Migration["Auto-Migration Engine"]
+        Reseller["Reseller Platform"]
         DB[(PostgreSQL + TimescaleDB)]
         Redis[(Redis — cache + sessions)]
     end
@@ -126,14 +118,14 @@ flowchart TB
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Go 1.22+, Echo, gRPC, sqlc, pgx |
+| Backend | Go 1.26, Echo, gRPC, sqlc, pgx |
 | Frontend | React 18, TypeScript 5.6, Tailwind CSS, TanStack Query |
 | Database | PostgreSQL 16 + TimescaleDB |
 | Cache | Redis 7 |
 | Proxy Cores | Xray-core, sing-box |
 | Web Server | Caddy (auto HTTPS) |
 | Transport | gRPC + mTLS (panel ↔ nodes) |
-| Notifications | Webhook (HMAC), Telegram Bot API |
+| Notifications | Webhook (HMAC-SHA256), Telegram Bot API |
 | Monitoring | Prometheus metrics + Grafana |
 
 ---

@@ -1,325 +1,287 @@
 # Installation
 
-!!! success "v1.2.0"
-    This guide covers VortexUI **v1.2.0**. The installer handles everything —
-    secrets, mTLS certificates, database, and initial admin creation.
+!!! success "Recommended"
+    Use the **one-line installer** for the fastest path to a working panel. It handles
+    dependencies, database setup, HTTPS, and systemd services automatically.
 
 ---
 
 ## Prerequisites
 
-| Requirement | Docker (recommended) | Native |
-|-------------|:--------------------:|:------:|
-| OS | Ubuntu 22.04+ / Debian 12+ | Linux |
-| RAM | 2 GB minimum | 2 GB+ |
-| CPU | 1 vCPU | 1+ vCPU |
-| Disk | 10 GB free | 10 GB free |
-| Docker + Compose v2 | ✅ required | DB/Redis only |
-| Go 1.22+ | — | ✅ |
-| Ports | 80 + 443 (HTTPS) or custom | same |
-
-!!! warning "Firewall"
-    Ensure ports **80** and **443** are open if you want automatic HTTPS.
-    Also open any inbound ports you plan to use (e.g., 2053 for VLESS).
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| OS | Ubuntu 20.04 / Debian 11 | Ubuntu 22.04+ / Debian 12 |
+| RAM | 1 GB | 2 GB+ |
+| Disk | 10 GB | 20 GB+ (TimescaleDB grows with traffic data) |
+| CPU | 1 vCPU | 2+ vCPU |
+| Go (native build only) | 1.26 | 1.26 |
+| Docker (container install) | 24.0+ | Latest stable |
+| Domain | Optional | Recommended (for HTTPS + subscriptions) |
 
 ---
 
-## Method 1: One-Line Install (Recommended)
+## One-Line Install
 
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
 ```
 
-### What the installer does
+The installer will:
 
-1. **Asks installation method** — Docker Compose or Native
-2. **Asks access method** — Domain + HTTPS or IP + HTTP
-3. **Generates secrets** — JWT key, DB password, Redis password
-4. **Creates mTLS certificates** — for panel ↔ node communication
-5. **Starts the stack** — all containers or systemd services
-6. **Creates first admin** — prints credentials to terminal
-7. **Installs `vortexui` CLI** — management commands
+1. Detect your OS and architecture
+2. Install dependencies (PostgreSQL, Redis, Caddy)
+3. Download and build VortexUI
+4. Run database migrations
+5. Create a sudo admin account (interactive prompt)
+6. Configure systemd services
+7. Set up HTTPS via Caddy (if a domain is provided)
 
-### Non-interactive (CI/scripting)
-
-```bash
-VORTEXUI_METHOD=docker \
-VORTEXUI_NONINTERACTIVE=1 \
-VORTEXUI_ADMIN_USER=admin \
-VORTEXUI_ADMIN_PASS='your-strong-password' \
-VORTEXUI_DOMAIN=panel.example.com \
-VORTEXUI_ACME_EMAIL=admin@example.com \
-bash install.sh
-```
-
-### After install
-
-```bash
-vortexui status       # check all services are running
-vortexui              # open interactive menu
-```
+After completion, access the panel at `https://your-domain.com` or `http://server-ip:8080`.
 
 ---
 
-## Method 2: Docker Compose (Manual)
+## Docker Compose
 
-```bash
-# Clone
-git clone https://github.com/iPmartNetwork/VortexUI && cd VortexUI
+=== "Quick Start"
 
-# Generate secrets
-cat <<EOF > deploy/.env
-JWT_SECRET=$(openssl rand -hex 32)
-DB_PASSWORD=$(openssl rand -hex 16)
-SITE_ADDRESS=panel.example.com
-ACME_EMAIL=admin@example.com
-EOF
+    ```bash
+    git clone https://github.com/iPmartNetwork/VortexUI.git
+    cd VortexUI/deploy
+    cp ../.env.example .env
+    # Edit .env with your settings
+    docker compose up -d
+    ```
 
-# Generate mTLS certificates
-make certs
+=== "Production (with Caddy HTTPS)"
 
-# Start stack
-docker compose --env-file deploy/.env -f deploy/compose.yml up -d --build
+    ```bash
+    git clone https://github.com/iPmartNetwork/VortexUI.git
+    cd VortexUI/deploy
+    cp ../.env.example .env
+    ```
 
-# Create admin
-docker compose -f deploy/compose.yml exec panel \
-  /usr/local/bin/panel admin create --username admin --password 'change-me' --sudo
-```
+    Edit `.env`:
+    ```env
+    VORTEX_DOMAIN=panel.example.com
+    VORTEX_ADMIN_USER=admin
+    VORTEX_ADMIN_PASS=your-secure-password
+    VORTEX_JWT_SECRET=random-32-byte-string
+    VORTEX_DB_URL=postgres://vortex:pass@db:5432/vortex?sslmode=disable
+    VORTEX_REDIS_URL=redis://redis:6379/0
+    ```
 
-### Stack Architecture
+    Then:
+    ```bash
+    docker compose up -d
+    ```
 
-```mermaid
-graph LR
-    User([Browser]) --> Caddy
-    Caddy --> Panel
-    Panel --> DB[(PostgreSQL)]
-    Panel --> Redis[(Redis)]
-    Panel --> LocalNode[Local Node]
-```
-
-| Container | Port | Purpose |
-|-----------|------|---------|
-| `web` (Caddy) | 80, 443 | HTTPS termination + SPA |
-| `panel` | 8080 (internal) | API + local node + gRPC hub |
-| `db` | 5432 (internal) | PostgreSQL 16 + TimescaleDB |
-| `redis` | 6379 (internal) | Sessions, cache, device tracking |
+The `deploy/compose.yml` includes: panel, web frontend, PostgreSQL + TimescaleDB, Redis, and Caddy.
 
 ---
 
-## Method 3: Native (Advanced / Development)
+## Native Build
 
-```bash
-git clone https://github.com/iPmartNetwork/VortexUI && cd VortexUI
+=== "Ubuntu/Debian"
 
-# Start DB and Redis
-docker compose up -d db redis
+    ```bash
+    # Install Go 1.26
+    sudo snap install go --classic
+    go version  # should show go1.26.x
 
-# Configure
-cp .env.example .env
-# Edit .env — set VORTEX_DATABASE_URL and VORTEX_JWT_SECRET
+    # Install dependencies
+    sudo apt update && sudo apt install -y postgresql redis-server
 
-# Build
-make build
+    # Clone and build
+    git clone https://github.com/iPmartNetwork/VortexUI.git
+    cd VortexUI
+    go build -o vortexui ./cmd/panel
 
-# Generate dev certificates
-make certs
+    # Run migrations
+    ./vortexui migrate
 
-# Run panel (includes local node)
-make run-panel
+    # Create admin
+    ./vortexui admin create --username admin --password your-password --sudo
 
-# Create admin
-./bin/panel admin create --username admin --password 'your-pass' --sudo
-```
+    # Start
+    ./vortexui serve
+    ```
 
-Frontend development:
-```bash
-cd web && npm install && npm run dev
-```
+=== "Other Linux"
 
----
+    ```bash
+    # Install Go 1.26 from official tarball
+    wget https://go.dev/dl/go1.26.linux-amd64.tar.gz
+    sudo tar -C /usr/local -xzf go1.26.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
 
-## Node Agent (Multi-Server Fleet)
+    # Then follow the same clone/build steps as Ubuntu
+    ```
 
-For each remote server in your fleet:
-
-### 1. Copy certificates
-
-Transfer `ca.crt`, `node.crt`, and `node.key` from the panel server.
-
-### 2. Install core
-
-```bash
-# Xray
-bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install
-
-# OR sing-box
-bash -c "$(curl -L https://raw.githubusercontent.com/SagerNet/sing-box-install/main/install.sh)" @ install
-```
-
-### 3. Start agent
-
-```bash
-VORTEX_NODE_LISTEN=:50051 \
-VORTEX_CORE=xray \
-VORTEX_CORE_BIN=/usr/local/bin/xray \
-VORTEX_CORE_CONFIG=/etc/vortex/core.json \
-VORTEX_TLS_CERT=/etc/vortex/node.crt \
-VORTEX_TLS_KEY=/etc/vortex/node.key \
-VORTEX_TLS_CA=/etc/vortex/ca.crt \
-./bin/node
-```
-
-### 4. Register in panel
-
-Go to **Nodes → Add Node** — enter `ip:50051` and the node connects via mTLS.
+!!! warning "Go Version"
+    VortexUI requires **Go 1.26** or later. Earlier versions will fail to compile.
 
 ---
 
-## Local Node (Single-Server)
+## Node Agent Setup
 
-For a single-server setup, no separate agent is needed:
+The node agent runs on remote servers and communicates with the panel via gRPC + mTLS.
 
-```env
-VORTEX_LOCAL_NODE=true
-VORTEX_LOCAL_NODE_NAME=local
-VORTEX_LOCAL_NODE_HOST=your-public-ip
-VORTEX_CORE=xray
-VORTEX_CORE_BIN=/usr/local/bin/xray
-```
+=== "Enrollment Wizard (Recommended)"
 
-The panel manages the core process in-process. In Docker Compose this is the default.
+    1. In the panel UI, go to **Nodes → Add Node**
+    2. The enrollment wizard generates a one-line install command
+    3. SSH into your remote server and paste the command
+    4. The agent auto-registers, exchanges certificates, and starts reporting
+
+=== "Manual Install"
+
+    ```bash
+    # On the remote server
+    bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install-node.sh)
+    ```
+
+    You'll be prompted for:
+    - Panel address (e.g. `https://panel.example.com`)
+    - Node enrollment token (generated in panel UI)
+
+=== "Docker Node"
+
+    ```bash
+    docker run -d --name vortex-node \
+      -e PANEL_ADDR=https://panel.example.com \
+      -e NODE_TOKEN=your-enrollment-token \
+      --network host \
+      ghcr.io/ipmartnetwork/vortexui-node:latest
+    ```
+
+---
+
+## Local Node (Single Server)
+
+If you only need one server, use the **local node** — the proxy core runs in-process alongside the panel. No separate agent needed.
+
+1. During installation, select "Yes" when asked about local node
+2. Or later: **Nodes → Add Node → Local**
+3. Choose core (Xray or sing-box)
+4. The panel manages the core process directly
+
+!!! tip
+    Local node is perfect for single-server setups. For multi-server deployments, use remote nodes with the enrollment wizard.
 
 ---
 
 ## Environment Variables
 
-### Required
-
-| Variable | Description |
-|----------|-------------|
-| `VORTEX_DATABASE_URL` | PostgreSQL connection string |
-| `VORTEX_JWT_SECRET` | Minimum 32 bytes — `openssl rand -hex 32` |
-
-### Networking
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VORTEX_HTTP_ADDR` | `:8080` | Panel API listen address |
-| `VORTEX_GRPC_ADDR` | `:50051` | Hub gRPC listen address |
-| `VORTEX_REDIS_URL` | `redis://localhost:6379/0` | Redis URL |
-
-### Node
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VORTEX_LOCAL_NODE` | `false` | Enable in-process node |
-| `VORTEX_LOCAL_NODE_HOST` | `127.0.0.1` | Public IP for subscriptions |
-| `VORTEX_CORE` | `xray` | `xray` or `singbox` |
-| `VORTEX_CORE_BIN` | — | Path to core binary |
-
-### Security
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VORTEX_SHARE_AUTOLIMIT` | `false` | Auto-limit on account sharing |
-| `VORTEX_TLS_CERT` | — | mTLS certificate path |
-| `VORTEX_TLS_KEY` | — | mTLS key path |
-| `VORTEX_TLS_CA` | — | mTLS CA path |
-
-### Integrations
-
-| Variable | Description |
-|----------|-------------|
-| `VORTEX_WEBHOOK_URL` | Notification webhook endpoint |
-| `VORTEX_WEBHOOK_SECRET` | HMAC-SHA256 signing key |
-| `VORTEX_TELEGRAM_TOKEN` | Telegram bot token |
-| `VORTEX_TELEGRAM_CHAT_ID` | Admin notification chat |
-| `VORTEX_CF_API_TOKEN` | Cloudflare DNS automation |
-| `VORTEX_CF_ZONE_ID` | Cloudflare zone ID |
-
-Full list: [`.env.example`](https://github.com/iPmartNetwork/VortexUI/blob/master/.env.example)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `VORTEX_DOMAIN` | Panel domain (for HTTPS) | — |
+| `VORTEX_LISTEN` | API listen address | `:8080` |
+| `VORTEX_DB_URL` | PostgreSQL connection string | `postgres://localhost/vortex` |
+| `VORTEX_REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
+| `VORTEX_JWT_SECRET` | JWT signing key (≥32 bytes) | — (required) |
+| `VORTEX_ADMIN_USER` | Initial admin username | — |
+| `VORTEX_ADMIN_PASS` | Initial admin password | — |
+| `VORTEX_TELEGRAM_TOKEN` | Telegram bot token | — |
+| `VORTEX_TELEGRAM_ADMIN` | Admin chat ID for notifications | — |
+| `VORTEX_ZARINPAL_MERCHANT` | ZarinPal merchant ID | — |
+| `VORTEX_NOWPAYMENTS_KEY` | NowPayments API key | — |
+| `VORTEX_NOWPAYMENTS_IPN_SECRET` | NowPayments IPN HMAC secret | — |
+| `VORTEX_BACKUP_CRON` | Backup schedule (cron expression) | — |
+| `VORTEX_BACKUP_TELEGRAM` | Send backups to Telegram | `false` |
+| `VORTEX_BACKUP_S3_BUCKET` | S3 bucket for backups | — |
+| `VORTEX_METRICS_ENABLED` | Enable Prometheus metrics | `false` |
+| `VORTEX_METRICS_LISTEN` | Metrics endpoint address | `:9090` |
+| `VORTEX_SHARE_AUTOLIMIT` | Auto-limit on account sharing detection | `false` |
 
 ---
 
-## Management CLI (`vortexui`)
+## CLI Management
 
-After installation, the `vortexui` command provides an interactive menu:
-
-```
-$ vortexui
-
-╭──────────────────────────────────╮
-│       VortexUI Management        │
-╰──────────────────────────────────╯
-
-   1) Start            2) Stop
-   3) Restart          4) Status
-   5) Logs             6) Update
-   7) Create admin     8) Change web port
-   9) Domain / SSL    10) Settings / URL
-  11) Uninstall        0) Exit
-```
-
-Or use subcommands directly:
+The `vortexui` binary provides an interactive menu:
 
 ```bash
-vortexui start
-vortexui stop
-vortexui restart
-vortexui status
-vortexui logs
-vortexui update
-vortexui admin create --username admin --password pass --sudo
-vortexui settings
-vortexui uninstall
+vortexui
 ```
+
+```
+╔══════════════════════════════════════╗
+║          VortexUI Management         ║
+╠══════════════════════════════════════╣
+║  1) Start panel                      ║
+║  2) Stop panel                       ║
+║  3) Restart panel                    ║
+║  4) Status                           ║
+║  5) Logs (live)                      ║
+║  6) Update                           ║
+║  7) Admin management                 ║
+║  8) Backup                           ║
+║  9) Doctor (diagnostics)             ║
+║  0) Exit                             ║
+╚══════════════════════════════════════╝
+```
+
+Key commands:
+
+| Command | Action |
+|---------|--------|
+| `vortexui update` | Pull latest release and restart |
+| `vortexui admin create` | Create a new admin |
+| `vortexui admin reset-password` | Reset admin password |
+| `vortexui backup` | Create an immediate backup |
+| `vortexui doctor` | Run diagnostics (DB, Redis, nodes, ports) |
+| `vortexui migrate` | Run pending database migrations |
 
 ---
 
 ## Updating
 
-### Automatic (recommended)
+=== "Auto Update (Recommended)"
 
-```bash
-vortexui update
-```
+    ```bash
+    vortexui update
+    ```
 
-### Manual
+    This pulls the latest release, rebuilds, runs migrations, and restarts.
 
-```bash
-cd /opt/vortexui
-git fetch origin master
-git reset --hard origin/master
-docker compose -f deploy/compose.yml up -d --build
-```
+=== "Manual Update (Panel Server)"
 
-!!! info "Safe update"
-    Re-running the installer or `vortexui update` is **non-destructive** —
-    secrets, database, and configuration are preserved.
+    ```bash
+    cd /opt/VortexUI  # or wherever you cloned
+    git pull origin master
+    go build -o vortexui ./cmd/panel
+    ./vortexui migrate
+    sudo systemctl restart vortexui
+    ```
+
+=== "Manual Update (Node Servers)"
+
+    ```bash
+    cd /opt/VortexUI-node
+    git pull origin master
+    go build -o vortex-node ./cmd/node
+    sudo systemctl restart vortex-node
+    ```
+
+=== "Docker Update"
+
+    ```bash
+    cd /opt/VortexUI/deploy
+    docker compose pull
+    docker compose up -d
+    ```
 
 ---
 
 ## Post-Install Verification
 
-```bash
-# Check services
-vortexui status
+After installation, verify everything is working:
 
-# API health
-curl -s https://panel.example.com/api/health
-# → {"status":"ok"}
+1. **Panel accessible** — open `https://your-domain.com` in a browser
+2. **Login works** — sign in with your admin credentials
+3. **Database connected** — check Settings → System Info
+4. **Node online** — if using local node, verify it shows "Online" in Nodes page
+5. **Run diagnostics** — `vortexui doctor` checks all components
 
-# Admin login
-curl -s https://panel.example.com/api/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"your-pass"}'
-# → {"token":"eyJ..."}
-```
-
----
-
-## Next Steps
-
-1. **[First Steps](03-first-steps.md)** — add your first node and user
-2. **[Dashboard](04-dashboard.md)** — explore the real-time overview
-3. **[Security](08-security-administration.md)** — configure TLS tricks and probing protection
+!!! tip "Health Endpoint"
+    The panel exposes `GET /api/health` — returns `200 OK` with component status.
+    Use this for external monitoring (UptimeRobot, Prometheus blackbox, etc.).

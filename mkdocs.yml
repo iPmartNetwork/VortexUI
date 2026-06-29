@@ -5,7 +5,7 @@
 
 site_name: VortexUI Docs
 site_url: https://ipmartnetwork.github.io/VortexUI/
-site_description: Next-generation proxy management panel — installation, features, API, operations
+site_description: "VortexUI v1.2.7 — next-generation proxy management panel with per-reseller plans, self-service shop, and anti-censorship tools"
 site_author: iPmart Network
 
 repo_name: iPmartNetwork/VortexUI
@@ -140,9 +140,6 @@ plugins:
             Protocols: Protocols & config
             Operations: Operations
             Troubleshooting: Troubleshooting & FAQ
-            v1.2.0 Features: v1.2.0 Features
-            v1.2.3 Features: v1.2.3 Features
-            v1.2.5 Features: v1.2.5 Features
         - locale: fa
           name: فارسی
           build: true
@@ -169,9 +166,6 @@ plugins:
             Protocols: پروتکل‌ها
             Operations: عملیات
             Troubleshooting: عیب‌یابی و FAQ
-            v1.2.0 Features: ویژگی‌های نسخه 1.2.0
-            v1.2.3 Features: ویژگی‌های نسخه 1.2.3
-            v1.2.5 Features: ویژگی‌های نسخه 1.2.5
         - locale: ar
           name: العربية
           build: true
@@ -198,9 +192,6 @@ plugins:
             Protocols: البروتوكولات
             Operations: العمليات
             Troubleshooting: استكشاف الأخطاء
-            v1.2.0 Features: ميزات الإصدار 1.2.0
-            v1.2.3 Features: ميزات الإصدار 1.2.3
-            v1.2.5 Features: ميزات الإصدار 1.2.5
         - locale: tr
           name: Türkçe
           build: true
@@ -227,9 +218,6 @@ plugins:
             Protocols: Protokoller
             Operations: Operasyonlar
             Troubleshooting: Sorun giderme
-            v1.2.0 Features: v1.2.0 Özellikleri
-            v1.2.3 Features: v1.2.3 Özellikleri
-            v1.2.5 Features: v1.2.5 Özellikleri
 
 nav:
   - Home: README.md
@@ -251,8 +239,5 @@ nav:
       - Protocols: 13-protocols-config.md
       - Operations: 14-operations-maintenance.md
       - Troubleshooting: 15-troubleshooting-faq.md
-  - v1.2.0 Features: 16-v120-features.md
-  - v1.2.3 Features: 17-v123-features.md
-  - v1.2.5 Features: 18-v125-features.md
 
 # _enhance_wiki.py is a maintenance script, not published
