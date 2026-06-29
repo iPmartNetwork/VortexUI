@@ -1,142 +1,268 @@
-# ۱۵. عیب‌یابی و سوالات متداول
-
-!!! tip "راهنما"
-    اول **`vortexui logs`** و **`/api/health`** — بیشتر مشکلات از JWT، DB یا firewall است.
+# عیب‌یابی و سؤالات متداول
 
 ---
 
 ## مشکلات رایج
 
-### پنل بالا نمی‌آید
+### اتصال رد شد
+
+**علامت:** کلاینت‌ها نمی‌توانند به پروکسی متصل شوند.
+
+**بررسی کنید:**
+
+1. آیا نود آنلاین است؟ صفحه **نودها** را برای وضعیت بررسی کنید
+2. آیا پورت اینباند باز است؟ `ss -tlnp | grep <port>`
+3. آیا فایروال اجازه ترافیک می‌دهد؟ `ufw status` یا `iptables -L`
+4. آیا هسته اجرا می‌شود؟ لاگ‌های نود را بررسی کنید
+5. آیا پروتکل/ترنسپورت در کانفیگ کلاینت صحیح است؟
+
+!!! tip
+    دستور `vortexui doctor` را اجرا کنید تا تمام اجزا را یکجا بررسی کند.
+
+### خطاهای TLS
+
+**علامت:** `tls: handshake failure` یا `certificate verify failed`
+
+**بررسی کنید:**
+
+1. **REALITY:** آیا دامنه مقصد/SNI از نود قابل دسترسی است؟ `curl -I https://dest-domain` را امتحان کنید
+2. **TLS:** آیا گواهی معتبر است؟ انقضا را با `openssl s_client -connect host:443` بررسی کنید
+3. **CDN:** آیا حالت SSL کلادفلر روی "Full (Strict)" تنظیم شده؟
+4. **کلاینت:** آیا فیلد SNI با تنظیمات سرور مطابقت دارد؟
+5. **فرگمنت:** اگر از فرگمنت TLS استفاده می‌کنید، موقتاً غیرفعالش کنید
+
+### نود قطع شد
+
+**علامت:** نود در پنل "آفلاین" نمایش داده می‌شود.
+
+**بررسی کنید:**
+
+1. آیا سرور نود اجرا می‌شود؟ SSH کنید و بررسی کنید: `systemctl status vortex-node`
+2. اتصال شبکه: `ping <panel-ip>` از نود
+3. گواهی‌های mTLS: بررسی انقضا یا عدم تطابق
+4. فایروال: آیا پورت gRPC (پیش‌فرض ۹۰۹۰) بین پنل و نود باز است؟
+5. لاگ‌های ایجنت نود را بررسی کنید: `journalctl -u vortex-node -n 50`
+
+### سابسکریپشن خالی
+
+**علامت:** کلاینت سابسکریپشن خالی (بدون کانفیگ) دریافت می‌کند.
+
+**بررسی کنید:**
+
+1. آیا کاربر اینباند اختصاص‌داده‌شده دارد؟ جزئیات کاربر → اینباندها
+2. آیا اینباندهای اختصاص‌داده‌شده روی نودهای آنلاین هستند؟
+3. آیا هاست‌های سابسکریپشن به‌درستی تنظیم شده‌اند (در صورت استفاده)؟
+4. آیا توکن سابسکریپشن معتبر است (لغو نشده)؟
+5. پاسخ خام را بررسی کنید: `curl https://panel.example.com/sub/<token>`
+
+### CPU بالا روی نود
+
+**علامت:** CPU نود بالای ۹۰% باقی می‌ماند.
+
+**بررسی کنید:**
+
+1. کاربران زیاد؟ تعداد اتصالات فعال را بررسی کنید
+2. آیا مهاجرت خودکار تنظیم شده؟ باید کاربران را منتقل کند
+3. پروسس هسته: `top -p $(pgrep xray)` یا `pgrep sing-box`
+4. افزودن نودهای بیشتر و فعال‌سازی بالانسر را در نظر بگیرید
+
+### مشکلات اتصال دیتابیس
+
+**علامت:** پنل خطای 500 برمی‌گرداند، لاگ‌ها خطای اتصال PostgreSQL نشان می‌دهند.
+
+**بررسی کنید:**
+
+1. آیا PostgreSQL اجرا می‌شود؟ `systemctl status postgresql`
+2. رشته اتصال در `.env` صحیح است؟
+3. اتصالات حداکثر تمام شده؟ `SELECT count(*) FROM pg_stat_activity;`
+4. افزودن pgBouncer برای استخر اتصال را در نظر بگیرید
+
+---
+
+## نکات دیباگ
+
+### `vortexui doctor`
+
+اجرای تشخیص جامع:
 
 ```bash
-vortexui status
-vortexui logs
-curl http://127.0.0.1:8080/api/health
+vortexui doctor
 ```
 
-| علت | راه‌حل |
-|-----|--------|
-| JWT secret خالی | `deploy/.env` → `JWT_SECRET=$(openssl rand -hex 32)` |
-| DB down | `docker compose ps` — restart `db` |
-| پورت اشغال | `ss -tlnp \| grep 8080` |
+بررسی‌ها:
+
+- ✅ اتصال PostgreSQL + نسخه اسکیما
+- ✅ اتصال Redis + تأخیر
+- ✅ اتصال gRPC نود (به ازای هر نود)
+- ✅ اعتبار گواهی
+- ✅ در دسترس بودن پورت
+- ✅ رزولوشن DNS
+- ✅ فضای دیسک
+- ✅ وجود و نسخه باینری هسته
+
+### اندپوینت سلامت
+
+```bash
+curl https://panel.example.com/api/health
+```
+
+وضعیت اجزا را برمی‌گرداند:
+
+```json
+{
+  "status": "healthy",
+  "components": {
+    "database": "ok",
+    "redis": "ok",
+    "nodes": { "online": 3, "offline": 0 }
+  },
+  "version": "1.2.7"
+}
+```
+
+### فعال‌سازی لاگ دیباگ
+
+```bash
+VORTEX_LOG_LEVEL=debug systemctl restart vortexui
+```
+
+سپس لاگ‌ها را مشاهده کنید:
+
+```bash
+journalctl -u vortexui -f
+```
+
+!!! warning
+    لاگ دیباگ حجیم است. پس از عیب‌یابی غیرفعال کنید تا دیسک پر نشود.
+
+### تست دستی سابسکریپشن
+
+```bash
+# فرمت Base64
+curl -s https://panel.example.com/sub/<token>
+
+# فرمت Clash
+curl -s "https://panel.example.com/sub/<token>?format=clash"
+
+# با تشخیص User-Agent
+curl -s -A "clash-meta" https://panel.example.com/sub/<token>
+```
+
+### بررسی سلامت نود از طریق API
+
+```bash
+curl -H "Authorization: Bearer <token>" \
+  https://panel.example.com/api/nodes/<id>/health
+```
 
 ---
 
-### HTTPS / Let's Encrypt fail
+## سؤالات متداول
 
-| علت | راه‌حل |
-|-----|--------|
-| DNS اشتباه | A record به IP سرور |
-| پورت 80 بسته | firewall: `ufw allow 80,443` |
-| rate limit LE | صبر ۱h یا staging test |
+### چگونه رمز عبور ادمین را بازنشانی کنم؟
 
----
+```bash
+vortexui admin reset-password --username admin
+```
 
-### نود offline / قرمز
+یا از طریق منوی تعاملی:
 
-| علت | راه‌حل |
-|-----|--------|
-| Agent down | `systemctl status vortex-node` |
-| mTLS mismatch | regenerate certs، SAN شامل IP |
-| Firewall | پورت 50051 gRPC باز |
-| Core crash | Nodes → Logs |
+```bash
+vortexui
+# گزینه ۷ → بازنشانی رمز عبور
+```
 
----
+### چگونه از 3x-ui مهاجرت کنم؟
 
-### کاربر وصل نمی‌شود
+1. دیتابیس 3x-ui خود را اکسپورت کنید (`x-ui.db`)
+2. در VortexUI: **کاربران → ایمپورت → 3x-ui**
+3. فایل دیتابیس را آپلود کنید
+4. اینباندها را نگاشت کنید (VortexUI کاربران را به اینباندهای مطابق اختصاص می‌دهد)
+5. بررسی و تأیید کنید
 
-| بررسی | |
-|-------|---|
-| Inbound فعال؟ | Nodes → Inbounds |
-| User status `active`? | Users |
-| Expire / limited? | User detail |
-| پورت inbound باز? | `ufw` / cloud security group |
-| REALITY keys match? | regenerate + new sub |
+### چگونه از Marzban مهاجرت کنم؟
 
----
+1. در VortexUI: **کاربران → ایمپورت → Marzban**
+2. رشته اتصال دیتابیس یا فایل اکسپورت ارائه دهید
+3. کاربران، داده ترافیک و تاریخ‌های انقضا حفظ می‌شوند
+4. نگاشت اینباند تا حد امکان به‌صورت خودکار انجام می‌شود
 
-### ترافیک ثبت نمی‌شود
+### آیا می‌توانم پنل و نود را روی یک سرور اجرا کنم؟
 
-| علت | راه‌حل |
-|-----|--------|
-| Core API port | `VORTEX_CORE_API_PORT=10085` |
-| Stats disabled in core | panel config renders stats |
-| Redis down | restart redis |
+بله — از ویژگی **نود محلی** استفاده کنید. هسته پروکسی درون‌پروسسی در کنار پنل اجرا می‌شود. نیازی به ایجنت نیست.
 
----
+### تشخیص خودکار سابسکریپشن چگونه کار می‌کند؟
 
-### Subscription خالی
+پنل هدر `User-Agent` کلاینت را بررسی می‌کند:
 
-| علت | راه‌حل |
-|-----|--------|
-| No inbound assigned | Edit user → select inbounds |
-| Node down | fix node first |
-| Wrong endpoint | set Custom Endpoint |
+- حاوی "clash" → YAML کلش
+- حاوی "sing-box" → JSON سینگ‌باکس
+- حاوی "outline" → لینک‌های `ss://` Outline
+- سایر → لینک‌های اشتراک base64
 
----
+با پارامتر `?format=` بازنویسی کنید.
 
-### SSE / live update کار نمی‌کند
+### چگونه دامنه برای HTTPS اضافه کنم؟
 
-| علت | راه‌حل |
-|-----|--------|
-| Caddy buffering | default OK — check proxy timeout |
-| Token expired | re-login |
-| Ad blocker | disable for panel domain |
+1. رکورد DNS A دامنه را به IP سرور اشاره دهید
+2. `VORTEX_DOMAIN=your-domain.com` را در `.env` تنظیم کنید
+3. پنل را ریستارت کنید — Caddy به‌صورت خودکار گواهی صادر می‌کند
 
----
+### چگونه بکاپ و بازیابی کنم؟
 
-## FAQ
+**بکاپ:**
+```bash
+vortexui backup
+# یا خودکار: VORTEX_BACKUP_CRON="0 3 * * *" تنظیم کنید
+```
 
-### تفاوت VortexUI با 3x-ui چیست؟
+**بازیابی:**
+```bash
+vortexui restore /path/to/backup.tar.gz
+```
 
-مدل **کاربر‌محور**، push delta traffic، outbound/routing/balancer کامل، audit، API token، failover پیشرفته.
+### تفاوت حالت سهمیه اختصاص‌یافته و مصرف‌شده چیست؟
 
-### آیا SQLite دارد؟
+- **اختصاص‌یافته:** استخر هنگام تعیین حد ترافیک به کاربران کاهش می‌یابد (مجموع حدهای کاربران محاسبه می‌شود)
+- **مصرف‌شده:** استخر فقط وقتی کاربران واقعاً ترافیک مصرف کنند کاهش می‌یابد
 
-خیر — **PostgreSQL + TimescaleDB** (production-grade، سری زمانی ترافیک).
+از اختصاص‌یافته برای بسته‌های از‌پیش‌فروخته‌شده و از مصرف‌شده برای پرداخت مصرفی استفاده کنید.
 
-### چند نود پشتیبانی می‌شود؟
+### چگونه پرداخت اختصاصی ریسلر تنظیم کنم؟
 
-نامحدود — هر نود agent جدا یا یک local node.
+1. یک ادمین ریسلر با نقش مناسب ایجاد کنید
+2. ریسلر وارد شود → **اکانت ریسلر → تنظیم پرداخت**
+3. شماره کارت، آدرس‌های رمزارز یا مرچنت زرین‌پال خود را تنظیم کند
+4. کاربرانش این گزینه‌های پرداخت را در فروشگاه می‌بینند
 
-### sing-box یا xray؟
+### چرا نود من "ناسالم" نمایش داده می‌شود؟
 
-هر نود جدا — Hysteria2/TUIC فقط sing-box؛ REALITY روی هر دو.
+نود در بررسی‌های سلامت ناموفق است. دلایل رایج:
 
-### import از Marzban؟
+- CPU بالا (بیش از ۹۰%) یا RAM (بیش از ۹۰%)
+- افت بسته بیش از ۱۰%
+- هسته کرش کرده (ریستارت خودکار باید مدیریت کند)
+- مشکل گواهی
 
-بله — Users → Import.
+بررسی: **نودها → نود → سلامت** برای دلایل خاص خرابی.
 
-### اشتراک‌گذاری اکانت؟
+### چگونه از کلادفلر با VortexUI استفاده کنم؟
 
-Device limit + online IP guard + optional autolimit.
+1. دامنه را از طریق کلادفلر به سرور اشاره دهید (ابر نارنجی)
+2. حالت SSL کلادفلر را روی **Full (Strict)** تنظیم کنید
+3. از ترنسپورت WebSocket استفاده کنید (برای پروکسی کلادفلر ضروری)
+4. هاست‌های سابسکریپشن را تنظیم کنید تا دامنه CDN تبلیغ شود
+5. کاربران به کلادفلر متصل می‌شوند → کلادفلر به نود شما فوروارد می‌کند
 
-### فروش با زرین‌پال؟
+### چگونه فروشگاه سلف‌سرویس را فعال کنم؟
 
-Plans + ZarinPal gateway — [فصل ۹](./09-plans-payments.md).
+1. پلن ایجاد کنید (**پلن‌ها → پلن جدید**)
+2. روش‌های پرداخت تنظیم کنید (**تنظیمات → تنظیم پرداخت**)
+3. لینک پورتال را با کاربران به اشتراک بگذارید: `/portal/login`
+4. کاربران همچنین می‌توانند از طریق `/sub/{token}/shop` به فروشگاه دسترسی پیدا کنند
 
-### backup قبل از update؟
+### وقتی ریسلر سهمیه‌اش تمام شود چه اتفاقی می‌افتد؟
 
-**همیشه** — `vortexui update` ایمن است ولی backup توصیه می‌شود.
-
-### license?
-
-GPL-3.0 — مشتقات باید source باز باشند.
-
----
-
-## گزارش باگ
-
-1. [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues)
-2. نسخه: `vortexui settings` یا sidebar
-3. لاگ: `vortexui logs` (بدون secret)
-4. [SECURITY.md](https://github.com/iPmartNetwork/VortexUI/blob/master/SECURITY.md) برای آسیب‌پذیری
-
----
-
-## Community
-
-- ⭐ Star on GitHub
-- [Contributing](https://github.com/iPmartNetwork/VortexUI/blob/master/CONTRIBUTING.md)
-- [Changelog](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md)
+- **اعتبار کاربر تمام شده:** نمی‌تواند کاربر جدید ایجاد کند
+- **اعتبار ترافیک تمام شده:** کاربران موجود تا زمان محدودیت فردی ادامه می‌دهند (حالت مصرف‌شده) یا نمی‌تواند ترافیک بیشتر اختصاص دهد (حالت اختصاص‌یافته)
+- تعلیق خودکار قابل تنظیم است تا ریسلر را کاملاً غیرفعال کند

@@ -1,97 +1,245 @@
-# 5. Kullanıcı Yönetimi
+# Kullanıcı Yönetimi
 
-!!! warning "Uyarı"
-    **Revoke Sub** eski bağlantıyı geçersiz kılar — yalnızca token sızdıysa kullanın.
-
----
-
-## Felsefe: Tek Kullanıcı, Birden Fazla Protokol
-
-Her **User** tek bir kayıttır. Tek bir **subscription token** ile izin verilen tüm inbound'lara erişir — VLESS ve VMess için ayrı girişler oluşturmaya gerek yoktur.
+!!! abstract "Kullanıcı-Merkezli Model"
+    Bir kullanıcı = bir abonelik tokeni = tüm düğümlerdeki atanmış tüm gelen bağlantılara erişim.
+    Protokol başına ayrı hesap gerekmez.
 
 ---
 
-## Kullanıcı Oluşturma
+## Kullanıcı CRUD
 
-**Users → New User**
+### Kullanıcı Oluşturma
+
+**Kullanıcılar → Yeni Kullanıcı**
 
 | Alan | Açıklama |
-|-------|-------------|
-| **Username** | Benzersiz tanımlayıcı |
-| **Data limit** | Trafik limiti (bayt) — 0 = sınırsız |
-| **Expire at** | Bitiş tarihi |
-| **Device limit** | Maksimum eşzamanlı cihaz (IP/HWID) |
-| **Reset strategy** | `none` / `daily` / `weekly` / `monthly` |
-| **Status** | `active` / `disabled` / `limited` |
-| **Inbounds** | İzin verilen inbound'lar |
-| **Note** | Admin notu |
+|------|----------|
+| Kullanıcı adı | Benzersiz tanımlayıcı |
+| Veri limiti | Trafik sınırı (bayt) — `0` = sınırsız |
+| Bitiş tarihi | Abonelik sona erme tarihi |
+| Cihaz limiti | Maksimum eş zamanlı cihaz |
+| Sıfırlama stratejisi | `none` / `daily` / `weekly` / `monthly` |
+| Durum | `active` / `disabled` / `limited` |
+| Gelen bağlantılar | İzin verilen gelen bağlantılar (bir veya daha fazla seçin) |
+| Not | Yalnızca yönetici notu |
+
+### Toplu İşlemler
+
+| Eylem | Açıklama |
+|-------|----------|
+| **Toplu Oluştur** | Kullanıcılar → Toplu Ekle — sayı belirtin veya CSV yükleyin |
+| **Çoklu seçim** | Birden fazla kullanıcıyı işaretleyin → eylem uygulayın |
+| **Toplu eylemler** | Etkinleştir, devre dışı bırak, sil, uzat, trafiği sıfırla |
+| **İçe aktar** | Kullanıcılar → İçe Aktar — 3x-ui veya Marzban veritabanından |
 
 ---
 
-## Toplu İşlemler
+## Kotalar ve Limitler
 
-| Eylem | Yol |
-|--------|------|
-| **Bulk Create** | Users → Add Bulk — CSV/count |
-| **Multi-select** | Birden fazla kullanıcı seç → eylem |
-| **Import** | Users → Import — 3x-ui / Marzban |
+### Veri Limiti
 
----
+Kullanıcı başına trafik sınırı belirleyin. Aşıldığında kullanıcının durumu `limited` olur ve `user.limited` olayı tetiklenir.
 
-## Abonelik
+### Cihaz Limiti
 
-### Bağlantılar
+Maksimum eş zamanlı bağlantılar (farklı IP'ler). Uygulama [IP-limit sistemi](08-security-administration.md) tarafından yönetilir.
 
-| Endpoint | Çıktı |
-|----------|--------|
-| `GET /sub/{token}` | base64 (varsayılan) |
-| `GET /sub/{token}?format=clash` | Clash YAML |
-| `GET /sub/{token}?format=singbox` | sing-box JSON |
-| `GET /sub/info/{token}` | Kullanıcı HTML sayfası |
+### Süre Sonu
 
-### İptal
+Kullanıcılar yapılandırılan tarihte sona erer. Sistem 3 gün önce `user.expiry_warning` ve sona ermede `user.expired` olayını tetikler.
 
-**Users → Revoke Sub** — yeni token verilir; önceki bağlantı geçersiz olur.
+### Sıfırlama Stratejisi
+
+| Strateji | Davranış |
+|----------|----------|
+| `none` | Asla sıfırlamaz — trafik sonsuza kadar birikir |
+| `daily` | Gece yarısı UTC'de sıfırla |
+| `weekly` | Her Pazartesi gece yarısı UTC'de sıfırla |
+| `monthly` | Her ayın 1'inde gece yarısı UTC'de sıfırla |
 
 ---
 
-## Trafik Muhasebesi
+## Abonelik Teslimi
 
-- **Delta push** yöntemi: çekirdek deltaları push eder (polling değil)
-- **Yeniden başlatmaya dayanıklı**: sayaçlar DB'de saklanır
-- **Reset**: manuel veya zamanlanmış (aylık vb.)
-- **Kota uygulama**: limit aşımı → `limited` durumu + `user.limited` olayı
+### Abonelik Bağlantısı
+
+Her kullanıcı benzersiz bir abonelik URL'si alır:
+
+```
+https://panel.example.com/sub/{token}
+```
+
+Yanıt biçimi istemcinin User-Agent'ından otomatik algılanır veya `?format=` ile zorlanır:
+
+| Biçim | Parametre | Çıktı |
+|-------|-----------|-------|
+| Base64 | `?format=base64` | V2Ray uyumlu base64 kodlanmış bağlantılar |
+| Clash | `?format=clash` | Clash YAML yapılandırması |
+| sing-box | `?format=singbox` | sing-box JSON yapılandırması |
+| Xray JSON | `?format=xray` | Ham Xray/V2Ray istemci JSON |
+| Outline | `?format=outline` | Outline için `ss://` Shadowsocks bağlantıları |
+| Düz bağlantılar | `?format=links` | V2rayN tarzı paylaşım bağlantıları, satır başına bir |
+
+### Abonelik Sunucuları
+
+Canlı çekirdek yapılandırmasına dokunmadan aboneliğin ne tanıttığını değiştiren gelen bağlantı başına geçersiz kılmalar.
+
+| Alan | Açıklama |
+|------|----------|
+| Etiket | Görüntü adı (şablon değişkenlerini destekler) |
+| Adres | Tanıtılan sunucu/IP (örn. bir CDN alan adı) |
+| Port | Geçersiz kılma portu (`0` = miras al) |
+| SNI | TLS sunucu adı |
+| Host | HTTP `Host` başlığı |
+| Yol | WS/HTTPUpgrade/gRPC yolu |
+| ALPN | Virgülle ayrılmış (örn. `h2,http/1.1`) |
+| Parmak izi | uTLS parmak izi (örn. `chrome`) |
+| Güvenlik | `inbound_default`, `none`, `tls` veya `reality` |
+| Güvensiz izin ver | Sertifika doğrulamayı atla |
+| Mux | Çoğullamayı etkinleştir |
+| Fragment | TLS fragment belirtimi (örn. `1,40-60,30-50`) |
+| Öncelik | Gelen bağlantı içindeki sıra (düşük olan önce gösterilir) |
+
+**Şablon Değişkenleri** — kullanıcı başına işlenir:
+
+| Değişken | Karşılığı |
+|----------|-----------|
+| `{USERNAME}` | Kullanıcının kullanıcı adı |
+| `{SERVER_IP}` | Düğümün adresi |
+| `{SERVER_PORT}` | Tanıtılan port |
+| `{PROTOCOL}` | Gelen bağlantı protokolü |
+| `{NETWORK}` | Taşıma türü |
+| `{SECURITY}` | Taşıma güvenliği |
+| `{REMARK}` | Yapılandırılan etiket |
+
+!!! tip
+    Tek bir gelen bağlantıyı birden fazla CDN alan adı arkasına koymak için abonelik sunucularını kullanın — her biri farklı SNI ve yol ile, tümü şablon değişkenleri kullanan tek bir sunucu tanımından.
 
 ---
 
-## Cihaz Limiti ve HWID
+## Self-Servis Portal
 
-| Mekanizma | Açıklama |
-|-----------|-------------|
-| **Device limit** | Eşzamanlı IP/ayrı cihaz sayısı |
-| **HWID allowlist** | Yalnızca kayıtlı cihazlar |
-| **Online IP guard** | Çevrimiçi IP'yi limit ile karşılaştır — [Bölüm 8](./08-security-administration.md) |
+**Son kullanıcı URL'si:** `/portal/login`
+
+Kullanıcılar abonelik tokenleriyle giriş yapar ve şunlara erişir:
+
+| Özellik | Açıklama |
+|---------|----------|
+| Gösterge paneli | Kullanım istatistikleri, kalan veri/süre, aktif cihazlar |
+| Planlar | Abonelik planlarını göz atma ve satın alma (bayilerinin mağazasından) |
+| Talepler | Destek talebi açma, yönetici mesajlarına yanıt verme |
+| Referans | Referans kodunu görüntüleme/paylaşma, kazanılan ödülleri görme |
+| QR Kodu | Mobil uygulamalara abonelik aktarmak için tarama |
+
+### Self-Servis Mağaza
+
+**URL:** `/sub/{token}/shop`
+
+Her bayi kendi planlarını ve ödeme yöntemlerini yapılandırır. Son kullanıcılar yalnızca bayilerinin tekliflerini görür:
+
+1. Kullanıcı mevcut planları göz atar
+2. Plan ve ödeme yöntemi seçer (ZarinPal, karttan karta veya kripto)
+3. Ödemeyi tamamlar (veya dekont yükler)
+4. Sipariş otomatik olarak (ZarinPal) veya yönetici onayından sonra (kart/kripto) tamamlanır
+
+Tam detaylar için [Planlar ve Ödemeler](09-plans-payments.md) sayfasına bakın.
 
 ---
 
-## Kullanıcı Detay Sayfası
+## Aile/Grup Abonelikleri
 
-**Users → kullanıcı adına tıkla** → `/users/:id`
+**Kullanıcılar → Aile Grupları**
 
-- Kullanım grafiği
-- Çevrimiçi IP'ler
-- Sıfırlama geçmişi
-- Satır içi düzenleme
+Kullanıcıların bir veri havuzunu paylaşmasına izin verin:
+
+1. Paylaşılan veri limiti ile bir **Aile Grubu** oluşturun
+2. Mevcut kullanıcıları üye olarak ekleyin
+3. Her üyenin trafiği paylaşılan havuzdan düşer
+4. Paylaşılan havuz içinde isteğe bağlı üye başına sınır
+
+| Alan | Açıklama |
+|------|----------|
+| Ad | Grup adı |
+| Sahip | Birincil hesap |
+| Veri limiti | Toplam paylaşılan havuz |
+| Maksimum üye | Limit (varsayılan: 5) |
+| Üye kotası | Havuz içindeki üye başına sınır |
 
 ---
 
-## En İyi Node'u Otomatik Seçme
+## Akıllı Kota
 
-Aboneliklerde url-test etkinleştirilerek en düşük gecikmeli aktif node otomatik seçilebilir (yapılandırma şablonunda).
+Kullanıcıları limitlerinde sert kesme yerine kademeli hız azaltma.
+
+Katmanları JSON olarak yapılandırın:
+
+```json
+[
+  { "threshold_pct": 80, "action": "warn", "speed_limit": 0 },
+  { "threshold_pct": 95, "action": "throttle", "speed_limit": 524288 },
+  { "threshold_pct": 100, "action": "disable" }
+]
+```
+
+- **%80**'de → kullanıcıyı uyar (bildirim olayı)
+- **%95**'te → 512 KB/s'ye kısıtla
+- **%100**'de → hesabı devre dışı bırak
+
+!!! info
+    Akıllı Kota plan başına veya global olarak yapılandırılır. Plan bazlı ayarlar global varsayılanı geçersiz kılar.
 
 ---
 
-## Kullanıcı Bildirimleri
+## Referans Sistemi
 
-- **Telegram kullanıcı botu**: kullanıcı token ile giriş yapar — `/usage`, `/renew`
-- **Süre dolumu uyarısı**: 3 gün önce — `user.expiry_warning` olayı
+**Kullanıcılar → Referanslar**
+
+| Ayar | Açıklama | Varsayılan |
+|------|----------|------------|
+| Etkin | Referansları aç/kapat | Kapalı |
+| Ödül türü | `data` (ek GB) veya `days` (ek süre) | `data` |
+| Ödül miktarı | Referans başına ne kadar | 1 GB |
+| Maksimum referans | Kullanıcı başına limit (`0` = sınırsız) | `0` |
+| Ücretli gerektir | Yalnızca ödeme yapan referanslar için ödül | Kapalı |
+| Her iki taraf ödüllendirilir | Referans veren + yeni kullanıcı | Evet |
+
+Kullanıcılar referans kodlarına portal üzerinden erişir. Bir arkadaş kodu kullanarak kaydolduğunda her iki taraf ödüllendirilir.
+
+---
+
+## Yapılandırma Şablonları
+
+Kullanıcıların aboneliklerinde aldıkları Clash/sing-box çıktısını özelleştirin:
+
+- Özel yönlendirme kuralları ekleyin (reklamları engelle, yerel trafiği doğrudan yönlendir)
+- DNS ayarlarını yapılandırın
+- Proxy grubu stratejilerini ayarlayın (url-test, fallback, load-balance)
+- Kullanıcı başına veya global şablonlar
+
+---
+
+## Derin Bağlantılar ve QR Kodları
+
+**Sistem → Derin Bağlantılar**
+
+Tek dokunuşla uygulama kurulumu için abonelik derin bağlantıları oluşturun:
+
+| Ayar | Açıklama |
+|------|----------|
+| Temel URL | Panelin genel URL'si |
+| Uygulama şeması | Yerel uygulamalar için URL şeması |
+| Ad dahil et | Bağlantıya sunucu adını ekle |
+| QR logosu | QR merkezi için özel logo |
+
+---
+
+## Diğer Panellerden İçe Aktarma
+
+**Kullanıcılar → İçe Aktar**
+
+Şuralardan kullanıcıları taşıyın:
+
+- **3x-ui** — veritabanı dosya yolunu belirtin
+- **Marzban** — veritabanı bağlantısı veya dışa aktarma dosyası sağlayın
+
+İçe aktarıcı kullanıcıları eşler; kullanıcı adlarını, trafik limitlerini ve bitiş tarihlerini korur.

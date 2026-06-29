@@ -1,142 +1,268 @@
-# ١٥. استكشاف الأخطاء والأسئلة الشائعة
-
-!!! tip "نصيحة"
-    ابدأ بـ **`vortexui logs`** و**`/api/health`** — أغلب المشاكل JWT أو DB أو firewall.
+# استكشاف الأخطاء والأسئلة المتكررة
 
 ---
 
 ## المشاكل الشائعة
 
-### اللوحة لا تبدأ
+### رفض الاتصال
 
-```bash
-vortexui status
-vortexui logs
-curl http://127.0.0.1:8080/api/health
-```
+**العَرَض:** العملاء لا يمكنهم الاتصال بالبروكسي.
 
-| السبب | الحل |
-|-------|----------|
-| Empty JWT secret | `deploy/.env` → `JWT_SECRET=$(openssl rand -hex 32)` |
-| DB down | `docker compose ps` — restart `db` |
-| Port in use | `ss -tlnp \| grep 8080` |
+**تحقق من:**
 
----
+1. هل العقدة متصلة؟ تحقق من صفحة **العقد** للحالة
+2. هل منفذ الاتصال الوارد مفتوح؟ `ss -tlnp | grep <port>`
+3. هل الجدار الناري يسمح بالحركة؟ `ufw status` أو `iptables -L`
+4. هل النواة تعمل؟ تحقق من سجلات العقدة للأخطاء
+5. هل البروتوكول/النقل صحيح في إعداد العميل؟
 
-### فشل HTTPS / Let's Encrypt
+!!! tip
+    شغّل `vortexui doctor` لفحص جميع المكونات دفعة واحدة.
 
-| السبب | الحل |
-|-------|----------|
-| Wrong DNS | A record to server IP |
-| Port 80 closed | firewall: `ufw allow 80,443` |
-| LE rate limit | wait 1h or staging test |
+### أخطاء TLS
 
----
+**العَرَض:** `tls: handshake failure` أو `certificate verify failed`
 
-### العقدة offline / حمراء
+**تحقق من:**
 
-| السبب | الحل |
-|-------|----------|
-| Agent down | `systemctl status vortex-node` |
-| mTLS mismatch | regenerate certs, SAN includes IP |
-| Firewall | port 50051 gRPC open |
-| Core crash | Nodes → Logs |
+1. **REALITY:** هل نطاق الوجهة/SNI قابل للوصول من العقدة؟ جرّب `curl -I https://dest-domain`
+2. **TLS:** هل الشهادة صالحة؟ تحقق من الانتهاء بـ `openssl s_client -connect host:443`
+3. **CDN:** هل وضع SSL في Cloudflare مضبوط على "Full (Strict)"؟
+4. **العميل:** هل حقل SNI يطابق إعداد الخادم؟
+5. **التجزئة:** إذا كنت تستخدم تجزئة TLS، جرّب تعطيلها مؤقتاً
 
----
+### انقطاع العقدة
 
-### المستخدم لا يستطيع الاتصال
+**العَرَض:** العقدة تظهر "غير متصلة" في لوحة التحكم.
 
-| التحقق | |
-|-------|---|
-| Inbound active? | Nodes → Inbounds |
-| User status `active`? | Users |
-| Expired / limited? | User detail |
-| Inbound port open? | `ufw` / cloud security group |
-| REALITY keys match? | regenerate + new sub |
+**تحقق من:**
 
----
-
-### الحركة غير مسجّلة
-
-| السبب | الحل |
-|-------|----------|
-| Core API port | `VORTEX_CORE_API_PORT=10085` |
-| Stats disabled in core | panel config renders stats |
-| Redis down | restart redis |
-
----
+1. هل خادم العقدة يعمل؟ ادخل عبر SSH وتحقق: `systemctl status vortex-node`
+2. اتصال الشبكة: `ping <panel-ip>` من العقدة
+3. شهادات mTLS: تحقق من الانتهاء أو عدم التطابق
+4. الجدار الناري: هل منفذ gRPC (افتراضي 9090) مفتوح بين لوحة التحكم والعقدة؟
+5. تحقق من سجلات عميل العقدة: `journalctl -u vortex-node -n 50`
 
 ### اشتراك فارغ
 
-| السبب | الحل |
-|-------|----------|
-| No inbound assigned | Edit user → select inbounds |
-| Node down | fix node first |
-| Wrong endpoint | set Custom Endpoint |
+**العَرَض:** العميل يستقبل اشتراكاً فارغاً (بدون إعدادات).
+
+**تحقق من:**
+
+1. هل للمستخدم اتصالات واردة مُعيّنة؟ تحقق من تفاصيل المستخدم → الاتصالات الواردة
+2. هل الاتصالات المُعيّنة على عقد متصلة؟
+3. هل مضيفات الاشتراك مُعدّة بشكل صحيح (إذا كانت مستخدمة)؟
+4. هل توكن الاشتراك صالح (لم يُلغَ)؟
+5. تحقق من الاستجابة الخام: `curl https://panel.example.com/sub/<token>`
+
+### استخدام عالي للمعالج على العقدة
+
+**العَرَض:** معالج العقدة يبقى فوق 90%.
+
+**تحقق من:**
+
+1. مستخدمون كثيرون جداً؟ تحقق من عدد الاتصالات النشطة
+2. هل الترحيل التلقائي مُعدّ؟ يجب أن ينقل المستخدمين بعيداً
+3. عملية النواة: `top -p $(pgrep xray)` أو `pgrep sing-box`
+4. فكّر في إضافة عقد أخرى وتفعيل موازنة الحمل
+
+### مشاكل اتصال قاعدة البيانات
+
+**العَرَض:** لوحة التحكم تُرجع أخطاء 500، السجلات تُظهر أخطاء اتصال PostgreSQL.
+
+**تحقق من:**
+
+1. هل PostgreSQL يعمل؟ `systemctl status postgresql`
+2. سلسلة الاتصال صحيحة في `.env`؟
+3. هل نفدت الاتصالات القصوى؟ `SELECT count(*) FROM pg_stat_activity;`
+4. فكّر في إضافة pgBouncer لتجميع الاتصالات
 
 ---
 
-### SSE / التحديث المباشر لا يعمل
+## نصائح التصحيح
 
-| السبب | الحل |
-|-------|----------|
-| Caddy buffering | default OK — check proxy timeout |
-| Token expired | re-login |
-| Ad blocker | disable for panel domain |
+### `vortexui doctor`
+
+تشغيل تشخيصات شاملة:
+
+```bash
+vortexui doctor
+```
+
+يفحص:
+
+- ✅ اتصال PostgreSQL + إصدار المخطط
+- ✅ اتصال Redis + زمن الاستجابة
+- ✅ اتصال gRPC للعقد (لكل عقدة)
+- ✅ صلاحية الشهادات
+- ✅ توفر المنافذ
+- ✅ تحليل DNS
+- ✅ مساحة القرص
+- ✅ وجود ملفات النواة التنفيذية وإصداراتها
+
+### نقطة نهاية الصحة
+
+```bash
+curl https://panel.example.com/api/health
+```
+
+تُرجع حالة المكونات:
+
+```json
+{
+  "status": "healthy",
+  "components": {
+    "database": "ok",
+    "redis": "ok",
+    "nodes": { "online": 3, "offline": 0 }
+  },
+  "version": "1.2.7"
+}
+```
+
+### تفعيل سجل التصحيح
+
+```bash
+VORTEX_LOG_LEVEL=debug systemctl restart vortexui
+```
+
+ثم راقب السجلات:
+
+```bash
+journalctl -u vortexui -f
+```
+
+!!! warning
+    سجل التصحيح مفصّل جداً. عطّله بعد استكشاف الأخطاء لتجنب امتلاء القرص.
+
+### اختبار الاشتراك يدوياً
+
+```bash
+# صيغة Base64
+curl -s https://panel.example.com/sub/<token>
+
+# صيغة Clash
+curl -s "https://panel.example.com/sub/<token>?format=clash"
+
+# مع اكتشاف User-Agent
+curl -s -A "clash-meta" https://panel.example.com/sub/<token>
+```
+
+### فحص سلامة العقدة عبر API
+
+```bash
+curl -H "Authorization: Bearer <token>" \
+  https://panel.example.com/api/nodes/<id>/health
+```
 
 ---
 
-## FAQ
+## الأسئلة المتكررة
 
-### كيف يختلف VortexUI عن 3x-ui?
+### كيف أعيد تعيين كلمة مرور المسؤول؟
 
-**نموذج يركز على المستخدم**، حركة push delta، outbound/routing/balancer كامل، audit، API token، failover متقدم.
+```bash
+vortexui admin reset-password --username admin
+```
 
-### هل يدعم SQLite?
+أو عبر القائمة التفاعلية:
 
-لا — **PostgreSQL + TimescaleDB** (إنتاجي، سلاسل زمنية للحركة).
+```bash
+vortexui
+# اختر الخيار 7 → إعادة تعيين كلمة المرور
+```
 
-### كم عقدة مدعومة?
+### كيف أرحّل من 3x-ui؟
 
-غير محدود — كل عقدة لها agent منفصل أو local node واحد.
+1. صدّر قاعدة بيانات 3x-ui (`x-ui.db`)
+2. في VortexUI: **المستخدمون → استيراد → 3x-ui**
+3. ارفع ملف قاعدة البيانات
+4. عيّن الاتصالات الواردة (VortexUI يعيّن المستخدمين للاتصالات المطابقة)
+5. راجع وأكّد
 
-### sing-box أم xray?
+### كيف أرحّل من Marzban؟
 
-لكل عقدة — Hysteria2/TUIC فقط على sing-box؛ REALITY على كليهما.
+1. في VortexUI: **المستخدمون → استيراد → Marzban**
+2. قدّم سلسلة اتصال قاعدة البيانات أو ملف التصدير
+3. المستخدمون، بيانات الحركة، وتواريخ الانتهاء تُحفظ
+4. تعيين الاتصالات الواردة يتم تلقائياً قدر الإمكان
 
-### استيراد من Marzban?
+### هل يمكنني تشغيل لوحة التحكم والعقدة على نفس الخادم؟
 
-نعم — Users → Import.
+نعم — استخدم ميزة **العقدة المحلية**. نواة البروكسي تعمل داخل العملية بجانب لوحة التحكم. لا حاجة لعميل.
 
-### مشاركة الحساب?
+### كيف يعمل الاكتشاف التلقائي للاشتراك؟
 
-حد الأجهزة + online IP guard + autolimit اختياري.
+لوحة التحكم تفحص ترويسة `User-Agent` للعميل:
 
-### البيع مع ZarinPal?
+- يحتوي "clash" → Clash YAML
+- يحتوي "sing-box" → sing-box JSON
+- يحتوي "outline" → روابط Outline `ss://`
+- غير ذلك → روابط مشفرة بـ base64
 
-Plans + ZarinPal gateway — [الفصل 9](./09-plans-payments.md).
+يمكن التجاوز بمعامل `?format=`.
 
-### نسخ احتياطي قبل التحديث?
+### كيف أضيف نطاقاً لـ HTTPS؟
 
-**دائماً** — `vortexui update` آمن لكن النسخ الاحتياطي موصى به.
+1. وجّه سجل DNS A لنطاقك إلى IP خادمك
+2. عيّن `VORTEX_DOMAIN=your-domain.com` في `.env`
+3. أعد تشغيل لوحة التحكم — Caddy يُصدر الشهادة تلقائياً
 
-### الترخيص?
+### كيف أنسخ احتياطياً وأستعيد؟
 
-GPL-3.0 — المشتقات يجب أن تكون مفتوحة المصدر.
+**نسخ احتياطي:**
+```bash
+vortexui backup
+# أو تلقائي: عيّن VORTEX_BACKUP_CRON="0 3 * * *"
+```
 
----
+**استعادة:**
+```bash
+vortexui restore /path/to/backup.tar.gz
+```
 
-## الإبلاغ عن الأخطاء
+### ما الفرق بين وضع الحصة المخصص والمستهلك؟
 
-1. [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues)
-2. الإصدار: `vortexui settings` أو الشريط الجانبي
-3. السجلات: `vortexui logs` (بدون أسرار)
-4. [SECURITY.md](https://github.com/iPmartNetwork/VortexUI/blob/master/SECURITY.md) للثغرات
+- **مخصص (Allocated):** الحصة تنقص عند تعيين حدود بيانات للمستخدمين (مجموع جميع حدود المستخدمين يُحسب)
+- **مستهلك (Consumed):** الحصة تنقص فقط عند استهلاك المستخدمين للحركة فعلياً
 
----
+استخدم المخصص للحزم المباعة مسبقاً. استخدم المستهلك للدفع حسب الاستخدام.
 
-## المجتمع
+### كيف أعدّ المدفوعات لكل موزّع؟
 
-- ⭐ Star on GitHub
-- [Contributing](https://github.com/iPmartNetwork/VortexUI/blob/master/CONTRIBUTING.md)
-- [Changelog](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md)
+1. أنشئ مسؤول موزّع بالدور المناسب
+2. الموزّع يسجّل الدخول → **حساب الموزّع → إعداد الدفع**
+3. يعيّن رقم بطاقته، عناوين العملات الرقمية، أو تاجر ZarinPal
+4. مستخدموه يرون خيارات الدفع هذه في المتجر
+
+### لماذا عقدتي تظهر "غير سليمة"؟
+
+العقدة تفشل في فحوصات السلامة. الأسباب الشائعة:
+
+- معالج عالي (>90%) أو ذاكرة (>90%)
+- فقدان حزم >10%
+- تعطّل عملية النواة (إعادة التشغيل التلقائي يجب أن تتعامل مع هذا)
+- مشكلة في الشهادة
+
+تحقق: **العقد → العقدة → السلامة** لأسباب الفشل المحددة.
+
+### كيف أستخدم Cloudflare مع VortexUI؟
+
+1. وجّه النطاق لخادمك عبر Cloudflare (السحابة البرتقالية)
+2. اضبط وضع SSL في Cloudflare على **Full (Strict)**
+3. استخدم نقل WebSocket (مطلوب لتوكيل Cloudflare)
+4. اعدد مضيفات الاشتراك لإعلان نطاق CDN
+5. المستخدمون يتصلون بـ Cloudflare → Cloudflare يوجّه لعقدتك
+
+### كيف أفعّل متجر الخدمة الذاتية؟
+
+1. أنشئ خططاً (**الخطط → خطة جديدة**)
+2. اعدد طرق الدفع (**الإعدادات → إعداد الدفع**)
+3. شارك رابط البوابة مع المستخدمين: `/portal/login`
+4. يمكن للمستخدمين أيضاً الوصول للمتجر عبر `/sub/{token}/shop`
+
+### ماذا يحدث عندما ينفد رصيد الموزّع؟
+
+- **نفاد رصيد المستخدمين:** لا يمكن إنشاء مستخدمين جدد
+- **نفاد رصيد الحركة:** المستخدمون الحاليون يستمرون حتى يُقيّدوا فردياً (وضع الاستهلاك) أو لا يمكن تعيين بيانات أخرى (وضع التخصيص)
+- التعليق التلقائي يمكن تكوينه لتعطيل الموزّع بالكامل

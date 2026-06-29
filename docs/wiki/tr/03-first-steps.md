@@ -1,133 +1,149 @@
-# 3. İlk Adımlar
+# İlk Adımlar
 
-!!! tip "İpucu"
-    Bu akışı **5 dakikada** tamamlayın: node → inbound → kullanıcı → abonelik → test.
-
----
-
-## Giriş Yapma
-
-1. Kurulum URL'sini tarayıcıda açın (ör. `https://panel.example.com`)
-2. Kurulum sırasında oluşturulan admin kullanıcı adı ve şifre ile oturum açın
-3. 2FA etkinse, 6 haneli authenticator kodunu girin
-
-### Yeni admin oluşturma (CLI)
-
-```bash
-# Docker
-docker compose -f deploy/compose.yml exec panel \
-  /usr/local/bin/panel admin create --username admin2 --password 'pass' --sudo
-
-# Native
-./bin/panel admin create --username admin2 --password 'pass' --sudo
-
-# Or via vortexui
-vortexui admin
-```
+!!! info "Tahmini Süre"
+    Girişten çalışan bir abonelik bağlantısına: **5 dakika**.
 
 ---
 
-## İlk İş Akışı (5 Dakika)
+## 1. Giriş Yapın ve Hesabınızı Güvenceye Alın
 
-```mermaid
-flowchart LR
-    A["1. Check node"] --> B["2. Create inbound"]
-    B --> C["3. Create user"]
-    C --> D["4. Get subscription"]
-    D --> E["5. Test in client"]
-```
+1. Panel URL'nize gidin (örn. `https://panel.example.com`)
+2. Kurulum sırasında oluşturduğunuz yönetici kimlik bilgileriyle giriş yapın
+3. **Şifrenizi hemen değiştirin**: Ayarlar → Profil → Şifre Değiştir
 
-### Adım 1: Node'u kontrol edin
+### TOTP 2FA'yı Etkinleştirin
 
-- Menü → **Nodes**
-- `local` node'u (veya eklenen node) **yeşil** olmalı ve Core Running görünmeli
-- CPU/RAM/Disk ve bağlantı sayısını inceleyin
+1. **Ayarlar → İki Faktörlü Doğrulama** bölümüne gidin
+2. **Etkinleştir**'e tıklayın — QR kodunu Google Authenticator veya herhangi bir TOTP uygulamasıyla tarayın
+3. Onaylamak için 6 haneli kodu girin
+4. Kurtarma kodlarınızı güvenli bir yerde saklayın
 
-### Adım 2: Inbound oluşturun
-
-1. Node üzerinde → **Inbounds**
-2. **Add Inbound**
-3. Hızlı VLESS + REALITY örneği:
-
-| Alan | Değer |
-|-------|-------|
-| Protocol | `vless` |
-| Port | `443` |
-| Network | `tcp` |
-| Security | `reality` |
-| Flow | `xtls-rprx-vision` |
-| SNI | `www.microsoft.com` |
-
-4. REALITY bölümünde **Generate**'e tıklayın (özel/genel anahtar çifti)
-5. Kaydedin — çekirdek yapılandırmayı hot-reload eder
-
-> Protokol ayrıntıları: [Bölüm 13 — Protokoller](./13-protocols-config.md)
-
-### Adım 3: Kullanıcı oluşturun
-
-1. Menü → **Users** → **New User**
-2. Önerilen alanlar:
-
-| Alan | Örnek |
-|-------|---------|
-| Username | `testuser` |
-| Data limit | `50 GB` |
-| Expire | 30 days |
-| Device limit | `3` |
-| Inbounds | Oluşturduğunuz inbound'u seçin |
-
-3. **Save**
-
-### Adım 4: Abonelik alın
-
-1. Kullanıcı listesinde → **Subscription** simgesi (veya QR)
-2. Aşağıdaki bağlantıları kopyalayın:
-
-| Format | Kullanım |
-|--------|----------|
-| Base64 | v2rayNG, Nekoray |
-| Clash | Clash Meta / Mihomo |
-| sing-box | sing-box client |
-| QR Code | Mobil tarama |
-
-3. Genel kullanıcı sayfası: `https://panel.example.com/sub/info/{token}` — trafik grafiği ve QR
-
-### Adım 5: Test
-
-1. Bağlantıyı istemcinize aktarın
-2. Bağlanın
-3. Panelde → **Users** → Usage — trafik artmalı (canlı SSE)
+!!! warning
+    2FA olmadan, şifrenizi bilen herkes panele tam erişime sahip olur. Paneli internete açmadan önce etkinleştirin.
 
 ---
 
-## Önerilen İlk Ayarlar
+## 2. İlk Düğümünüzü Ekleyin
 
-| Ayar | Yol | Neden |
-|---------|------|-----|
-| Şifre değiştir | Settings → Password | Güvenlik |
-| 2FA etkinleştir | Settings → 2FA | Hesap koruması |
-| Iran Geo | Nodes → Update Geo | IR yönlendirme |
-| Webhook/TG | env + restart | Olay bildirimleri |
-| Backup | Settings → Backup | Felaket kurtarma |
+=== "Yerel Düğüm (Tek Sunucu)"
+
+    Panel ve proxy çekirdeğiniz aynı makinede çalışıyorsa:
+
+    1. **Düğümler → Düğüm Ekle** bölümüne gidin
+    2. **Yerel Düğüm** seçin
+    3. Çekirdek seçin: **Xray-core** veya **sing-box**
+    4. **Oluştur**'a tıklayın
+    5. Düğüm otomatik başlar ve "Çevrimiçi" olarak görünür
+
+=== "Uzak Düğüm (Kayıt Sihirbazı)"
+
+    Ayrı bir sunucu için:
+
+    1. **Düğümler → Düğüm Ekle** bölümüne gidin
+    2. **Uzak Düğüm** seçin
+    3. Sihirbaz tek satırlık bir kurulum komutu gösterir — kopyalayın
+    4. Uzak sunucunuza SSH ile bağlanıp komutu yapıştırın
+    5. Ajanın bağlanmasını bekleyin — düğüm "Çevrimiçi" olarak görünür
+
+!!! tip
+    Kayıt sihirbazı sertifika değişimini, çekirdek kurulumunu ve servis kaydını yönetir. Manuel sertifika yönetimi gerekmez.
 
 ---
 
-## Başka Panelden Kullanıcı İçe Aktarma
+## 3. İlk Gelen Bağlantınızı Oluşturun
 
-**Users → Import** — desteklenen kaynaklar:
-- **3x-ui** (JSON export)
-- **Marzban** (JSON export)
+Hızlı bir VLESS + REALITY kurulumu (sansür dayanıklı bağlantılar için önerilir):
 
-Kullanıcılar UUID ve kota ile taşınır; inbound'lar ayrı eşleştirilmelidir.
+1. **Gelen Bağlantılar → Gelen Bağlantı Ekle** bölümüne gidin
+2. Yapılandırın:
+
+    | Alan | Değer |
+    |------|-------|
+    | Protokol | VLESS |
+    | Düğüm | Düğümünüz |
+    | Port | `443` |
+    | Taşıma | TCP |
+    | Güvenlik | REALITY |
+    | Hedef (SNI) | `www.google.com:443` (veya Reality Tarayıcı kullanın) |
+    | Sunucu Adları | `www.google.com` |
+    | Kısa ID'ler | Otomatik oluşturulur (veya kendiniz girin) |
+
+3. **Oluştur**'a tıklayın
+
+!!! tip "Reality Tarayıcı"
+    Sunucu konumunuz için en iyi SNI alan adlarını bulmak için **Güvenlik → Reality Tarayıcı**'yı kullanın. Düşük gecikme ve kararlı bağlantılar için en yüksek puanlı sonucu seçin.
 
 ---
 
-## UI Kısayolları
+## 4. İlk Kullanıcınızı Oluşturun
 
-| Eylem | Yol |
-|--------|------|
-| Koyu/açık tema | Kenar çubuğu → ay/güneş simgesi |
-| Dil | Settings → Language |
-| Kullanıcı ara | Users → arama kutusu |
-| Node logları | Nodes → Logs |
-| Canlı olaylar | Otomatik — köşede toast |
+1. **Kullanıcılar → Yeni Kullanıcı** bölümüne gidin
+2. Doldurun:
+
+    | Alan | Değer |
+    |------|-------|
+    | Kullanıcı adı | `testuser` |
+    | Veri limiti | `50 GB` (veya sınırsız için `0`) |
+    | Süre | Şu andan 30 gün sonra |
+    | Cihaz limiti | `3` |
+    | Gelen bağlantılar | VLESS gelen bağlantınızı seçin |
+
+3. **Oluştur**'a tıklayın
+4. Kullanıcının abonelik tokeni otomatik olarak oluşturulur
+
+---
+
+## 5. Abonelik Bağlantısını Test Edin
+
+1. Kullanıcı listesinden kullanıcı adına tıklayarak detay sayfasını açın
+2. **Abonelik Bağlantısı**'nı kopyalayın (veya QR kodunu tarayın)
+3. İstemci uygulamanıza aktarın:
+
+=== "v2rayNG (Android)"
+
+    1. v2rayNG'yi açın → **+** dokunun → **Panodan yapılandırma içe aktar**
+    2. Veya QR kodunu doğrudan tarayın
+
+=== "Clash Meta (Masaüstü/Mobil)"
+
+    ```
+    https://panel.example.com/sub/<token>?format=clash
+    ```
+    Clash'te abonelik URL'si olarak ekleyin.
+
+=== "sing-box (iOS/Android)"
+
+    ```
+    https://panel.example.com/sub/<token>?format=singbox
+    ```
+    Uzak profil olarak ekleyin.
+
+4. Bağlanın ve trafiğin aktığını doğrulayın — panelde kullanıcının kullanımını kontrol edin
+
+---
+
+## 6. Bildirimleri Etkinleştirin
+
+Bilgilendirilmek için Telegram bildirimlerini ayarlayın:
+
+1. **Ayarlar → Bildirimler → Telegram** bölümüne gidin
+2. **Bot Tokeni**'nizi girin ([@BotFather](https://t.me/BotFather) ile oluşturun)
+3. **Yönetici Sohbet ID**'nizi girin ([@userinfobot](https://t.me/userinfobot) ile alın)
+4. Teslimayı doğrulamak için **Test** butonuna tıklayın
+5. İstediğiniz olayları etkinleştirin:
+    - Kullanıcı oluşturuldu/süresi doldu/limite ulaştı
+    - Düğüm çevrimdışı
+    - Kota eşiğine ulaşıldı
+    - Yedekleme tamamlandı
+
+---
+
+## Sırada Ne Var?
+
+Artık bir düğüm, bir gelen bağlantı ve bir kullanıcı ile çalışan bir VortexUI kurulumunuz var. Buradan devam edin:
+
+- **[Gösterge Paneli](04-dashboard.md)** — gerçek zamanlı izlemeyi keşfedin
+- **[Kullanıcı Yönetimi](05-user-management.md)** — toplu işlemler, kotalar, portal
+- **[Düğüm Yönetimi](06-node-management.md)** — daha fazla düğüm ekleyin, otomatik göçü yapılandırın
+- **[Planlar ve Ödemeler](09-plans-payments.md)** — self-servis plan satın almalarını ayarlayın
+- **[Güvenlik](08-security-administration.md)** — sansür karşıtı özellikleri yapılandırın

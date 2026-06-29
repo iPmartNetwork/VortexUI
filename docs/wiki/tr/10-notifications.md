@@ -1,105 +1,169 @@
-# 10. Bildirimler
+# Bildirimler
 
-!!! tip "İpucu"
-    Webhook'lar `X-Vortex-Signature: sha256=...` ile imzalanır — secret'ı env'de ayarlayın.
-
----
-
-## Event Bus
-
-Tüm domain olayları dahili bus üzerinden akar:
-
-| Olay | Ne zaman |
-|-------|------|
-| `user.created` | Kullanıcı oluşturuldu |
-| `user.deleted` | Kullanıcı silindi |
-| `user.limited` | Trafik limiti aşıldı |
-| `user.expired` | Süresi doldu |
-| `user.reset` | Trafik sıfırlandı |
-| `user.ip_limit` | Hesap paylaşımı |
-| `user.expiry_warning` | Süre dolumundan 3 gün önce |
-| `node.down` | Node erişilemez |
-| `node.up` | Node kurtarıldı |
+!!! info "Çok Kanallı"
+    VortexUI webhook, Telegram ve uygulama içi bildirimleri destekler. Tüm kanallar bağımsız olarak yapılandırılabilir ve farklı olay alt kümeleri alabilir.
 
 ---
 
-## Webhook
+## Webhook (HMAC-SHA256)
 
-```env
-VORTEX_WEBHOOK_URL=https://your-server.com/hook
-VORTEX_WEBHOOK_SECRET=your-hmac-secret
+**Ayarlar → Bildirimler → Webhook**
+
+Panel olayları için uç noktanızda yapılandırılmış JSON yükleri alın.
+
+### Yapılandırma
+
+| Ayar | Açıklama |
+|------|----------|
+| URL | Webhook uç noktanız |
+| Gizli anahtar | HMAC-SHA256 imzalama anahtarı |
+| Olaylar | Hangi olayların gönderileceğini seçin |
+| Etkin | Aç/kapat |
+
+### Doğrulama
+
+Her istek bir `X-Signature-256` başlığı içerir:
+
+```
+X-Signature-256: sha256=<hex_hmac>
 ```
 
-### Payload
+`HMAC-SHA256(request_body, secret)` hesaplayıp karşılaştırarak doğrulayın.
+
+### Olay Yükü Yapısı
 
 ```json
 {
-  "type": "user.limited",
-  "time": "2026-06-17T12:00:00Z",
-  "user_id": "uuid",
-  "username": "john",
-  "message": "User john exceeded data limit"
+  "event": "user.limited",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "data": {
+    "user_id": "uuid",
+    "username": "testuser",
+    "data_limit": 53687091200,
+    "used_traffic": 53687091200
+  }
 }
 ```
 
-### İmza
+### Mevcut Olaylar
 
-Header: `X-Vortex-Signature: sha256=<hex>`
+| Olay | Tetikleyici |
+|------|-------------|
+| `user.created` | Yeni kullanıcı oluşturuldu |
+| `user.deleted` | Kullanıcı silindi |
+| `user.limited` | Kullanıcı veri limitine ulaştı |
+| `user.expired` | Kullanıcı abonelik süresi doldu |
+| `user.expiry_warning` | Sona ermeden 3 gün önce |
+| `user.enabled` | Kullanıcı yeniden etkinleştirildi |
+| `user.disabled` | Kullanıcı manuel devre dışı bırakıldı |
+| `node.offline` | Düğüm bağlantısı kesildi |
+| `node.online` | Düğüm yeniden bağlandı |
+| `node.unhealthy` | Düğüm sağlık kontrolü başarısız |
+| `order.created` | Yeni satın alma siparişi |
+| `order.paid` | Sipariş ödemesi onaylandı |
+| `backup.completed` | Yedekleme tamamlandı |
+| `admin.login` | Yönetici giriş olayı |
 
-```python
-import hmac, hashlib
-sig = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+---
+
+## Telegram Bot
+
+**Ayarlar → Bildirimler → Telegram**
+
+### Yönetici Botu
+
+Yöneticinin Telegram sohbetine bildirimler gönderir:
+
+| Ayar | Açıklama |
+|------|----------|
+| Bot tokeni | [@BotFather](https://t.me/BotFather)'dan |
+| Yönetici sohbet ID'si | Kişisel veya grup sohbet ID'niz |
+| Olaylar | Bildirim olaylarını seçin |
+
+### Kullanıcıya Yönelik Bot
+
+Kullanıcılar abonelik tokenleri ile botla etkileşime geçebilir:
+
+| Komut | Eylem |
+|-------|-------|
+| `/start` | Abonelik tokeni ile hesabı bağla |
+| `/usage` | Mevcut veri kullanımını görüntüle |
+| `/renew` | Yenileme bağlantısını al |
+| `/status` | Hesap durumunu kontrol et |
+| `/help` | Mevcut komutları listele |
+
+### Bildirim Şablonları
+
+Şablon değişkenleri ile mesaj biçimini özelleştirin:
+
+```
+🔔 Kullanıcı Limite Ulaştı
+Kullanıcı adı: {username}
+Kullanılan: {used_traffic}
+Limit: {data_limit}
 ```
 
 ---
 
-## Telegram Notifier
+## Kota Bildirimleri
 
-```env
-VORTEX_TELEGRAM_TOKEN=123456:ABC...
-VORTEX_TELEGRAM_CHAT_ID=-1001234567890
-```
+**Ayarlar → Bildirimler → Kota Uyarıları**
 
-Olaylar admin sohbetine gönderilir.
+Kullanıcılar veri limitlerine yaklaştığında uyarı:
 
----
-
-## Telegram Bot (Etkileşimli — Admin)
-
-Long-polling ile bot:
-
-| Komut | Eylem |
-|---------|--------|
-| `/status` | Node durumu |
-| `/users` | Kullanıcı istatistikleri |
-| `/node <name>` | Node ayrıntıları |
-| `/limit <user>` | Kullanıcıyı sınırla |
+| Ayar | Açıklama |
+|------|----------|
+| Etkin | Kota bildirimlerini etkinleştir |
+| Eşikler | Tetikleme yüzdeleri (örn. %80, %90, %100) |
+| Telegram | Bot üzerinden gönder |
+| Webhook | Webhook URL'sine gönder |
+| Bekleme süresi | Tekrarlanan uyarılar arası dakika |
 
 ---
 
-## Telegram User Bot
+## Bayi Kota Uyarıları
 
-Son kullanıcılar abonelik token'ı ile kimlik doğrular:
+**Kenar çubuğu → Bayi Kota Uyarıları** (yalnızca sudo yönetici)
 
-| Komut | Eylem |
-|---------|--------|
-| `/start` | Yardım |
-| `/login <token>` | Hesap bağla |
-| `/usage` | Mevcut kullanım |
-| `/sub` | Abonelik bağlantısı |
+Bayiler trafik/kullanıcı havuz limitlerine yaklaştığında izleme:
 
----
-
-## Telegram/S3'e Otomatik Yedekleme
-
-**Settings → Auto Backup**
-
-- Zamanlama (cron benzeri)
-- Hedef: Telegram belgesi veya S3 bucket
-- Dosya: JSON transactional yedekleme
+| Ayar | Açıklama |
+|------|----------|
+| Etkin | Global anahtar |
+| Telegram | Panel botuna gönder |
+| Webhook URL | İsteğe bağlı harici uç nokta |
+| Eşikler | Yüzdeler (örn. 80, 90, 100) |
+| Bekleme süresi | Uyarılar arası dakika |
+| Son uyarılar | Tetiklenen uyarılar tablosu |
 
 ---
 
-## SSE (UI)
+## Bildirim Merkezi (Zil Açılır Menüsü)
 
-Webhook'lara ek olarak UI aynı bus'a SSE ile abone olur — toast'lar ve otomatik yenileme.
+Panel başlığındaki zil simgesi son bildirimleri gösterir:
+
+- Okunmamış sayı rozeti
+- Genişletmek için tıklayın
+- Her bildirim gösterir: olay türü, açıklama, zaman damgası
+- İlgili kaynağa gitmek için tıklayın
+- Okundu olarak işaretle / tümünü okundu olarak işaretle
+
+Yönetici hesabı başına kalıcıdır.
+
+---
+
+## SSE Canlı Olaylar
+
+Panel, gerçek zamanlı arayüz güncellemeleri için Server-Sent Events kullanır:
+
+| Akış | İçerik |
+|------|--------|
+| `/api/sse/events` | Sistem olayları (düğüm durumu, kullanıcı limitleri, vb.) |
+| `/api/sse/stats` | Canlı istatistikler (bağlantılar, trafik sayaçları) |
+| `/api/sse/monitor` | Aktif bağlantı güncellemeleri |
+
+Ön yüz bileşenleri otomatik abone olur. Yapılandırma gerekmez — SSE her zaman aktiftir.
+
+!!! tip
+    SSE olayları gerçek zamanlı gösterge paneli göstergelerini, monitör sayfasını ve bildirim zilini besler.
+    Ters proxy'niz yanıtları arabelleğe alıyorsa, SSE akışına izin verildiğinden emin olun (Caddy bunu varsayılan olarak yönetir).
