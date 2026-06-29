@@ -13,6 +13,7 @@ const (
 	ResellerSettingBranding       = "branding"
 	ResellerSettingAutoBackup     = "auto_backup"
 	ResellerSettingUpdate         = "update"
+	ResellerSettingBilling        = "billing"
 )
 
 // AllResellerSettingKeys lists every Settings section sudo can grant.
@@ -29,6 +30,7 @@ func AllResellerSettingKeys() []string {
 		ResellerSettingBranding,
 		ResellerSettingAutoBackup,
 		ResellerSettingUpdate,
+		ResellerSettingBilling,
 	}
 }
 
@@ -46,6 +48,7 @@ func DefaultResellerSettings() map[string]bool {
 		ResellerSettingBranding:       false,
 		ResellerSettingAutoBackup:     false,
 		ResellerSettingUpdate:         false,
+		ResellerSettingBilling:        false,
 	}
 }
 

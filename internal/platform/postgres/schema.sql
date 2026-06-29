@@ -741,3 +741,15 @@ CREATE TABLE clean_ip_scans (
     scanned_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_clean_ip_score ON clean_ip_scans (score DESC);
+
+-- reseller per-admin payment configuration
+CREATE TABLE reseller_payment_config (
+    admin_id            UUID PRIMARY KEY REFERENCES admins(id) ON DELETE CASCADE,
+    card_number         TEXT NOT NULL DEFAULT '',
+    card_holder         TEXT NOT NULL DEFAULT '',
+    card_bank           TEXT NOT NULL DEFAULT '',
+    crypto_addresses    JSONB NOT NULL DEFAULT '{}',
+    zarinpal_merchant_id TEXT NOT NULL DEFAULT '',
+    manual_instructions TEXT NOT NULL DEFAULT '',
+    enabled_methods     JSONB NOT NULL DEFAULT '[]'
+);
