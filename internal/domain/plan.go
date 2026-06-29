@@ -45,9 +45,10 @@ type Order struct {
 	Gateway   string      `json:"gateway"`   // "zarinpal" | "nowpayments" | "manual"
 	GatewayID string      `json:"gateway_id"` // external transaction/authority ID
 	Amount    int64       `json:"amount"`     // paid amount in gateway's unit
-	Currency  string      `json:"currency"`   // "IRR" | "USD" | "USDT"
-	CreatedAt time.Time   `json:"created_at"`
-	PaidAt    *time.Time  `json:"paid_at,omitempty"`
+	Currency   string      `json:"currency"`   // "IRR" | "USD" | "USDT"
+	ProofImage string      `json:"proof_image,omitempty"` // base64 data URL of payment receipt/screenshot
+	CreatedAt  time.Time   `json:"created_at"`
+	PaidAt     *time.Time  `json:"paid_at,omitempty"`
 }
 
 // OrderStatus tracks the payment lifecycle.

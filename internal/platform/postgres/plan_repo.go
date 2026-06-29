@@ -20,7 +20,7 @@ const planCols = `id, name, description, data_limit, duration_days, device_limit
 	reset_strategy, inbound_ids, price_toman, price_usd, max_users, enabled, created_at, admin_id`
 
 const orderCols = `id, user_id, admin_id, plan_id, username, status, gateway,
-	gateway_id, amount, currency, created_at, paid_at`
+	gateway_id, amount, currency, created_at, paid_at, proof_image`
 
 func marshalUUIDs(ids []uuid.UUID) ([]byte, error) {
 	if ids == nil {
@@ -53,7 +53,7 @@ func scanOrder(row pgx.Row) (*domain.Order, error) {
 	var userID, adminID pgtype.UUID
 	var paidAt pgtype.Timestamptz
 	if err := row.Scan(&o.ID, &userID, &adminID, &o.PlanID, &o.Username, &o.Status,
-		&o.Gateway, &o.GatewayID, &o.Amount, &o.Currency, &o.CreatedAt, &paidAt); err != nil {
+		&o.Gateway, &o.GatewayID, &o.Amount, &o.Currency, &o.CreatedAt, &paidAt, &o.ProofImage); err != nil {
 		return nil, err
 	}
 	if userID.Valid {
@@ -130,10 +130,10 @@ func (r *PlanRepo) DeletePlan(ctx context.Context, id uuid.UUID) error {
 func (r *PlanRepo) CreateOrder(ctx context.Context, o *domain.Order) error {
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO orders (id, user_id, admin_id, plan_id, username, status, gateway,
-			gateway_id, amount, currency, created_at, paid_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+			gateway_id, amount, currency, created_at, paid_at, proof_image)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
 		o.ID, o.UserID, o.AdminID, o.PlanID, o.Username, o.Status, o.Gateway,
-		o.GatewayID, o.Amount, o.Currency, o.CreatedAt, o.PaidAt)
+		o.GatewayID, o.Amount, o.Currency, o.CreatedAt, o.PaidAt, o.ProofImage)
 	return err
 }
 
@@ -145,9 +145,9 @@ func (r *PlanRepo) GetOrder(ctx context.Context, id uuid.UUID) (*domain.Order, e
 func (r *PlanRepo) UpdateOrder(ctx context.Context, o *domain.Order) error {
 	_, err := r.pool.Exec(ctx, `
 		UPDATE orders SET user_id=$2, admin_id=$3, status=$4, gateway=$5, gateway_id=$6,
-			amount=$7, currency=$8, paid_at=$9
+			amount=$7, currency=$8, paid_at=$9, proof_image=$10
 		WHERE id=$1`,
-		o.ID, o.UserID, o.AdminID, o.Status, o.Gateway, o.GatewayID, o.Amount, o.Currency, o.PaidAt)
+		o.ID, o.UserID, o.AdminID, o.Status, o.Gateway, o.GatewayID, o.Amount, o.Currency, o.PaidAt, o.ProofImage)
 	return err
 }
 

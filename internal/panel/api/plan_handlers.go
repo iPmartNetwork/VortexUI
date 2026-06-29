@@ -182,21 +182,25 @@ func (h *Handlers) InitPurchase(c echo.Context) error {
 	case "card_to_card":
 		// Manual card-to-card: create order as pending, no gateway contact.
 		txID := req.TxID
+		if txID == "" && req.ProofImage == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "please provide a receipt image or transaction ID")
+		}
 		if txID == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, "tx_id is required for card_to_card")
+			txID = "receipt"
 		}
 		order := &domain.Order{
-			ID:        uuid.New(),
-			PlanID:    planID,
-			UserID:    userID,
-			AdminID:   adminID,
-			Username:  req.Username,
-			Status:    domain.OrderPending,
-			Gateway:   "card_to_card",
-			GatewayID: txID,
-			Amount:    plan.PriceToman,
-			Currency:  "IRR",
-			CreatedAt: time.Now(),
+			ID:         uuid.New(),
+			PlanID:     planID,
+			UserID:     userID,
+			AdminID:    adminID,
+			Username:   req.Username,
+			Status:     domain.OrderPending,
+			Gateway:    "card_to_card",
+			GatewayID:  txID,
+			Amount:     plan.PriceToman,
+			Currency:   "IRR",
+			ProofImage: req.ProofImage,
+			CreatedAt:  time.Now(),
 		}
 		if err := h.Plans.CreateOrder(c.Request().Context(), order); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "create order failed")
@@ -218,17 +222,18 @@ func (h *Handlers) InitPurchase(c echo.Context) error {
 		}
 		gatewayID := coin + ":" + txID
 		order := &domain.Order{
-			ID:        uuid.New(),
-			PlanID:    planID,
-			UserID:    userID,
-			AdminID:   adminID,
-			Username:  req.Username,
-			Status:    domain.OrderPending,
-			Gateway:   "crypto",
-			GatewayID: gatewayID,
-			Amount:    int64(plan.PriceUSD * 100),
-			Currency:  "USD",
-			CreatedAt: time.Now(),
+			ID:         uuid.New(),
+			PlanID:     planID,
+			UserID:     userID,
+			AdminID:    adminID,
+			Username:   req.Username,
+			Status:     domain.OrderPending,
+			Gateway:    "crypto",
+			GatewayID:  gatewayID,
+			Amount:     int64(plan.PriceUSD * 100),
+			Currency:   "USD",
+			ProofImage: req.ProofImage,
+			CreatedAt:  time.Now(),
 		}
 		if err := h.Plans.CreateOrder(c.Request().Context(), order); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "create order failed")

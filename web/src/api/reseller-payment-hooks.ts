@@ -22,6 +22,7 @@ export interface PendingOrder {
   gateway_id: string;
   amount: number;
   currency: string;
+  proof_image?: string;
   created_at: string;
   paid_at: string | null;
 }
