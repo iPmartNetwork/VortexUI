@@ -44,8 +44,14 @@ export function ProtocolDonutChart({
   const hovered = hoverIdx !== null ? slices[hoverIdx] : null;
   const hoveredPct = hovered ? ((hovered.value / total) * 100).toFixed(0) : null;
 
+  // Pair legend entries so each row shares a single background chip (two
+  // items side by side), matching the reference layout instead of every
+  // item getting its own separate, oddly-stretched box.
+  const rows: (typeof arcs)[number][][] = [];
+  for (let k = 0; k < arcs.length; k += 2) rows.push(arcs.slice(k, k + 2));
+
   return (
-    <div className={cn("flex flex-col items-center gap-4", className)}>
+    <div className={cn("flex flex-col items-center gap-5", className)}>
       {/* Donut */}
       <div className="relative h-36 w-36 flex-shrink-0">
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
@@ -86,39 +92,41 @@ export function ProtocolDonutChart({
         </div>
       </div>
 
-      {/* 2-column legend of "chip" rows — lone trailing item on an odd count
-          spans both columns and centers so rows never look lopsided. */}
-      <div className="w-full grid grid-cols-2 gap-2">
-        {slices.map((slice, i) => {
-          const pct = ((slice.value / total) * 100).toFixed(0);
-          const isLoneTrailing = i === slices.length - 1 && slices.length % 2 !== 0;
-          return (
-            <div
-              key={slice.label}
-              onMouseEnter={() => setHoverIdx(i)}
-              onMouseLeave={() => setHoverIdx(null)}
-              className={cn(
-                "flex items-center gap-1.5 text-xs min-w-0 rounded-lg px-2 py-1.5 cursor-pointer transition-colors bg-surface-2/40",
-                hoverIdx === i ? "bg-surface-2/80 ring-1 ring-border/60" : "hover:bg-surface-2/60",
-                isLoneTrailing && "col-span-2 max-w-[160px] justify-self-center",
-              )}
-            >
-              <span
-                className="rounded-full flex-shrink-0"
-                style={{ background: slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length], height: 7, width: 7 }}
-              />
-              <span
-                className={cn(
-                  "text-[9.5px] whitespace-nowrap overflow-hidden text-ellipsis",
-                  hoverIdx === i ? "text-fg font-semibold" : "text-fg-muted",
-                )}
-              >
-                {slice.label}
-              </span>
-              <span className="font-bold text-fg tabular-nums text-[9.5px] ms-auto flex-shrink-0">{pct}%</span>
-            </div>
-          );
-        })}
+      {/* Legend — each row is a single shared chip holding one or two
+          protocol entries side by side, like the reference layout. */}
+      <div className="w-full flex flex-col gap-1.5">
+        {rows.map((row, rowIdx) => (
+          <div key={rowIdx} className="flex items-center gap-4 rounded-lg bg-surface-2/40 px-2.5 py-1.5">
+            {row.map(({ slice, i }) => {
+              const pct = ((slice.value / total) * 100).toFixed(0);
+              return (
+                <div
+                  key={slice.label}
+                  onMouseEnter={() => setHoverIdx(i)}
+                  onMouseLeave={() => setHoverIdx(null)}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs min-w-0 flex-1 cursor-pointer rounded-md px-1 -mx-1 py-0.5 transition-colors",
+                    hoverIdx === i && "bg-surface-2",
+                  )}
+                >
+                  <span
+                    className="rounded-full flex-shrink-0"
+                    style={{ background: slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length], height: 7, width: 7 }}
+                  />
+                  <span
+                    className={cn(
+                      "text-[9.5px] whitespace-nowrap overflow-hidden text-ellipsis",
+                      hoverIdx === i ? "text-fg font-semibold" : "text-fg-muted",
+                    )}
+                  >
+                    {slice.label}
+                  </span>
+                  <span className="font-bold text-fg tabular-nums text-[9.5px] ms-auto flex-shrink-0">{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
