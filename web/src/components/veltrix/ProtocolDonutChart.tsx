@@ -7,7 +7,7 @@ export interface ProtocolSlice {
   color: string;
 }
 
-const DEFAULT_COLORS = ["#3B82F6", "#8B5CF6", "#14B8A6", "#64748B", "#F59E0B", "#EC4899"];
+const DEFAULT_COLORS = ["#22D3EE", "#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#F43F5E"];
 
 export function ProtocolDonutChart({
   slices,
@@ -30,7 +30,7 @@ export function ProtocolDonutChart({
     );
   }
 
-  const r = 36;
+  const r = 38;
   const circ = 2 * Math.PI * r;
   let offset = 0;
   const arcs = slices.map((slice, i) => {
@@ -45,11 +45,11 @@ export function ProtocolDonutChart({
   const hoveredPct = hovered ? ((hovered.value / total) * 100).toFixed(0) : null;
 
   return (
-    <div className={cn("flex flex-col items-center gap-3", className)}>
+    <div className={cn("flex flex-col items-center gap-4", className)}>
       {/* Donut */}
-      <div className="relative h-32 w-32 flex-shrink-0">
+      <div className="relative h-36 w-36 flex-shrink-0">
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-          <circle cx="50" cy="50" r={r} fill="none" stroke="hsl(var(--border))" strokeWidth="8" opacity="0.22" />
+          <circle cx="50" cy="50" r={r} fill="none" stroke="hsl(var(--border))" strokeWidth="10" opacity="0.18" />
           {arcs.map(({ slice, i, dash, arcOffset }) => (
             <circle
               key={slice.label}
@@ -58,7 +58,7 @@ export function ProtocolDonutChart({
               r={r}
               fill="none"
               stroke={slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length]}
-              strokeWidth={hoverIdx === i ? "9.5" : "8"}
+              strokeWidth={hoverIdx === i ? "11.5" : "10"}
               strokeDasharray={`${dash} ${circ - dash}`}
               strokeDashoffset={-arcOffset}
               strokeLinecap="round"
@@ -72,23 +72,23 @@ export function ProtocolDonutChart({
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2 pointer-events-none">
           {hovered ? (
             <>
-              <span className="text-sm font-black text-fg tabular-nums leading-none">{hoveredPct}%</span>
-              <span className="text-[7px] font-bold uppercase tracking-wide text-fg-subtle mt-1 max-w-[64px] truncate">
+              <span className="text-base font-black text-fg tabular-nums leading-none">{hoveredPct}%</span>
+              <span className="text-[7.5px] font-bold uppercase tracking-wide text-fg-subtle mt-1 max-w-[70px] truncate">
                 {hovered.label}
               </span>
             </>
           ) : (
             <>
-              <span className="text-xl font-black text-fg tabular-nums leading-none">{centerValue}</span>
-              <span className="text-[7px] font-bold uppercase tracking-widest text-fg-subtle mt-1">{centerLabel}</span>
+              <span className="text-2xl font-black text-fg tabular-nums leading-none">{centerValue}</span>
+              <span className="text-[7.5px] font-bold uppercase tracking-widest text-fg-subtle mt-1">{centerLabel}</span>
             </>
           )}
         </div>
       </div>
 
-      {/* 2-column legend grid — lone trailing item on an odd count is centered
-          so rows never look lopsided (2 left / 1 stranded on the right). */}
-      <div className="w-full grid grid-cols-2 gap-x-3 gap-y-1.5">
+      {/* 2-column legend of "chip" rows — lone trailing item on an odd count
+          spans both columns and centers so rows never look lopsided. */}
+      <div className="w-full grid grid-cols-2 gap-2">
         {slices.map((slice, i) => {
           const pct = ((slice.value / total) * 100).toFixed(0);
           const isLoneTrailing = i === slices.length - 1 && slices.length % 2 !== 0;
@@ -98,9 +98,9 @@ export function ProtocolDonutChart({
               onMouseEnter={() => setHoverIdx(i)}
               onMouseLeave={() => setHoverIdx(null)}
               className={cn(
-                "flex items-center gap-1.5 text-xs min-w-0 rounded-md px-1.5 -mx-1.5 py-0.5 cursor-pointer transition-colors",
-                hoverIdx === i ? "bg-surface-2/70" : "hover:bg-surface-2/40",
-                isLoneTrailing && "col-span-2 justify-self-center",
+                "flex items-center gap-1.5 text-xs min-w-0 rounded-lg px-2 py-1.5 cursor-pointer transition-colors bg-surface-2/40",
+                hoverIdx === i ? "bg-surface-2/80 ring-1 ring-border/60" : "hover:bg-surface-2/60",
+                isLoneTrailing && "col-span-2 max-w-[160px] justify-self-center",
               )}
             >
               <span
@@ -115,7 +115,7 @@ export function ProtocolDonutChart({
               >
                 {slice.label}
               </span>
-              <span className="font-bold text-fg tabular-nums text-[9.5px] ms-2 flex-shrink-0">{pct}%</span>
+              <span className="font-bold text-fg tabular-nums text-[9.5px] ms-auto flex-shrink-0">{pct}%</span>
             </div>
           );
         })}
