@@ -17,6 +17,9 @@ copyright: Copyright &copy; 2026 iPmart Network — GPL-3.0
 docs_dir: docs/wiki
 site_dir: site
 
+exclude_docs: |
+  _*.py
+
 hooks:
   - docs/hooks/copy_assets.py
 
