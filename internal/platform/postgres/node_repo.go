@@ -85,10 +85,6 @@ func (r *NodeRepo) UpdateHealth(ctx context.Context, id uuid.UUID, h domain.Node
 }
 
 func nodeToDomain(n db.Node) *domain.Node {
-	locAuto := true
-	if !n.LocationAuto {
-		locAuto = false
-	}
 	return &domain.Node{
 		ID:           n.ID,
 		Name:         n.Name,
@@ -100,7 +96,7 @@ func nodeToDomain(n db.Node) *domain.Node {
 		Region:       n.Region,
 		CountryCode:  n.CountryCode,
 		PingMs:       int(n.PingMs),
-		LocationAuto: locAuto,
+		LocationAuto: n.LocationAuto,
 		LastSeen:     tsToPtr(n.LastSeen),
 		Health: domain.NodeHealth{
 			CPUPercent:  n.CpuPercent,
