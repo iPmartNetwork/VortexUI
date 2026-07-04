@@ -346,12 +346,12 @@ export function Overview() {
             </h3>
             <p className="text-[9px] text-fg-subtle mt-0.5">Active connections by transport type</p>
           </div>
-          <div className="flex-1 flex items-center">
+          <div className="flex-1 flex pt-2.5">
             <ProtocolDonutChart
               slices={protocolSlices}
               centerValue={totalConnections || byStatus.active || 0}
               centerLabel={t("overview.sessionsCenter")}
-              className="w-full"
+              className="w-full h-full justify-between"
             />
           </div>
         </GlassCard>
