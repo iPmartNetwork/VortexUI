@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { useUpdateNode } from "@/api/hooks";
 import type { Node } from "@/api/types";
-import { Button, Input } from "./ui";
+import { findLocationPreset, SERVER_LOCATIONS } from "@/lib/serverLocations";
+import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 import { useToast } from "./toast";
+
+const AUTO_LOCATION = "__auto__";
+const CUSTOM_LOCATION = "__custom__";
 
 export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: () => void }) {
   const update = useUpdateNode();
@@ -12,8 +16,9 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
   const [address, setAddress] = useState("");
   const [ratio, setRatio] = useState("");
   const [endpoint, setEndpoint] = useState("");
+  const [locationKey, setLocationKey] = useState(AUTO_LOCATION);
   const [region, setRegion] = useState("");
-  const [locationAuto, setLocationAuto] = useState(true);
+  const [countryCode, setCountryCode] = useState("");
   const [speedLimit, setSpeedLimit] = useState("");
   const [geoBlock, setGeoBlock] = useState("");
   const [error, setError] = useState("");
@@ -25,7 +30,13 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
     setRatio(String(node.usage_ratio));
     setEndpoint(node.endpoint || "");
     setRegion(node.region || "");
-    setLocationAuto(node.location_auto !== false);
+    setCountryCode(node.country_code || "");
+    if (node.location_auto !== false) {
+      setLocationKey(AUTO_LOCATION);
+    } else {
+      const preset = findLocationPreset(node.region, node.country_code);
+      setLocationKey(preset ? `${preset.code}-${preset.city}` : CUSTOM_LOCATION);
+    }
     setSpeedLimit(node.speed_limit ? String(node.speed_limit) : "");
     setGeoBlock(node.geo_block?.join(",") ?? "");
     setError("");
@@ -33,16 +44,22 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
 
   if (!node) return null;
 
+  const isCustomLocation = locationKey === CUSTOM_LOCATION;
+  const isAutoLocation = locationKey === AUTO_LOCATION;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!node) return;
     setError("");
+    const preset = SERVER_LOCATIONS.find((p) => `${p.code}-${p.city}` === locationKey);
     try {
       await update.mutateAsync({
         id: node.id,
         input: {
           name, address, usage_ratio: ratio ? Number(ratio) : undefined, endpoint,
-          region, location_auto: locationAuto,
+          location_auto: isAutoLocation,
+          region: isAutoLocation ? "" : preset ? preset.label : region,
+          country_code: isAutoLocation ? "" : preset ? preset.code : countryCode,
           speed_limit: speedLimit ? Number(speedLimit) : 0,
           geo_block: geoBlock ? geoBlock.split(",").map(s => s.trim()).filter(Boolean) : [],
         },
@@ -75,13 +92,27 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
         </label>
         <p className="text-[10px] text-fg-subtle">Subscription links will use this address instead of the real server IP. Useful for tunneled or relay setups.</p>
         <label className="block text-xs text-muted-foreground">
-          Region label (display)
-          <Input className="mt-1" placeholder="e.g. Frankfurt, DE" value={region} onChange={(e) => setRegion(e.target.value)} />
+          Server location
+          <Select className="mt-1" value={locationKey} onChange={(e) => setLocationKey(e.target.value)}>
+            <option value={AUTO_LOCATION}>Auto-detect from IP (GeoIP)</option>
+            {SERVER_LOCATIONS.map((loc) => (
+              <option key={`${loc.code}-${loc.city}`} value={`${loc.code}-${loc.city}`}>{loc.label}</option>
+            ))}
+            <option value={CUSTOM_LOCATION}>Custom…</option>
+          </Select>
         </label>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          <input type="checkbox" checked={locationAuto} onChange={(e) => setLocationAuto(e.target.checked)} className="rounded border-border" />
-          Auto-detect country from endpoint IP (GeoIP)
-        </label>
+        {isCustomLocation && (
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs text-muted-foreground">
+              Region label (display)
+              <Input className="mt-1" placeholder="e.g. Frankfurt, DE" value={region} onChange={(e) => setRegion(e.target.value)} />
+            </label>
+            <label className="block text-xs text-muted-foreground">
+              Country code (ISO)
+              <Input className="mt-1" placeholder="e.g. DE" maxLength={2} value={countryCode} onChange={(e) => setCountryCode(e.target.value.toUpperCase())} />
+            </label>
+          </div>
+        )}
         <label className="block text-xs text-muted-foreground">
           Speed limit (bytes/sec)
           <Input className="mt-1" placeholder="0 = unlimited" value={speedLimit} onChange={(e) => setSpeedLimit(e.target.value)} inputMode="numeric" />

@@ -23,10 +23,12 @@ func ApplyNodeGeo(n *domain.Node, geo GeoCountryResolver) {
 		return
 	}
 	if geoip.IsLocal(host) {
-		if n.LocationAuto && strings.TrimSpace(n.Region) == "" {
-			n.Region = "Local"
+		if n.LocationAuto {
+			if strings.TrimSpace(n.Region) == "" {
+				n.Region = "Local"
+			}
+			n.CountryCode = ""
 		}
-		n.CountryCode = ""
 		return
 	}
 	if geo != nil && n.LocationAuto {
