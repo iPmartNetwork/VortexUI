@@ -142,11 +142,11 @@ export function Overview() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-bg-elevated via-surface to-primary/[0.03] p-6 md:p-8 shadow-xl"
+        className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-bg-elevated via-surface to-primary/[0.03] p-5 md:p-6 shadow-xl"
       >
         {/* decorative blobs */}
-        <div className="absolute top-0 end-0 w-80 h-80 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 start-0 w-64 h-64 rounded-full bg-accent/8 blur-3xl pointer-events-none" />
+        <div className="absolute top-0 end-0 w-72 h-72 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 start-0 w-56 h-56 rounded-full bg-accent/8 blur-3xl pointer-events-none" />
         <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
 
         <div className="relative z-10 flex flex-col xl:flex-row xl:items-start justify-between gap-6">
@@ -165,8 +165,8 @@ export function Overview() {
               )}
             </div>
 
-            {/* Large title */}
-            <h1 className="text-3xl md:text-5xl font-black text-fg tracking-tight leading-tight">
+            {/* Title */}
+            <h1 className="text-xl md:text-2xl font-black text-fg tracking-tight leading-tight whitespace-nowrap">
               {t("overview.commandTower")}
               {panelVersion && (
                 <span className="text-primary"> v{panelVersion}</span>
@@ -174,46 +174,43 @@ export function Overview() {
             </h1>
 
             {/* Description */}
-            <p className="text-sm text-fg-muted leading-relaxed max-w-xl">
+            <p className="text-[13px] text-fg-muted leading-relaxed max-w-xl">
               {overviewLoading || !s ? (
                 <span className="animate-pulse">{t("overview.loadingTelemetry")}</span>
               ) : (
                 <>
-                  Real-time telemetry and anti-censorship control plane.
-                  {" "}Active probing shield and smart routing automation
-                  are running{" "}
-                  {allHealthy ? "optimally" : "in partial mode"}
-                  {" "}across {totalNodes > 0 ? `${totalNodes} node${totalNodes !== 1 ? "s" : ""}` : "all nodes"}.
-                  {" "}Uptime: <span className="text-fg font-semibold">{fmtUptime(s.uptime_seconds)}</span>
-                  {" "}· {totalConnections} live connections.
+                  Real-time telemetry and anti-censorship control plane running{" "}
+                  {allHealthy ? "optimally" : "in partial mode"} across{" "}
+                  {totalNodes > 0 ? `${totalNodes} node${totalNodes !== 1 ? "s" : ""}` : "all nodes"}.
+                  {" "}Uptime {fmtUptime(s.uptime_seconds)} · {totalConnections} live connections.
                 </>
               )}
             </p>
           </div>
 
           {/* Right — status cards */}
-          <div className="flex flex-col gap-3 w-full xl:max-w-sm flex-shrink-0">
-            <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-surface/60 backdrop-blur-sm p-4">
-              <div className="h-9 w-9 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Shield size={17} className="text-amber-400" />
+          <div className="grid grid-cols-2 gap-2.5 w-full xl:max-w-sm flex-shrink-0">
+            <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-surface/60 backdrop-blur-sm p-3">
+              <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                <Shield size={15} className="text-amber-400" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-fg-subtle leading-tight">
                   {t("overview.activeProbingShield")}
                 </p>
-                <p className="text-sm font-bold text-fg mt-0.5">{probingText}</p>
+                <p className="text-xs font-bold text-fg mt-1 leading-tight truncate">{probingText}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 rounded-2xl border border-border/60 bg-surface/60 backdrop-blur-sm p-4">
-              <div className="h-9 w-9 rounded-full bg-teal-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Radio size={17} className="text-teal-400" />
+            <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-surface/60 backdrop-blur-sm p-3">
+              <div className="h-8 w-8 rounded-full bg-teal-500/15 flex items-center justify-center flex-shrink-0">
+                <Radio size={15} className="text-teal-400" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-fg-subtle leading-tight">
                   {t("overview.smartRoutingRules")}
                 </p>
-                <p className="text-sm font-bold text-fg mt-0.5">{routingText}</p>
+                <p className="text-xs font-bold text-fg mt-1 leading-tight truncate">{routingText}</p>
               </div>
             </div>
           </div>
@@ -252,7 +249,7 @@ export function Overview() {
           title={t("overview.totalSubscriptions")}
           value={overviewLoading ? "—" : totalUsers.toLocaleString()}
           change={trends?.users_pct}
-          icon={<Users size={20} />}
+          icon={<Users size={17} />}
           color="cyan"
           delay={0.05}
           subLabel={`${(byStatus.active ?? 0).toLocaleString()} ${t("overview.activeShort")}`}
@@ -262,7 +259,7 @@ export function Overview() {
           value={overviewLoading ? "—" : onlineCount}
           suffix={totalNodes > 0 ? `/ ${totalNodes}` : undefined}
           change={0}
-          icon={<Server size={20} />}
+          icon={<Server size={17} />}
           color="green"
           delay={0.1}
           subLabel={standbyNodes > 0 ? `${standbyNodes} ${t("overview.standby")}` : undefined}
@@ -271,7 +268,7 @@ export function Overview() {
           title={t("overview.dailyBandwidth")}
           value={overviewLoading ? "—" : formatDailyBandwidth(totalUsed)}
           change={trends?.bandwidth_pct}
-          icon={<Zap size={20} />}
+          icon={<Zap size={17} />}
           color="purple"
           delay={0.15}
           subLabel={
@@ -284,7 +281,7 @@ export function Overview() {
           title={t("overview.activeSessions")}
           value={overviewLoading ? "—" : totalConnections.toLocaleString()}
           change={trends?.sessions_pct}
-          icon={<Wifi size={20} />}
+          icon={<Wifi size={17} />}
           color="blue"
           delay={0.2}
           subLabel={
@@ -301,7 +298,16 @@ export function Overview() {
         <GlassCard className="xl:col-span-2 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
             <div>
-              <h3 className="text-base font-bold text-fg">{t("overview.liveTrafficStream")}</h3>
+              <h3 className="text-base font-bold text-fg flex items-center gap-2">
+                {t("overview.liveTrafficStream")}
+                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-success">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                  </span>
+                  Live
+                </span>
+              </h3>
               <p className="text-[11px] text-fg-subtle mt-0.5">{t("overview.trafficDeltaHint")}</p>
             </div>
             <div className="flex items-center gap-1.5">
