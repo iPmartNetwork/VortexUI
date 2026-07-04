@@ -22,7 +22,6 @@ permissions:
   pages: write
   id-token: write
 
-# Do not cancel an in-flight Pages deploy — rapid pushes were wedging GitHub Pages.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -45,6 +44,14 @@ jobs:
       - name: Build site
         run: mkdocs build --strict
 
+      - name: Prepare Pages artifact
+        run: |
+          touch site/.nojekyll
+          rm -f site/_*.py
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
       - name: Upload artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
@@ -62,4 +69,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
