@@ -51,7 +51,7 @@ export function ProtocolDonutChart({
   for (let k = 0; k < arcs.length; k += 2) rows.push(arcs.slice(k, k + 2));
 
   return (
-    <div className={cn("flex flex-col items-center gap-5", className)}>
+    <div className={cn("flex flex-col items-center gap-3.5", className)}>
       {/* Donut */}
       <div className="relative h-40 w-40 flex-shrink-0">
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
