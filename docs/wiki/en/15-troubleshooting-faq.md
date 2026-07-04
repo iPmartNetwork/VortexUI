@@ -116,7 +116,7 @@ Returns component status:
     "redis": "ok",
     "nodes": { "online": 3, "offline": 0 }
   },
-  "version": "1.2.7"
+  "version": "1.2.8"
 }
 ```
 

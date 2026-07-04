@@ -27,7 +27,7 @@ export function Federation() {
   function update(field: keyof FedConfig, value: any) { setForm(prev => ({ ...(prev ?? cfgData?.config ?? {} as any), [field]: value })); }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("federation.title")} subtitle={t("federation.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">

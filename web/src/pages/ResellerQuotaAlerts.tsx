@@ -38,7 +38,7 @@ export function ResellerQuotaAlerts() {
   if (!cfg) return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("reseller.alerts.title")} subtitle={t("reseller.alerts.subtitle")} />
 
       <Card className="space-y-4 p-5">

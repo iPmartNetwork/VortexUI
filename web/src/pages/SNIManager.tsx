@@ -27,7 +27,7 @@ export function SNIManager() {
   const renewCert = useMutation({ mutationFn: (id: string) => api(`/api/sni/certs/${id}/renew`, { method: "POST" }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["sni-certs"] }); toast.success("Renewal started"); } });
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("sni.title")} subtitle={t("sni.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">

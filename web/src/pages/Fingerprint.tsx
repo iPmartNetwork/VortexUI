@@ -27,7 +27,7 @@ export function Fingerprint() {
   function update(field: keyof FPPolicy, value: any) { setForm(prev => ({ ...(prev ?? policyData?.policy ?? {} as any), [field]: value })); }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("fingerprint.title")} subtitle={t("fingerprint.subtitle")} />
 
       <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">

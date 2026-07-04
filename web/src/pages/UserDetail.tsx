@@ -56,7 +56,7 @@ export function UserDetail() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate("/users")} className="grid h-9 w-9 place-items-center rounded-xl text-fg-muted transition hover:bg-surface-2/60 hover:text-fg">

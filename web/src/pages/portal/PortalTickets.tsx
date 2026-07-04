@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { portalApi } from "./portalApi";
-import { Button, Card, Input, Badge, Select } from "@/components/ui";
+import { Button, Card, Input, Badge, Select, PageHeader } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
+import { useI18n } from "@/i18n/i18n";
 
 interface Ticket {
   id: string;
@@ -28,6 +29,7 @@ interface TicketDetail extends Ticket {
 export function PortalTickets() {
   const [createOpen, setCreateOpen] = useState(false);
   const [viewId, setViewId] = useState<string | null>(null);
+  const { t } = useI18n();
 
   const { data } = useQuery({
     queryKey: ["portal-tickets"],
@@ -35,11 +37,13 @@ export function PortalTickets() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-fg">Support Tickets</h1>
-        <Button onClick={() => setCreateOpen(true)}>New Ticket</Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t("portal.ticketsTitle")}
+        subtitle={t("portal.ticketsCount").replace("{count}", String(data?.tickets?.length ?? 0))}
+      >
+        <Button onClick={() => setCreateOpen(true)}>{t("portal.newTicket")}</Button>
+      </PageHeader>
 
       <CreateTicketModal open={createOpen} onClose={() => setCreateOpen(false)} />
       {viewId && <ViewTicketModal ticketId={viewId} onClose={() => setViewId(null)} />}

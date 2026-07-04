@@ -3,6 +3,11 @@
 !!! info "Real-Time"
     All dashboard data updates via Server-Sent Events (SSE) — no manual refresh needed.
 
+!!! tip "Veltrix UI (v1.2.8)"
+    The **Overview** page uses the new Veltrix design — live stat cards, node fleet
+    health, and top traffic users. See [Veltrix UI (v1.2.8)](16-v128-ui-refresh.md)
+    for navigation, command palette, and language switcher details.
+
 ---
 
 ## Overview Widgets

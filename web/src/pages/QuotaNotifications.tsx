@@ -20,7 +20,7 @@ export function QuotaNotifications() {
   function update(field: keyof QNConfig, value: any) { setForm(prev => ({ ...(prev ?? cfgData?.config ?? {} as any), [field]: value })); }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title="Quota Notifications" subtitle="Notify users at each smart quota tier via Telegram or webhook" />
       {cfg && (
         <Card className="space-y-4">

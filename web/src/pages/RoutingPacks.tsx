@@ -127,7 +127,7 @@ export function RoutingPacks() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("nav.routingPacks")} subtitle="Reusable smart-routing rule sets">
         <Button onClick={openCreate}>{t("common.add")}</Button>
       </PageHeader>

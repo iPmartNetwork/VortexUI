@@ -60,7 +60,7 @@ export function Balancers() {
   }
 
   return (
-    <div>
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("nav.balancers")} subtitle="Outbound load balancing">
         <NodePicker value={node} onChange={setNode} />
         <Button onClick={() => setOpen(true)}>{t("common.add")}</Button>

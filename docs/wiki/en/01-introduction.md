@@ -190,7 +190,7 @@ erDiagram
 
 ## Comparison with Other Panels
 
-| Feature | VortexUI 1.2.7 | 3x-ui | Marzban | Hiddify |
+| Feature | VortexUI 1.2.8 | 3x-ui | Marzban | Hiddify |
 |---------|:--:|:--:|:--:|:--:|
 | Dual core (Xray + sing-box) | ✅ | ❌ | ❌ | ✅ |
 | User-centric model | ✅ | ❌ | ✅ | ✅ |

@@ -128,7 +128,7 @@ function NotFound() {
         <div className="text-6xl">404</div>
         <h1 className="text-lg font-bold text-fg">Page not found</h1>
         <p className="text-sm text-fg-muted">The page you're looking for doesn't exist.</p>
-        <a href="/overview" className="grad-bg inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium text-white shadow-lg">
+        <a href="/overview" className="grad-bg inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium text-primary-fg shadow-lg">
           Go to Dashboard
         </a>
       </div>

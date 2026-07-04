@@ -25,7 +25,7 @@ export function DeepLinks() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title="Deep Links & QR" subtitle="One-tap subscription import via custom URL scheme" />
       {cfg && (
         <Card className="space-y-4">

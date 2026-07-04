@@ -5,7 +5,7 @@
 
 site_name: VortexUI Docs
 site_url: https://ipmartnetwork.github.io/VortexUI/
-site_description: "VortexUI v1.2.7 — next-generation proxy management panel with per-reseller plans, self-service shop, and anti-censorship tools"
+site_description: "VortexUI v1.2.8 — next-generation proxy management panel with Veltrix UI, full i18n, per-reseller shop, and anti-censorship tools"
 site_author: iPmart Network
 
 repo_name: iPmartNetwork/VortexUI
@@ -135,6 +135,7 @@ plugins:
             Plans & payments: Plans & payments
             Notifications: Notifications
             Settings & backup: Settings & backup
+            Veltrix UI (v1.2.8): Veltrix UI (v1.2.8)
             Technical reference: Technical reference
             API reference: API reference
             Protocols: Protocols & config
@@ -161,6 +162,7 @@ plugins:
             Plans & payments: پلن‌ها و پرداخت
             Notifications: اعلان‌ها
             Settings & backup: تنظیمات و پشتیبان
+            Veltrix UI (v1.2.8): Veltrix UI (نسخه ۱.۲.۸)
             Technical reference: مرجع فنی
             API reference: مرجع API
             Protocols: پروتکل‌ها
@@ -187,6 +189,7 @@ plugins:
             Plans & payments: الخطط والمدفوعات
             Notifications: الإشعارات
             Settings & backup: الإعدادات والنسخ الاحتياطي
+            Veltrix UI (v1.2.8): Veltrix UI (1.2.8)
             Technical reference: مرجع تقني
             API reference: مرجع API
             Protocols: البروتوكولات
@@ -213,6 +216,7 @@ plugins:
             Plans & payments: Planlar ve ödeme
             Notifications: Bildirimler
             Settings & backup: Ayarlar ve yedekleme
+            Veltrix UI (v1.2.8): Veltrix UI (v1.2.8)
             Technical reference: Teknik referans
             API reference: API referansı
             Protocols: Protokoller
@@ -234,6 +238,7 @@ nav:
       - Plans & payments: 09-plans-payments.md
       - Notifications: 10-notifications.md
       - Settings & backup: 11-settings-backup.md
+      - Veltrix UI (v1.2.8): 16-v128-ui-refresh.md
   - Technical reference:
       - API reference: 12-api-reference.md
       - Protocols: 13-protocols-config.md

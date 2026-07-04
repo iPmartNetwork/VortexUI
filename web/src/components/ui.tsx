@@ -14,11 +14,10 @@ export function Button({
     "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20";
   const variants = {
     primary:
-      "grad-bg text-white shadow-lg shadow-primary/20 hover:shadow-primary/35 hover:brightness-110 glow-primary/0 hover:glow-primary",
+      "grad-bg text-primary-fg shadow-md hover:shadow-lg hover:brightness-110",
     outline:
-      "border border-border-strong/80 bg-surface/60 hover:bg-surface-2/80 text-fg backdrop-blur-sm",
-    ghost:
-      "bg-transparent hover:bg-surface-2/60 text-fg-muted hover:text-fg",
+      "border border-border/80 bg-surface/60 hover:bg-surface-2/80 text-fg backdrop-blur-sm",
+    ghost: "bg-transparent hover:bg-surface-2/60 text-fg-muted hover:text-fg",
     destructive:
       "bg-danger text-white hover:bg-danger/90 shadow-lg shadow-danger/20 hover:shadow-danger/35",
   };
@@ -26,38 +25,48 @@ export function Button({
   return <button className={cn(base, variants[variant], sizes[size], className)} {...props} />;
 }
 
-// --- Input --- (inset dark field with glow focus ring)
+// --- Input --- (inset field with glow focus ring)
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn("field", className)} {...props} />;
+  return <input className={cn("field input-surface", className)} {...props} />;
 }
 
 // --- Select ---
 export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn("field cursor-pointer pe-8 appearance-none", className)} {...props} />;
+  return (
+    <select className={cn("field input-surface cursor-pointer pe-8 appearance-none", className)} {...props} />
+  );
 }
 
-// --- Card --- (glass surface)
+// --- Card --- (Veltrix elevated surface — used across all admin pages)
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("card p-5", className)} {...props} />;
+  return (
+    <div
+      className={cn(
+        "rounded-2xl bg-bg-elevated border border-border p-5 transition-all duration-200",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 // --- Badge --- (pill with status color + ring)
 const badgeColors: Record<string, string> = {
-  active: "bg-success/12 text-success ring-success/20",
-  running: "bg-success/12 text-success ring-success/20",
-  limited: "bg-warning/12 text-warning ring-warning/20",
-  expired: "bg-danger/12 text-danger ring-danger/20",
-  disabled: "bg-fg-subtle/12 text-fg-muted ring-fg-subtle/15",
-  down: "bg-danger/12 text-danger ring-danger/20",
-  on_hold: "bg-accent/12 text-accent ring-accent/20",
-  muted: "bg-surface-2/80 text-fg-muted ring-border/40",
+  active: "bg-success/15 text-success border-success/30",
+  running: "bg-success/15 text-success border-success/30",
+  limited: "bg-warning/15 text-warning border-warning/30",
+  expired: "bg-danger/15 text-danger border-danger/30",
+  disabled: "bg-fg-subtle/10 text-fg-subtle border-fg-subtle/20",
+  down: "bg-danger/15 text-danger border-danger/30",
+  on_hold: "bg-primary/15 text-primary border-primary/30",
+  muted: "bg-surface-2/80 text-fg-muted border-border/40",
 };
 
 export function Badge({ children, color = "muted" }: { children: React.ReactNode; color?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset",
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
         badgeColors[color] ?? badgeColors.muted,
       )}
     >
@@ -66,7 +75,7 @@ export function Badge({ children, color = "muted" }: { children: React.ReactNode
   );
 }
 
-// --- Page Header ---
+// --- Page Header --- (Veltrix page title bar)
 export function PageHeader({
   title,
   subtitle,
@@ -77,52 +86,59 @@ export function PageHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 className="text-[1.6rem] font-bold tracking-tight text-fg">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-fg-muted">{subtitle}</p>}
+        <h1 className="text-xl font-bold text-fg tracking-tight">{title}</h1>
+        {subtitle && <p className="text-sm text-fg-muted mt-0.5">{subtitle}</p>}
       </div>
-      {children && <div className="flex items-center gap-2.5">{children}</div>}
+      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
     </div>
   );
 }
 
-// --- StatCard --- (glass tile with accent number + glow border top)
+// --- StatCard --- (metric tile — live values only, no mock deltas)
 export function StatCard({
   label,
   value,
   accent = "grad",
   icon,
+  sub,
 }: {
   label: string;
   value: React.ReactNode;
-  accent?: "grad" | "success" | "accent" | "plain";
+  accent?: "grad" | "success" | "accent" | "plain" | "warning";
   icon?: React.ReactNode;
+  sub?: string;
 }) {
   const valueClass = {
     grad: "grad-text",
     success: "text-success",
     accent: "text-accent",
     plain: "text-fg",
+    warning: "text-warning",
   }[accent];
 
-  const glowClass = {
-    grad: "via-primary/60",
-    success: "via-success/60",
-    accent: "via-accent/60",
-    plain: "via-fg-subtle/30",
+  const iconBox = {
+    grad: "bg-primary/10 text-primary",
+    success: "bg-success/10 text-success",
+    accent: "bg-accent/10 text-accent",
+    plain: "bg-surface-2 text-fg-muted",
+    warning: "bg-warning/10 text-warning",
   }[accent];
 
   return (
-    <div className="card relative overflow-hidden p-5">
-      {/* Top glow line */}
-      <div className={cn("absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent", glowClass)} />
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-xs font-medium text-fg-muted">{label}</div>
-          <div className={cn("mt-1.5 text-2xl font-bold tracking-tight", valueClass)}>{value}</div>
+    <div className="rounded-2xl bg-bg-elevated border border-border p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-px">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold text-fg-subtle uppercase tracking-wider">{label}</div>
+          <div className={cn("mt-1.5 text-2xl font-bold tracking-tight tabular-nums", valueClass)}>{value}</div>
+          {sub && <div className="mt-1 text-[11px] text-fg-muted truncate">{sub}</div>}
         </div>
-        {icon && <div className="rounded-lg bg-surface-2/60 p-2 text-fg-subtle">{icon}</div>}
+        {icon && (
+          <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0", iconBox)}>
+            {icon}
+          </div>
+        )}
       </div>
     </div>
   );

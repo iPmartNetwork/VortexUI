@@ -6,6 +6,39 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.8] - 2026-07-04
+
+Major frontend release: **Veltrix UI** design system across the admin panel and user
+portal, with complete translations for all eight supported languages.
+
+### Added
+- **Veltrix design system** — glass-style `GlassCard`, `StatsCard`, `StatusBadge`, and
+  `PageShell` components with cyan/sky accent palette and framer-motion transitions.
+- **New app shell** — collapsible `AppSidebar` + sticky `AppHeader` with mini mode,
+  mobile drawer, theme toggle, and language switcher (8 languages).
+- **Command palette** — fuzzy navigation search via **Ctrl+K** / **⌘K** from the
+  header, sidebar, and keyboard shortcut.
+- **Redesigned core pages** — Overview, Users, and Nodes with live API stat cards,
+  fleet health badges, and traffic leaderboards.
+- **Portal UI refresh** — redesigned login, dashboard, desktop sidebar, and mobile
+  bottom navigation; all portal strings wired to i18n.
+- **Complete i18n (639 keys × 8 languages)** — billing, reseller payment settings,
+  pending orders, shell, overview, users, nodes, and portal keys for EN/FA/TR/AR/RU/ZH/JA/ES.
+- **Locale tooling** — `web/src/i18n/locale/*.json` supplements plus
+  `apply-i18n-locales.mjs` and `check-i18n.mjs` scripts for translation maintenance.
+
+### Changed
+- **Admin panel rollout** — shared `Card`, `PageHeader`, `StatCard`, `Badge`, `Button`,
+  and `DataTable` restyled; page-enter animations applied across all admin routes.
+- **Login page** — dual-tab admin login and subscription-token portal shortcut with
+  language picker and secure-connection indicator.
+- **Theme tokens** — updated Tailwind palette and CSS variables for Veltrix cyan/sky
+  look in dark and light modes.
+
+### Fixed
+- Hardcoded FA/EN UI strings replaced with `t()` so language switching works on
+  Overview, Users, Nodes, Login, shell, and portal pages.
+
 ## [1.2.7] - 2026-06-29
 
 Major reseller commerce release: per-reseller payment configuration, per-reseller
@@ -437,7 +470,8 @@ First stable release.
 
 ---
 
-[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.7...HEAD
+[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.8...HEAD
+[1.2.8]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.5...v1.2.6
 [1.2.5]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.3...v1.2.5

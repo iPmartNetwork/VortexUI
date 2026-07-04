@@ -118,7 +118,7 @@ export function Admins() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-page-enter">
       {adminOpen && <CreateAdminModal open onClose={() => setAdminOpen(false)} />}
       {roleOpen && <CreateRoleModal open onClose={() => setRoleOpen(false)} />}
       {editAdmin && <EditAdminModal admin={editAdmin} onClose={() => setEditAdmin(null)} />}

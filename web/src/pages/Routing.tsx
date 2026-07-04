@@ -65,7 +65,7 @@ export function Routing() {
   const sorted = [...(list.data?.routing ?? [])].sort((a, b) => a.priority - b.priority);
 
   return (
-    <div>
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("nav.routing")} subtitle="Traffic steering rules">
         <NodePicker value={node} onChange={setNode} />
         <Button onClick={() => setOpen(true)}>{t("common.add")}</Button>

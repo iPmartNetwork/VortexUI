@@ -81,7 +81,7 @@ export function ResellerPaymentSettings() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("resellerPayment.title")} subtitle={t("resellerPayment.subtitle")} />
 
       <Card>

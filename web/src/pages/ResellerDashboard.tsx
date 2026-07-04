@@ -63,7 +63,7 @@ export function ResellerDashboard() {
   const trafficLabel = trafficMode === "consumed" ? t("reseller.dashboard.trafficConsumed") : t("reseller.dashboard.trafficAssigned");
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageHeader
           title={t("reseller.dashboard.title")}

@@ -85,7 +85,7 @@ export function Settings() {
   const show = (key: ResellerSettingKey) => sudo || flags[key];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5 animate-fade-in">
+    <div className="mx-auto max-w-4xl space-y-5 animate-page-enter">
       <PageHeader title={t("nav.settings")} />
 
       {show("appearance") && (

@@ -78,7 +78,7 @@ export function CleanIPScanner() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("cleanip.title")} subtitle={t("cleanip.subtitle")} />
 
       <Card className="space-y-4">

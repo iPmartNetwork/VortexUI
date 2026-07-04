@@ -19,7 +19,7 @@ export function Logs() {
   const { data, isLoading } = useLogs(level);
 
   return (
-    <div>
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("nav.logs")} subtitle="Panel activity">
         <Select className="w-32" value={level} onChange={(e) => setLevel(e.target.value)}>
           {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}

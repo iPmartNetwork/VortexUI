@@ -1,13 +1,17 @@
 # VortexUI Documentation
 
 <div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.4rem;">VortexUI v1.2.7</strong><br/>
-  <em style="font-size: 1.1rem;">Next-generation proxy management panel — core-agnostic, user-centric, real-time, anti-censorship</em>
+  <strong style="font-size: 1.4rem;">VortexUI v1.2.8</strong><br/>
+  <em style="font-size: 1.1rem;">Next-generation proxy management panel — Veltrix UI, full i18n, core-agnostic, user-centric, real-time</em>
 </div>
 
 ---
 
 <div class="grid cards" markdown>
+
+- :material-palette: **Veltrix UI (v1.2.8)**
+
+    Glass design system, collapsible sidebar shell, command palette (Ctrl+K), and complete 8-language translations across admin + portal.
 
 - :material-account-group: **Self-Service Portal & Shop**
 

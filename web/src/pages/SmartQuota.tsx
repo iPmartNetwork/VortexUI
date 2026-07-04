@@ -44,7 +44,7 @@ export function SmartQuota() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex items-center justify-between">
         <PageHeader title="Smart Quota" subtitle="Fair-use policies with progressive speed reduction" />
         <Button onClick={() => setCreateOpen(true)}>New Policy</Button>

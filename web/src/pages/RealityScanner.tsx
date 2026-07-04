@@ -53,7 +53,7 @@ export function RealityScanner() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title="Reality Scanner" subtitle="Probe SNIs to find the best ones for REALITY" />
 
       <Card className="space-y-4">
