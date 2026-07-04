@@ -36,6 +36,8 @@ Thumbs.db
 # Frontend
 /web/node_modules/
 /web/dist/
+/web/scripts/missing-*.tsv
+/web/scripts/missing-*.txt
 
 # MkDocs build output & copied assets
 /site/
