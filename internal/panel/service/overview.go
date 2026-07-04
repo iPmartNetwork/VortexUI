@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/port"
 )
@@ -24,6 +26,7 @@ const overviewStaleAfter = 90 * time.Second
 type OverviewService struct {
 	users      UserStatsRepo
 	nodes      port.NodeRepository
+	widgets    *WidgetDeps
 	staleAfter time.Duration
 	now        func() time.Time
 }
@@ -33,10 +36,16 @@ func NewOverviewService(users UserStatsRepo, nodes port.NodeRepository) *Overvie
 	return &OverviewService{users: users, nodes: nodes, staleAfter: overviewStaleAfter, now: time.Now}
 }
 
+// SetWidgetDeps enables dashboard widgets (badges, trends, protocol breakdown).
+func (s *OverviewService) SetWidgetDeps(dep WidgetDeps) {
+	s.widgets = &dep
+}
+
 // Overview is the dashboard payload.
 type Overview struct {
-	Users domain.UserStats `json:"users"`
-	Nodes NodeSummary      `json:"nodes"`
+	Users   domain.UserStats     `json:"users"`
+	Nodes   NodeSummary          `json:"nodes"`
+	Widgets domain.DashboardWidgets `json:"widgets"`
 }
 
 // NodeSummary aggregates the fleet plus a per-node snapshot.
@@ -61,7 +70,7 @@ type NodeSnapshot struct {
 
 // Build computes the overview. Node connectivity uses the same staleness rule as
 // subscriptions, so "online" here matches what clients are actually served.
-func (s *OverviewService) Build(ctx context.Context) (*Overview, error) {
+func (s *OverviewService) Build(ctx context.Context, adminID *uuid.UUID, sudo bool) (*Overview, error) {
 	stats, err := s.users.Stats(ctx)
 	if err != nil {
 		return nil, err
@@ -95,5 +104,6 @@ func (s *OverviewService) Build(ctx context.Context) (*Overview, error) {
 			AgentVer:    n.AgentVer,
 		})
 	}
-	return &Overview{Users: stats, Nodes: summary}, nil
+	widgets := s.buildWidgets(ctx, summary, stats, adminID, sudo)
+	return &Overview{Users: stats, Nodes: summary, Widgets: widgets}, nil
 }

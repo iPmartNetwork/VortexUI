@@ -131,6 +131,39 @@ export interface Overview {
       health: NodeHealth;
     }[];
   };
+  widgets: DashboardWidgets;
+}
+
+export interface DashboardWidgets {
+  nav_badges: {
+    active_users: number;
+    open_tickets: number;
+    pending_orders: number;
+  };
+  trends: {
+    users_pct: number;
+    bandwidth_pct: number;
+    sessions_pct: number;
+  };
+  probing: {
+    enabled: boolean;
+    blocked_scanners: number;
+    events_24h: number;
+  };
+  routing: {
+    active_rules: number;
+    routing_packs: number;
+    balancers: number;
+    inbounds: number;
+  };
+  protocols: { label: string; count: number; percent: number }[];
+  telemetry?: {
+    node_name: string;
+    core: string;
+    connections: number;
+    cpu_percent: number;
+    online: boolean;
+  };
 }
 
 export interface AuditEntry {

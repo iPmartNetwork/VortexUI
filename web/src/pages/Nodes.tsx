@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Cpu,
@@ -10,7 +11,7 @@ import {
   Server,
   Signal,
 } from "lucide-react";
-import { useDeleteNode, useNodeDebugBundle, useNodes } from "@/api/hooks";
+import { useDeleteNode, useNodeDebugBundle, useNodes, useAllInbounds } from "@/api/hooks";
 import { useRestartCore, useStopCore, useUpdateGeo } from "@/api/policy-hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button } from "@/components/ui";
@@ -216,7 +217,10 @@ export function Nodes() {
   useTitle("Nodes");
   const { can } = useAuth();
   const canManage = can("node:write");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") === "inbounds" ? "inbounds" : "fleet";
   const { data, isLoading } = useNodes();
+  const allInbounds = useAllInbounds();
   const del = useDeleteNode();
   const restart = useRestartCore();
   const stop = useStopCore();
@@ -246,6 +250,30 @@ export function Nodes() {
     }
     return { active, warning, offline, connections, total: nodes.length };
   }, [nodes]);
+
+  const inboundsByNode = useMemo(() => {
+    const map = new Map<string, typeof allInbounds.data>();
+    for (const ib of allInbounds.data ?? []) {
+      const list = map.get(ib.nodeName) ?? [];
+      list.push(ib);
+      map.set(ib.nodeName, list);
+    }
+    return map;
+  }, [allInbounds.data]);
+
+  function setTab(tab: "fleet" | "inbounds") {
+    if (tab === "fleet") {
+      searchParams.delete("tab");
+      setSearchParams(searchParams, { replace: true });
+    } else {
+      setSearchParams({ tab: "inbounds" }, { replace: true });
+    }
+  }
+
+  function openNodeInbounds(nodeName: string) {
+    const node = nodes.find((n) => n.name === nodeName);
+    if (node) setManaging(node);
+  }
 
   async function remove(n: Node) {
     if (
@@ -316,18 +344,84 @@ export function Nodes() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-fg">{t("nodes.title")}</h1>
+          <h1 className="text-xl font-bold text-fg">
+            {activeTab === "inbounds" ? t("nav.inboundsSubhosts") : t("nodes.title")}
+          </h1>
           <p className="text-sm text-fg-muted mt-0.5">
-            {fleetStats.total} {t("nodes.registered")}
+            {activeTab === "inbounds"
+              ? `${allInbounds.data?.length ?? 0} ${t("nodes.inboundsTotal")}`
+              : `${fleetStats.total} ${t("nodes.registered")}`}
           </p>
         </div>
-        {canManage && (
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus size={15} /> {t("nodes.new")}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-xl border border-border/70 bg-surface-2/50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setTab("fleet")}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
+                activeTab === "fleet" ? "bg-primary/15 text-primary" : "text-fg-muted hover:text-fg",
+              )}
+            >
+              {t("nodes.tabFleet")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("inbounds")}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
+                activeTab === "inbounds" ? "bg-primary/15 text-primary" : "text-fg-muted hover:text-fg",
+              )}
+            >
+              {t("nav.inboundsSubhosts")}
+            </button>
+          </div>
+          {canManage && activeTab === "fleet" && (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus size={15} /> {t("nodes.new")}
+            </Button>
+          )}
+        </div>
       </div>
 
+      {activeTab === "inbounds" ? (
+        <>
+          {allInbounds.isLoading && <div className="text-sm text-fg-muted">{t("common.loading")}</div>}
+          {!allInbounds.isLoading && (allInbounds.data?.length ?? 0) === 0 && (
+            <GlassCard className="flex flex-col items-center gap-3 py-16 text-center">
+              <Globe size={32} className="text-fg-subtle" />
+              <p className="text-sm text-fg-muted">{t("nodes.noInbounds")}</p>
+            </GlassCard>
+          )}
+          <div className="space-y-4">
+            {[...inboundsByNode.entries()].map(([nodeName, ibs]) => (
+              <GlassCard key={nodeName} className="space-y-3">
+                <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-3">
+                  <h3 className="text-sm font-bold text-fg">{nodeName}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => openNodeInbounds(nodeName)}>
+                    {t("nodes.manageInbounds")}
+                  </Button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {ibs?.map((ib) => (
+                    <div
+                      key={ib.id}
+                      className="rounded-xl border border-border/70 bg-surface-2/40 px-3 py-2.5 flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-fg truncate">{ib.tag}</p>
+                        <p className="text-[10px] text-fg-subtle uppercase">{ib.protocol}</p>
+                      </div>
+                      <Badge variant="outline">{ib.protocol}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatsCard
           title={t("nodes.statOnline")}
@@ -405,6 +499,8 @@ export function Nodes() {
               : "No nodes assigned to your account yet — ask the main admin to allow nodes for you."}
           </p>
         </GlassCard>
+      )}
+        </>
       )}
     </div>
   );

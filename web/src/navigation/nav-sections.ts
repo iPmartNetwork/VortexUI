@@ -38,6 +38,7 @@ export interface NavItem {
   to: string;
   key: TKey;
   icon: React.ElementType;
+  badgeKey?: "active_users" | "open_tickets" | "pending_orders";
 }
 
 export interface NavSection {

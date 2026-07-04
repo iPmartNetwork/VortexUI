@@ -269,6 +269,15 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	resellerSuspender.SetPublisher(bus)
 	go resellerSuspender.Run(ctx)
 	overviewSvc := service.NewOverviewService(users, nodes)
+	overviewSvc.SetWidgetDeps(service.WidgetDeps{
+		Counters:     store.Dashboard(),
+		Traffic:      traffic,
+		Inbounds:     store.Inbounds(),
+		Routing:      store.Routing(),
+		Balancers:    store.Balancers(),
+		RoutingPacks: store.RoutingPacks(),
+		Probing:      store.Probing(),
+	})
 	backupSvc := service.NewBackupService(nodes, store.Inbounds(), store.Outbounds(), store.Routing(), store.Balancers(), users, store.Backup())
 
 	// Wire failover migration into the hub now that its dependencies exist (the
