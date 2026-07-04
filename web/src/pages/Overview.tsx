@@ -112,7 +112,7 @@ export function Overview() {
   const protocolSlices = (widgets?.protocols ?? []).map((p, i) => ({
     label: p.label,
     value: p.count,
-    color: ["#3B82F6", "#8B5CF6", "#14B8A6", "#64748B", "#F59E0B", "#EC4899"][i % 6],
+    color: ["#22D3EE", "#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#F43F5E"][i % 6],
   }));
   const allHealthy = totalNodes > 0 && onlineCount === totalNodes;
   const standbyNodes = totalNodes - onlineCount;
@@ -336,9 +336,12 @@ export function Overview() {
         </GlassCard>
 
         {/* Protocol breakdown — 1/3 width */}
-        <GlassCard className="space-y-2.5 !p-3.5">
-          <div className="border-b border-border/60 pb-2">
-            <h3 className="text-[13px] font-bold text-fg">{t("overview.protocolBreakdown")}</h3>
+        <GlassCard className="space-y-3 !p-4">
+          <div className="border-b border-border/60 pb-2.5">
+            <h3 className="text-[13px] font-bold text-fg flex items-center gap-1.5">
+              <Shield size={13} className="text-primary" />
+              {t("overview.protocolBreakdown")}
+            </h3>
             <p className="text-[9px] text-fg-subtle mt-0.5">Active connections by transport type</p>
           </div>
           <ProtocolDonutChart
