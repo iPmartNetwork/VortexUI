@@ -1,32 +1,27 @@
 # VortexUI Documentation
 
-## Documentation site (MkDocs Material)
+## Documentation site (Arena / Veltrix UI)
 
 **Live site:** [https://ipmartnetwork.github.io/VortexUI/](https://ipmartnetwork.github.io/VortexUI/)
 
-Four languages: **English · فارسی · العربية · Türkçe** — search, dark/light theme, sidebar navigation, Mermaid diagrams.
+Single-page React site (same design as the Arena mock): hero, install tabs, protocols, architecture, 8-language i18n, glass UI.
 
-Wiki pages follow the design patterns in [`review/DOC-TEMPLATE.md`](../review/DOC-TEMPLATE.md) (hero block, card grid, admonitions, Veltrix cyan styling).
+Built from `review/arena-export/` via `review/patch_arena.py` — see [`review/README.md`](../review/README.md).
 
 ### Local preview
 
 ```bash
+python review/patch_arena.py
+# serve review/site/ with any static server
+```
+
+### Wiki (MkDocs — reference / long-form)
+
+Panel chapters in `docs/wiki/{en,fa,ar,tr}/` can still be built locally:
+
+```bash
 pip install -r docs/requirements.txt
 mkdocs serve
-# open http://127.0.0.1:8000
-```
-
-Or:
-
-```bash
-make docs-serve
-```
-
-### Build
-
-```bash
-make docs
-# output in site/
 ```
 
 ### Deploy

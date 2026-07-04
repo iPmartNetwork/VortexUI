@@ -139,7 +139,7 @@
 | **Node telemetry** | Region, country code, ping ms (migration `0030`) |
 | **Admin APIs** | `GET /api/admins/:id/quota` and `GET /api/admins/:id/wallet` |
 
-📖 Full details: [CHANGELOG.md](CHANGELOG.md) · [Docs — Panel redesign (v1.2.9)](https://ipmartnetwork.github.io/VortexUI/en/17-v129-panel-redesign/)
+📖 Full details: [CHANGELOG.md](CHANGELOG.md) · [Documentation](https://ipmartnetwork.github.io/VortexUI/)
 
 ---
 

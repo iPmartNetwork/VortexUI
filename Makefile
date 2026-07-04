@@ -75,10 +75,13 @@ stack-up: ## Build & run the full stack (needs `make certs` and JWT_SECRET)
 stack-down: ## Tear down the full stack
 	docker compose -f deploy/compose.yml down
 
-docs: ## Build documentation site (MkDocs Material)
+docs: ## Build public docs site (Arena → review/site)
+	python review/patch_arena.py
+
+docs-wiki: ## Build MkDocs wiki (reference)
 	pip install -r docs/requirements.txt
 	mkdocs build
 
-docs-serve: ## Serve docs locally at http://127.0.0.1:8000
-	pip install -r docs/requirements.txt
-	mkdocs serve -a 127.0.0.1:8000
+docs-serve: ## Serve Arena docs locally (build first)
+	python review/patch_arena.py
+	python -m http.server 8000 --directory review/site

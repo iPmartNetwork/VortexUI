@@ -1,20 +1,29 @@
-# VortexUI Docs — Review Template
+# VortexUI Docs Site (Arena / Veltrix)
 
-Design reference for pages published at **[ipmartnetwork.github.io/VortexUI](https://ipmartnetwork.github.io/VortexUI/)**.
+Public docs at **[ipmartnetwork.github.io/VortexUI](https://ipmartnetwork.github.io/VortexUI/)** are the same **Arena single-page React site** (glass UI, hero, install tabs, i18n) — not MkDocs Material.
 
-Wiki sources live in `docs/wiki/{en,fa,ar,tr}/`. When adding or updating documentation, copy patterns from **[DOC-TEMPLATE.md](./DOC-TEMPLATE.md)** — hero block, card grid, admonitions, tables, and Veltrix cyan accent styling via `docs/wiki/stylesheets/extra.css`.
+## Source layout
 
-## Quick checklist
-
-1. Start from `DOC-TEMPLATE.md` — replace placeholders, keep structure.
-2. Add the page to `mkdocs.yml` under **Panel guide** (all four locales).
-3. Cross-link from related chapters (Dashboard, Settings, Security).
-4. Mention migration steps if the release touches the database.
-5. Link to `CHANGELOG.md` for the full release notes.
+| Path | Role |
+|------|------|
+| `arena-export/index.html` | Frozen Arena bundle (v1.2.8 baseline) |
+| `arena-export/favicon-*.svg` | Favicons |
+| `patch_arena.py` | Patches version + v1.2.9 copy, adds GitHub Pages `base href` |
+| `site/` | Build output (generated; deployed by CI) |
 
 ## Build locally
 
 ```bash
-pip install -r docs/requirements.txt
-mkdocs serve
+python review/patch_arena.py
+# open review/site/index.html or serve review/site/
 ```
+
+## Release updates
+
+1. Edit string replacements in `patch_arena.py` (hero badge, meta description, feature blurbs).
+2. Run the script and spot-check `review/site/index.html`.
+3. Push — `.github/workflows/docs.yml` builds `review/site` and deploys to GitHub Pages.
+
+## Wiki (reference only)
+
+Long-form panel chapters remain in `docs/wiki/` for maintainers. They are **not** the public landing site. See `DOC-TEMPLATE.md` if you extend the wiki separately.

@@ -40,6 +40,7 @@ Thumbs.db
 /web/scripts/missing-*.txt
 
 # MkDocs build output & copied assets
+/review/site/
 /site/
 /docs/wiki/assets/
 
