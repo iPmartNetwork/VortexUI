@@ -329,7 +329,7 @@ export function Overview() {
             </div>
           </div>
           {trafficSeries.isLoading ? (
-            <div className="h-44 animate-pulse rounded-xl bg-surface-2/50" />
+            <div className="h-52 animate-pulse rounded-xl bg-surface-2/50" />
           ) : (
             <TrafficSeriesChart points={trafficSeries.data?.points ?? []} />
           )}
