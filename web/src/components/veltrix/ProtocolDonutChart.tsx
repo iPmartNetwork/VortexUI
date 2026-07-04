@@ -30,7 +30,7 @@ export function ProtocolDonutChart({
     );
   }
 
-  const r = 38;
+  const r = 42;
   const circ = 2 * Math.PI * r;
   let offset = 0;
   const arcs = slices.map((slice, i) => {
@@ -53,7 +53,7 @@ export function ProtocolDonutChart({
   return (
     <div className={cn("flex flex-col items-center gap-5", className)}>
       {/* Donut */}
-      <div className="relative h-36 w-36 flex-shrink-0">
+      <div className="relative h-40 w-40 flex-shrink-0">
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
           <circle cx="50" cy="50" r={r} fill="none" stroke="hsl(var(--border))" strokeWidth="10" opacity="0.18" />
           {arcs.map(({ slice, i, dash, arcOffset }) => (
