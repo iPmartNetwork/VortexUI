@@ -336,7 +336,7 @@ export function Overview() {
         </GlassCard>
 
         {/* Protocol breakdown — 1/3 width */}
-        <GlassCard className="space-y-3 !p-4">
+        <GlassCard className="flex flex-col !p-4">
           <div className="border-b border-border/60 pb-2.5">
             <h3 className="text-[13px] font-bold text-fg flex items-center gap-1.5">
               <Shield size={13} className="text-primary" />
@@ -344,11 +344,14 @@ export function Overview() {
             </h3>
             <p className="text-[9px] text-fg-subtle mt-0.5">Active connections by transport type</p>
           </div>
-          <ProtocolDonutChart
-            slices={protocolSlices}
-            centerValue={totalConnections || byStatus.active || 0}
-            centerLabel={t("overview.sessionsCenter")}
-          />
+          <div className="flex-1 flex items-center pt-4">
+            <ProtocolDonutChart
+              slices={protocolSlices}
+              centerValue={totalConnections || byStatus.active || 0}
+              centerLabel={t("overview.sessionsCenter")}
+              className="w-full"
+            />
+          </div>
         </GlassCard>
       </div>
 
