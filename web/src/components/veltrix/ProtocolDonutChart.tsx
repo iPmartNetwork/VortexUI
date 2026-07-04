@@ -53,12 +53,6 @@ export function ProtocolDonutChart({
     return ring;
   });
 
-  // 2×2 grid — pair slices into rows of 2
-  const pairs: ProtocolSlice[][] = [];
-  for (let i = 0; i < slices.length; i += 2) {
-    pairs.push(slices.slice(i, i + 2));
-  }
-
   return (
     <div className={cn("flex flex-col items-center gap-5", className)}>
       {/* Donut */}
@@ -74,19 +68,19 @@ export function ProtocolDonutChart({
       </div>
 
       {/* 2×2 legend grid */}
-      <div className="w-full grid grid-cols-2 gap-x-4 gap-y-2.5">
+      <div className="w-full grid grid-cols-2 gap-x-3 gap-y-2.5">
         {slices.map((slice, i) => {
           const pct = ((slice.value / total) * 100).toFixed(0);
           return (
-            <div key={slice.label} className="flex items-center justify-between gap-1.5 text-xs min-w-0">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span
-                  className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                  style={{ background: slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length] }}
-                />
-                <span className="text-fg-muted truncate text-[11px]">{slice.label}</span>
-              </div>
-              <span className="font-bold text-fg tabular-nums flex-shrink-0 text-[11px]">{pct}%</span>
+            <div key={slice.label} className="flex items-center gap-1.5 text-xs min-w-0">
+              <span
+                className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                style={{ background: slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length] }}
+              />
+              <span className="text-fg-muted text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">
+                {slice.label}
+              </span>
+              <span className="font-bold text-fg tabular-nums text-[11px] ms-auto flex-shrink-0">{pct}%</span>
             </div>
           );
         })}
