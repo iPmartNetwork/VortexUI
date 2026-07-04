@@ -28,6 +28,7 @@ const (
 	NodeDown          Type = "node.down" // became unhealthy/unreachable
 	NodeUp            Type = "node.up"   // (re)connected
 	NodeDisconnectAlert Type = "node.disconnect_alert" // unreachable > 5 min
+	NodeAutoRecover   Type = "node.auto_recover" // panel restarted core or reset hub link
 	AdminQuotaWarning Type = "admin.quota_warning"
 )
 

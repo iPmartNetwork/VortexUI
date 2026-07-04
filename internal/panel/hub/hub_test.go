@@ -24,6 +24,7 @@ type fakeConn struct {
 	healthFn   func(call int) (domain.NodeHealth, error) // overrides healthSeq when set
 	healthCall int
 	consumeErr error
+	restartCoreFn func()
 }
 
 func (f *fakeConn) Sync(context.Context, *core.GeneratedConfig, domain.CoreType) error { return nil }
@@ -34,7 +35,12 @@ func (f *fakeConn) OnlineStats(context.Context) (map[string]int, error)         
 func (f *fakeConn) OnlineIPs(context.Context, string) (map[string]int64, error)        { return nil, nil }
 func (f *fakeConn) UpdateGeo(context.Context, string, string) (int64, int64, error)    { return 0, 0, nil }
 func (f *fakeConn) Logs(context.Context, int) ([]string, error)                        { return nil, nil }
-func (f *fakeConn) RestartCore(context.Context) error                                  { return nil }
+func (f *fakeConn) RestartCore(context.Context) error {
+	if f.restartCoreFn != nil {
+		f.restartCoreFn()
+	}
+	return nil
+}
 func (f *fakeConn) StopCore(context.Context) error                                     { return nil }
 
 func (f *fakeConn) Health(context.Context) (domain.NodeHealth, error) {
@@ -177,6 +183,43 @@ func TestHub_ResyncOnConnectAndReconnect(t *testing.T) {
 		case <-ctx.Done():
 			t.Fatalf("expected resync #%d (connect/reconnect), timed out", i+1)
 		}
+	}
+}
+
+func TestHub_AutoRecoverCore(t *testing.T) {
+	restarted := make(chan string, 1)
+	conn := &fakeConn{healthFn: func(call int) (domain.NodeHealth, error) {
+		return domain.NodeHealth{CoreRunning: false}, nil
+	}}
+	conn.restartCoreFn = func() {
+		select {
+		case restarted <- "n1":
+		default:
+		}
+	}
+
+	h := New(Options{
+		Dialer:                  func(*domain.Node) (NodeConn, error) { return conn, nil },
+		HealthInterval:          5 * time.Millisecond,
+		AutoRecoverCore:         true,
+		AutoRecoverCoreAfter:    20 * time.Millisecond,
+		AutoRecoverCoreCooldown: time.Second,
+	})
+	defer h.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := h.Register(ctx, &domain.Node{ID: uuid.New(), Name: "n1", Core: domain.CoreXray}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	select {
+	case name := <-restarted:
+		if name != "n1" {
+			t.Errorf("restart for wrong node: %s", name)
+		}
+	case <-ctx.Done():
+		t.Fatal("expected auto recover restart core")
 	}
 }
 
