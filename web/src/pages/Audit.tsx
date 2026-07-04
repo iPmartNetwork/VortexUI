@@ -16,7 +16,7 @@ export function Audit() {
   const { t } = useI18n();
 
   return (
-    <div>
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("nav.audit")} subtitle={t("audit.subtitle")} />
 
       <Card className="p-0 text-sm">

@@ -39,7 +39,7 @@ export function Evasion() {
   const profiles = data?.profiles ?? [];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex items-center justify-between">
         <PageHeader title={t("evasion.title")} />
         <Button onClick={() => setCreateOpen(true)}>{t("evasion.newProfile")}</Button>

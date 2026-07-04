@@ -88,7 +88,7 @@ export function WalletBilling() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("billing.title")} subtitle={t("billing.subtitle")} />
 
       <div className="flex flex-wrap gap-2">

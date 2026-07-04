@@ -47,7 +47,7 @@ export function MyQuota() {
   const u = data?.usage;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader
         title={t("reseller.quota.title")}
         subtitle={admin?.username ? `${t("reseller.quota.subtitle")} · ${admin.username}` : t("reseller.quota.subtitle")}

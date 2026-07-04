@@ -1,13 +1,17 @@
 # مستندات VortexUI
 
 <div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.4rem;">VortexUI نسخه ۱.۲.۷</strong><br/>
-  <em style="font-size: 1.1rem;">پنل مدیریت پروکسی نسل جدید — مستقل از هسته، کاربرمحور، بلادرنگ، ضد سانسور</em>
+  <strong style="font-size: 1.4rem;">VortexUI نسخه ۱.۲.۸</strong><br/>
+  <em style="font-size: 1.1rem;">پنل مدیریت پروکسی نسل جدید — Veltrix UI، i18n کامل، مستقل از هسته، کاربرمحور، بلادرنگ</em>
 </div>
 
 ---
 
 <div class="grid cards" markdown>
+
+- :material-palette: **Veltrix UI (نسخه ۱.۲.۸)**
+
+    سیستم طراحی شیشه‌ای، سایدبار تاشو، command palette (Ctrl+K) و ترجمه کامل ۸ زبان در پنل ادمین و پورتال.
 
 - :material-account-group: **پورتال سلف‌سرویس و فروشگاه**
 

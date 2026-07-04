@@ -24,7 +24,7 @@ export function TLSTricks() {
   const fromPreset = useMutation({ mutationFn: (isp: string) => api("/api/tls-tricks/preset", { method: "POST", body: { isp } }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["tls-tricks"] }); toast.success("Profile created from preset"); } });
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex items-center justify-between">
         <PageHeader title="TLS Tricks" subtitle="ISP-specific fragment, mux, padding, and ECH profiles" />
         <Button onClick={() => setCreateOpen(true)}>Custom Profile</Button>

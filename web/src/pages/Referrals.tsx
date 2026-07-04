@@ -64,7 +64,7 @@ export function Referrals() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title="Referral System" subtitle="Invite codes, rewards, and tracking" />
 
       {config && (

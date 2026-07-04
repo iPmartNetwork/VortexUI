@@ -20,7 +20,7 @@
 
   <br />
   
-  [Features](#-features) · [What's New in 1.2.7](#-whats-new-in-127) · [What's New in 1.2.6](#-whats-new-in-126) · [What's New in 1.2.5](#-whats-new-in-125) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+  [Features](#-features) · [What's New in 1.2.8](#-whats-new-in-128) · [What's New in 1.2.7](#-whats-new-in-127) · [What's New in 1.2.6](#-whats-new-in-126) · [What's New in 1.2.5](#-whats-new-in-125) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 </div>
 
 ---
@@ -98,10 +98,12 @@
 - **Support ticket system**
 
 ### 🎨 Frontend & UX
-- React 18 + TypeScript + Tailwind
-- 8 languages with full RTL
+- React 18 + TypeScript + Tailwind + **framer-motion**
+- **Veltrix UI** — glass cards, stat tiles, status badges, cyan/sky theme
+- 8 languages with **639 translated keys** and full RTL (EN/FA/TR/AR/RU/ZH/JA/ES)
+- Collapsible sidebar shell + sticky header with language/theme controls
 - Dark + Light themes (smooth transition)
-- **Command palette** (Ctrl+K)
+- **Command palette** (Ctrl+K / ⌘K)
 - **Customizable dashboard widgets** (drag & drop)
 - **Onboarding tour** for new admins
 - **Mobile-first portal** (bottom nav, pull-to-refresh)
@@ -115,6 +117,26 @@
 </td>
 </tr>
 </table>
+
+---
+
+## 🆕 What's New in 1.2.8
+
+<div align="center">
+
+**Veltrix UI · complete i18n · redesigned admin + portal shell**
+
+</div>
+
+| Feature | Description |
+|---------|-------------|
+| **Veltrix design system** | Glass cards, stat tiles, status badges, page-enter animations, cyan/sky palette |
+| **New app shell** | Collapsible sidebar + header with mini mode, mobile drawer, theme and language switcher |
+| **Command palette** | Fuzzy page search via Ctrl+K / ⌘K from header, sidebar, or keyboard |
+| **Live core pages** | Overview, Users, and Nodes rebuilt with real-time API stat cards and fleet health |
+| **Portal refresh** | Redesigned login, dashboard, desktop sidebar, and mobile bottom navigation |
+| **Full i18n** | 639 keys in all 8 languages — billing, reseller payment, pending orders, shell, portal |
+| **Locale tooling** | JSON locale files + apply/check scripts for translation maintenance |
 
 ---
 
@@ -305,7 +327,7 @@ See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup deta
 
 </div>
 
-| | VortexUI 1.2.7 | 3x-ui | Marzban | Hiddify |
+| | VortexUI 1.2.8 | 3x-ui | Marzban | Hiddify |
 |:--|:--:|:--:|:--:|:--:|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |
@@ -493,6 +515,8 @@ make run-panel          # start panel
 - [x] Command palette + keyboard shortcuts
 - [x] Dashboard widgets + onboarding tour
 - [x] Mobile-first portal
+- [x] Veltrix UI redesign (v1.2.8)
+- [x] Complete 8-language i18n — admin + portal (v1.2.8)
 - [x] Per-reseller payment configuration (v1.2.7)
 - [x] Per-reseller owned plans (v1.2.7)
 - [x] Payment proof/receipt uploads (v1.2.7)

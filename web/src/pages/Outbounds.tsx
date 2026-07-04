@@ -178,7 +178,7 @@ export function Outbounds() {
   }
 
   return (
-    <div>
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("nav.outbounds")} subtitle="Egress handlers per node">
         <NodePicker value={node} onChange={setNode} />
         <Button onClick={() => setOpen(true)}>{t("common.add")}</Button>

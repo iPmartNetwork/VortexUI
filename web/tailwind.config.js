@@ -11,6 +11,7 @@ export default {
         "bg-elevated": c("bg-elevated"),
         surface: c("surface"),
         "surface-2": c("surface-2"),
+        "surface-3": c("surface-3"),
         border: c("border"),
         "border-strong": c("border-strong"),
         fg: c("fg"),

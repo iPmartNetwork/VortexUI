@@ -1,7 +1,7 @@
 # توثيق VortexUI
 
 <div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.4rem;">VortexUI الإصدار 1.2.7</strong><br/>
+  <strong style="font-size: 1.4rem;">VortexUI الإصدار 1.2.8</strong><br/>
   <em style="font-size: 1.1rem;">لوحة إدارة بروكسي من الجيل التالي — مستقلة عن النواة، محورها المستخدم، تعمل بالوقت الفعلي، مضادة للرقابة</em>
 </div>
 

@@ -46,7 +46,7 @@ export function Analytics() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex items-center justify-between">
         <PageHeader title={t("analytics.title")} subtitle={t("analytics.subtitle")} />
         <div className="flex gap-2">

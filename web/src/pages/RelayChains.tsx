@@ -54,7 +54,7 @@ export function RelayChains() {
   const nodeMap = Object.fromEntries(nodesData?.nodes?.map(n => [n.id, n.name]) ?? []);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex items-center justify-between">
         <PageHeader title={t("relay.title")} subtitle={t("relay.subtitle")} />
         <Button onClick={() => setCreateOpen(true)}>{t("relay.newChain")}</Button>

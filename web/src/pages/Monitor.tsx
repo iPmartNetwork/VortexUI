@@ -28,7 +28,7 @@ export function Monitor() {
   const total = data?.total ?? 0;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex items-center justify-between">
         <PageHeader title={t("monitor.title")} />
         <div className="flex items-center gap-2 rounded-full bg-success/10 px-3 py-1.5 text-xs font-medium text-success">

@@ -1,39 +1,21 @@
 import {
   Users, Wifi, Activity, Cpu, MemoryStick,
   Zap, Clock, TrendingUp, MonitorSmartphone, Layers, Timer, Box,
-  Power, RotateCcw, Tag, Gauge, ChevronRight,
+  Power, RotateCcw, Tag, Gauge, ChevronRight, Server, ArrowUpRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useOverview, useSystem, useTrafficSamples, useTrafficSeries, useRestartCore, useStopCore } from "@/api/policy-hooks";
 import { useAccountQuota } from "@/api/quota-hooks";
-import { useAllInbounds, useNodes } from "@/api/hooks";
+import { useAllInbounds, useNodes, useUsers, useVersion } from "@/api/hooks";
 import { useAuth } from "@/auth/auth";
 import { Card } from "@/components/ui";
 import { TrafficSeriesChart } from "@/components/TrafficSeriesChart";
+import { GlassCard, StatsCard, StatusBadge } from "@/components/veltrix";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 import { cn, formatBytes } from "@/lib/utils";
-
-/* ═══════ Hero Stat Card ═══════ */
-function HeroStat({ label, value, sub, icon, glow }: { label: string; value: React.ReactNode; sub?: string; icon: React.ReactNode; glow: "primary" | "accent" | "success" | "warning" }) {
-  const ring = { primary: "ring-primary/15 hover:ring-primary/30", accent: "ring-accent/15 hover:ring-accent/30", success: "ring-success/15 hover:ring-success/30", warning: "ring-warning/15 hover:ring-warning/30" }[glow];
-  const iconBox = { primary: "bg-primary/10 text-primary", accent: "bg-accent/10 text-accent", success: "bg-success/10 text-success", warning: "bg-warning/10 text-warning" }[glow];
-  const valCls = { primary: "grad-text", accent: "text-accent", success: "text-success", warning: "text-warning" }[glow];
-  const line = { primary: "via-primary/50", accent: "via-accent/50", success: "via-success/50", warning: "via-warning/50" }[glow];
-  return (
-    <div className={cn("card relative overflow-hidden p-5 ring-1 transition-all duration-300 hover:shadow-xl", ring)}>
-      <div className={cn("absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent to-transparent", line)} />
-      <div className="flex items-start gap-4">
-        <div className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-xl transition", iconBox)}>{icon}</div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">{label}</div>
-          <div className={cn("mt-1 text-[1.6rem] font-extrabold leading-none tracking-tight", valCls)}>{value}</div>
-          {sub && <div className="mt-1.5 text-[11px] text-fg-muted">{sub}</div>}
-        </div>
-      </div>
-    </div>
-  );
-}
+import type { Overview as OverviewData } from "@/api/types";
 
 /* ═══════ Mini Sparkline (SVG) ═══════ */
 function Sparkline({ data, className }: { data: number[]; className?: string }) {
@@ -64,7 +46,6 @@ const STATUS_META: Record<string, { color: string; label: string }> = {
   on_hold: { color: "bg-accent", label: "On Hold" },
 };
 
-/* ═══════ Uptime formatter ═══════ */
 function fmtUptime(sec: number): string {
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
@@ -72,6 +53,20 @@ function fmtUptime(sec: number): string {
   if (d > 0) return `${d}d ${h}h ${m}m`;
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
+}
+
+function daysUntil(iso: string | null): string {
+  if (!iso) return "∞";
+  const d = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+  if (d < 0) return "expired";
+  return `${d}d`;
+}
+
+function nodeFleetStatus(item: OverviewData["nodes"]["items"][number]): "active" | "warning" | "inactive" {
+  if (!item.online || !item.health?.core_running) return "inactive";
+  const load = Math.max(item.health.cpu_percent ?? 0, item.health.mem_percent ?? 0);
+  if (load > 75) return "warning";
+  return "active";
 }
 
 /* ═══════ Core Engine Card ═══════ */
@@ -109,10 +104,12 @@ export function Overview() {
   useTitle("Overview");
   const { sudo } = useAuth();
   const accountQuota = useAccountQuota();
-  const { data, dataUpdatedAt } = useOverview();
+  const { data, dataUpdatedAt, isLoading: overviewLoading } = useOverview();
   const sys = useSystem();
   const inbounds = useAllInbounds();
   const nodesQ = useNodes();
+  const recentUsersQ = useUsers({ limit: 20, status: "active" });
+  const panelVersion = useVersion().data;
   const { t } = useI18n();
 
   const u = data?.users;
@@ -126,8 +123,13 @@ export function Overview() {
 
   const s = sys.data;
   const inboundCount = inbounds.data?.length ?? 0;
+  const fleetItems = data?.nodes.items ?? [];
+  const totalConnections = fleetItems.reduce((sum, n) => sum + (n.health?.connections ?? 0), 0);
+  const trafficPoints = trafficSeries.data?.points ?? [];
+  const peakBucket = trafficPoints.length
+    ? Math.max(...trafficPoints.map((p) => p.up + p.down))
+    : 0;
 
-  // Derive core status from nodes: find the first node of each type
   const nodesList = nodesQ.data?.nodes ?? [];
   const xrayNode = nodesList.find((n) => n.core === "xray");
   const singboxNode = nodesList.find((n) => n.core === "singbox");
@@ -138,22 +140,75 @@ export function Overview() {
   const restartCore = useRestartCore();
   const stopCore = useStopCore();
 
+  const topUsers = [...(recentUsersQ.data?.users ?? [])]
+    .sort((a, b) => b.used_traffic - a.used_traffic)
+    .slice(0, 5);
+
+  const coreLabel = [xrayVer !== "—" ? `Xray ${xrayVer}` : null, singboxVer !== "—" ? `sing-box ${singboxVer}` : null]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div className="space-y-7 animate-fade-in">
-      {/* ── Header + live badge ── */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[1.6rem] font-bold tracking-tight text-fg">{t("nav.overview")}</h1>
+    <div className="space-y-6 animate-page-enter">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-bg-elevated via-surface to-bg-elevated border border-border/80 p-6 md:p-8 shadow-xl"
+      >
+        <div className="absolute top-0 end-0 w-80 h-80 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 start-1/4 w-64 h-64 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge
+                status={onlineCount === totalNodes && totalNodes > 0 ? "optimal" : onlineCount > 0 ? "warning" : "inactive"}
+                label={
+                  totalNodes === 0
+                    ? t("overview.noNodes")
+                    : `${onlineCount}/${totalNodes} ${t("overview.online")}`
+                }
+              />
+              {panelVersion && (
+                <span className="px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30 text-[10px] font-semibold">
+                  v{panelVersion}
+                </span>
+              )}
+              {coreLabel && (
+                <span className="px-2.5 py-0.5 rounded-full bg-surface-2/80 text-fg-muted border border-border/60 text-[10px] font-semibold truncate max-w-xs">
+                  {coreLabel}
+                </span>
+              )}
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black text-fg tracking-tight">{t("nav.overview")}</h1>
+            <p className="text-xs md:text-sm text-fg-muted leading-relaxed">
+              {overviewLoading || !s ? (
+                t("overview.loadingTelemetry")
+              ) : (
+                <>
+                  {s.hostname} · {t("overview.uptime")} {fmtUptime(s.uptime_seconds)} ·{" "}
+                  {totalConnections} {t("overview.liveConnections")}
+                </>
+              )}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 rounded-full bg-surface/60 px-3 py-1.5 text-[11px] text-fg-subtle ring-1 ring-border/50 flex-shrink-0">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60" />
+              <span className="inline-flex h-2 w-2 rounded-full bg-success" />
+            </span>
+            {t("overview.live")}
+            {dataUpdatedAt > 0 && (
+              <span className="flex items-center gap-1">
+                <Clock size={10} />
+                {new Date(dataUpdatedAt).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 rounded-full bg-surface/60 px-3 py-1.5 text-[11px] text-fg-subtle ring-1 ring-border/50">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60" />
-            <span className="inline-flex h-2 w-2 rounded-full bg-success" />
-          </span>
-          Live
-          {dataUpdatedAt > 0 && <span className="flex items-center gap-1"><Clock size={10} />{new Date(dataUpdatedAt).toLocaleTimeString()}</span>}
-        </div>
-      </div>
+      </motion.div>
 
       {!sudo && accountQuota.data?.usage && (
         <Card className="p-4">
@@ -180,12 +235,176 @@ export function Overview() {
         </Card>
       )}
 
-      {/* ── Hero stats ── */}
-      <div className="grid grid-cols-2 gap-4 lg:gap-5 xl:grid-cols-4">
-        <HeroStat label="Total Users" value={totalUsers} sub={`${byStatus.active ?? 0} active now`} icon={<Users size={20} />} glow="primary" />
-        <HeroStat label="Nodes Online" value={`${onlineCount} / ${totalNodes}`} sub="fleet health" icon={<Wifi size={20} />} glow="accent" />
-        <HeroStat label="Active" value={byStatus.active ?? 0} sub="connections live" icon={<Activity size={20} />} glow="success" />
-        <HeroStat label="Traffic" value={formatBytes(totalUsed, false)} sub="total bandwidth" icon={<Zap size={20} />} glow="warning" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatsCard
+          title={t("overview.totalUsers")}
+          value={overviewLoading ? "—" : totalUsers}
+          icon={<Users size={18} />}
+          color="cyan"
+          delay={0.05}
+          subLabel={`${byStatus.active ?? 0} ${t("overview.activeShort")}`}
+        />
+        <StatsCard
+          title={t("overview.nodesOnline")}
+          value={overviewLoading ? "—" : onlineCount}
+          suffix={totalNodes > 0 ? `/ ${totalNodes}` : undefined}
+          icon={<Server size={18} />}
+          color="green"
+          delay={0.1}
+        />
+        <StatsCard
+          title={t("overview.trafficUsed")}
+          value={overviewLoading ? "—" : formatBytes(totalUsed, false)}
+          icon={<Zap size={18} />}
+          color="purple"
+          delay={0.15}
+          subLabel={
+            peakBucket > 0
+              ? `${t("overview.peak")} ${formatBytes(peakBucket, false)}/min`
+              : undefined
+          }
+        />
+        <StatsCard
+          title={t("overview.liveConnectionsTitle")}
+          value={overviewLoading ? "—" : totalConnections}
+          icon={<Wifi size={18} />}
+          color="blue"
+          delay={0.2}
+          subLabel={`${byStatus.active ?? 0} ${t("overview.activeAccounts")}`}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <GlassCard className="space-y-4">
+          <div className="flex items-center justify-between border-b border-border/60 pb-3">
+            <div>
+              <h3 className="text-base font-bold text-fg flex items-center gap-2">
+                <Server size={18} className="text-success" />
+                {t("overview.nodeFleet")}
+              </h3>
+              <p className="text-xs text-fg-subtle mt-0.5">
+                {t("overview.liveApiHint")}
+              </p>
+            </div>
+            <Link to="/nodes" className="text-xs text-primary hover:underline font-medium flex items-center gap-1">
+              {t("overview.allNodes")} <ArrowUpRight size={13} />
+            </Link>
+          </div>
+          {overviewLoading ? (
+            <div className="h-32 animate-pulse rounded-lg bg-surface-2/50" />
+          ) : fleetItems.length === 0 ? (
+            <p className="text-sm text-fg-muted py-6 text-center">{t("overview.noNodesEnrolled")}</p>
+          ) : (
+            <div className="space-y-3">
+              {fleetItems.map((node) => {
+                const status = nodeFleetStatus(node);
+                const load = Math.max(node.health?.cpu_percent ?? 0, node.health?.mem_percent ?? 0);
+                return (
+                  <div
+                    key={node.id}
+                    className="p-3.5 rounded-2xl bg-surface-2/60 border border-border/80 hover:border-primary/30 transition-all space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-fg truncate">{node.name}</p>
+                        <p className="text-[10px] text-fg-subtle">
+                          {node.core} · {node.health?.connections ?? 0} conn
+                        </p>
+                      </div>
+                      <StatusBadge status={status} label={status} pulse={status === "active"} />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-fg-subtle">CPU / RAM</span>
+                        <span
+                          className={cn(
+                            "font-bold",
+                            load > 75 ? "text-danger" : load > 50 ? "text-warning" : "text-success",
+                          )}
+                        >
+                          {load.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-surface-3 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            load > 75 ? "bg-danger" : load > 50 ? "bg-warning" : "bg-success",
+                          )}
+                          style={{ width: `${Math.min(100, load)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard className="space-y-4">
+          <div className="flex items-center justify-between border-b border-border/60 pb-3">
+            <div>
+              <h3 className="text-base font-bold text-fg flex items-center gap-2">
+                <Users size={18} className="text-accent" />
+                {t("overview.topUsers")}
+              </h3>
+              <p className="text-xs text-fg-subtle mt-0.5">
+                {t("overview.sortedByTraffic")}
+              </p>
+            </div>
+            <Link to="/users" className="text-xs text-primary hover:underline font-medium flex items-center gap-1">
+              {t("overview.allUsers")} <ArrowUpRight size={13} />
+            </Link>
+          </div>
+          {recentUsersQ.isLoading ? (
+            <div className="h-32 animate-pulse rounded-lg bg-surface-2/50" />
+          ) : topUsers.length === 0 ? (
+            <p className="text-sm text-fg-muted py-6 text-center">{t("overview.noUsersYet")}</p>
+          ) : (
+            <div className="space-y-3">
+              {topUsers.map((user) => {
+                const usedPct =
+                  user.data_limit > 0 ? Math.min(100, (user.used_traffic / user.data_limit) * 100) : 0;
+                return (
+                  <div
+                    key={user.id}
+                    className="p-3.5 rounded-2xl bg-surface-2/60 border border-border/80 hover:border-border-strong transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-xl bg-surface-3 flex items-center justify-center text-fg-subtle font-semibold text-xs flex-shrink-0">
+                        {user.username.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-fg truncate">{user.username}</p>
+                        <p className="text-[10px] text-fg-muted">
+                          {t("overview.expiresShort")}: {daysUntil(user.expire_at)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 self-end sm:self-center">
+                      <div className="text-end text-xs">
+                        <span className="font-bold text-fg">{formatBytes(user.used_traffic, false)}</span>
+                        {user.data_limit > 0 && (
+                          <span className="text-fg-subtle text-[10px]"> / {formatBytes(user.data_limit, false)}</span>
+                        )}
+                        {user.data_limit > 0 && (
+                          <div className="w-24 bg-surface-3 h-1 rounded-full overflow-hidden mt-1 ms-auto">
+                            <div
+                              className={cn("h-full rounded-full", usedPct > 80 ? "bg-warning" : "bg-primary")}
+                              style={{ width: `${usedPct}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <StatusBadge status={user.status} label={user.status} pulse={user.status === "active"} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </GlassCard>
       </div>
 
       {/* ── System Info + Traffic Chart row ── */}
@@ -358,7 +577,7 @@ function ChartsPanel() {
       case "CPU": liveValue = sys?.cpu_percent ?? null; liveUnit = "%"; break;
       case "RAM": liveValue = sys?.mem_percent ?? null; liveUnit = "%"; break;
       case "Bandwidth": liveValue = null; liveUnit = ""; break; // see traffic chart above
-      case "Connections": liveValue = ov?.nodes.items?.reduce((s: number, n: any) => s + (n.health?.connections ?? 0), 0) ?? null; break;
+      case "Connections": liveValue = ov?.nodes.items?.reduce((s: number, n) => s + (n.health?.connections ?? 0), 0) ?? null; break;
       case "Online": liveValue = ov?.nodes.online ?? null; break;
     }
   } else {
@@ -371,8 +590,8 @@ function ChartsPanel() {
       case "Heap": liveValue = allocMB; liveUnit = " MB"; break;
       case "Sys": liveValue = sysMB; liveUnit = " MB"; break;
       case "Objects": liveValue = goroutines; liveUnit = ""; break;
-      case "GC Count": liveValue = goroutines ? Math.floor(goroutines * 0.3) : null; liveUnit = ""; break;
-      case "Connections": liveValue = ov?.nodes.items?.reduce((s: number, n: any) => s + (n.health?.connections ?? 0), 0) ?? null; break;
+      case "GC Count": liveValue = null; liveUnit = ""; break;
+      case "Connections": liveValue = ov?.nodes.items?.reduce((s: number, n) => s + (n.health?.connections ?? 0), 0) ?? null; break;
     }
   }
 

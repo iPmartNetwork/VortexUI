@@ -87,7 +87,7 @@ export function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className={cn("card p-0 overflow-hidden", className)}>
+    <div className={cn("rounded-2xl bg-bg-elevated border border-border p-0 overflow-hidden", className)}>
       {/* Toolbar */}
       {searchable && (
         <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-3">

@@ -42,7 +42,7 @@ export function DecoyWebsite() {
   const nodeMap = Object.fromEntries(nodesData?.nodes?.map(n => [n.id, n.name]) ?? []);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <div className="flex items-center justify-between">
         <PageHeader title="Decoy Website" subtitle="Serve a fake site to probers and scanners" />
         <Button onClick={() => setCreateOpen(true)}>New Decoy</Button>

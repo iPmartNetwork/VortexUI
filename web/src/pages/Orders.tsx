@@ -32,7 +32,7 @@ export function Orders() {
   const orders = useOrders();
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title="Orders" />
 
       <Card className="p-0 overflow-hidden">

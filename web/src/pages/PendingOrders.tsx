@@ -45,7 +45,7 @@ export function PendingOrders() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader title={t("pendingOrders.title")} subtitle={t("pendingOrders.subtitle")} />
 
       <Card className="p-0 overflow-hidden">

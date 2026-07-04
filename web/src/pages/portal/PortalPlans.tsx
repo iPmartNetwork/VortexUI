@@ -139,7 +139,7 @@ export function PortalPlans() {
   if (isLoading) return <div className="p-8 text-center text-fg-muted">Loading plans...</div>;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-page-enter">
       <h1 className="text-xl font-bold text-fg">Available Plans</h1>
       <p className="text-sm text-fg-muted">
         Purchase a plan to extend your subscription (traffic + duration are added to your current balance).
@@ -166,7 +166,7 @@ export function PortalPlans() {
 
             {/* Inline gateway selector */}
             {selectedPlan?.id === p.id && (
-              <div className="space-y-3 border-t border-border/40 pt-3 animate-fade-in">
+              <div className="space-y-3 border-t border-border/40 pt-3 animate-page-enter">
                 <label className="block text-xs font-medium text-fg-muted">Payment Gateway</label>
                 <Select value={gateway} onChange={(e) => setGateway(e.target.value)}>
                   <option value="" disabled>Select gateway...</option>

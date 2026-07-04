@@ -102,7 +102,7 @@ export function ResellerAccount() {
   const allowSubResellers = !!session?.admin.allow_sub_resellers;
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-page-enter">
       {walletTopUp && (
         <WalletTopUpModal
           open
