@@ -239,7 +239,7 @@ func TestOverviewBuildAggregatesUsersAndNodeConnectivity(t *testing.T) {
 	svc := NewOverviewService(stats, &listNodeRepo{nodes: []*domain.Node{nodes.nodes[onID], nodes.nodes[offID]}})
 	svc.now = func() time.Time { return now }
 
-	ov, err := svc.Build(context.Background())
+	ov, err := svc.Build(context.Background(), nil, true)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

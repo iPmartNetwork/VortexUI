@@ -34,7 +34,7 @@ export function Layout() {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         <AppHeader />
         <main className="flex-1 overflow-auto">
-          <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8 animate-page-enter">
+          <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6 md:py-8 animate-page-enter">
             {impersonating && (
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
                 <span>

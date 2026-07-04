@@ -20,12 +20,28 @@ import { useAuth } from "@/auth/auth";
 import { canAccessRoute } from "@/auth/permissions";
 import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
-import { useVersion } from "@/api/hooks";
-import { buildNavSections } from "@/navigation/nav-sections";
+import { useVersion, useNodes } from "@/api/hooks";
+import { buildCompactNavSections } from "@/navigation/nav-sections-compact";
+import { useOverview } from "@/api/policy-hooks";
+import type { Overview } from "@/api/types";
 import { openCommandPalette } from "@/lib/commandPalette";
 import { LANG_OPTIONS } from "@/i18n/lang-options";
 
 const PANEL_VERSION = "1.2.8";
+
+function navBadgeCount(badges: Overview["widgets"]["nav_badges"] | undefined, key?: string): number {
+  if (!badges || !key) return 0;
+  switch (key) {
+    case "active_users":
+      return badges.active_users;
+    case "open_tickets":
+      return badges.open_tickets;
+    case "pending_orders":
+      return badges.pending_orders;
+    default:
+      return 0;
+  }
+}
 
 interface AppSidebarProps {
   mobileOpen: boolean;
@@ -39,11 +55,17 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
   const { resolved, toggle: toggleTheme } = useTheme();
   const { t, lang, setLang } = useI18n();
   const version = useVersion().data ?? PANEL_VERSION;
+  const nodesQ = useNodes();
+  const overviewQ = useOverview();
+  const navBadges = overviewQ.data?.widgets?.nav_badges;
+  const primaryCore = nodesQ.data?.nodes?.find((n) => n.core === "xray") ?? nodesQ.data?.nodes?.[0];
+  const coreOnline = primaryCore?.health?.core_running ?? false;
+  const coreVer = primaryCore?.core_version || "—";
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
   const [langOpen, setLangOpen] = useState(false);
 
-  const visibleSections = buildNavSections(sudo)
+  const visibleSections = buildCompactNavSections(sudo)
     .map((section) => ({
       ...section,
       items: section.items.filter((item) =>
@@ -79,7 +101,8 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
                 <p className="text-sm font-semibold text-fg leading-none tracking-tight">
                   Vortex<span className="text-primary">UI</span>
                 </p>
-                <p className="text-[10px] text-fg-subtle mt-0.5 leading-none">v{version}</p>
+                <p className="text-[10px] text-fg-subtle mt-0.5 leading-none">{t("app.taglineVeltrix")}</p>
+                <p className="text-[10px] text-primary/80 mt-0.5 leading-none font-medium">v{version}</p>
               </div>
             </>
           )}
@@ -114,8 +137,14 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
                 <div className={mini ? "space-y-1 flex flex-col items-center" : "space-y-px"}>
                   {sec.items.map((item) => {
                     const Icon = item.icon;
-                    const active = location.pathname.startsWith(item.to);
+                    const [itemPath, itemQuery] = item.to.split("?");
+                    const active =
+                      location.pathname.startsWith(itemPath) &&
+                      (itemQuery
+                        ? location.search.includes(itemQuery)
+                        : !location.search.includes("tab=inbounds"));
                     const label = t(item.key);
+                    const badge = navBadgeCount(navBadges, item.badgeKey);
 
                     return (
                       <div key={item.to} className="relative w-full">
@@ -153,6 +182,11 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
                           {!mini && (
                             <span className="flex-1 text-start text-[13px] truncate">{label}</span>
                           )}
+                          {!mini && badge > 0 && (
+                            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-fg text-[10px] font-bold flex items-center justify-center tabular-nums">
+                              {badge > 99 ? "99+" : badge}
+                            </span>
+                          )}
                         </NavLink>
 
                         {mini && (
@@ -182,16 +216,29 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
         </nav>
 
         {!mini && (
-          <div className="px-3 pb-1.5 flex-shrink-0">
+          <div className="px-3 pb-2 flex-shrink-0 space-y-2">
             <button
               type="button"
               onClick={() => navigate("/portal/login")}
-              className="w-full h-8 rounded-[10px] text-[12px] font-medium text-accent flex items-center justify-center gap-1.5 border border-accent/15 hover:border-accent/30 hover:bg-accent/[0.06] transition-all"
+              className="w-full h-9 rounded-xl text-[12px] font-semibold text-primary flex items-center justify-center gap-1.5 border border-primary/20 bg-primary/[0.06] hover:bg-primary/10 transition-all"
             >
-              <Smartphone size={13} />
-              {t("shell.userPortal")}
-              <ExternalLink size={10} className="opacity-40" />
+              <Smartphone size={14} />
+              {t("shell.selfServicePortal")}
+              <ExternalLink size={10} className="opacity-50" />
             </button>
+            {primaryCore && (
+              <div className="rounded-xl border border-border/70 bg-surface-2/50 px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${coreOnline ? "bg-success shadow-[0_0_6px] shadow-success/50" : "bg-fg-subtle"}`} />
+                  <span className="text-xs font-bold text-fg truncate">
+                    {primaryCore.core === "singbox" ? "sing-box" : "Xray"} {coreVer}
+                  </span>
+                </div>
+                <p className="text-[10px] text-fg-subtle mt-1">
+                  {coreOnline ? t("overview.coreOnline") : t("overview.coreOffline")}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -364,7 +411,7 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
       <aside
         className={cn(
           "hidden md:flex relative flex-col z-20 transition-[width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] border-e border-border/40 flex-shrink-0",
-          collapsed ? "w-[58px]" : "w-[236px]",
+          collapsed ? "w-[58px]" : "w-[278px]",
         )}
         style={{ background: "var(--sidebar-bg)" }}
       >

@@ -312,7 +312,15 @@ func (h *Handlers) DeleteBalancer(c echo.Context) error {
 // GetOverview returns the dashboard summary: user aggregates and node fleet
 // connectivity/health.
 func (h *Handlers) GetOverview(c echo.Context) error {
-	ov, err := h.Overview.Build(c.Request().Context())
+	claims := claimsFrom(c)
+	var adminID *uuid.UUID
+	sudo := false
+	if claims != nil {
+		sudo = claims.Sudo
+		id := claims.AdminID
+		adminID = &id
+	}
+	ov, err := h.Overview.Build(c.Request().Context(), adminID, sudo)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "overview failed")
 	}

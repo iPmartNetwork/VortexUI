@@ -8,12 +8,15 @@ import { useI18n } from "@/i18n/i18n";
 import { openCommandPalette } from "@/lib/commandPalette";
 import { LANG_OPTIONS } from "@/i18n/lang-options";
 import type { Lang } from "@/i18n/dict";
+import { TelemetryTicker } from "@/components/TelemetryTicker";
+import { useVersion } from "@/api/hooks";
 
 export function AppHeader() {
   const { session, sudo } = useAuth();
   const { resolved, toggle: toggleTheme } = useTheme();
   const { t, lang, setLang } = useI18n();
   const navigate = useNavigate();
+  const panelVersion = useVersion().data;
   const [searchFocused, setSearchFocused] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
 
@@ -22,11 +25,11 @@ export function AppHeader() {
   const currentLang = LANG_OPTIONS.find((l) => l.code === lang);
 
   return (
-    <header className="sticky top-0 z-30 h-14 border-b border-border/60 bg-bg/90 backdrop-blur-xl flex items-center justify-between px-4 md:px-5 transition-colors duration-300">
+    <header className="sticky top-0 z-30 h-14 border-b border-border/60 bg-bg/90 backdrop-blur-xl flex items-center gap-3 px-4 md:px-5 transition-colors duration-300">
       <div
         className={cn(
-          "relative flex-1 max-w-sm ms-10 md:ms-0 transition-all",
-          searchFocused && "max-w-md",
+          "relative w-full max-w-[220px] md:max-w-xs flex-shrink-0 ms-10 md:ms-0 transition-all",
+          searchFocused && "md:max-w-sm",
         )}
       >
         <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-fg-subtle" />
@@ -46,7 +49,9 @@ export function AppHeader() {
         </kbd>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <TelemetryTicker />
+
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         <div className="relative">
           <button
             type="button"
@@ -99,8 +104,14 @@ export function AppHeader() {
           className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-accent hover:bg-accent/10 transition-all border border-transparent hover:border-accent/30"
         >
           <Smartphone size={14} />
-          <span>{t("shell.portal")}</span>
+          <span>{t("shell.userPortal")}</span>
         </button>
+
+        {panelVersion && (
+          <span className="hidden md:inline-flex items-center rounded-lg bg-primary/10 text-primary border border-primary/25 px-2 py-1 text-[10px] font-bold tracking-wide">
+            PRO v{panelVersion}
+          </span>
+        )}
 
         <button
           type="button"
