@@ -3,9 +3,12 @@ import { Check, Copy, Loader2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCreateNode, useNodeEnrollment, useTestNodeConnection } from "@/api/hooks";
 import type { NodeDiagnostics, NodeEnrollmentPhase } from "@/api/types";
+import { SERVER_LOCATIONS } from "@/lib/serverLocations";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 import { useToast } from "./toast";
+
+const AUTO_LOCATION = "__auto__";
 
 const STEPS = ["Bundle", "Install", "Register", "Test"] as const;
 
@@ -47,6 +50,7 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
   const [address, setAddress] = useState("");
   const [core, setCore] = useState("xray");
   const [endpoint, setEndpoint] = useState("");
+  const [locationKey, setLocationKey] = useState(AUTO_LOCATION);
   const [error, setError] = useState("");
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [diag, setDiag] = useState<NodeDiagnostics | null>(null);
@@ -65,6 +69,7 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
     setAddress("");
     setCore("xray");
     setEndpoint("");
+    setLocationKey(AUTO_LOCATION);
     setError("");
     setCreatedId(null);
     setDiag(null);
@@ -88,7 +93,12 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
     e.preventDefault();
     setError("");
     try {
-      const res = await create.mutateAsync({ name, address, core, endpoint: endpoint || undefined });
+      const preset = SERVER_LOCATIONS.find((p) => `${p.code}-${p.city}` === locationKey);
+      const res = await create.mutateAsync({
+        name, address, core, endpoint: endpoint || undefined,
+        location_auto: !preset,
+        ...(preset ? { region: preset.label, country_code: preset.code } : {}),
+      });
       setCreatedId(res.node.id);
       setStep(3);
       runTest(res.node.id);
@@ -199,6 +209,15 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
             <option value="singbox">sing-box</option>
           </Select>
           <Input placeholder="Endpoint (optional — tunnel/CDN IP or domain)" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} />
+          <label className="block text-xs text-fg-subtle">
+            Server location
+            <Select className="mt-1" value={locationKey} onChange={(e) => setLocationKey(e.target.value)}>
+              <option value={AUTO_LOCATION}>Auto-detect from IP (GeoIP)</option>
+              {SERVER_LOCATIONS.map((loc) => (
+                <option key={`${loc.code}-${loc.city}`} value={`${loc.code}-${loc.city}`}>{loc.label}</option>
+              ))}
+            </Select>
+          </label>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-between gap-2 pt-1">
             <Button type="button" variant="ghost" onClick={() => setStep(1)}>Back</Button>

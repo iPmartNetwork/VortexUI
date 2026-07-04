@@ -5,9 +5,9 @@ import {
   Cpu,
   HardDrive,
   MemoryStick,
-  MoreVertical,
   Plus,
   Server,
+  Settings,
   Signal,
   Users,
 } from "lucide-react";
@@ -345,7 +345,7 @@ export function Nodes() {
                         className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2/80 transition"
                         aria-label={t("common.actions")}
                       >
-                        <MoreVertical size={15} />
+                        <Settings size={15} />
                       </button>
                       {isMenuOpen && (
                         <div className="absolute end-0 top-full mt-1 z-20 min-w-[170px] rounded-lg border border-border/60 bg-surface shadow-lg py-1 text-xs">
