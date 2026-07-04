@@ -144,7 +144,9 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 	// retry, no log — leaving the node stuck "disconnected" until the panel is
 	// restarted. With a timeout the call fails, we log + drop + redial next tick.
 	hctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	start := time.Now()
 	h, err := conn.Health(hctx)
+	pingMs := int(time.Since(start).Milliseconds())
 	cancel()
 	if err != nil {
 		m.hub.log.Warn("health check failed", "node", m.node.Name, "err", err)
@@ -158,6 +160,8 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 	wasHealthy := m.status == domain.NodeConnected && m.health.CoreRunning
 	wasReachable := m.reachable
 	m.health = h
+	m.health.PingMs = pingMs
+	m.node.PingMs = pingMs
 	m.status = domain.NodeConnected
 	m.reachable = true
 	nowHealthy := h.CoreRunning

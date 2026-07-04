@@ -45,6 +45,7 @@ type NodeService struct {
 	registrar NodeRegistrar
 	logs      NodeLogQuerier
 	core      NodeCoreController
+	geo       GeoCountryResolver
 	now       func() time.Time
 }
 
@@ -65,6 +66,11 @@ func (s *NodeService) SetCoreController(c NodeCoreController) {
 	if c != nil {
 		s.core = c
 	}
+}
+
+// SetGeoResolver wires MaxMind (or disabled) country lookup for node locations.
+func (s *NodeService) SetGeoResolver(g GeoCountryResolver) {
+	s.geo = g
 }
 
 // Logs fetches up to limit recent core log lines from a node. Errors when no log
@@ -109,11 +115,14 @@ func (s *NodeService) UpdateGeo(ctx context.Context, id uuid.UUID, geoipURL, geo
 
 // CreateNodeInput describes a new node.
 type CreateNodeInput struct {
-	Name       string
-	Address    string
-	Core       domain.CoreType
-	UsageRatio float64
-	Endpoint   string
+	Name         string
+	Address      string
+	Core         domain.CoreType
+	UsageRatio   float64
+	Endpoint     string
+	Region       string
+	CountryCode  string
+	LocationAuto *bool
 }
 
 // Create persists a node and immediately brings it under hub management so its
@@ -131,15 +140,22 @@ func (s *NodeService) Create(ctx context.Context, in CreateNodeInput) (*domain.N
 		ratio = 1
 	}
 	n := &domain.Node{
-		ID:         uuid.New(),
-		Name:       in.Name,
-		Address:    in.Address,
-		Core:       core,
-		Status:     domain.NodeDisconnected,
-		UsageRatio: ratio,
-		Endpoint:   in.Endpoint,
-		CreatedAt:  s.now(),
+		ID:           uuid.New(),
+		Name:         in.Name,
+		Address:      in.Address,
+		Core:         core,
+		Status:       domain.NodeDisconnected,
+		UsageRatio:   ratio,
+		Endpoint:     in.Endpoint,
+		Region:       in.Region,
+		CountryCode:  in.CountryCode,
+		LocationAuto: true,
+		CreatedAt:    s.now(),
 	}
+	if in.LocationAuto != nil {
+		n.LocationAuto = *in.LocationAuto
+	}
+	ApplyNodeGeo(n, s.geo)
 	if err := s.repo.Create(ctx, n); err != nil {
 		return nil, err
 	}
@@ -162,10 +178,16 @@ func (s *NodeService) Get(ctx context.Context, id uuid.UUID) (*domain.Node, erro
 
 // UpdateNodeInput is the mutable subset of a node.
 type UpdateNodeInput struct {
-	Name       string
-	Address    string
-	UsageRatio float64
-	Endpoint   string
+	Name         string
+	Address      string
+	UsageRatio   float64
+	Endpoint     string
+	Region       string
+	CountryCode  string
+	LocationAuto *bool
+	RegionSet    bool
+	CountrySet   bool
+	LocationSet  bool
 }
 
 // Update persists node changes and re-establishes hub management so an address
@@ -187,6 +209,18 @@ func (s *NodeService) Update(ctx context.Context, id uuid.UUID, in UpdateNodeInp
 	}
 	// Endpoint can be set to empty string to clear it (revert to real IP).
 	n.Endpoint = in.Endpoint
+	if in.RegionSet {
+		n.Region = in.Region
+	}
+	if in.CountrySet {
+		n.CountryCode = in.CountryCode
+	}
+	if in.LocationSet && in.LocationAuto != nil {
+		n.LocationAuto = *in.LocationAuto
+	}
+	if n.LocationAuto {
+		ApplyNodeGeo(n, s.geo)
+	}
 	if err := s.repo.Update(ctx, n); err != nil {
 		return nil, err
 	}

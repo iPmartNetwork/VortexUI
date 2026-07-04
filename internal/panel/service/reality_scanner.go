@@ -27,11 +27,14 @@ func NewRealityScannerService(repo port.RealityScanRepository, nodes port.NodeRe
 
 // ScanResult holds the outcome of probing one SNI.
 type ScanResult struct {
-	SNI       string `json:"sni"`
-	LatencyMS int    `json:"latency_ms"`
-	Score     int    `json:"score"`
-	Valid     bool   `json:"valid"`
-	Error     string `json:"error,omitempty"`
+	SNI         string `json:"sni"`
+	ResolvedIP  string `json:"resolved_ip,omitempty"`
+	TLSVersion  string `json:"tls_version,omitempty"`
+	ALPN        string `json:"alpn,omitempty"`
+	LatencyMS   int    `json:"latency_ms"`
+	Score       int    `json:"score"`
+	Valid       bool   `json:"valid"`
+	Error       string `json:"error,omitempty"`
 }
 
 // Scan probes a list of SNIs from the given node and returns scored results.
@@ -134,5 +137,33 @@ func probeSNI(host string, port int, sni string) ScanResult {
 		score = 0
 	}
 
-	return ScanResult{SNI: sni, LatencyMS: latencyMS, Score: score, Valid: true}
+	resolvedIP := host
+	if addrs, err := net.LookupHost(sni); err == nil && len(addrs) > 0 {
+		resolvedIP = addrs[0]
+	}
+
+	return ScanResult{
+		SNI:        sni,
+		ResolvedIP: resolvedIP,
+		TLSVersion: tlsVersionLabel(state.Version),
+		ALPN:       state.NegotiatedProtocol,
+		LatencyMS:  latencyMS,
+		Score:      score,
+		Valid:      true,
+	}
+}
+
+func tlsVersionLabel(v uint16) string {
+	switch v {
+	case tls.VersionTLS13:
+		return "TLSv1.3"
+	case tls.VersionTLS12:
+		return "TLSv1.2"
+	case tls.VersionTLS11:
+		return "TLSv1.1"
+	case tls.VersionTLS10:
+		return "TLSv1.0"
+	default:
+		return "unknown"
+	}
 }

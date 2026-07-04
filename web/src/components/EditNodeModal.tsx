@@ -12,6 +12,8 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
   const [address, setAddress] = useState("");
   const [ratio, setRatio] = useState("");
   const [endpoint, setEndpoint] = useState("");
+  const [region, setRegion] = useState("");
+  const [locationAuto, setLocationAuto] = useState(true);
   const [speedLimit, setSpeedLimit] = useState("");
   const [geoBlock, setGeoBlock] = useState("");
   const [error, setError] = useState("");
@@ -22,6 +24,8 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
     setAddress(node.address);
     setRatio(String(node.usage_ratio));
     setEndpoint(node.endpoint || "");
+    setRegion(node.region || "");
+    setLocationAuto(node.location_auto !== false);
     setSpeedLimit(node.speed_limit ? String(node.speed_limit) : "");
     setGeoBlock(node.geo_block?.join(",") ?? "");
     setError("");
@@ -34,7 +38,15 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
     if (!node) return;
     setError("");
     try {
-      await update.mutateAsync({ id: node.id, input: { name, address, usage_ratio: ratio ? Number(ratio) : undefined, endpoint, speed_limit: speedLimit ? Number(speedLimit) : 0, geo_block: geoBlock ? geoBlock.split(",").map(s => s.trim()).filter(Boolean) : [] } });
+      await update.mutateAsync({
+        id: node.id,
+        input: {
+          name, address, usage_ratio: ratio ? Number(ratio) : undefined, endpoint,
+          region, location_auto: locationAuto,
+          speed_limit: speedLimit ? Number(speedLimit) : 0,
+          geo_block: geoBlock ? geoBlock.split(",").map(s => s.trim()).filter(Boolean) : [],
+        },
+      });
       toast.success(`Saved ${name}`);
       onClose();
     } catch {
@@ -62,6 +74,14 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
           <Input className="mt-1" placeholder="Leave empty to use real IP" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} />
         </label>
         <p className="text-[10px] text-fg-subtle">Subscription links will use this address instead of the real server IP. Useful for tunneled or relay setups.</p>
+        <label className="block text-xs text-muted-foreground">
+          Region label (display)
+          <Input className="mt-1" placeholder="e.g. Frankfurt, DE" value={region} onChange={(e) => setRegion(e.target.value)} />
+        </label>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input type="checkbox" checked={locationAuto} onChange={(e) => setLocationAuto(e.target.checked)} className="rounded border-border" />
+          Auto-detect country from endpoint IP (GeoIP)
+        </label>
         <label className="block text-xs text-muted-foreground">
           Speed limit (bytes/sec)
           <Input className="mt-1" placeholder="0 = unlimited" value={speedLimit} onChange={(e) => setSpeedLimit(e.target.value)} inputMode="numeric" />

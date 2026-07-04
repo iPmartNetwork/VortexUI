@@ -20,7 +20,9 @@ export function TelemetryTicker() {
     <div className="hidden lg:flex flex-1 items-center justify-center gap-2 px-4 min-w-0">
       <Activity size={13} className={`flex-shrink-0 ${tel.online ? "text-primary animate-pulse" : "text-fg-subtle"}`} />
       <span className="text-[11px] font-mono text-fg-muted truncate">
-        [{tel.core}] {tel.node_name}
+        [{tel.core}] {tel.location || tel.node_name}
+        <span className="text-fg-subtle mx-1.5">·</span>
+        {tel.ping_ms != null && tel.ping_ms > 0 ? `${tel.ping_ms}ms` : "—"}
         <span className="text-fg-subtle mx-1.5">·</span>
         {tel.connections} {t("overview.liveConnections")}
         <span className="text-fg-subtle mx-1.5">·</span>

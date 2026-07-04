@@ -1,17 +1,16 @@
-import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Cpu,
   Copy,
-  Globe,
+  Cpu,
   HardDrive,
   MemoryStick,
+  MoreVertical,
   Plus,
   Server,
   Signal,
 } from "lucide-react";
-import { useDeleteNode, useNodeDebugBundle, useNodes, useAllInbounds } from "@/api/hooks";
+import { useDeleteNode, useNodeDebugBundle, useNodes } from "@/api/hooks";
 import { useRestartCore, useStopCore, useUpdateGeo } from "@/api/policy-hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button } from "@/components/ui";
@@ -19,7 +18,7 @@ import { CreateNodeModal, diagColor, diagLabel, phaseLabel } from "@/components/
 import { EditNodeModal } from "@/components/EditNodeModal";
 import { NodeInboundsModal } from "@/components/NodeInboundsModal";
 import { NodeLogsModal } from "@/components/NodeLogsModal";
-import { GlassCard, StatsCard, StatusBadge } from "@/components/veltrix";
+import { CoreBadge, GlassCard, StatusBadge } from "@/components/veltrix";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
@@ -27,35 +26,14 @@ import { useTitle } from "@/lib/useTitle";
 import { useAuth } from "@/auth/auth";
 import { cn } from "@/lib/utils";
 
-function MetricBar({ value, label, icon }: { value: number; label: string; icon: React.ReactNode }) {
-  const v = Math.min(100, Math.max(0, value));
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-[10px]">
-        <span className="flex items-center gap-1 text-fg-subtle">
-          {icon} {label}
-        </span>
-        <span
-          className={cn(
-            "font-medium",
-            v > 80 ? "text-danger" : v > 60 ? "text-warning" : "text-success",
-          )}
-        >
-          {v.toFixed(0)}%
-        </span>
-      </div>
-      <div className="h-1 rounded-full bg-surface-3 overflow-hidden">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all duration-500",
-            v > 80 ? "bg-danger" : v > 60 ? "bg-warning" : "bg-success",
-          )}
-          style={{ width: `${v}%` }}
-        />
-      </div>
-    </div>
-  );
-}
+type FleetFilter = "" | "online" | "warning" | "offline";
+
+const FLEET_FILTERS: { value: FleetFilter; labelKey: "users.filterAll" | "nodes.filterOnline" | "nodes.filterWarning" | "nodes.filterOffline" }[] = [
+  { value: "", labelKey: "users.filterAll" },
+  { value: "online", labelKey: "nodes.filterOnline" },
+  { value: "warning", labelKey: "nodes.filterWarning" },
+  { value: "offline", labelKey: "nodes.filterOffline" },
+];
 
 function timeAgoShort(iso: string | null): string {
   if (!iso) return "—";
@@ -83,133 +61,55 @@ function nodeDisplayStatus(n: Node): "active" | "warning" | "inactive" {
   return "active";
 }
 
-function NodeCard({
-  n,
-  onInbounds,
-  onLogs,
-  onEdit,
-  onDelete,
-  onRestart,
-  onStop,
-  onStart,
-  onUpdateGeo,
-  onCopyDebug,
-  canManage,
-}: {
-  n: Node;
-  onInbounds: () => void;
-  onLogs: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onRestart: () => void;
-  onStop: () => void;
-  onStart: () => void;
-  onUpdateGeo: () => void;
-  onCopyDebug: () => void;
-  canManage: boolean;
-}) {
-  const online = isNodeOnline(n);
-  const status = nodeDisplayStatus(n);
+function statusLabel(status: "active" | "warning" | "inactive", online: boolean): string {
+  if (!online) return "OFFLINE";
+  if (status === "warning") return "WARNING";
+  return "ONLINE";
+}
 
+function nodeLoad(n: Node): number {
+  return Math.max(n.health.cpu_percent ?? 0, n.health.mem_percent ?? 0);
+}
+
+function matchesFleetFilter(n: Node, filter: FleetFilter): boolean {
+  const st = nodeDisplayStatus(n);
+  switch (filter) {
+    case "online":
+      return st === "active";
+    case "warning":
+      return st === "warning";
+    case "offline":
+      return st === "inactive";
+    default:
+      return true;
+  }
+}
+
+function LoadBar({ value }: { value: number }) {
+  const v = Math.min(100, Math.max(0, value));
   return (
-    <GlassCard hover className="!p-0 overflow-hidden flex flex-col">
-      <div className="p-5 flex-1">
-        <div className="flex items-start justify-between gap-2 mb-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-surface-2/80 text-primary flex-shrink-0">
-              <Server size={18} />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-fg truncate">{n.name}</h3>
-              <div className="flex items-center gap-1 text-[10px] text-fg-subtle mt-0.5" dir="ltr">
-                <Globe size={9} />
-                <span className="truncate font-mono">{n.address}</span>
-              </div>
-            </div>
-          </div>
-          <StatusBadge status={status} label={online ? "online" : "offline"} pulse={online} />
-        </div>
-
-        <div className="space-y-2.5 mb-4">
-          <MetricBar value={n.health.cpu_percent} label="CPU" icon={<Cpu size={9} />} />
-          <MetricBar value={n.health.mem_percent} label="RAM" icon={<MemoryStick size={9} />} />
-          <MetricBar value={n.health.disk_percent} label="Disk" icon={<HardDrive size={9} />} />
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/40">
-          <div className="text-center p-2 rounded-lg bg-surface/40">
-            <div className="flex items-center justify-center gap-1 text-[10px] text-fg-subtle mb-0.5">
-              <Signal size={9} /> Connections
-            </div>
-            <p className="text-xs font-semibold text-fg tabular-nums">{n.health.connections}</p>
-          </div>
-          <div className="text-center p-2 rounded-lg bg-surface/40">
-            <div className="text-[10px] text-fg-subtle mb-0.5">Last seen</div>
-            <p className="text-xs font-semibold text-fg">{timeAgoShort(n.last_seen)}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-3 pt-3 border-t border-border/40 text-[10px]">
-          <Badge color={online ? "running" : "down"}>{n.core}</Badge>
-          {n.enrollment_phase && n.enrollment_phase !== "synced" && (
-            <Badge color={n.enrollment_phase === "connected" ? "on_hold" : "muted"}>
-              {phaseLabel(n.enrollment_phase)}
-            </Badge>
+    <div className="space-y-1 min-w-[100px] max-w-[140px]">
+      <div className="flex justify-between text-[10px]">
+        <span className="text-fg-subtle">CPU / RAM</span>
+        <span
+          className={cn(
+            "font-semibold tabular-nums",
+            v > 75 ? "text-danger" : v > 50 ? "text-warning" : "text-success",
           )}
-          {!online && n.diagnostics && n.diagnostics.code !== "ok" && (
-            <span title={n.diagnostics.message}>
-              <Badge color={diagColor(n.diagnostics.code)}>{diagLabel(n.diagnostics.code)}</Badge>
-            </span>
-          )}
-          {n.core_version && (
-            <span className="rounded-md bg-surface-2/60 px-2 py-0.5 font-mono text-fg-muted">
-              {n.core_version}
-            </span>
-          )}
-          {n.agent_version && <span className="text-fg-subtle">agent {n.agent_version}</span>}
-        </div>
+        >
+          {v.toFixed(0)}%
+        </span>
       </div>
-
-      {canManage && (
-        <div className="flex flex-wrap items-center gap-1 border-t border-border/40 px-3 py-2.5 bg-surface/20">
-          <Button variant="ghost" size="sm" onClick={onInbounds}>
-            Inbounds
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onLogs}>
-            Logs
-          </Button>
-          {!online && (
-            <Button variant="ghost" size="sm" onClick={onCopyDebug} title="Copy debug bundle for support">
-              <Copy size={12} className="me-1" />
-              Debug
-            </Button>
+      <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-500",
+            v > 75 ? "bg-danger" : v > 50 ? "bg-warning" : "bg-success",
           )}
-          {online ? (
-            <Button variant="ghost" size="sm" className="text-warning" onClick={onStop}>
-              Stop
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" className="text-success" onClick={onStart}>
-              Start
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={onRestart}>
-            Restart
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onUpdateGeo} title="Refresh Iran geoip/geosite routing data">
-            Update Geo
-          </Button>
-          <div className="ms-auto flex gap-1">
-            <Button variant="ghost" size="sm" onClick={onEdit}>
-              Edit
-            </Button>
-            <Button variant="ghost" size="sm" className="text-danger" onClick={onDelete}>
-              Delete
-            </Button>
-          </div>
-        </div>
-      )}
-    </GlassCard>
+          style={{ width: `${v}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -217,10 +117,19 @@ export function Nodes() {
   useTitle("Nodes");
   const { can } = useAuth();
   const canManage = can("node:write");
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") === "inbounds" ? "inbounds" : "fleet";
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [fleetFilter, setFleetFilter] = useState<FleetFilter>("");
+  const [menuNodeId, setMenuNodeId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "inbounds") {
+      navigate("/inbounds", { replace: true });
+    }
+  }, [searchParams, navigate]);
+
   const { data, isLoading } = useNodes();
-  const allInbounds = useAllInbounds();
   const del = useDeleteNode();
   const restart = useRestartCore();
   const stop = useStopCore();
@@ -229,6 +138,7 @@ export function Nodes() {
   const confirm = useConfirm();
   const toast = useToast();
   const { t } = useI18n();
+
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Node | null>(null);
   const [managing, setManaging] = useState<Node | null>(null);
@@ -236,46 +146,23 @@ export function Nodes() {
 
   const nodes = data?.nodes ?? [];
 
-  const fleetStats = useMemo(() => {
-    let active = 0;
-    let warning = 0;
-    let offline = 0;
-    let connections = 0;
-    for (const n of nodes) {
-      connections += n.health.connections ?? 0;
-      const st = nodeDisplayStatus(n);
-      if (st === "active") active++;
-      else if (st === "warning") warning++;
-      else offline++;
-    }
-    return { active, warning, offline, connections, total: nodes.length };
-  }, [nodes]);
+  const filteredNodes = useMemo(
+    () => nodes.filter((n) => matchesFleetFilter(n, fleetFilter)),
+    [nodes, fleetFilter],
+  );
 
-  const inboundsByNode = useMemo(() => {
-    const map = new Map<string, typeof allInbounds.data>();
-    for (const ib of allInbounds.data ?? []) {
-      const list = map.get(ib.nodeName) ?? [];
-      list.push(ib);
-      map.set(ib.nodeName, list);
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as globalThis.Node)) {
+        setMenuNodeId(null);
+      }
     }
-    return map;
-  }, [allInbounds.data]);
-
-  function setTab(tab: "fleet" | "inbounds") {
-    if (tab === "fleet") {
-      searchParams.delete("tab");
-      setSearchParams(searchParams, { replace: true });
-    } else {
-      setSearchParams({ tab: "inbounds" }, { replace: true });
-    }
-  }
-
-  function openNodeInbounds(nodeName: string) {
-    const node = nodes.find((n) => n.name === nodeName);
-    if (node) setManaging(node);
-  }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
 
   async function remove(n: Node) {
+    setMenuNodeId(null);
     if (
       await confirm({
         title: `Delete node ${n.name}?`,
@@ -292,6 +179,7 @@ export function Nodes() {
   }
 
   async function doStop(n: Node) {
+    setMenuNodeId(null);
     if (
       await confirm({
         title: `Stop core on ${n.name}?`,
@@ -308,6 +196,7 @@ export function Nodes() {
   }
 
   async function doUpdateGeo(n: Node) {
+    setMenuNodeId(null);
     if (
       await confirm({
         title: `Update geo data on ${n.name}?`,
@@ -326,6 +215,7 @@ export function Nodes() {
   }
 
   async function copyDebug(n: Node) {
+    setMenuNodeId(null);
     try {
       const res = await debug.mutateAsync(n.id);
       await navigator.clipboard.writeText(res.debug_text);
@@ -336,172 +226,286 @@ export function Nodes() {
   }
 
   return (
-    <div className="space-y-6 animate-page-enter">
+    <div className="space-y-5 animate-page-enter">
       <CreateNodeModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <EditNodeModal node={editing} onClose={() => setEditing(null)} />
       <NodeInboundsModal node={managing} onClose={() => setManaging(null)} />
       <NodeLogsModal node={logging} onClose={() => setLogging(null)} />
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-fg">
-            {activeTab === "inbounds" ? t("nav.inboundsSubhosts") : t("nodes.title")}
-          </h1>
-          <p className="text-sm text-fg-muted mt-0.5">
-            {activeTab === "inbounds"
-              ? `${allInbounds.data?.length ?? 0} ${t("nodes.inboundsTotal")}`
-              : `${fleetStats.total} ${t("nodes.registered")}`}
+          <h1 className="text-2xl font-bold text-fg tracking-tight">{t("nodes.managementTitle")}</h1>
+          <p className="text-sm text-fg-muted mt-1">
+            {nodes.length} {t("nodes.registeredNodes")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-xl border border-border/70 bg-surface-2/50 p-0.5">
-            <button
-              type="button"
-              onClick={() => setTab("fleet")}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
-                activeTab === "fleet" ? "bg-primary/15 text-primary" : "text-fg-muted hover:text-fg",
-              )}
-            >
-              {t("nodes.tabFleet")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("inbounds")}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
-                activeTab === "inbounds" ? "bg-primary/15 text-primary" : "text-fg-muted hover:text-fg",
-              )}
-            >
-              {t("nav.inboundsSubhosts")}
-            </button>
-          </div>
-          {canManage && activeTab === "fleet" && (
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus size={15} /> {t("nodes.new")}
-            </Button>
-          )}
-        </div>
+        {canManage && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus size={15} /> {t("nodes.new")}
+          </Button>
+        )}
       </div>
 
-      {activeTab === "inbounds" ? (
-        <>
-          {allInbounds.isLoading && <div className="text-sm text-fg-muted">{t("common.loading")}</div>}
-          {!allInbounds.isLoading && (allInbounds.data?.length ?? 0) === 0 && (
-            <GlassCard className="flex flex-col items-center gap-3 py-16 text-center">
-              <Globe size={32} className="text-fg-subtle" />
-              <p className="text-sm text-fg-muted">{t("nodes.noInbounds")}</p>
-            </GlassCard>
-          )}
-          <div className="space-y-4">
-            {[...inboundsByNode.entries()].map(([nodeName, ibs]) => (
-              <GlassCard key={nodeName} className="space-y-3">
-                <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-3">
-                  <h3 className="text-sm font-bold text-fg">{nodeName}</h3>
-                  <Button variant="ghost" size="sm" onClick={() => openNodeInbounds(nodeName)}>
-                    {t("nodes.manageInbounds")}
-                  </Button>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {ibs?.map((ib) => (
-                    <div
-                      key={ib.id}
-                      className="rounded-xl border border-border/70 bg-surface-2/40 px-3 py-2.5 flex items-center justify-between gap-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-fg truncate">{ib.tag}</p>
-                        <p className="text-[10px] text-fg-subtle uppercase">{ib.protocol}</p>
-                      </div>
-                      <Badge color="muted">{ib.protocol}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </GlassCard>
+      <GlassCard hover={false} className="!p-0 overflow-hidden">
+          <div className="flex flex-wrap items-center gap-1 p-4 border-b border-border/40">
+            {FLEET_FILTERS.map((f) => (
+              <button
+                key={f.value || "all"}
+                type="button"
+                onClick={() => setFleetFilter(f.value)}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all",
+                  fleetFilter === f.value
+                    ? "bg-primary text-primary-fg shadow-sm"
+                    : "text-fg-muted hover:text-fg hover:bg-surface/60",
+                )}
+              >
+                {t(f.labelKey)}
+              </button>
             ))}
           </div>
-        </>
-      ) : (
-        <>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatsCard
-          title={t("nodes.statOnline")}
-          value={isLoading ? "—" : fleetStats.active}
-          icon={<Server size={18} />}
-          color="green"
-          delay={0.05}
-        />
-        <StatsCard
-          title={t("nodes.statHighLoad")}
-          value={isLoading ? "—" : fleetStats.warning}
-          icon={<Cpu size={18} />}
-          color="orange"
-          delay={0.1}
-        />
-        <StatsCard
-          title={t("nodes.statOffline")}
-          value={isLoading ? "—" : fleetStats.offline}
-          icon={<Server size={18} />}
-          color="red"
-          delay={0.15}
-        />
-        <StatsCard
-          title={t("nodes.statConnections")}
-          value={isLoading ? "—" : fleetStats.connections}
-          icon={<Signal size={18} />}
-          color="cyan"
-          delay={0.2}
-        />
-      </div>
 
-      {isLoading && <div className="text-sm text-fg-muted">{t("common.loading")}</div>}
+          {isLoading && (
+            <div className="p-8 text-sm text-fg-muted text-center">{t("common.loading")}</div>
+          )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {nodes.map((n, i) => (
-          <motion.div
-            key={n.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-          >
-            <NodeCard
-              n={n}
-              onInbounds={() => setManaging(n)}
-              onLogs={() => setLogging(n)}
-              onEdit={() => setEditing(n)}
-              onDelete={() => remove(n)}
-              onRestart={() =>
-                restart
-                  .mutateAsync(n.id)
-                  .then(() => toast.success("Core restarted"))
-                  .catch(() => toast.error("Restart failed"))
-              }
-              onStart={() =>
-                restart
-                  .mutateAsync(n.id)
-                  .then(() => toast.success("Core started"))
-                  .catch(() => toast.error("Start failed"))
-              }
-              onStop={() => doStop(n)}
-              onUpdateGeo={() => doUpdateGeo(n)}
-              onCopyDebug={() => copyDebug(n)}
-              canManage={canManage}
-            />
-          </motion.div>
-        ))}
-      </div>
+          {!isLoading && filteredNodes.length === 0 && (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <Server size={32} className="text-fg-subtle" />
+              <p className="text-sm text-fg-muted">
+                {nodes.length === 0
+                  ? canManage
+                    ? t("nodes.none")
+                    : "No nodes assigned to your account yet — ask the main admin to allow nodes for you."
+                  : t("users.none")}
+              </p>
+            </div>
+          )}
 
-      {!isLoading && nodes.length === 0 && (
-        <GlassCard className="flex flex-col items-center gap-3 py-16 text-center">
-          <Server size={32} className="text-fg-subtle" />
-          <p className="text-sm text-fg-muted">
-            {canManage
-              ? t("nodes.none")
-              : "No nodes assigned to your account yet — ask the main admin to allow nodes for you."}
-          </p>
+          {!isLoading && filteredNodes.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/40 bg-surface/30">
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
+                      {t("nodes.title")}
+                    </th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden md:table-cell">
+                      {t("nodes.core")}
+                    </th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden lg:table-cell">
+                      {t("nodes.location")}
+                    </th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
+                      {t("nodes.load")}
+                    </th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden sm:table-cell">
+                      {t("nodes.users")}
+                    </th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden sm:table-cell">
+                      {t("nodes.connections")}
+                    </th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
+                      {t("common.status")}
+                    </th>
+                    <th className="text-end py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide w-12">
+                      {t("common.actions")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredNodes.map((n) => {
+                    const online = isNodeOnline(n);
+                    const status = nodeDisplayStatus(n);
+                    const load = nodeLoad(n);
+                    const location = n.location || n.region || n.name;
+                    return (
+                      <tr
+                        key={n.id}
+                        className="border-b border-border/20 hover:bg-surface/40 transition-colors"
+                      >
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3 min-w-[160px]">
+                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                              <Server size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-fg text-sm truncate">{n.name}</p>
+                              <p className="text-[11px] text-fg-subtle font-mono truncate" dir="ltr">
+                                {n.address}
+                              </p>
+                              {(n.core_version || n.enrollment_phase) && (
+                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                  {n.enrollment_phase && n.enrollment_phase !== "synced" && (
+                                    <Badge color={n.enrollment_phase === "connected" ? "on_hold" : "muted"}>
+                                      {phaseLabel(n.enrollment_phase)}
+                                    </Badge>
+                                  )}
+                                  {!online && n.diagnostics && n.diagnostics.code !== "ok" && (
+                                    <Badge color={diagColor(n.diagnostics.code)}>
+                                      {diagLabel(n.diagnostics.code)}
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 hidden md:table-cell">
+                          <CoreBadge core={n.core} />
+                          {n.core_version && (
+                            <p className="text-[10px] text-fg-subtle mt-1 font-mono truncate max-w-[120px]" title={n.core_version}>
+                              {n.core_version.split(" ")[0]}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 hidden lg:table-cell">
+                          <div className="text-xs text-fg-muted">
+                            <p className="font-medium text-fg">{location}</p>
+                            <p className="text-[10px] text-fg-subtle mt-0.5">
+                              {n.ping_ms && n.ping_ms > 0 ? `${n.ping_ms}ms` : "—"}
+                              <span className="mx-1">·</span>
+                              {t("nodes.lastSeen")} {timeAgoShort(n.last_seen)}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <LoadBar value={load} />
+                          <p className="text-[10px] text-fg-subtle mt-1 flex items-center gap-2">
+                            <span className="inline-flex items-center gap-0.5">
+                              <Cpu size={9} /> {n.health.cpu_percent.toFixed(0)}%
+                            </span>
+                            <span className="inline-flex items-center gap-0.5">
+                              <MemoryStick size={9} /> {n.health.mem_percent.toFixed(0)}%
+                            </span>
+                            <span className="inline-flex items-center gap-0.5 hidden xl:inline-flex">
+                              <HardDrive size={9} /> {n.health.disk_percent.toFixed(0)}%
+                            </span>
+                          </p>
+                        </td>
+                        <td className="py-3.5 px-4 hidden sm:table-cell tabular-nums text-fg-muted">
+                          {n.users_count ?? 0}
+                        </td>
+                        <td className="py-3.5 px-4 hidden sm:table-cell tabular-nums text-fg-muted">
+                          <span className="inline-flex items-center gap-1">
+                            <Signal size={12} className="text-fg-subtle" />
+                            {n.health.connections}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <StatusBadge
+                            status={status}
+                            label={statusLabel(status, online)}
+                            pulse={online && status === "active"}
+                          />
+                        </td>
+                        <td className="py-3.5 px-4 text-end">
+                          <div className="relative inline-block" ref={menuNodeId === n.id ? menuRef : undefined}>
+                            <button
+                              type="button"
+                              onClick={() => setMenuNodeId(menuNodeId === n.id ? null : n.id)}
+                              className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2/80 transition"
+                              aria-label={t("common.actions")}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                            {menuNodeId === n.id && (
+                              <div className="absolute end-0 top-full mt-1 z-20 min-w-[170px] rounded-lg border border-border/60 bg-surface shadow-lg py-1 text-xs">
+                                <MenuAction onClick={() => { setManaging(n); setMenuNodeId(null); }}>
+                                  {t("nodes.inbounds")}
+                                </MenuAction>
+                                <MenuAction onClick={() => { setLogging(n); setMenuNodeId(null); }}>
+                                  Logs
+                                </MenuAction>
+                                {!online && (
+                                  <MenuAction onClick={() => copyDebug(n)}>
+                                    <Copy size={13} className="inline me-1" />
+                                    Debug
+                                  </MenuAction>
+                                )}
+                                {canManage && (
+                                  <>
+                                    {online ? (
+                                      <MenuAction className="text-warning" onClick={() => doStop(n)}>
+                                        Stop
+                                      </MenuAction>
+                                    ) : (
+                                      <MenuAction
+                                        className="text-success"
+                                        onClick={() => {
+                                          setMenuNodeId(null);
+                                          restart
+                                            .mutateAsync(n.id)
+                                            .then(() => toast.success("Core started"))
+                                            .catch(() => toast.error("Start failed"));
+                                        }}
+                                      >
+                                        Start
+                                      </MenuAction>
+                                    )}
+                                    <MenuAction
+                                      onClick={() => {
+                                        setMenuNodeId(null);
+                                        restart
+                                          .mutateAsync(n.id)
+                                          .then(() => toast.success("Core restarted"))
+                                          .catch(() => toast.error("Restart failed"));
+                                      }}
+                                    >
+                                      Restart
+                                    </MenuAction>
+                                    <MenuAction onClick={() => doUpdateGeo(n)}>Update Geo</MenuAction>
+                                    <MenuAction onClick={() => { setEditing(n); setMenuNodeId(null); }}>
+                                      {t("common.edit")}
+                                    </MenuAction>
+                                    <MenuAction className="text-danger hover:bg-danger/10" onClick={() => remove(n)}>
+                                      {t("common.delete")}
+                                    </MenuAction>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!isLoading && filteredNodes.length > 0 && (
+            <div className="border-t border-border/40 px-4 py-3 text-sm text-fg-muted">
+              {t("users.showingOf")
+                .replace("{count}", String(filteredNodes.length))
+                .replace("{total}", String(nodes.length))}
+            </div>
+          )}
         </GlassCard>
-      )}
-        </>
-      )}
     </div>
+  );
+}
+
+function MenuAction({
+  children,
+  onClick,
+  className,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "w-full px-3 py-2 text-start text-fg hover:bg-surface-2/60 transition",
+        className,
+      )}
+    >
+      {children}
+    </button>
   );
 }

@@ -130,7 +130,7 @@ export function BulkCreateModal({ open, onClose }: { open: boolean; onClose: () 
                   <span className="text-xs text-fg-muted">{ib.protocol} · {ib.nodeName}</span>
                 </label>
               ))}
-              {inbounds.data?.length === 0 && <p className="text-xs text-fg-muted">No inbounds yet — create one under Nodes.</p>}
+              {inbounds.data?.length === 0 && <p className="text-xs text-fg-muted">No inbounds yet — create one under Inbounds.</p>}
             </div>
           </div>
 

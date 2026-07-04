@@ -29,6 +29,7 @@ const (
 type Ticket struct {
 	ID       uuid.UUID      `json:"id"`
 	UserID   uuid.UUID      `json:"user_id"`
+	Username string         `json:"username,omitempty"`
 	Subject  string         `json:"subject"`
 	Status   TicketStatus   `json:"status"`
 	Priority TicketPriority `json:"priority"`

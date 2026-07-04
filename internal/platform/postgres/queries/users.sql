@@ -46,7 +46,17 @@ WHERE u.id = d.id;
 -- name: ListUsers :many
 SELECT * FROM users
 WHERE (sqlc.arg(search)::text = '' OR username ILIKE '%' || sqlc.arg(search) || '%')
-  AND (sqlc.arg(status)::text = '' OR status = sqlc.arg(status))
+  AND (
+    (
+      (sqlc.narg(statuses)::text[] IS NULL OR cardinality(sqlc.narg(statuses)::text[]) = 0)
+      AND (sqlc.arg(status)::text = '' OR status = sqlc.arg(status))
+    )
+    OR (
+      sqlc.narg(statuses)::text[] IS NOT NULL
+      AND cardinality(sqlc.narg(statuses)::text[]) > 0
+      AND status = ANY(sqlc.narg(statuses)::text[])
+    )
+  )
   AND (sqlc.narg(admin_id)::uuid IS NULL OR admin_id = sqlc.narg(admin_id))
 ORDER BY created_at DESC
 LIMIT sqlc.arg(lim) OFFSET sqlc.arg(off);
@@ -54,8 +64,29 @@ LIMIT sqlc.arg(lim) OFFSET sqlc.arg(off);
 -- name: CountUsers :one
 SELECT count(*) FROM users
 WHERE (sqlc.arg(search)::text = '' OR username ILIKE '%' || sqlc.arg(search) || '%')
-  AND (sqlc.arg(status)::text = '' OR status = sqlc.arg(status))
+  AND (
+    (
+      (sqlc.narg(statuses)::text[] IS NULL OR cardinality(sqlc.narg(statuses)::text[]) = 0)
+      AND (sqlc.arg(status)::text = '' OR status = sqlc.arg(status))
+    )
+    OR (
+      sqlc.narg(statuses)::text[] IS NOT NULL
+      AND cardinality(sqlc.narg(statuses)::text[]) > 0
+      AND status = ANY(sqlc.narg(statuses)::text[])
+    )
+  )
   AND (sqlc.narg(admin_id)::uuid IS NULL OR admin_id = sqlc.narg(admin_id));
+
+-- name: PrimaryInboundProtocols :many
+SELECT DISTINCT ON (ui.user_id)
+    ui.user_id,
+    i.protocol,
+    i.network,
+    i.security
+FROM user_inbounds ui
+JOIN inbounds i ON i.id = ui.inbound_id
+WHERE ui.user_id = ANY(sqlc.arg(user_ids)::uuid[])
+ORDER BY ui.user_id, i.tag;
 
 -- UsersToLimit returns active users who have crossed their data cap or expiry,
 -- so the enforcement loop can disable+de-provision exactly those (not a full

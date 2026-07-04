@@ -93,7 +93,12 @@ type Balancer struct {
 	Enabled bool `json:"enabled"`
 }
 
-// WantsObservatory reports whether this balancer should be probed.
+// BalancerListItem is a balancer row with its parent node name for fleet views.
+type BalancerListItem struct {
+	Balancer
+	NodeName string `json:"node_name"`
+}
+
 func (b *Balancer) WantsObservatory() bool {
 	return b.Observe || b.Strategy.NeedsObservatory()
 }

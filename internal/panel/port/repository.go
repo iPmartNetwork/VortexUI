@@ -33,17 +33,21 @@ type UserRepository interface {
 	SetInbounds(ctx context.Context, userID uuid.UUID, inboundIDs []uuid.UUID) error
 	InboundsFor(ctx context.Context, userID uuid.UUID) ([]domain.Inbound, error)
 
+	// PrimaryInboundProtocols returns the primary inbound protocol label per user.
+	PrimaryInboundProtocols(ctx context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error)
+
 	// StatsForAdmin aggregates owned-user counts and traffic for reseller quotas.
 	StatsForAdmin(ctx context.Context, adminID uuid.UUID) (domain.AdminUserStats, error)
 }
 
 // UserFilter parameterizes paginated listing.
 type UserFilter struct {
-	Search  string
-	Status  domain.UserStatus
-	AdminID  *uuid.UUID // non-nil scopes to users created by this admin (reseller)
-	Limit   int
-	Offset  int
+	Search   string
+	Status   domain.UserStatus
+	Statuses []domain.UserStatus // when set, matches any of these statuses
+	AdminID  *uuid.UUID          // non-nil scopes to users created by this admin (reseller)
+	Limit    int
+	Offset   int
 }
 
 // NodeRepository persists nodes and their live health.
@@ -63,6 +67,7 @@ type InboundRepository interface {
 	Update(ctx context.Context, in *domain.Inbound) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Inbound, error)
+	ListFleet(ctx context.Context) ([]domain.InboundListItem, error)
 }
 
 // OutboundRepository persists per-node egress handlers.
@@ -90,6 +95,7 @@ type BalancerRepository interface {
 	Update(ctx context.Context, b *domain.Balancer) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Balancer, error)
+	ListFleet(ctx context.Context) ([]domain.BalancerListItem, error)
 }
 
 // AdminRepository persists panel operators and roles.

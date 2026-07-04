@@ -5,7 +5,7 @@
 
 site_name: VortexUI Docs
 site_url: https://ipmartnetwork.github.io/VortexUI/
-site_description: "VortexUI v1.2.8 — next-generation proxy management panel with Veltrix UI, full i18n, per-reseller shop, and anti-censorship tools"
+site_description: "VortexUI v1.2.9 — proxy management panel with Command Tower UI, merged admin pages, reseller profiles, Veltrix design, and full i18n"
 site_author: iPmart Network
 
 repo_name: iPmartNetwork/VortexUI
@@ -139,6 +139,7 @@ plugins:
             Notifications: Notifications
             Settings & backup: Settings & backup
             Veltrix UI (v1.2.8): Veltrix UI (v1.2.8)
+            Command Tower (v1.2.9): Command Tower (v1.2.9)
             Technical reference: Technical reference
             API reference: API reference
             Protocols: Protocols & config
@@ -166,6 +167,7 @@ plugins:
             Notifications: اعلان‌ها
             Settings & backup: تنظیمات و پشتیبان
             Veltrix UI (v1.2.8): Veltrix UI (نسخه ۱.۲.۸)
+            Command Tower (v1.2.9): Command Tower (نسخه ۱.۲.۹)
             Technical reference: مرجع فنی
             API reference: مرجع API
             Protocols: پروتکل‌ها
@@ -193,6 +195,7 @@ plugins:
             Notifications: الإشعارات
             Settings & backup: الإعدادات والنسخ الاحتياطي
             Veltrix UI (v1.2.8): Veltrix UI (1.2.8)
+            Command Tower (v1.2.9): Command Tower (1.2.9)
             Technical reference: مرجع تقني
             API reference: مرجع API
             Protocols: البروتوكولات
@@ -220,6 +223,7 @@ plugins:
             Notifications: Bildirimler
             Settings & backup: Ayarlar ve yedekleme
             Veltrix UI (v1.2.8): Veltrix UI (v1.2.8)
+            Command Tower (v1.2.9): Command Tower (v1.2.9)
             Technical reference: Teknik referans
             API reference: API referansı
             Protocols: Protokoller
@@ -242,6 +246,7 @@ nav:
       - Notifications: 10-notifications.md
       - Settings & backup: 11-settings-backup.md
       - Veltrix UI (v1.2.8): 16-v128-ui-refresh.md
+      - Command Tower (v1.2.9): 17-v129-panel-redesign.md
   - Technical reference:
       - API reference: 12-api-reference.md
       - Protocols: 13-protocols-config.md

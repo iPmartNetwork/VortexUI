@@ -3,6 +3,10 @@
 !!! info "بلادرنگ"
     تمام داده‌های داشبورد از طریق Server-Sent Events (SSE) بروزرسانی می‌شوند — نیازی به رفرش دستی نیست.
 
+!!! tip "Command Tower UI (نسخه ۱.۲.۹)"
+    ویجت‌های Command Tower — بازه ترافیک، کاربران پرمصرف با پروتکل، geo/ping نودها.
+    [Command Tower (۱.۲.۹)](17-v129-panel-redesign.md).
+
 !!! tip "Veltrix UI (نسخه ۱.۲.۸)"
     صفحه **Overview** با طراحی Veltrix — کارت آمار زنده، وضعیت نودها و پرمصرف‌ترین
     کاربران. جزئیات ناوبری و command palette: [Veltrix UI](16-v128-ui-refresh.md).

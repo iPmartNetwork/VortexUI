@@ -29,10 +29,12 @@ func (r *TicketRepo) Create(ctx context.Context, t *domain.Ticket) error {
 
 func (r *TicketRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Ticket, error) {
 	row := r.pool.QueryRow(ctx, `
-		SELECT id, user_id, subject, status, priority, created_at, updated_at
-		FROM tickets WHERE id = $1`, id)
+		SELECT t.id, t.user_id, COALESCE(u.username, ''), t.subject, t.status, t.priority, t.created_at, t.updated_at
+		FROM tickets t
+		LEFT JOIN users u ON u.id = t.user_id
+		WHERE t.id = $1`, id)
 	var t domain.Ticket
-	err := row.Scan(&t.ID, &t.UserID, &t.Subject, &t.Status, &t.Priority, &t.CreatedAt, &t.UpdatedAt)
+	err := row.Scan(&t.ID, &t.UserID, &t.Username, &t.Subject, &t.Status, &t.Priority, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -67,14 +69,15 @@ func (r *TicketRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]*domai
 
 func (r *TicketRepo) ListAll(ctx context.Context, status string, limit, offset int) ([]*domain.Ticket, int, error) {
 	var args []interface{}
-	q := `SELECT id, user_id, subject, status, priority, created_at, updated_at FROM tickets`
+	q := `SELECT t.id, t.user_id, COALESCE(u.username, ''), t.subject, t.status, t.priority, t.created_at, t.updated_at
+		FROM tickets t LEFT JOIN users u ON u.id = t.user_id`
 	cq := `SELECT COUNT(*) FROM tickets`
 	if status != "" {
-		q += ` WHERE status = $1`
+		q += ` WHERE t.status = $1`
 		cq += ` WHERE status = $1`
 		args = append(args, status)
 	}
-	q += ` ORDER BY updated_at DESC LIMIT $` + itoa(len(args)+1) + ` OFFSET $` + itoa(len(args)+2)
+	q += ` ORDER BY t.updated_at DESC LIMIT $` + itoa(len(args)+1) + ` OFFSET $` + itoa(len(args)+2)
 	args = append(args, limit, offset)
 
 	rows, err := r.pool.Query(ctx, q, args...)
@@ -85,7 +88,7 @@ func (r *TicketRepo) ListAll(ctx context.Context, status string, limit, offset i
 	var out []*domain.Ticket
 	for rows.Next() {
 		var t domain.Ticket
-		if err := rows.Scan(&t.ID, &t.UserID, &t.Subject, &t.Status, &t.Priority, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Username, &t.Subject, &t.Status, &t.Priority, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, &t)

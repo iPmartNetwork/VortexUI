@@ -42,6 +42,7 @@ type Handlers struct {
 	Balancers *service.BalancerService
 	Admins    *service.AdminService
 	Overview  *service.OverviewService
+	Counters  port.DashboardCounter // optional; enriches node list with users_count
 	Backup    *service.BackupService
 	Plans     PlanServiceInterface          // optional; nil disables plan/order endpoints
 	ZarinPal  *payment.ZarinPal            // optional; nil disables ZarinPal payments
@@ -559,6 +560,16 @@ func (h *Handlers) ListUsers(c echo.Context) error {
 		Limit:  atoiDefault(c.QueryParam("limit"), 50),
 		Offset: atoiDefault(c.QueryParam("offset"), 0),
 	}
+	switch c.QueryParam("status_group") {
+	case "warning":
+		f.Status = domain.UserStatusLimited
+	case "inactive":
+		f.Statuses = []domain.UserStatus{
+			domain.UserStatusDisabled,
+			domain.UserStatusExpired,
+			domain.UserStatusOnHold,
+		}
+	}
 	// Reseller scoping: non-sudo admins only see their own users.
 	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
 		id := claims.AdminID
@@ -568,7 +579,23 @@ func (h *Handlers) ListUsers(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
 	}
-	return c.JSON(http.StatusOK, echo.Map{"users": users, "total": total})
+	ids := make([]uuid.UUID, len(users))
+	for i, u := range users {
+		ids[i] = u.ID
+	}
+	protocols, err := h.Repo.PrimaryInboundProtocols(c.Request().Context(), ids)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	items := make([]domain.UserListItem, len(users))
+	for i, u := range users {
+		items[i] = domain.UserListItem{
+			User:          *u,
+			ProtocolLabel: protocols[u.ID],
+			DeviceCount:   len(u.AllowedHWIDs),
+		}
+	}
+	return c.JSON(http.StatusOK, echo.Map{"users": items, "total": total})
 }
 
 // GetUser fetches one user by id.

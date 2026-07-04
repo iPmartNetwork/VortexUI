@@ -190,7 +190,7 @@ erDiagram
 
 ## مقایسه با سایر پنل‌ها
 
-| ویژگی | VortexUI 1.2.8 | 3x-ui | Marzban | Hiddify |
+| ویژگی | VortexUI 1.2.9 | 3x-ui | Marzban | Hiddify |
 |--------|:--:|:--:|:--:|:--:|
 | دو هسته (Xray + sing-box) | ✅ | ❌ | ❌ | ✅ |
 | مدل کاربرمحور | ✅ | ❌ | ✅ | ✅ |

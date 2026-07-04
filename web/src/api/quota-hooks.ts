@@ -34,6 +34,14 @@ export function useResellerQuotaUsage() {
   });
 }
 
+export function useAdminQuotaUsage(adminId: string | null) {
+  return useQuery({
+    queryKey: ["admin-quota", adminId],
+    queryFn: () => api<{ usage: AdminQuotaUsage }>(`/api/admins/${adminId}/quota`),
+    enabled: !!adminId,
+  });
+}
+
 export interface ResellerDashboardData {
   quota: AdminQuotaUsage;
   users_by_status: Record<string, number>;

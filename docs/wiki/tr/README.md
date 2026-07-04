@@ -1,7 +1,7 @@
 # VortexUI Belgelendirmesi
 
 <div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.4rem;">VortexUI v1.2.8</strong><br/>
+  <strong style="font-size: 1.4rem;">VortexUI v1.2.9</strong><br/>
   <em style="font-size: 1.1rem;">Yeni nesil proxy yönetim paneli — çekirdek-bağımsız, kullanıcı-merkezli, gerçek zamanlı, sansür karşıtı</em>
 </div>
 

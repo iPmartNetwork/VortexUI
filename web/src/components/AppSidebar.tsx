@@ -2,8 +2,6 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Zap,
-  Search,
   Menu,
   X,
   LogOut,
@@ -11,23 +9,18 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ExternalLink,
-  Moon,
-  Sun,
-  Globe,
+  Terminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/auth/auth";
 import { canAccessRoute } from "@/auth/permissions";
-import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
 import { useVersion, useNodes } from "@/api/hooks";
 import { buildCompactNavSections } from "@/navigation/nav-sections-compact";
 import { useOverview } from "@/api/policy-hooks";
 import type { Overview } from "@/api/types";
-import { openCommandPalette } from "@/lib/commandPalette";
-import { LANG_OPTIONS } from "@/i18n/lang-options";
 
-const PANEL_VERSION = "1.2.8";
+const PANEL_VERSION = "1.2.9";
 
 function navBadgeCount(badges: Overview["widgets"]["nav_badges"] | undefined, key?: string): number {
   if (!badges || !key) return 0;
@@ -52,8 +45,7 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
   const { logout, sudo, permissions, session } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { resolved, toggle: toggleTheme } = useTheme();
-  const { t, lang, setLang } = useI18n();
+  const { t, lang } = useI18n();
   const version = useVersion().data ?? PANEL_VERSION;
   const nodesQ = useNodes();
   const overviewQ = useOverview();
@@ -61,9 +53,10 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
   const primaryCore = nodesQ.data?.nodes?.find((n) => n.core === "xray") ?? nodesQ.data?.nodes?.[0];
   const coreOnline = primaryCore?.health?.core_running ?? false;
   const coreVer = primaryCore?.core_version || "—";
+  const coreLabel = primaryCore?.core === "singbox" ? "sing-box" : "Xray";
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [langOpen, setLangOpen] = useState(false);
+  const rtl = lang === "fa" || lang === "ar";
 
   const visibleSections = buildCompactNavSections(sudo)
     .map((section) => ({
@@ -74,9 +67,6 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
     }))
     .filter((section) => section.items.length > 0);
 
-  const username = session?.admin.username ?? "Admin";
-  const initials = username.slice(0, 2).toUpperCase();
-
   function signOut() {
     logout();
     navigate("/login");
@@ -86,43 +76,26 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
     const mini = collapsed && !mobile;
 
     return (
-      <div className="flex flex-col h-full select-none">
-        <div className={cn("flex items-center flex-shrink-0 h-14", mini ? "justify-center" : "px-4 gap-3")}>
+      <div className="flex flex-col h-full min-h-0 select-none">
+        {/* Brand — text only (no logo icon) */}
+        <div className={cn("flex-shrink-0 px-4 pt-4 pb-3", mini && "px-2 pt-3 pb-2 flex justify-center")}>
           {mini ? (
-            <div className="h-8 w-8 rounded-[10px] grad-bg flex items-center justify-center">
-              <Zap size={15} className="text-primary-fg" />
-            </div>
+            <span className="text-[11px] font-black tracking-tight text-fg">VU</span>
           ) : (
             <>
-              <div className="h-8 w-8 rounded-[10px] grad-bg flex items-center justify-center flex-shrink-0">
-                <Zap size={15} className="text-primary-fg" />
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-black tracking-[0.12em] text-fg">VORTEXUI</span>
+                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary tabular-nums">
+                  {version}
+                </span>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-fg leading-none tracking-tight">
-                  Vortex<span className="text-primary">UI</span>
-                </p>
-                <p className="text-[10px] text-fg-subtle mt-0.5 leading-none">{t("app.taglineVeltrix")}</p>
-                <p className="text-[10px] text-primary/80 mt-0.5 leading-none font-medium">v{version}</p>
-              </div>
+              <p className="text-[10px] text-fg-subtle mt-1 leading-none">{t("app.taglineVeltrix")}</p>
             </>
           )}
         </div>
 
-        {!mini && (
-          <div className="px-3 pb-3">
-            <button
-              type="button"
-              onClick={openCommandPalette}
-              className="w-full flex items-center gap-2 h-8 px-2.5 rounded-lg bg-surface-2/50 border border-border/60 text-fg-subtle text-xs hover:border-border-strong transition-colors"
-            >
-              <Search size={13} className="flex-shrink-0 opacity-50" />
-              <span className="flex-1 text-start truncate opacity-60">{t("shell.search")}</span>
-              <kbd className="text-[9px] opacity-40 font-mono border border-border rounded px-1 py-px">⌘K</kbd>
-            </button>
-          </div>
-        )}
-
-        <nav className={cn("flex-1 overflow-y-auto", mini ? "px-1.5 py-2" : "px-2.5 py-1")}>
+        {/* Nav — scrolls inside fixed sidebar */}
+        <nav className={cn("flex-1 min-h-0 overflow-y-auto overscroll-contain", mini ? "px-1.5 py-1" : "px-2.5 py-1")}>
           <div className={mini ? "space-y-3" : "space-y-5"}>
             {visibleSections.map((sec, si) => (
               <div key={sec.id}>
@@ -137,12 +110,8 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
                 <div className={mini ? "space-y-1 flex flex-col items-center" : "space-y-px"}>
                   {sec.items.map((item) => {
                     const Icon = item.icon;
-                    const [itemPath, itemQuery] = item.to.split("?");
-                    const active =
-                      location.pathname.startsWith(itemPath) &&
-                      (itemQuery
-                        ? location.search.includes(itemQuery)
-                        : !location.search.includes("tab=inbounds"));
+                    const itemPath = item.to.split("?")[0];
+                    const active = location.pathname.startsWith(itemPath);
                     const label = t(item.key);
                     const badge = navBadgeCount(navBadges, item.badgeKey);
 
@@ -180,12 +149,25 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
                             <Icon size={18} strokeWidth={2} />
                           </span>
                           {!mini && (
-                            <span className="flex-1 text-start text-[13px] truncate">{label}</span>
-                          )}
-                          {!mini && badge > 0 && (
-                            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-fg text-[10px] font-bold flex items-center justify-center tabular-nums">
-                              {badge > 99 ? "99+" : badge}
-                            </span>
+                            <>
+                              <span className="flex-1 text-start text-[13px] truncate">{label}</span>
+                              {item.hotDot && badge === 0 && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-success flex-shrink-0 shadow-[0_0_6px] shadow-success/50" />
+                              )}
+                              {badge > 0 && (
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-semibold leading-none min-w-[18px] h-[18px]",
+                                    "flex items-center justify-center rounded-[6px] tabular-nums px-1",
+                                    active
+                                      ? "bg-primary/25 text-primary"
+                                      : "bg-surface-3/70 text-fg-subtle",
+                                  )}
+                                >
+                                  {badge > 99 ? "99+" : badge}
+                                </span>
+                              )}
+                            </>
                           )}
                         </NavLink>
 
@@ -193,14 +175,19 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
                           <AnimatePresence>
                             {hovered === item.to && (
                               <motion.div
-                                initial={{ opacity: 0, x: lang === "fa" || lang === "ar" ? 4 : -4 }}
+                                initial={{ opacity: 0, x: rtl ? 4 : -4 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: lang === "fa" || lang === "ar" ? 4 : -4 }}
+                                exit={{ opacity: 0, x: rtl ? 4 : -4 }}
                                 transition={{ duration: 0.1 }}
                                 className="absolute start-full ms-2.5 top-1/2 -translate-y-1/2 z-[60] pointer-events-none"
                               >
                                 <div className="flex items-center gap-2 rounded-lg bg-fg text-bg px-2.5 py-1.5 shadow-xl text-[11px] font-medium whitespace-nowrap">
                                   {label}
+                                  {badge > 0 && (
+                                    <span className="bg-primary/20 text-primary rounded px-1 text-[9px] font-bold">
+                                      {badge > 99 ? "99+" : badge}
+                                    </span>
+                                  )}
                                 </div>
                               </motion.div>
                             )}
@@ -215,135 +202,54 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
           </div>
         </nav>
 
-        {!mini && (
-          <div className="px-3 pb-2 flex-shrink-0 space-y-2">
+        {/* Footer — pinned at bottom */}
+        <div className={cn("flex-shrink-0 border-t border-border/40", mini ? "p-2 space-y-2" : "p-3 space-y-2")}>
+          {!mini && (
             <button
               type="button"
               onClick={() => navigate("/portal/login")}
-              className="w-full h-9 rounded-xl text-[12px] font-semibold text-primary flex items-center justify-center gap-1.5 border border-primary/20 bg-primary/[0.06] hover:bg-primary/10 transition-all"
+              className="w-full h-9 rounded-xl text-[12px] font-semibold text-accent flex items-center justify-center gap-1.5 border border-accent/20 bg-accent/[0.06] hover:bg-accent/10 transition-all"
             >
               <Smartphone size={14} />
               {t("shell.selfServicePortal")}
               <ExternalLink size={10} className="opacity-50" />
             </button>
-            {primaryCore && (
-              <div className="rounded-xl border border-border/70 bg-surface-2/50 px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${coreOnline ? "bg-success shadow-[0_0_6px] shadow-success/50" : "bg-fg-subtle"}`} />
-                  <span className="text-xs font-bold text-fg truncate">
-                    {primaryCore.core === "singbox" ? "sing-box" : "Xray"} {coreVer}
-                  </span>
-                </div>
-                <p className="text-[10px] text-fg-subtle mt-1">
+          )}
+
+          {primaryCore && !mini && (
+            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-2/50 px-3 py-2.5">
+              <div className="h-8 w-8 rounded-lg bg-surface-3/80 flex items-center justify-center flex-shrink-0 text-fg-subtle">
+                <Terminal size={14} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-fg truncate">
+                  {coreLabel} v{coreVer}
+                </p>
+                <p className="text-[10px] text-fg-subtle flex items-center gap-1.5 mt-0.5">
+                  <span className={cn("h-1.5 w-1.5 rounded-full", coreOnline ? "bg-success" : "bg-fg-subtle")} />
                   {coreOnline ? t("overview.coreOnline") : t("overview.coreOffline")}
                 </p>
               </div>
-            )}
-          </div>
-        )}
-
-        <div
-          className={cn(
-            "flex-shrink-0 border-t border-border/40",
-            mini ? "py-3 flex flex-col items-center gap-1.5" : "p-2.5 space-y-1",
-          )}
-        >
-          {mini ? (
-            <>
-              <div className="relative">
-                <div className="h-8 w-8 rounded-[10px] bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold">
-                  {initials}
-                </div>
-                <span className="absolute -bottom-px -end-px h-2 w-2 rounded-full bg-success ring-[1.5px] ring-[var(--sidebar-bg)]" />
-              </div>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-fg-subtle hover:text-fg hover:bg-surface-2 transition-colors"
-                title={t("theme.label")}
-              >
-                {resolved === "dark" ? <Sun size={13} /> : <Moon size={13} />}
-              </button>
               <button
                 type="button"
                 onClick={signOut}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-fg-subtle hover:text-danger hover:bg-danger/10 transition-colors"
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-fg-subtle hover:text-danger hover:bg-danger/10 transition-colors flex-shrink-0"
                 title={t("nav.signout")}
               >
-                <LogOut size={13} />
+                <LogOut size={15} />
               </button>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 px-2 py-1.5">
-                <div className="relative flex-shrink-0">
-                  <div className="h-8 w-8 rounded-[10px] bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
-                    {initials}
-                  </div>
-                  <span className="absolute -bottom-px -end-px h-2.5 w-2.5 rounded-full bg-success ring-[1.5px] ring-[var(--sidebar-bg)]" />
-                </div>
-                <div className="flex-1 min-w-0 text-start">
-                  <p className="text-[13px] font-semibold text-fg leading-tight truncate">{username}</p>
-                  <p className="text-[10px] text-fg-subtle leading-tight truncate">
-                    {sudo ? t("shell.superAdmin") : t("shell.reseller")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 px-1">
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="h-8 flex-1 rounded-lg flex items-center justify-center text-fg-subtle hover:text-fg hover:bg-surface-2 transition-colors"
-                  title={t("theme.label")}
-                >
-                  {resolved === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-                </button>
-                <div className="relative flex-1">
-                  <button
-                    type="button"
-                    onClick={() => setLangOpen(!langOpen)}
-                    className="h-8 w-full rounded-lg flex items-center justify-center text-fg-subtle hover:text-fg hover:bg-surface-2 transition-colors"
-                    title="Language"
-                  >
-                    <Globe size={14} />
-                  </button>
-                  {langOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setLangOpen(false)} />
-                      <div className="absolute bottom-full start-0 z-50 mb-2 w-36 rounded-xl border border-border/60 bg-bg-elevated/95 p-1 shadow-xl backdrop-blur-xl animate-scale-in">
-                        {LANG_OPTIONS.map((l) => (
-                          <button
-                            key={l.code}
-                            type="button"
-                            onClick={() => {
-                              setLang(l.code);
-                              setLangOpen(false);
-                            }}
-                            className={cn(
-                              "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
-                              lang === l.code
-                                ? "bg-primary/10 text-primary"
-                                : "text-fg-muted hover:bg-surface-2/60 hover:text-fg",
-                            )}
-                          >
-                            <span className="w-5 text-[10px] font-bold text-fg-subtle">{l.code.toUpperCase()}</span>
-                            {l.label}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={signOut}
-                  className="h-8 flex-1 rounded-lg flex items-center justify-center text-fg-subtle hover:text-danger hover:bg-danger/10 transition-colors"
-                  title={t("nav.signout")}
-                >
-                  <LogOut size={14} />
-                </button>
-              </div>
-            </>
+            </div>
+          )}
+
+          {mini && (
+            <button
+              type="button"
+              onClick={signOut}
+              className="h-8 w-8 mx-auto rounded-lg flex items-center justify-center text-fg-subtle hover:text-danger hover:bg-danger/10 transition-colors"
+              title={t("nav.signout")}
+            >
+              <LogOut size={14} />
+            </button>
           )}
         </div>
 
@@ -385,13 +291,13 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
               onClick={() => onMobileOpenChange(false)}
             />
             <motion.aside
-              initial={{ x: lang === "fa" || lang === "ar" ? 260 : -260 }}
+              initial={{ x: rtl ? 260 : -260 }}
               animate={{ x: 0 }}
-              exit={{ x: lang === "fa" || lang === "ar" ? 260 : -260 }}
+              exit={{ x: rtl ? 260 : -260 }}
               transition={{ type: "spring", stiffness: 400, damping: 32 }}
               className={cn(
                 "md:hidden fixed top-0 bottom-0 w-[252px] z-50 overflow-hidden shadow-2xl border-border/60",
-                lang === "fa" || lang === "ar" ? "end-0 border-s" : "start-0 border-e",
+                rtl ? "end-0 border-s" : "start-0 border-e",
               )}
               style={{ background: "var(--sidebar-bg)" }}
             >
@@ -410,8 +316,9 @@ export function AppSidebar({ mobileOpen, onMobileOpenChange }: AppSidebarProps) 
 
       <aside
         className={cn(
-          "hidden md:flex relative flex-col z-20 transition-[width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] border-e border-border/40 flex-shrink-0",
-          collapsed ? "w-[58px]" : "w-[278px]",
+          "hidden md:flex relative flex-col z-20 h-screen sticky top-0 flex-shrink-0",
+          "transition-[width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] border-e border-border/40",
+          collapsed ? "w-[58px]" : "w-[236px]",
         )}
         style={{ background: "var(--sidebar-bg)" }}
       >

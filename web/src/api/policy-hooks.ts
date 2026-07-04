@@ -18,10 +18,24 @@ export function useOverview() {
 
 // useTrafficSeries fetches fleet-wide bucketed throughput for the dashboard
 // chart. Defaults to the last hour in 1-minute buckets (server-side).
-export function useTrafficSeries() {
+export type TrafficRange = "24h" | "7d" | "30d";
+
+function trafficRangeQuery(range: TrafficRange) {
+  const to = Math.floor(Date.now() / 1000);
+  const sec =
+    range === "30d" ? 30 * 86400 : range === "7d" ? 7 * 86400 : 24 * 3600;
+  const bucket = range === "24h" ? "1h" : range === "7d" ? "6h" : "1d";
+  return { from: to - sec, to, bucket };
+}
+
+export function useTrafficSeries(range: TrafficRange = "24h") {
+  const q = trafficRangeQuery(range);
   return useQuery({
-    queryKey: ["traffic-series"],
-    queryFn: () => api<{ points: { time: string; up: number; down: number }[] }>("/api/traffic/series"),
+    queryKey: ["traffic-series", range],
+    queryFn: () =>
+      api<{ points: { time: string; up: number; down: number }[] }>("/api/traffic/series", {
+        query: { from: q.from, to: q.to, bucket: q.bucket },
+      }),
     refetchInterval: 15000,
   });
 }
@@ -119,7 +133,10 @@ function makePolicyHooks<T>(path: string, key: string) {
       const qc = useQueryClient();
       return useMutation({
         mutationFn: (body: Record<string, unknown>) => api(`/api/${path}`, { method: "POST", body }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: [key] }),
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: [key] });
+          if (key === "balancers") qc.invalidateQueries({ queryKey: ["balancers-fleet"] });
+        },
       });
     },
     useUpdate() {
@@ -127,14 +144,20 @@ function makePolicyHooks<T>(path: string, key: string) {
       return useMutation({
         mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
           api(`/api/${path}/${id}`, { method: "PUT", body }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: [key] }),
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: [key] });
+          if (key === "balancers") qc.invalidateQueries({ queryKey: ["balancers-fleet"] });
+        },
       });
     },
     useDelete() {
       const qc = useQueryClient();
       return useMutation({
         mutationFn: (id: string) => api<void>(`/api/${path}/${id}`, { method: "DELETE" }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: [key] }),
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: [key] });
+          if (key === "balancers") qc.invalidateQueries({ queryKey: ["balancers-fleet"] });
+        },
       });
     },
   };

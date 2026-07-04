@@ -1,13 +1,17 @@
 # VortexUI Documentation
 
 <div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.4rem;">VortexUI v1.2.8</strong><br/>
-  <em style="font-size: 1.1rem;">Next-generation proxy management panel — Veltrix UI, full i18n, core-agnostic, user-centric, real-time</em>
+  <strong style="font-size: 1.4rem;">VortexUI v1.2.9</strong><br/>
+  <em style="font-size: 1.1rem;">Next-generation proxy management panel — Command Tower UI, Veltrix design, full i18n, core-agnostic, user-centric, real-time</em>
 </div>
 
 ---
 
 <div class="grid cards" markdown>
+
+- :material-palette: **Command Tower UI (v1.2.9)**
+
+    Merged admin pages, Settings hub, reseller profiles, fleet telemetry, and dedicated Inbounds view.
 
 - :material-palette: **Veltrix UI (v1.2.8)**
 
@@ -64,6 +68,8 @@
 | [Plans & Payments](09-plans-payments.md) | Per-reseller plans, payment config, shop, wallet billing, orders |
 | [Notifications](10-notifications.md) | Webhooks, Telegram, quota alerts, SSE events |
 | [Settings](11-settings-backup.md) | Branding, whitelabel, backup, deep links, updates |
+| [Command Tower (v1.2.9)](17-v129-panel-redesign.md) | Merged pages, Settings hub, reseller profiles, upgrade |
+| [Veltrix UI (v1.2.8)](16-v128-ui-refresh.md) | Design system, command palette, i18n rollout |
 | [API Reference](12-api-reference.md) | Authentication, endpoints, OpenAPI spec |
 | [Protocols](13-protocols-config.md) | 14 protocols, transports, security layers, capability matrix |
 | [Operations](14-operations-maintenance.md) | HTTPS, Prometheus, scaling, database, performance |

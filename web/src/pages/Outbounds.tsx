@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Trash2, Pencil } from "lucide-react";
 import { outboundHooks } from "@/api/policy-hooks";
 import type { Outbound } from "@/api/types";
-import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { NodePicker } from "@/components/NodePicker";
 import { useConfirm } from "@/components/confirm";
@@ -10,10 +10,12 @@ import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { JsonCodeEditor } from "@/components/JsonCodeEditor";
 import { DEFAULT_OUTBOUND_TEMPLATE, parseShareLink } from "@/lib/outbound-uri";
+import { Navigate } from "react-router-dom";
 
 const PROTOCOLS = ["freedom", "blackhole", "dns", "vless", "vmess", "trojan", "shadowsocks", "socks", "http", "wireguard"];
 
-export function Outbounds() {
+/** Tab panel for Routing & Load Balancers */
+export function OutboundsTab() {
   const { t } = useI18n();
   const [node, setNode] = useState("");
   const [open, setOpen] = useState(false);
@@ -178,11 +180,11 @@ export function Outbounds() {
   }
 
   return (
-    <div className="space-y-6 animate-page-enter">
-      <PageHeader title={t("nav.outbounds")} subtitle="Egress handlers per node">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <NodePicker value={node} onChange={setNode} />
         <Button onClick={() => setOpen(true)}>{t("common.add")}</Button>
-      </PageHeader>
+      </div>
 
       <Card className="p-0">
         <div className="divide-y divide-white/[0.05]">
@@ -300,4 +302,9 @@ export function Outbounds() {
       </Modal>
     </div>
   );
+}
+
+/** @deprecated — use /routing?tab=outbounds */
+export function Outbounds() {
+  return <Navigate to="/routing?tab=outbounds" replace />;
 }

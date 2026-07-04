@@ -14,11 +14,14 @@ import (
 // --- nodes ---
 
 type createNodeRequest struct {
-	Name       string  `json:"name"`
-	Address    string  `json:"address"`
-	Core       string  `json:"core"`
-	UsageRatio float64 `json:"usage_ratio"`
-	Endpoint   string  `json:"endpoint"`
+	Name         string  `json:"name"`
+	Address      string  `json:"address"`
+	Core         string  `json:"core"`
+	UsageRatio   float64 `json:"usage_ratio"`
+	Endpoint     string  `json:"endpoint"`
+	Region       string  `json:"region"`
+	CountryCode  string  `json:"country_code"`
+	LocationAuto *bool   `json:"location_auto"`
 }
 
 // CreateNode registers a new node and brings it under live management.
@@ -28,7 +31,9 @@ func (h *Handlers) CreateNode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
 	n, err := h.Nodes.Create(c.Request().Context(), service.CreateNodeInput{
-		Name: req.Name, Address: req.Address, Core: domain.CoreType(req.Core), UsageRatio: req.UsageRatio, Endpoint: req.Endpoint,
+		Name: req.Name, Address: req.Address, Core: domain.CoreType(req.Core),
+		UsageRatio: req.UsageRatio, Endpoint: req.Endpoint,
+		Region: req.Region, CountryCode: req.CountryCode, LocationAuto: req.LocationAuto,
 	})
 	if n == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
@@ -66,7 +71,19 @@ func (h *Handlers) ListNodes(c echo.Context) error {
 	for _, n := range nodes {
 		enrichNode(n, h)
 	}
-	return c.JSON(http.StatusOK, echo.Map{"nodes": nodes})
+	var usersByNode map[uuid.UUID]int
+	if h.Counters != nil {
+		usersByNode, _ = h.Counters.UsersCountByNode(c.Request().Context())
+	}
+	items := make([]domain.NodeListItem, len(nodes))
+	for i, n := range nodes {
+		items[i] = domain.NodeListItem{
+			Node:       *n,
+			Location:   service.NodeDisplayLocation(n),
+			UsersCount: usersByNode[n.ID],
+		}
+	}
+	return c.JSON(http.StatusOK, echo.Map{"nodes": items})
 }
 
 // GetNode returns one node.
@@ -87,10 +104,13 @@ func (h *Handlers) GetNode(c echo.Context) error {
 }
 
 type updateNodeRequest struct {
-	Name       string  `json:"name"`
-	Address    string  `json:"address"`
-	UsageRatio float64 `json:"usage_ratio"`
-	Endpoint   string  `json:"endpoint"`
+	Name         string  `json:"name"`
+	Address      string  `json:"address"`
+	UsageRatio   float64 `json:"usage_ratio"`
+	Endpoint     string  `json:"endpoint"`
+	Region       *string `json:"region"`
+	CountryCode  *string `json:"country_code"`
+	LocationAuto *bool   `json:"location_auto"`
 }
 
 // UpdateNode edits a node and re-establishes its hub connection.
@@ -103,9 +123,22 @@ func (h *Handlers) UpdateNode(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
 	}
-	n, err := h.Nodes.Update(c.Request().Context(), id, service.UpdateNodeInput{
+	in := service.UpdateNodeInput{
 		Name: req.Name, Address: req.Address, UsageRatio: req.UsageRatio, Endpoint: req.Endpoint,
-	})
+	}
+	if req.Region != nil {
+		in.RegionSet = true
+		in.Region = *req.Region
+	}
+	if req.CountryCode != nil {
+		in.CountrySet = true
+		in.CountryCode = *req.CountryCode
+	}
+	if req.LocationAuto != nil {
+		in.LocationSet = true
+		in.LocationAuto = req.LocationAuto
+	}
+	n, err := h.Nodes.Update(c.Request().Context(), id, in)
 	if errors.Is(err, domain.ErrNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, "node not found")
 	}
@@ -263,12 +296,16 @@ func (h *Handlers) CreateInbound(c echo.Context) error {
 	return c.JSON(http.StatusCreated, resp)
 }
 
-// ListInbounds returns the inbounds for a node (?node_id=...). Resellers only
-// see inbounds on their admin allowlist.
+// ListInbounds returns inbounds for a node (?node_id=...) or the full fleet when
+// node_id is omitted. Resellers only see inbounds on their admin allowlist.
 func (h *Handlers) ListInbounds(c echo.Context) error {
-	nodeID, err := uuid.Parse(c.QueryParam("node_id"))
+	nodeIDParam := c.QueryParam("node_id")
+	if nodeIDParam == "" {
+		return h.listInboundsFleet(c)
+	}
+	nodeID, err := uuid.Parse(nodeIDParam)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "node_id query param required")
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid node_id")
 	}
 	ins, err := h.Inbounds.ListByNode(c.Request().Context(), nodeID)
 	if err != nil {
@@ -292,6 +329,31 @@ func (h *Handlers) ListInbounds(c echo.Context) error {
 		ins = filtered
 	}
 	return c.JSON(http.StatusOK, echo.Map{"inbounds": ins})
+}
+
+func (h *Handlers) listInboundsFleet(c echo.Context) error {
+	items, err := h.Inbounds.ListFleet(c.Request().Context())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+	}
+	if claims := claimsFrom(c); claims != nil && !claims.Sudo {
+		allowed, aerr := h.Admins.InboundIDsForAdmin(c.Request().Context(), claims.AdminID)
+		if aerr != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+		}
+		allow := make(map[uuid.UUID]struct{}, len(allowed))
+		for _, id := range allowed {
+			allow[id] = struct{}{}
+		}
+		filtered := items[:0]
+		for _, item := range items {
+			if _, ok := allow[item.ID]; ok {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+	}
+	return c.JSON(http.StatusOK, echo.Map{"inbounds": items})
 }
 
 type updateInboundRequest struct {

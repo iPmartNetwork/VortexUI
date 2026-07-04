@@ -262,11 +262,19 @@ func (h *Handlers) CreateBalancer(c echo.Context) error {
 	return c.JSON(http.StatusCreated, resp)
 }
 
-// ListBalancers returns a node's balancers (?node_id=...).
+// ListBalancers returns balancers for a node (?node_id=...) or the full fleet.
 func (h *Handlers) ListBalancers(c echo.Context) error {
-	nodeID, err := uuid.Parse(c.QueryParam("node_id"))
+	nodeIDParam := c.QueryParam("node_id")
+	if nodeIDParam == "" {
+		items, err := h.Balancers.ListFleet(c.Request().Context())
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "list failed")
+		}
+		return c.JSON(http.StatusOK, echo.Map{"balancers": items})
+	}
+	nodeID, err := uuid.Parse(nodeIDParam)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "node_id query param required")
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid node_id")
 	}
 	bals, err := h.Balancers.ListByNode(c.Request().Context(), nodeID)
 	if err != nil {

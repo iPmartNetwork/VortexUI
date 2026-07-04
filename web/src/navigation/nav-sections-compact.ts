@@ -2,13 +2,12 @@ import {
   LayoutDashboard,
   Users as UsersIcon,
   Server,
-  Network,
+  Globe,
   Route as RouteIcon,
   ShieldCheck,
-  Wallet,
+  Package,
   LifeBuoy,
   Settings as SettingsIcon,
-  Scale,
 } from "lucide-react";
 import type { NavSection } from "./nav-sections";
 
@@ -28,10 +27,9 @@ export function buildCompactNavSections(sudo: boolean): NavSection[] {
       label: "nav.section.networkProxy",
       id: "network",
       items: [
-        { to: "/nodes?tab=inbounds", key: "nav.inboundsSubhosts", icon: Network },
+        { to: "/inbounds", key: "nav.inboundsSubhosts", icon: Globe },
         { to: "/routing", key: "nav.smartRoutingBalancers", icon: RouteIcon },
-        { to: "/balancers", key: "nav.balancersShort", icon: Scale },
-        { to: "/evasion", key: "nav.securityAntiDpi", icon: ShieldCheck },
+        { to: "/evasion", key: "nav.securityAntiDpi", icon: ShieldCheck, hotDot: true },
       ],
     },
     {
@@ -40,8 +38,8 @@ export function buildCompactNavSections(sudo: boolean): NavSection[] {
       items: [
         {
           to: sudo ? "/wallet-billing" : "/reseller-account",
-          key: "nav.resellerWallet",
-          icon: Wallet,
+          key: "nav.resellerPlatform",
+          icon: Package,
           badgeKey: "pending_orders",
         },
         { to: "/tickets", key: "nav.supportDesk", icon: LifeBuoy, badgeKey: "open_tickets" },
