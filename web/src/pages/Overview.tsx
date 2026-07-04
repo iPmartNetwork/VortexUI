@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useOverview, useSystem, useTrafficSeries, useRestartCore, useStopCore } from "@/api/policy-hooks";
 import { useAccountQuota } from "@/api/quota-hooks";
-import { useAllInbounds, useNodes, useUsers, useVersion } from "@/api/hooks";
+import { useNodes, useUsers, useVersion } from "@/api/hooks";
 import { useAuth } from "@/auth/auth";
 import { Card } from "@/components/ui";
 import { TrafficSeriesChart } from "@/components/TrafficSeriesChart";
@@ -78,7 +78,6 @@ export function Overview() {
   const accountQuota = useAccountQuota();
   const { data, dataUpdatedAt, isLoading: overviewLoading } = useOverview();
   const sys = useSystem();
-  const inbounds = useAllInbounds();
   const nodesQ = useNodes();
   const recentUsersQ = useUsers({ limit: 20, status: "active" });
   const panelVersion = useVersion().data;
@@ -127,7 +126,6 @@ export function Overview() {
   }));
   const allHealthy = totalNodes > 0 && onlineCount === totalNodes;
   const standbyNodes = totalNodes - onlineCount;
-  const inboundCount = widgets?.routing?.inbounds ?? inbounds.data?.length ?? 0;
 
   return (
     <div className="space-y-6 animate-page-enter">

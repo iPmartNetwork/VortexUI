@@ -412,7 +412,7 @@ export function Nodes() {
                         <p className="text-xs font-semibold text-fg truncate">{ib.tag}</p>
                         <p className="text-[10px] text-fg-subtle uppercase">{ib.protocol}</p>
                       </div>
-                      <Badge variant="outline">{ib.protocol}</Badge>
+                      <Badge color="muted">{ib.protocol}</Badge>
                     </div>
                   ))}
                 </div>
