@@ -9,6 +9,7 @@ import {
   Plus,
   Server,
   Signal,
+  Users,
 } from "lucide-react";
 import { useDeleteNode, useNodeDebugBundle, useNodes } from "@/api/hooks";
 import { useRestartCore, useStopCore, useUpdateGeo } from "@/api/policy-hooks";
@@ -67,10 +68,6 @@ function statusLabel(status: "active" | "warning" | "inactive", online: boolean)
   return "ONLINE";
 }
 
-function nodeLoad(n: Node): number {
-  return Math.max(n.health.cpu_percent ?? 0, n.health.mem_percent ?? 0);
-}
-
 function matchesFleetFilter(n: Node, filter: FleetFilter): boolean {
   const st = nodeDisplayStatus(n);
   switch (filter) {
@@ -85,31 +82,49 @@ function matchesFleetFilter(n: Node, filter: FleetFilter): boolean {
   }
 }
 
-function LoadBar({ value }: { value: number }) {
-  const v = Math.min(100, Math.max(0, value));
+/** Renders a 2-letter ISO country code as a flag emoji via regional indicator
+ * symbols; falls back to a globe icon when no code is set. */
+function flagEmoji(code?: string): string {
+  if (!code || code.length !== 2) return "🌐";
+  const cc = code.toUpperCase();
+  const points = [...cc].map((c) => 127397 + c.charCodeAt(0));
+  return String.fromCodePoint(...points);
+}
+
+function metricTone(v: number): { bar: string; text: string } {
+  if (v > 85) return { bar: "bg-danger", text: "text-danger" };
+  if (v > 65) return { bar: "bg-warning", text: "text-warning" };
+  return { bar: "bg-success", text: "text-success" };
+}
+
+function MetricBar({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  const v = Math.min(100, Math.max(0, value || 0));
+  const tone = metricTone(v);
   return (
-    <div className="space-y-1 min-w-[100px] max-w-[140px]">
-      <div className="flex justify-between text-[10px]">
-        <span className="text-fg-subtle">CPU / RAM</span>
-        <span
-          className={cn(
-            "font-semibold tabular-nums",
-            v > 75 ? "text-danger" : v > 50 ? "text-warning" : "text-success",
-          )}
-        >
-          {v.toFixed(0)}%
-        </span>
-      </div>
-      <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
+    <div className="flex items-center gap-2">
+      <span className="flex items-center gap-1 text-[10px] text-fg-subtle w-9 flex-shrink-0">
+        {icon}
+        {label}
+      </span>
+      <div className="flex-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
         <div
-          className={cn(
-            "h-full rounded-full transition-all duration-500",
-            v > 75 ? "bg-danger" : v > 50 ? "bg-warning" : "bg-success",
-          )}
+          className={cn("h-full rounded-full transition-all duration-500", tone.bar)}
           style={{ width: `${v}%` }}
         />
       </div>
+      <span className={cn("text-[10px] font-bold tabular-nums w-8 text-end flex-shrink-0", tone.text)}>
+        {v.toFixed(0)}%
+      </span>
     </div>
+  );
+}
+
+function SummaryStat({ value, label, color }: { value: number; label: string; color: string }) {
+  return (
+    <GlassCard hover={false} className="!p-3.5 text-center">
+      <p className={cn("text-2xl font-black tabular-nums leading-none", color)}>{value}</p>
+      <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">{label}</p>
+    </GlassCard>
   );
 }
 
@@ -150,6 +165,21 @@ export function Nodes() {
     () => nodes.filter((n) => matchesFleetFilter(n, fleetFilter)),
     [nodes, fleetFilter],
   );
+
+  const summary = useMemo(() => {
+    let active = 0;
+    let warning = 0;
+    let offline = 0;
+    let users = 0;
+    for (const n of nodes) {
+      const st = nodeDisplayStatus(n);
+      if (st === "active") active++;
+      else if (st === "warning") warning++;
+      else offline++;
+      users += n.users_count ?? 0;
+    }
+    return { active, warning, offline, users };
+  }, [nodes]);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -246,243 +276,206 @@ export function Nodes() {
         )}
       </div>
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
-          <div className="flex flex-wrap items-center gap-1 p-4 border-b border-border/40">
-            {FLEET_FILTERS.map((f) => (
-              <button
-                key={f.value || "all"}
-                type="button"
-                onClick={() => setFleetFilter(f.value)}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all",
-                  fleetFilter === f.value
-                    ? "bg-primary text-primary-fg shadow-sm"
-                    : "text-fg-muted hover:text-fg hover:bg-surface/60",
-                )}
-              >
-                {t(f.labelKey)}
-              </button>
-            ))}
-          </div>
+      {/* Fleet summary — active / warning / offline / total users at a glance */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <SummaryStat value={summary.active} label={t("nodes.filterOnline")} color="text-success" />
+        <SummaryStat value={summary.warning} label={t("nodes.filterWarning")} color="text-warning" />
+        <SummaryStat value={summary.offline} label={t("nodes.filterOffline")} color="text-danger" />
+        <SummaryStat value={summary.users} label={t("nodes.users")} color="text-primary" />
+      </div>
 
-          {isLoading && (
-            <div className="p-8 text-sm text-fg-muted text-center">{t("common.loading")}</div>
-          )}
+      <div className="flex flex-wrap items-center gap-1">
+        {FLEET_FILTERS.map((f) => (
+          <button
+            key={f.value || "all"}
+            type="button"
+            onClick={() => setFleetFilter(f.value)}
+            className={cn(
+              "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all",
+              fleetFilter === f.value
+                ? "bg-primary text-primary-fg shadow-sm"
+                : "text-fg-muted hover:text-fg hover:bg-surface/60",
+            )}
+          >
+            {t(f.labelKey)}
+          </button>
+        ))}
+      </div>
 
-          {!isLoading && filteredNodes.length === 0 && (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <Server size={32} className="text-fg-subtle" />
-              <p className="text-sm text-fg-muted">
-                {nodes.length === 0
-                  ? canManage
-                    ? t("nodes.none")
-                    : "No nodes assigned to your account yet — ask the main admin to allow nodes for you."
-                  : t("users.none")}
-              </p>
-            </div>
-          )}
+      {isLoading && (
+        <div className="p-8 text-sm text-fg-muted text-center">{t("common.loading")}</div>
+      )}
 
-          {!isLoading && filteredNodes.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/40 bg-surface/30">
-                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
-                      {t("nodes.title")}
-                    </th>
-                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden md:table-cell">
-                      {t("nodes.core")}
-                    </th>
-                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden lg:table-cell">
-                      {t("nodes.location")}
-                    </th>
-                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
-                      {t("nodes.load")}
-                    </th>
-                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden sm:table-cell">
-                      {t("nodes.users")}
-                    </th>
-                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden sm:table-cell">
-                      {t("nodes.connections")}
-                    </th>
-                    <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
-                      {t("common.status")}
-                    </th>
-                    <th className="text-end py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide w-12">
-                      {t("common.actions")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredNodes.map((n) => {
-                    const online = isNodeOnline(n);
-                    const status = nodeDisplayStatus(n);
-                    const load = nodeLoad(n);
-                    const location = n.location || n.region || n.name;
-                    return (
-                      <tr
-                        key={n.id}
-                        className="border-b border-border/20 hover:bg-surface/40 transition-colors"
-                      >
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-3 min-w-[160px]">
-                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                              <Server size={16} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-fg text-sm truncate">{n.name}</p>
-                              <p className="text-[11px] text-fg-subtle font-mono truncate" dir="ltr">
-                                {n.address}
-                              </p>
-                              {(n.core_version || n.enrollment_phase) && (
-                                <div className="flex flex-wrap items-center gap-1 mt-1">
-                                  {n.enrollment_phase && n.enrollment_phase !== "synced" && (
-                                    <Badge color={n.enrollment_phase === "connected" ? "on_hold" : "muted"}>
-                                      {phaseLabel(n.enrollment_phase)}
-                                    </Badge>
-                                  )}
-                                  {!online && n.diagnostics && n.diagnostics.code !== "ok" && (
-                                    <Badge color={diagColor(n.diagnostics.code)}>
-                                      {diagLabel(n.diagnostics.code)}
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 hidden md:table-cell">
-                          <CoreBadge core={n.core} />
-                          {n.core_version && (
-                            <p className="text-[10px] text-fg-subtle mt-1 font-mono truncate max-w-[120px]" title={n.core_version}>
-                              {n.core_version.split(" ")[0]}
-                            </p>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 hidden lg:table-cell">
-                          <div className="text-xs text-fg-muted">
-                            <p className="font-medium text-fg">{location}</p>
-                            <p className="text-[10px] text-fg-subtle mt-0.5">
-                              {n.ping_ms && n.ping_ms > 0 ? `${n.ping_ms}ms` : "—"}
-                              <span className="mx-1">·</span>
-                              {t("nodes.lastSeen")} {timeAgoShort(n.last_seen)}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <LoadBar value={load} />
-                          <p className="text-[10px] text-fg-subtle mt-1 flex items-center gap-2">
-                            <span className="inline-flex items-center gap-0.5">
-                              <Cpu size={9} /> {n.health.cpu_percent.toFixed(0)}%
-                            </span>
-                            <span className="inline-flex items-center gap-0.5">
-                              <MemoryStick size={9} /> {n.health.mem_percent.toFixed(0)}%
-                            </span>
-                            <span className="inline-flex items-center gap-0.5 hidden xl:inline-flex">
-                              <HardDrive size={9} /> {n.health.disk_percent.toFixed(0)}%
-                            </span>
-                          </p>
-                        </td>
-                        <td className="py-3.5 px-4 hidden sm:table-cell tabular-nums text-fg-muted">
-                          {n.users_count ?? 0}
-                        </td>
-                        <td className="py-3.5 px-4 hidden sm:table-cell tabular-nums text-fg-muted">
-                          <span className="inline-flex items-center gap-1">
-                            <Signal size={12} className="text-fg-subtle" />
-                            {n.health.connections}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <StatusBadge
-                            status={status}
-                            label={statusLabel(status, online)}
-                            pulse={online && status === "active"}
-                          />
-                        </td>
-                        <td className="py-3.5 px-4 text-end">
-                          <div className="relative inline-block" ref={menuNodeId === n.id ? menuRef : undefined}>
-                            <button
-                              type="button"
-                              onClick={() => setMenuNodeId(menuNodeId === n.id ? null : n.id)}
-                              className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2/80 transition"
-                              aria-label={t("common.actions")}
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-                            {menuNodeId === n.id && (
-                              <div className="absolute end-0 top-full mt-1 z-20 min-w-[170px] rounded-lg border border-border/60 bg-surface shadow-lg py-1 text-xs">
-                                <MenuAction onClick={() => { setManaging(n); setMenuNodeId(null); }}>
-                                  {t("nodes.inbounds")}
-                                </MenuAction>
-                                <MenuAction onClick={() => { setLogging(n); setMenuNodeId(null); }}>
-                                  Logs
-                                </MenuAction>
-                                {!online && (
-                                  <MenuAction onClick={() => copyDebug(n)}>
-                                    <Copy size={13} className="inline me-1" />
-                                    Debug
-                                  </MenuAction>
-                                )}
-                                {canManage && (
-                                  <>
-                                    {online ? (
-                                      <MenuAction className="text-warning" onClick={() => doStop(n)}>
-                                        Stop
-                                      </MenuAction>
-                                    ) : (
-                                      <MenuAction
-                                        className="text-success"
-                                        onClick={() => {
-                                          setMenuNodeId(null);
-                                          restart
-                                            .mutateAsync(n.id)
-                                            .then(() => toast.success("Core started"))
-                                            .catch(() => toast.error("Start failed"));
-                                        }}
-                                      >
-                                        Start
-                                      </MenuAction>
-                                    )}
-                                    <MenuAction
-                                      onClick={() => {
-                                        setMenuNodeId(null);
-                                        restart
-                                          .mutateAsync(n.id)
-                                          .then(() => toast.success("Core restarted"))
-                                          .catch(() => toast.error("Restart failed"));
-                                      }}
-                                    >
-                                      Restart
-                                    </MenuAction>
-                                    <MenuAction onClick={() => doUpdateGeo(n)}>Update Geo</MenuAction>
-                                    <MenuAction onClick={() => { setEditing(n); setMenuNodeId(null); }}>
-                                      {t("common.edit")}
-                                    </MenuAction>
-                                    <MenuAction className="text-danger hover:bg-danger/10" onClick={() => remove(n)}>
-                                      {t("common.delete")}
-                                    </MenuAction>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {!isLoading && filteredNodes.length > 0 && (
-            <div className="border-t border-border/40 px-4 py-3 text-sm text-fg-muted">
-              {t("users.showingOf")
-                .replace("{count}", String(filteredNodes.length))
-                .replace("{total}", String(nodes.length))}
-            </div>
-          )}
+      {!isLoading && filteredNodes.length === 0 && (
+        <GlassCard hover={false} className="flex flex-col items-center gap-3 py-16 text-center">
+          <Server size={32} className="text-fg-subtle" />
+          <p className="text-sm text-fg-muted">
+            {nodes.length === 0
+              ? canManage
+                ? t("nodes.none")
+                : "No nodes assigned to your account yet — ask the main admin to allow nodes for you."
+              : t("users.none")}
+          </p>
         </GlassCard>
+      )}
+
+      {!isLoading && filteredNodes.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredNodes.map((n) => {
+            const online = isNodeOnline(n);
+            const status = nodeDisplayStatus(n);
+            const location = n.location || n.region || n.name;
+            const isMenuOpen = menuNodeId === n.id;
+            return (
+              <GlassCard key={n.id} hover className="!p-4 flex flex-col gap-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-xl leading-none flex-shrink-0">{flagEmoji(n.country_code)}</span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-fg text-sm truncate">{n.name}</p>
+                      <p className="text-[10px] text-fg-subtle truncate">{location}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <StatusBadge status={status} label={statusLabel(status, online)} pulse={online && status === "active"} />
+                    <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
+                      <button
+                        type="button"
+                        onClick={() => setMenuNodeId(isMenuOpen ? null : n.id)}
+                        className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2/80 transition"
+                        aria-label={t("common.actions")}
+                      >
+                        <MoreVertical size={15} />
+                      </button>
+                      {isMenuOpen && (
+                        <div className="absolute end-0 top-full mt-1 z-20 min-w-[170px] rounded-lg border border-border/60 bg-surface shadow-lg py-1 text-xs">
+                          <MenuAction onClick={() => { setManaging(n); setMenuNodeId(null); }}>
+                            {t("nodes.inbounds")}
+                          </MenuAction>
+                          <MenuAction onClick={() => { setLogging(n); setMenuNodeId(null); }}>
+                            Logs
+                          </MenuAction>
+                          {!online && (
+                            <MenuAction onClick={() => copyDebug(n)}>
+                              <Copy size={13} className="inline me-1" />
+                              Debug
+                            </MenuAction>
+                          )}
+                          {canManage && (
+                            <>
+                              {online ? (
+                                <MenuAction className="text-warning" onClick={() => doStop(n)}>
+                                  Stop
+                                </MenuAction>
+                              ) : (
+                                <MenuAction
+                                  className="text-success"
+                                  onClick={() => {
+                                    setMenuNodeId(null);
+                                    restart
+                                      .mutateAsync(n.id)
+                                      .then(() => toast.success("Core started"))
+                                      .catch(() => toast.error("Start failed"));
+                                  }}
+                                >
+                                  Start
+                                </MenuAction>
+                              )}
+                              <MenuAction
+                                onClick={() => {
+                                  setMenuNodeId(null);
+                                  restart
+                                    .mutateAsync(n.id)
+                                    .then(() => toast.success("Core restarted"))
+                                    .catch(() => toast.error("Restart failed"));
+                                }}
+                              >
+                                Restart
+                              </MenuAction>
+                              <MenuAction onClick={() => doUpdateGeo(n)}>Update Geo</MenuAction>
+                              <MenuAction onClick={() => { setEditing(n); setMenuNodeId(null); }}>
+                                {t("common.edit")}
+                              </MenuAction>
+                              <MenuAction className="text-danger hover:bg-danger/10" onClick={() => remove(n)}>
+                                {t("common.delete")}
+                              </MenuAction>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {(n.core_version || n.enrollment_phase) && (
+                  <div className="flex flex-wrap items-center gap-1 -mt-2">
+                    {n.enrollment_phase && n.enrollment_phase !== "synced" && (
+                      <Badge color={n.enrollment_phase === "connected" ? "on_hold" : "muted"}>
+                        {phaseLabel(n.enrollment_phase)}
+                      </Badge>
+                    )}
+                    {!online && n.diagnostics && n.diagnostics.code !== "ok" && (
+                      <Badge color={diagColor(n.diagnostics.code)}>
+                        {diagLabel(n.diagnostics.code)}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <MetricBar icon={<Cpu size={10} />} label="CPU" value={n.health.cpu_percent} />
+                  <MetricBar icon={<MemoryStick size={10} />} label="RAM" value={n.health.mem_percent} />
+                  <MetricBar icon={<HardDrive size={10} />} label="Disk" value={n.health.disk_percent} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 pt-3 border-t border-border/50">
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-fg-subtle flex items-center gap-1">
+                      <Signal size={9} /> Latency
+                    </p>
+                    <p className="text-xs font-bold text-fg tabular-nums mt-0.5">
+                      {n.ping_ms && n.ping_ms > 0 ? `${n.ping_ms}ms` : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-fg-subtle flex items-center gap-1">
+                      <Users size={9} /> {t("nodes.users")}
+                    </p>
+                    <p className="text-xs font-bold text-fg tabular-nums mt-0.5">{n.users_count ?? 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-fg-subtle">
+                      {t("nodes.connections")}
+                    </p>
+                    <p className="text-xs font-bold text-fg tabular-nums mt-0.5">{n.health.connections}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-fg-subtle">
+                      {t("nodes.core")}
+                    </p>
+                    <div className="mt-0.5"><CoreBadge core={n.core} /></div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-border/50 text-[10px] text-fg-subtle">
+                  <span className="font-mono truncate" dir="ltr">{n.address}</span>
+                  <span className="flex-shrink-0">
+                    {online ? "· live" : `${t("nodes.lastSeen")} ${timeAgoShort(n.last_seen)}`}
+                  </span>
+                </div>
+              </GlassCard>
+            );
+          })}
+        </div>
+      )}
+
+      {!isLoading && filteredNodes.length > 0 && (
+        <p className="text-xs text-fg-subtle text-center">
+          {t("users.showingOf")
+            .replace("{count}", String(filteredNodes.length))
+            .replace("{total}", String(nodes.length))}
+        </p>
+      )}
     </div>
   );
 }
