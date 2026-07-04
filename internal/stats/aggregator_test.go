@@ -56,6 +56,9 @@ func (f *fakeUsers) InboundsFor(context.Context, uuid.UUID) ([]domain.Inbound, e
 func (f *fakeUsers) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
 	return domain.AdminUserStats{}, nil
 }
+func (f *fakeUsers) PrimaryInboundProtocols(context.Context, []uuid.UUID) (map[uuid.UUID]string, error) {
+	return map[uuid.UUID]string{}, nil
+}
 
 type fakeTraffic struct {
 	mu     sync.Mutex
