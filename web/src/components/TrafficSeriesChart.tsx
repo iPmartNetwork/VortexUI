@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { formatBytes } from "@/lib/utils";
 
 export interface TrafficSeriesPoint {
@@ -19,7 +20,19 @@ function fmtTick(iso: string, spanMs: number): string {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function fmtTooltipTime(iso: string, spanMs: number): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  if (spanMs <= 32 * 3600 * 1000) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
   if (points.length < 2) {
     return <div className="flex h-52 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
   }
@@ -60,14 +73,12 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
   const totals = points.map((p) => p.up + p.down);
   const ups = points.map((p) => p.up);
 
-  // X-axis ticks — evenly spaced; only collapse a label into its neighbour
-  // when they're identical AND adjacent (keeps first/last visible even if
-  // the wall-clock time-of-day repeats across a full 24h span).
   const spanMs = (() => {
     const t0 = new Date(points[0].time).getTime();
     const t1 = new Date(points[n - 1].time).getTime();
     return Number.isFinite(t0) && Number.isFinite(t1) ? Math.abs(t1 - t0) : 0;
   })();
+
   const tickCount = Math.min(6, n);
   const xTicks: { x: number; label: string }[] = [];
   let lastLabel = "";
@@ -85,9 +96,34 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
   const peak = Math.max(...totals);
   const total = totals.reduce((a, b) => a + b, 0);
 
+  function handleMove(e: React.MouseEvent<SVGSVGElement>) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const relX = ((e.clientX - rect.left) / rect.width) * w;
+    const ratio = (relX - padL) / (w - padL - padR);
+    const idx = Math.round(ratio * (n - 1));
+    setHoverIdx(Math.max(0, Math.min(n - 1, idx)));
+  }
+
+  const hp = hoverIdx !== null ? points[hoverIdx] : null;
+  const hx = hoverIdx !== null ? px(hoverIdx) : 0;
+
+  // Keep tooltip box inside chart bounds.
+  const tooltipW = 108;
+  const tooltipX = Math.min(Math.max(hx - tooltipW / 2, padL), w - padR - tooltipW);
+
   return (
     <div className="space-y-3">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Fleet-wide traffic over time">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${w} ${h}`}
+        className="w-full cursor-crosshair select-none"
+        role="img"
+        aria-label="Fleet-wide traffic over time"
+        onMouseMove={handleMove}
+        onMouseLeave={() => setHoverIdx(null)}
+      >
         <defs>
           <linearGradient id="ts-down-g" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#8B7CF6" stopOpacity="0.38" />
@@ -110,14 +146,7 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
 
         {/* Y-axis labels */}
         {yTicks.map((v, i) => (
-          <text
-            key={i}
-            x={padL - 6}
-            y={py(v) + 3}
-            textAnchor="end"
-            className="fill-current opacity-35"
-            style={{ fontSize: 9 }}
-          >
+          <text key={i} x={padL - 6} y={py(v) + 3} textAnchor="end" className="fill-current opacity-35" style={{ fontSize: 9 }}>
             {v === 0 ? "0" : formatBytes(v, false).replace(/\.\d+/, "")}
           </text>
         ))}
@@ -162,6 +191,37 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
             {label}
           </text>
         ))}
+
+        {/* Hover crosshair + tooltip */}
+        {hp && (
+          <g pointerEvents="none">
+            <line
+              x1={hx}
+              y1={padTop}
+              x2={hx}
+              y2={h - padBottom}
+              stroke="currentColor"
+              strokeOpacity="0.25"
+              strokeDasharray="3 3"
+            />
+            <circle cx={hx} cy={py(hp.up + hp.down)} r="3.5" fill="#8B7CF6" stroke="white" strokeWidth="1.5" />
+            <circle cx={hx} cy={py(hp.up)} r="3.5" fill="#2DD4BF" stroke="white" strokeWidth="1.5" />
+
+            <foreignObject x={tooltipX} y={padTop} width={tooltipW} height={62}>
+              <div className="rounded-lg border border-border/70 bg-bg-elevated/95 backdrop-blur-sm px-2.5 py-2 shadow-lg text-[10px] leading-tight">
+                <p className="text-fg-subtle font-semibold mb-1">{fmtTooltipTime(hp.time, spanMs)}</p>
+                <p className="flex items-center justify-between gap-2 text-fg">
+                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full inline-block" style={{ background: "#8B7CF6" }} />DL</span>
+                  <span className="font-bold tabular-nums">{formatBytes(hp.down, false)}</span>
+                </p>
+                <p className="flex items-center justify-between gap-2 text-fg">
+                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full inline-block" style={{ background: "#2DD4BF" }} />UL</span>
+                  <span className="font-bold tabular-nums">{formatBytes(hp.up, false)}</span>
+                </p>
+              </div>
+            </foreignObject>
+          </g>
+        )}
       </svg>
 
       <div className="flex items-center justify-between text-[11px] text-fg-muted">
