@@ -21,15 +21,15 @@ function fmtTick(iso: string, spanMs: number): string {
 
 export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] }) {
   if (points.length < 2) {
-    return <div className="flex h-44 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
+    return <div className="flex h-52 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
   }
 
-  const w = 600;
-  const h = 150;
-  const padL = 34;
-  const padR = 6;
-  const padTop = 14;
-  const padBottom = 22;
+  const w = 620;
+  const h = 190;
+  const padL = 30;
+  const padR = 4;
+  const padTop = 12;
+  const padBottom = 24;
   const innerH = h - padTop - padBottom;
   const max = Math.max(1, ...points.map((p) => p.up + p.down));
   const n = points.length;
@@ -60,7 +60,9 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
   const totals = points.map((p) => p.up + p.down);
   const ups = points.map((p) => p.up);
 
-  // Deduplicated X-axis ticks, evenly spaced.
+  // X-axis ticks — evenly spaced; only collapse a label into its neighbour
+  // when they're identical AND adjacent (keeps first/last visible even if
+  // the wall-clock time-of-day repeats across a full 24h span).
   const spanMs = (() => {
     const t0 = new Date(points[0].time).getTime();
     const t1 = new Date(points[n - 1].time).getTime();
@@ -68,44 +70,53 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
   })();
   const tickCount = Math.min(6, n);
   const xTicks: { x: number; label: string }[] = [];
-  const seen = new Set<string>();
+  let lastLabel = "";
   for (let k = 0; k < tickCount; k++) {
     const i = Math.round((k / (tickCount - 1)) * (n - 1));
     const label = fmtTick(points[i].time, spanMs);
-    if (label && !seen.has(label)) {
-      seen.add(label);
+    const isEdge = k === 0 || k === tickCount - 1;
+    if (label && (isEdge || label !== lastLabel)) {
       xTicks.push({ x: px(i), label });
+      lastLabel = label;
     }
   }
 
   const yTicks = [max, max / 2, 0];
-
   const peak = Math.max(...totals);
   const total = totals.reduce((a, b) => a + b, 0);
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Fleet-wide traffic over time">
         <defs>
           <linearGradient id="ts-down-g" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#7C6EF0" stopOpacity="0.5" />
-            <stop offset="90%" stopColor="#7C6EF0" stopOpacity="0.03" />
+            <stop offset="0%" stopColor="#8B7CF6" stopOpacity="0.38" />
+            <stop offset="55%" stopColor="#8B7CF6" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#8B7CF6" stopOpacity="0.02" />
           </linearGradient>
           <linearGradient id="ts-up-g" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#34D399" stopOpacity="0.55" />
-            <stop offset="90%" stopColor="#34D399" stopOpacity="0.03" />
+            <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.4" />
+            <stop offset="60%" stopColor="#2DD4BF" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0.02" />
           </linearGradient>
+          <filter id="ts-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
 
-        {/* Y-axis labels (outside plot area, left) */}
+        {/* Y-axis labels */}
         {yTicks.map((v, i) => (
           <text
             key={i}
             x={padL - 6}
             y={py(v) + 3}
             textAnchor="end"
-            className="fill-current opacity-30"
-            style={{ fontSize: 8.5 }}
+            className="fill-current opacity-35"
+            style={{ fontSize: 9 }}
           >
             {v === 0 ? "0" : formatBytes(v, false).replace(/\.\d+/, "")}
           </text>
@@ -113,14 +124,30 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
 
         {/* Download area (total) */}
         <path d={area(totals)} fill="url(#ts-down-g)" />
-        <path d={smoothPath(totals)} fill="none" stroke="#7C6EF0" strokeWidth="1.75" strokeOpacity="0.85" strokeLinecap="round" />
+        <path
+          d={smoothPath(totals)}
+          fill="none"
+          stroke="#8B7CF6"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          filter="url(#ts-glow)"
+        />
 
         {/* Upload area */}
         <path d={area(ups)} fill="url(#ts-up-g)" />
-        <path d={smoothPath(ups)} fill="none" stroke="#34D399" strokeWidth="1.75" strokeOpacity="0.9" strokeLinecap="round" />
+        <path
+          d={smoothPath(ups)}
+          fill="none"
+          stroke="#2DD4BF"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeOpacity="0.95"
+        />
 
         {/* Baseline */}
-        <line x1={padL} y1={h - padBottom} x2={w - padR} y2={h - padBottom} stroke="currentColor" strokeOpacity="0.1" />
+        <line x1={padL} y1={h - padBottom} x2={w - padR} y2={h - padBottom} stroke="currentColor" strokeOpacity="0.08" />
 
         {/* X-axis ticks */}
         {xTicks.map(({ x, label }, i) => (
@@ -129,8 +156,8 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
             x={x}
             y={h - 6}
             textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
-            className="fill-current opacity-30"
-            style={{ fontSize: 8.5 }}
+            className="fill-current opacity-35"
+            style={{ fontSize: 9 }}
           >
             {label}
           </text>
@@ -140,11 +167,11 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
       <div className="flex items-center justify-between text-[11px] text-fg-muted">
         <span className="flex items-center gap-4">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#34D399" }} />
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#2DD4BF" }} />
             <span>Upload</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#7C6EF0" }} />
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#8B7CF6" }} />
             <span>Download</span>
           </span>
         </span>
