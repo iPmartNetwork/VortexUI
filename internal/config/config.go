@@ -62,6 +62,15 @@ type Panel struct {
 	ZarinPalMerchantID   string
 	NowPaymentsAPIKey    string
 	NowPaymentsIPNSecret string
+
+	// Automatic node recovery: restart proxy cores and reset hub connections
+	// without manual intervention or external cron jobs.
+	AutoRecoverCore         bool
+	AutoRecoverCoreAfter    time.Duration
+	AutoRecoverCoreCooldown time.Duration
+	AutoRecoverHub          bool
+	AutoRecoverHubAfter     time.Duration
+	AutoRecoverHubCooldown  time.Duration
 }
 
 // Node holds node-agent configuration. The agent is a gRPC *server* (the panel
@@ -136,6 +145,12 @@ func LoadPanel() (*Panel, error) {
 		ZarinPalMerchantID:   os.Getenv("VORTEX_ZARINPAL_MERCHANT_ID"),
 		NowPaymentsAPIKey:    os.Getenv("VORTEX_NOWPAYMENTS_API_KEY"),
 		NowPaymentsIPNSecret: os.Getenv("VORTEX_NOWPAYMENTS_IPN_SECRET"),
+		AutoRecoverCore:         envBool("VORTEX_AUTO_RECOVER_CORE", true),
+		AutoRecoverCoreAfter:    envDur("VORTEX_AUTO_RECOVER_CORE_AFTER", 2*time.Minute),
+		AutoRecoverCoreCooldown: envDur("VORTEX_AUTO_RECOVER_COOLDOWN", 5*time.Minute),
+		AutoRecoverHub:          envBool("VORTEX_AUTO_RECOVER_HUB", true),
+		AutoRecoverHubAfter:     envDur("VORTEX_AUTO_RECOVER_HUB_AFTER", 5*time.Minute),
+		AutoRecoverHubCooldown:  envDur("VORTEX_AUTO_RECOVER_HUB_COOLDOWN", 10*time.Minute),
 	}
 	if c.CoreBin == "" {
 		c.CoreBin = c.Core // resolve from PATH by core name

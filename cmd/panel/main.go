@@ -124,6 +124,12 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Nodes:  nodes,
 		Ingest: agg.Ingest,
 		Logger: log,
+		AutoRecoverCore:         cfg.AutoRecoverCore,
+		AutoRecoverCoreAfter:    cfg.AutoRecoverCoreAfter,
+		AutoRecoverCoreCooldown: cfg.AutoRecoverCoreCooldown,
+		AutoRecoverHub:          cfg.AutoRecoverHub,
+		AutoRecoverHubAfter:     cfg.AutoRecoverHubAfter,
+		AutoRecoverHubCooldown:  cfg.AutoRecoverHubCooldown,
 	})
 	defer h.Close()
 	if list, err := nodes.List(ctx); err != nil {
@@ -134,6 +140,15 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 				log.Error("register node failed", "node", n.Name, "err", err)
 			}
 		}
+	}
+	h.StartWatchdog(ctx)
+	if cfg.AutoRecoverCore || cfg.AutoRecoverHub {
+		log.Info("node auto-recovery enabled",
+			"core", cfg.AutoRecoverCore,
+			"core_after", cfg.AutoRecoverCoreAfter,
+			"hub", cfg.AutoRecoverHub,
+			"hub_after", cfg.AutoRecoverHubAfter,
+		)
 	}
 
 	// Redis powers login rate limiting. Optional: if unreachable the panel still
@@ -165,6 +180,15 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 				"network_ok":    diag.NetworkReachable,
 				"ca_match":      diag.CAMatch,
 			},
+		})
+	})
+	h.SetOnAutoRecover(func(_ context.Context, node *domain.Node, action string) {
+		bus.Publish(events.Event{
+			Type:     events.NodeAutoRecover,
+			NodeID:   node.ID.String(),
+			NodeName: node.Name,
+			Message:  action,
+			Data:     map[string]any{"action": action},
 		})
 	})
 	if cfg.WebhookURL != "" {

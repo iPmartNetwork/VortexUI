@@ -49,6 +49,10 @@ type FailoverFunc func(ctx context.Context, failed *domain.Node, target *domain.
 // period (default 5 minutes), carrying the latest diagnostics snapshot.
 type DisconnectAlertFunc func(ctx context.Context, node *domain.Node, diag domain.NodeDiagnostics, since time.Duration)
 
+// AutoRecoverFunc fires when the hub automatically restarts a core or resets
+// connections to recover from a prolonged unhealthy state.
+type AutoRecoverFunc func(ctx context.Context, node *domain.Node, action string)
+
 // ReadyFunc is invoked when a node's agent becomes reachable (initial connect or
 // after a reconnect). The higher layer uses it to push the node's full desired
 // config, so a restarted node is repopulated automatically.
@@ -62,7 +66,17 @@ type Options struct {
 	OnFailover     FailoverFunc
 	OnConnect      ReadyFunc // called when a node (re)connects; usually a resync
 	OnDisconnectAlert DisconnectAlertFunc
+	OnAutoRecover  AutoRecoverFunc
 	HealthInterval time.Duration
+
+	// Automatic recovery when nodes stay unhealthy without manual intervention.
+	AutoRecoverCore         bool
+	AutoRecoverCoreAfter    time.Duration
+	AutoRecoverCoreCooldown time.Duration
+	AutoRecoverHub          bool
+	AutoRecoverHubAfter     time.Duration
+	AutoRecoverHubCooldown  time.Duration
+
 	Logger         *slog.Logger
 }
 
@@ -76,12 +90,27 @@ type Hub struct {
 	failoverFn FailoverFunc // guarded by mu; settable post-construction
 	onConnect  ReadyFunc    // guarded by mu; settable post-construction
 	onDisconnectAlert DisconnectAlertFunc
+	onAutoRecover     AutoRecoverFunc
+
+	lastHubRecover time.Time
 }
 
 // New builds a Hub, applying defaults.
 func New(opts Options) *Hub {
 	if opts.HealthInterval == 0 {
 		opts.HealthInterval = 10 * time.Second
+	}
+	if opts.AutoRecoverCoreAfter == 0 {
+		opts.AutoRecoverCoreAfter = 2 * time.Minute
+	}
+	if opts.AutoRecoverCoreCooldown == 0 {
+		opts.AutoRecoverCoreCooldown = 5 * time.Minute
+	}
+	if opts.AutoRecoverHubAfter == 0 {
+		opts.AutoRecoverHubAfter = 5 * time.Minute
+	}
+	if opts.AutoRecoverHubCooldown == 0 {
+		opts.AutoRecoverHubCooldown = 10 * time.Minute
 	}
 	if opts.Ingest == nil {
 		opts.Ingest = func(domain.TrafficDelta) {}
@@ -98,6 +127,7 @@ func New(opts Options) *Hub {
 	return &Hub{
 		opts: opts, log: opts.Logger, conns: make(map[uuid.UUID]*managedNode),
 		failoverFn: opts.OnFailover, onConnect: opts.OnConnect,
+		onAutoRecover: opts.OnAutoRecover,
 	}
 }
 
@@ -150,6 +180,31 @@ func (h *Hub) disconnectAlert() DisconnectAlertFunc {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.onDisconnectAlert
+}
+
+// SetOnAutoRecover wires automatic recovery notifications.
+func (h *Hub) SetOnAutoRecover(fn AutoRecoverFunc) {
+	if fn == nil {
+		return
+	}
+	h.mu.Lock()
+	h.onAutoRecover = fn
+	h.mu.Unlock()
+}
+
+func (h *Hub) autoRecoverHook() AutoRecoverFunc {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.onAutoRecover
+}
+
+// StartWatchdog runs background checks for fleet-wide recovery (e.g. resetting
+// all hub connections when every node stays unreachable).
+func (h *Hub) StartWatchdog(ctx context.Context) {
+	if !h.opts.AutoRecoverHub {
+		return
+	}
+	go h.runHubWatchdog(ctx)
 }
 
 // Register brings a node under management: it dials, then starts the traffic and

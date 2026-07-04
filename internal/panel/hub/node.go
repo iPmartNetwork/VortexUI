@@ -25,6 +25,8 @@ type managedNode struct {
 	diag      domain.NodeDiagnostics
 	disconnectedAt      time.Time
 	disconnectAlertSent bool
+	coreDownSince       time.Time
+	lastAutoRecover     time.Time
 
 	cancel context.CancelFunc
 }
@@ -167,7 +169,16 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 	m.lastNetOK = true
 	m.disconnectedAt = time.Time{}
 	m.disconnectAlertSent = false
+	if nowHealthy {
+		m.coreDownSince = time.Time{}
+	} else if m.coreDownSince.IsZero() {
+		m.coreDownSince = time.Now()
+	}
 	m.mu.Unlock()
+
+	if !nowHealthy {
+		m.maybeAutoRecoverCore(ctx)
+	}
 
 	if m.hub.opts.Nodes != nil {
 		// Bound the DB write too: a stalled connection pool must not freeze the
@@ -202,6 +213,9 @@ func (m *managedNode) markUnhealthy(ctx context.Context) {
 	m.status = domain.NodeDisconnected
 	m.health.CoreRunning = false
 	m.reachable = false // next successful poll will re-trigger a resync
+	if m.disconnectedAt.IsZero() {
+		m.disconnectedAt = time.Now()
+	}
 	if m.diag.Code == "" {
 		m.diag = deriveDiag(m.status, m.health, m.lastErr, m.lastNetOK)
 	}
