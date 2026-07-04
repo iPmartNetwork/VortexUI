@@ -7,6 +7,9 @@ export interface TrafficSeriesPoint {
   down: number;
 }
 
+const DOWN_COLOR = "#6366F1"; // indigo-500
+const UP_COLOR = "#10B981"; // emerald-500
+
 /** Format a bucket timestamp based on the total span of the series. */
 function fmtTick(iso: string, spanMs: number): string {
   const d = new Date(iso);
@@ -34,15 +37,15 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   if (points.length < 2) {
-    return <div className="flex h-36 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
+    return <div className="flex h-28 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
   }
 
   const w = 620;
-  const h = 148;
-  const padL = 28;
+  const h = 116;
+  const padL = 26;
   const padR = 4;
-  const padTop = 10;
-  const padBottom = 20;
+  const padTop = 8;
+  const padBottom = 16;
   const innerH = h - padTop - padBottom;
   const max = Math.max(1, ...points.map((p) => p.up + p.down));
   const n = points.length;
@@ -79,7 +82,7 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
     return Number.isFinite(t0) && Number.isFinite(t1) ? Math.abs(t1 - t0) : 0;
   })();
 
-  const tickCount = Math.min(6, n);
+  const tickCount = Math.min(5, n);
   const xTicks: { x: number; label: string }[] = [];
   let lastLabel = "";
   for (let k = 0; k < tickCount; k++) {
@@ -92,7 +95,6 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
     }
   }
 
-  const yTicks = [max, max / 2, 0];
   const peak = Math.max(...totals);
   const total = totals.reduce((a, b) => a + b, 0);
 
@@ -109,12 +111,11 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
   const hp = hoverIdx !== null ? points[hoverIdx] : null;
   const hx = hoverIdx !== null ? px(hoverIdx) : 0;
 
-  // Keep tooltip box inside chart bounds.
-  const tooltipW = 100;
+  const tooltipW = 96;
   const tooltipX = Math.min(Math.max(hx - tooltipW / 2, padL), w - padR - tooltipW);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <svg
         ref={svgRef}
         viewBox={`0 0 ${w} ${h}`}
@@ -126,78 +127,37 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
       >
         <defs>
           <linearGradient id="ts-down-g" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8B7CF6" stopOpacity="0.4" />
-            <stop offset="55%" stopColor="#8B7CF6" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="#8B7CF6" stopOpacity="0.02" />
+            <stop offset="0%" stopColor={DOWN_COLOR} stopOpacity="0.3" />
+            <stop offset="70%" stopColor={DOWN_COLOR} stopOpacity="0.05" />
+            <stop offset="100%" stopColor={DOWN_COLOR} stopOpacity="0" />
           </linearGradient>
           <linearGradient id="ts-up-g" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.42" />
-            <stop offset="60%" stopColor="#2DD4BF" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0.02" />
+            <stop offset="0%" stopColor={UP_COLOR} stopOpacity="0.3" />
+            <stop offset="70%" stopColor={UP_COLOR} stopOpacity="0.05" />
+            <stop offset="100%" stopColor={UP_COLOR} stopOpacity="0" />
           </linearGradient>
-          <filter id="ts-glow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="1.4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
-        {/* Subtle horizontal grid */}
-        {yTicks.map((v, i) => (
-          <line
-            key={`grid-${i}`}
-            x1={padL}
-            y1={py(v)}
-            x2={w - padR}
-            y2={py(v)}
-            stroke="currentColor"
-            strokeOpacity={v === 0 ? 0.1 : 0.045}
-            strokeDasharray={v === 0 ? undefined : "2 4"}
-          />
-        ))}
-
-        {/* Y-axis labels */}
-        {yTicks.map((v, i) => (
-          <text key={i} x={padL - 6} y={py(v) + 3} textAnchor="end" className="fill-current opacity-35" style={{ fontSize: 8.5 }}>
-            {v === 0 ? "0" : formatBytes(v, false).replace(/\.\d+/, "")}
-          </text>
-        ))}
+        {/* Baseline only — clean, minimal, no grid clutter */}
+        <line x1={padL} y1={h - padBottom} x2={w - padR} y2={h - padBottom} stroke="currentColor" strokeOpacity="0.08" />
 
         {/* Download area (total) */}
         <path d={area(totals)} fill="url(#ts-down-g)" />
-        <path
-          d={smoothPath(totals)}
-          fill="none"
-          stroke="#8B7CF6"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          filter="url(#ts-glow)"
-        />
+        <path d={smoothPath(totals)} fill="none" stroke={DOWN_COLOR} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
 
         {/* Upload area */}
         <path d={area(ups)} fill="url(#ts-up-g)" />
-        <path
-          d={smoothPath(ups)}
-          fill="none"
-          stroke="#2DD4BF"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeOpacity="0.95"
-        />
+        <path d={smoothPath(ups)} fill="none" stroke={UP_COLOR} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.9" />
 
         {/* X-axis ticks */}
         {xTicks.map(({ x, label }, i) => (
           <text
             key={i}
             x={x}
-            y={h - 5}
+            y={h - 3}
             textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
-            className="fill-current opacity-35"
-            style={{ fontSize: 8.5 }}
+            className="fill-current opacity-30"
+            style={{ fontSize: 8 }}
           >
             {label}
           </text>
@@ -206,27 +166,19 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
         {/* Hover crosshair + tooltip */}
         {hp && (
           <g pointerEvents="none">
-            <line
-              x1={hx}
-              y1={padTop}
-              x2={hx}
-              y2={h - padBottom}
-              stroke="currentColor"
-              strokeOpacity="0.25"
-              strokeDasharray="3 3"
-            />
-            <circle cx={hx} cy={py(hp.up + hp.down)} r="3" fill="#8B7CF6" stroke="white" strokeWidth="1.25" />
-            <circle cx={hx} cy={py(hp.up)} r="3" fill="#2DD4BF" stroke="white" strokeWidth="1.25" />
+            <line x1={hx} y1={padTop} x2={hx} y2={h - padBottom} stroke="currentColor" strokeOpacity="0.22" strokeDasharray="2 3" />
+            <circle cx={hx} cy={py(hp.up + hp.down)} r="2.75" fill={DOWN_COLOR} stroke="white" strokeWidth="1.1" />
+            <circle cx={hx} cy={py(hp.up)} r="2.75" fill={UP_COLOR} stroke="white" strokeWidth="1.1" />
 
-            <foreignObject x={tooltipX} y={padTop} width={tooltipW} height={56}>
-              <div className="rounded-lg border border-border/70 bg-bg-elevated/95 backdrop-blur-sm px-2 py-1.5 shadow-lg text-[9.5px] leading-tight">
+            <foreignObject x={tooltipX} y={2} width={tooltipW} height={50}>
+              <div className="rounded-lg border border-border/70 bg-bg-elevated/95 backdrop-blur-sm px-2 py-1.5 shadow-lg text-[9px] leading-tight">
                 <p className="text-fg-subtle font-semibold mb-1">{fmtTooltipTime(hp.time, spanMs)}</p>
                 <p className="flex items-center justify-between gap-2 text-fg">
-                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full inline-block" style={{ background: "#8B7CF6" }} />DL</span>
+                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full inline-block" style={{ background: DOWN_COLOR }} />DL</span>
                   <span className="font-bold tabular-nums">{formatBytes(hp.down, false)}</span>
                 </p>
                 <p className="flex items-center justify-between gap-2 text-fg">
-                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full inline-block" style={{ background: "#2DD4BF" }} />UL</span>
+                  <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full inline-block" style={{ background: UP_COLOR }} />UL</span>
                   <span className="font-bold tabular-nums">{formatBytes(hp.up, false)}</span>
                 </p>
               </div>
@@ -238,11 +190,11 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
       <div className="flex items-center justify-between text-[10px] text-fg-muted">
         <span className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#2DD4BF" }} />
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: UP_COLOR }} />
             <span>Upload</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#8B7CF6" }} />
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: DOWN_COLOR }} />
             <span>Download</span>
           </span>
         </span>
