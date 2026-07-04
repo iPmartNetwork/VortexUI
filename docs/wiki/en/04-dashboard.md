@@ -3,6 +3,11 @@
 !!! info "Real-Time"
     All dashboard data updates via Server-Sent Events (SSE) — no manual refresh needed.
 
+!!! tip "Command Tower UI (v1.2.9)"
+    The **Overview** page includes live Command Tower widgets — traffic range tabs,
+    top users with protocol badges, and node geo/ping. See
+    [Command Tower (v1.2.9)](17-v129-panel-redesign.md).
+
 !!! tip "Veltrix UI (v1.2.8)"
     The **Overview** page uses the new Veltrix design — live stat cards, node fleet
     health, and top traffic users. See [Veltrix UI (v1.2.8)](16-v128-ui-refresh.md)

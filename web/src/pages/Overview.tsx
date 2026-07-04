@@ -1,12 +1,13 @@
+import { useState } from "react";
 import {
   Users, Wifi, Zap, Clock, ChevronRight, Server, ArrowUpRight,
   Power, RotateCcw, Tag, Shield, Radio, Gauge, TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useOverview, useSystem, useTrafficSeries, useRestartCore, useStopCore } from "@/api/policy-hooks";
+import { useOverview, useSystem, useTrafficSeries, useRestartCore, useStopCore, type TrafficRange } from "@/api/policy-hooks";
 import { useAccountQuota } from "@/api/quota-hooks";
-import { useNodes, useUsers, useVersion } from "@/api/hooks";
+import { useNodes, useVersion } from "@/api/hooks";
 import { useAuth } from "@/auth/auth";
 import { Card } from "@/components/ui";
 import { TrafficSeriesChart } from "@/components/TrafficSeriesChart";
@@ -14,7 +15,6 @@ import { GlassCard, StatsCard, StatusBadge, ProtocolDonutChart, formatDailyBandw
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 import { cn, formatBytes } from "@/lib/utils";
-import type { Overview as OverviewData } from "@/api/types";
 
 
 /* ═══════ Status colors ═══════ */
@@ -32,13 +32,6 @@ function daysUntil(iso: string | null): string {
   const d = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
   if (d < 0) return "expired";
   return `${d}d`;
-}
-
-function nodeFleetStatus(item: OverviewData["nodes"]["items"][number]): "active" | "warning" | "inactive" {
-  if (!item.online || !item.health?.core_running) return "inactive";
-  const load = Math.max(item.health.cpu_percent ?? 0, item.health.mem_percent ?? 0);
-  if (load > 75) return "warning";
-  return "active";
 }
 
 /* ═══════ Core Engine Card ═══════ */
@@ -79,9 +72,10 @@ export function Overview() {
   const { data, dataUpdatedAt, isLoading: overviewLoading } = useOverview();
   const sys = useSystem();
   const nodesQ = useNodes();
-  const recentUsersQ = useUsers({ limit: 20, status: "active" });
   const panelVersion = useVersion().data;
   const { t } = useI18n();
+  const [trafficRange, setTrafficRange] = useState<TrafficRange>("24h");
+  const trafficSeries = useTrafficSeries(trafficRange);
 
   const u = data?.users;
   const onlineCount = data?.nodes.online ?? 0;
@@ -89,7 +83,6 @@ export function Overview() {
   const byStatus = u?.by_status ?? {};
   const totalUsers = u?.total ?? 0;
   const totalUsed = u?.total_used ?? 0;
-  const trafficSeries = useTrafficSeries();
 
   const s = sys.data;
   const fleetItems = data?.nodes.items ?? [];
@@ -109,16 +102,10 @@ export function Overview() {
   const restartCore = useRestartCore();
   const stopCore = useStopCore();
 
-  const topUsers = [...(recentUsersQ.data?.users ?? [])]
-    .sort((a, b) => b.used_traffic - a.used_traffic)
-    .slice(0, 5);
-
-  const coreLabel = [xrayVer !== "—" ? `Xray ${xrayVer}` : null, singboxVer !== "—" ? `sing-box ${singboxVer}` : null]
-    .filter(Boolean)
-    .join(" · ");
-
   const widgets = data?.widgets;
   const trends = widgets?.trends;
+  const topUsers = widgets?.top_users ?? [];
+  const nodeFleet = widgets?.node_fleet ?? [];
   const protocolSlices = (widgets?.protocols ?? []).map((p, i) => ({
     label: p.label,
     value: p.count,
@@ -126,6 +113,10 @@ export function Overview() {
   }));
   const allHealthy = totalNodes > 0 && onlineCount === totalNodes;
   const standbyNodes = totalNodes - onlineCount;
+
+  const coreLabel = [xrayVer !== "—" ? `Xray ${xrayVer}` : null, singboxVer !== "—" ? `sing-box ${singboxVer}` : null]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="space-y-6 animate-page-enter">
@@ -272,12 +263,30 @@ export function Overview() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <GlassCard className="xl:col-span-2 space-y-4">
-          <div className="flex items-center justify-between border-b border-border/60 pb-3">
-            <h3 className="text-base font-bold text-fg">{t("overview.liveTrafficStream")}</h3>
-            <span className="text-[10px] text-fg-subtle flex items-center gap-1">
-              <Clock size={11} />
-              {dataUpdatedAt > 0 ? new Date(dataUpdatedAt).toLocaleTimeString() : t("overview.live")}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+            <div>
+              <h3 className="text-base font-bold text-fg">{t("overview.liveTrafficStream")}</h3>
+              <p className="text-[10px] text-fg-subtle mt-0.5">{t("overview.trafficDeltaHint")}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {(["24h", "7d", "30d"] as TrafficRange[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setTrafficRange(r)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase transition-colors",
+                    trafficRange === r ? "bg-primary/15 text-primary" : "text-fg-muted hover:text-fg",
+                  )}
+                >
+                  {r}
+                </button>
+              ))}
+              <span className="text-[10px] text-fg-subtle flex items-center gap-1 ms-1">
+                <Clock size={11} />
+                {dataUpdatedAt > 0 ? new Date(dataUpdatedAt).toLocaleTimeString() : t("overview.live")}
+              </span>
+            </div>
           </div>
           {trafficSeries.isLoading ? (
             <div className="h-48 animate-pulse rounded-lg bg-surface-2/50" />
@@ -314,13 +323,13 @@ export function Overview() {
           </div>
           {overviewLoading ? (
             <div className="h-32 animate-pulse rounded-lg bg-surface-2/50" />
-          ) : fleetItems.length === 0 ? (
+          ) : nodeFleet.length === 0 ? (
             <p className="text-sm text-fg-muted py-6 text-center">{t("overview.noNodesEnrolled")}</p>
           ) : (
             <div className="space-y-3">
-              {fleetItems.map((node) => {
-                const status = nodeFleetStatus(node);
-                const load = Math.max(node.health?.cpu_percent ?? 0, node.health?.mem_percent ?? 0);
+              {nodeFleet.map((node) => {
+                const status = node.status;
+                const load = Math.max(node.cpu_percent ?? 0, node.mem_percent ?? 0);
                 return (
                   <div
                     key={node.id}
@@ -328,9 +337,13 @@ export function Overview() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-fg truncate">{node.name}</p>
-                        <p className="text-[10px] text-fg-subtle">
-                          {node.core} · {node.health?.connections ?? 0} conn
+                        <p className="text-xs font-semibold text-fg truncate">
+                          {node.name} ({node.core === "singbox" ? "sing-box" : "Xray"})
+                        </p>
+                        <p className="text-[10px] text-fg-subtle truncate">
+                          {node.location}
+                          {node.ping_ms > 0 ? ` · Ping: ${node.ping_ms}ms` : ""}
+                          {node.users_count > 0 ? ` · ${node.users_count} ${t("overview.usersShort")}` : ""}
                         </p>
                       </div>
                       <StatusBadge status={status} label={status} pulse={status === "active"} />
@@ -379,7 +392,7 @@ export function Overview() {
               {t("overview.allUsers")} <ArrowUpRight size={13} />
             </Link>
           </div>
-          {recentUsersQ.isLoading ? (
+          {overviewLoading ? (
             <div className="h-32 animate-pulse rounded-lg bg-surface-2/50" />
           ) : topUsers.length === 0 ? (
             <p className="text-sm text-fg-muted py-6 text-center">{t("overview.noUsersYet")}</p>
@@ -399,8 +412,8 @@ export function Overview() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-fg truncate">{user.username}</p>
-                        <p className="text-[10px] text-fg-muted">
-                          {t("overview.expiresShort")}: {daysUntil(user.expire_at)}
+                        <p className="text-[10px] text-fg-muted truncate">
+                          {user.protocol_label || "—"} · {t("overview.expiresShort")}: {daysUntil(user.expire_at ?? null)}
                         </p>
                       </div>
                     </div>

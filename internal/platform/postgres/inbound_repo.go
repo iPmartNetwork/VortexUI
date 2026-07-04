@@ -84,6 +84,21 @@ func (r *InboundRepo) ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*doma
 	return out, nil
 }
 
+func (r *InboundRepo) ListFleet(ctx context.Context) ([]domain.InboundListItem, error) {
+	rows, err := r.q.ListInboundsFleet(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.InboundListItem, len(rows))
+	for i, row := range rows {
+		out[i] = domain.InboundListItem{
+			Inbound:  inboundToDomain(row.Inbound),
+			NodeName: row.NodeName,
+		}
+	}
+	return out, nil
+}
+
 func inboundToDomain(in db.Inbound) domain.Inbound {
 	return domain.Inbound{
 		ID:               in.ID,

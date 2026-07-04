@@ -167,6 +167,37 @@ components:
         traffic_quota: {type: integer, format: int64}
         last_login: {type: string, format: date-time, nullable: true}
         created_at: {type: string, format: date-time}
+    AdminQuotaUsage:
+      type: object
+      properties:
+        admin_id: {type: string, format: uuid}
+        username: {type: string}
+        user_quota: {type: integer}
+        user_count: {type: integer}
+        users_remaining: {type: integer, nullable: true}
+        traffic_quota: {type: integer, format: int64}
+        traffic_quota_mode: {type: string, enum: [allocated, consumed]}
+        traffic_used: {type: integer, format: int64}
+        traffic_allocated: {type: integer, format: int64}
+        traffic_remaining: {type: integer, format: int64, nullable: true}
+        wallet_traffic_bytes: {type: integer, format: int64}
+        wallet_user_credits: {type: integer}
+    AdminWallet:
+      type: object
+      properties:
+        admin_id: {type: string, format: uuid}
+        traffic_bytes: {type: integer, format: int64}
+        user_credits: {type: integer}
+    WalletLedgerEntry:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        admin_id: {type: string, format: uuid}
+        delta_traffic: {type: integer, format: int64}
+        delta_users: {type: integer}
+        reason: {type: string}
+        actor_admin_id: {type: string, format: uuid}
+        created_at: {type: string, format: date-time}
     Role:
       type: object
       properties:
@@ -897,6 +928,69 @@ paths:
         "204": {description: deleted}
         "400": {description: cannot delete yourself}
         "409": {description: cannot delete the last sudo admin}
+  /api/admins/usage:
+    get:
+      tags: [Admins]
+      summary: List quota usage for all resellers (sudo)
+      responses:
+        "200":
+          description: usage rows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usage:
+                    type: array
+                    items: {$ref: '#/components/schemas/AdminQuotaUsage'}
+  /api/admins/{id}/quota:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [Admins]
+      summary: Get quota usage for one admin (sudo or self)
+      responses:
+        "200":
+          description: usage
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usage: {$ref: '#/components/schemas/AdminQuotaUsage'}
+        "403": {description: forbidden}
+  /api/admins/{id}/wallet:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [Admins]
+      summary: Get prepaid wallet and ledger for one admin (sudo or self)
+      responses:
+        "200":
+          description: wallet view
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  wallet: {$ref: '#/components/schemas/AdminWallet'}
+                  ledger:
+                    type: array
+                    items: {$ref: '#/components/schemas/WalletLedgerEntry'}
+        "403": {description: forbidden}
+    post:
+      tags: [Admins]
+      summary: Top up an admin wallet (perm admin:manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traffic_bytes: {type: integer, format: int64}
+                user_credits: {type: integer}
+                reason: {type: string}
+      responses:
+        "200": {description: updated wallet}
 
   /api/roles:
     get:

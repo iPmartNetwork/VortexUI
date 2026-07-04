@@ -560,6 +560,46 @@ func (h *Handlers) ListResellerQuotaUsage(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"usage": usage})
 }
 
+// GetAdminQuotaUsage returns quota usage for one admin (sudo or self).
+func (h *Handlers) GetAdminQuotaUsage(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if !claims.Sudo && claims.AdminID != id {
+		return echo.NewHTTPError(http.StatusForbidden, "forbidden")
+	}
+	usage, err := h.Admins.QuotaUsage(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "quota failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"usage": usage})
+}
+
+// GetAdminWallet returns prepaid wallet balance and ledger for one admin (sudo or self).
+func (h *Handlers) GetAdminWallet(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if !claims.Sudo && claims.AdminID != id {
+		return echo.NewHTTPError(http.StatusForbidden, "forbidden")
+	}
+	wallet, ledger, err := h.Admins.WalletView(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "wallet failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"wallet": wallet, "ledger": ledger})
+}
+
 // ChangePassword updates the calling admin's own password.
 func (h *Handlers) ChangePassword(c echo.Context) error {
 	claims := claimsFrom(c)

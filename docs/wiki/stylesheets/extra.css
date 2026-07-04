@@ -1,49 +1,61 @@
-/* VortexUI docs branding */
+/* VortexUI docs — Veltrix / Command Tower branding */
 :root {
-  --vortex-primary: #1e3a5f;
-  --vortex-accent: #3b82f6;
+  --vortex-primary: #0e7490;
+  --vortex-accent: #06b6d4;
+  --vortex-glow: rgba(6, 182, 212, 0.15);
 }
 
 [data-md-color-scheme="default"] {
-  --md-primary-fg-color: #1e3a5f;
-  --md-primary-fg-color--light: #2d4a6f;
-  --md-primary-fg-color--dark: #152a45;
-  --md-accent-fg-color: #3b82f6;
+  --md-primary-fg-color: #0e7490;
+  --md-primary-fg-color--light: #0891b2;
+  --md-primary-fg-color--dark: #155e75;
+  --md-accent-fg-color: #06b6d4;
 }
 
 [data-md-color-scheme="slate"] {
-  --md-primary-fg-color: #1a2f4a;
-  --md-primary-fg-color--light: #243b5c;
-  --md-primary-fg-color--dark: #0f1a2e;
-  --md-accent-fg-color: #60a5fa;
+  --md-primary-fg-color: #164e63;
+  --md-primary-fg-color--light: #0e7490;
+  --md-primary-fg-color--dark: #083344;
+  --md-accent-fg-color: #22d3ee;
+}
+
+.md-header {
+  box-shadow: 0 1px 0 var(--vortex-glow);
 }
 
 .md-header__title {
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+}
+
+.md-typeset h1 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .md-typeset .grid.cards > ul > li {
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 8px 24px var(--vortex-glow);
+  transform: translateY(-1px);
 }
 
 .md-typeset img {
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
 }
 
 .md-typeset table:not([class]) {
   font-size: 0.85rem;
 }
 
-.md-typeset .grid.cards > ul > li {
-  border: 1px solid var(--md-default-fg-color--lightest);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.md-typeset .grid.cards > ul > li:hover {
-  border-color: var(--md-accent-fg-color);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+.md-typeset .admonition {
+  border-radius: 0.5rem;
 }
 
 [dir="rtl"] .md-typeset blockquote {

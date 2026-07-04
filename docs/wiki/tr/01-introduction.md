@@ -187,7 +187,7 @@ erDiagram
 
 ## Diğer Panellerle Karşılaştırma
 
-| Özellik | VortexUI 1.2.8 | 3x-ui | Marzban | Hiddify |
+| Özellik | VortexUI 1.2.9 | 3x-ui | Marzban | Hiddify |
 |---------|:--:|:--:|:--:|:--:|
 | Çift çekirdek (Xray + sing-box) | ✅ | ❌ | ❌ | ✅ |
 | Kullanıcı-merkezli model | ✅ | ❌ | ✅ | ✅ |

@@ -1,5 +1,11 @@
 # Settings & Backup
 
+!!! tip "Command Tower UI (v1.2.9)"
+    **Settings** uses a left sidebar with tabs: General, Security, Notifications,
+    Appearance, API keys, Backup, and **Admins** (sudo). Reseller management includes
+    sub-tabs and per-reseller profile pages. See
+    [Command Tower (v1.2.9)](17-v129-panel-redesign.md).
+
 ---
 
 ## Panel Settings

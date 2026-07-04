@@ -94,6 +94,12 @@ type Inbound struct {
 	Enabled bool `json:"enabled"`
 }
 
+// InboundListItem is an inbound row with its parent node name for fleet views.
+type InboundListItem struct {
+	Inbound
+	NodeName string `json:"node_name"`
+}
+
 // UserProxy binds a User to an Inbound. This many-to-many join is what makes the
 // model user-centric instead of inbound-centric.
 type UserProxy struct {

@@ -68,6 +68,19 @@ func (r *BalancerRepo) ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*dom
 	return out, nil
 }
 
+func (r *BalancerRepo) ListFleet(ctx context.Context) ([]domain.BalancerListItem, error) {
+	rows, err := r.q.ListBalancersFleet(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.BalancerListItem, len(rows))
+	for i, row := range rows {
+		b := balancerToDomain(row.Balancer)
+		out[i] = domain.BalancerListItem{Balancer: b, NodeName: row.NodeName}
+	}
+	return out, nil
+}
+
 func balancerToDomain(b db.Balancer) domain.Balancer {
 	return domain.Balancer{
 		ID:            b.ID,

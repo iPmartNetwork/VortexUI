@@ -7,20 +7,30 @@ interface Props {
   pageSize: number;
   onPageChange: (p: number) => void;
   onPageSizeChange?: (s: number) => void;
+  summaryLabel?: string;
+  alwaysShow?: boolean;
 }
 
-export function Pagination({ page, total, pageSize, onPageChange, onPageSizeChange }: Props) {
+export function Pagination({
+  page,
+  total,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  summaryLabel,
+  alwaysShow = false,
+}: Props) {
   const maxPage = Math.max(0, Math.ceil(total / pageSize) - 1);
-  if (total <= pageSize) return null;
+  if (total === 0) return null;
+  if (!alwaysShow && total <= pageSize) return null;
 
   const pages = buildPages(page, maxPage);
-  const from = page * pageSize + 1;
-  const to = Math.min((page + 1) * pageSize, total);
+  const showing = Math.min((page + 1) * pageSize, total);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-fg-muted">
       <div className="flex items-center gap-2">
-        <span>{from}–{to} of {total}</span>
+        <span>{summaryLabel ?? `${page * pageSize + 1}–${showing} of ${total}`}</span>
         {onPageSizeChange && (
           <select
             value={pageSize}

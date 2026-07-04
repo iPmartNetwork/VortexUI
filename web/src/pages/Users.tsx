@@ -1,8 +1,7 @@
-import { useState, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
-  Users as UsersIcon,
+  User as UserIcon,
   Search,
   Plus,
   Clock,
@@ -12,14 +11,13 @@ import {
   Trash2,
   Layers,
   Download,
+  MoreVertical,
 } from "lucide-react";
-import { useBulkDeleteUsers, useDeleteUser, useUsers } from "@/api/hooks";
-import { useOverview } from "@/api/policy-hooks";
+import { useDeleteUser, useUsers } from "@/api/hooks";
 import type { User, UserStatus } from "@/api/types";
-import { Button, Select } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { Pagination } from "@/components/Pagination";
-import { SortHeader, cycleSort, type SortDir } from "@/components/SortHeader";
-import { GlassCard, StatsCard, StatusBadge } from "@/components/veltrix";
+import { GlassCard, ProtocolBadge, StatusBadge } from "@/components/veltrix";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 import { CreateUserModal } from "@/components/CreateUserModal";
@@ -33,40 +31,50 @@ import { useToast } from "@/components/toast";
 import { useAuth } from "@/auth/auth";
 import { cn, formatBytes } from "@/lib/utils";
 
-const STATUS_FILTERS: { value: string; label: string }[] = [
-  { value: "", label: "all" },
-  { value: "active", label: "active" },
-  { value: "limited", label: "limited" },
-  { value: "expired", label: "expired" },
-  { value: "disabled", label: "disabled" },
-  { value: "on_hold", label: "on_hold" },
+type StatusFilter = "" | "active" | "warning" | "inactive";
+
+const STATUS_FILTERS: { value: StatusFilter; labelKey: "users.filterAll" | "users.statActive" | "users.filterWarning" | "users.filterInactive" }[] = [
+  { value: "", labelKey: "users.filterAll" },
+  { value: "active", labelKey: "users.statActive" },
+  { value: "warning", labelKey: "users.filterWarning" },
+  { value: "inactive", labelKey: "users.filterInactive" },
 ];
 
-function statusFilterLabel(value: string, t: (key: import("@/i18n/dict").TKey) => string): string {
-  switch (value) {
-    case "":
-      return t("users.filterAll");
-    case "active":
-      return t("users.statActive");
+function statusDisplay(status: UserStatus): { type: string; label: string; pulse: boolean } {
+  switch (status) {
     case "limited":
-      return t("users.statLimited");
+      return { type: "warning", label: "WARNING", pulse: false };
     case "expired":
-      return t("users.statExpired");
+      return { type: "error", label: "ERROR", pulse: false };
     case "disabled":
-      return t("common.disabled");
     case "on_hold":
-      return t("users.filterOnHold");
+      return { type: "inactive", label: "INACTIVE", pulse: false };
     default:
-      return value;
+      return { type: "active", label: "ACTIVE", pulse: true };
   }
 }
 
-function statusBadgeType(status: UserStatus): string {
-  if (status === "limited") return "warning";
-  if (status === "expired") return "error";
-  if (status === "disabled") return "inactive";
-  if (status === "on_hold") return "info";
-  return "active";
+function userQueryParams(filter: StatusFilter): { status?: string; status_group?: string } {
+  switch (filter) {
+    case "active":
+      return { status: "active" };
+    case "warning":
+      return { status_group: "warning" };
+    case "inactive":
+      return { status_group: "inactive" };
+    default:
+      return {};
+  }
+}
+
+function devicesLabel(u: User): string {
+  const connected = u.device_count ?? u.allowed_hwids?.length ?? 0;
+  if (u.device_limit > 0) return `${connected}/${u.device_limit}`;
+  return `${connected}/∞`;
+}
+
+function shortUserId(index: number): string {
+  return `#${String(index + 1).padStart(4, "0")}`;
 }
 
 export function Users() {
@@ -74,78 +82,43 @@ export function Users() {
   const { can } = useAuth();
   const canWrite = can("user:write");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize] = useState(20);
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [viewing, setViewing] = useState<User | null>(null);
   const [subbing, setSubbing] = useState<User | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>(null);
+  const [menuUserId, setMenuUserId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error } = useUsers({
     search,
-    status: statusFilter,
     limit: pageSize,
     offset: page * pageSize,
+    ...userQueryParams(statusFilter),
   });
-  const overview = useOverview().data;
-  const byStatus = overview?.users.by_status ?? {};
+  const users = data?.users ?? [];
   const total = data?.total ?? 0;
+  const showing = users.length;
 
   const { t } = useI18n();
   const nav = useNavigate();
   const del = useDeleteUser();
-  const bulkDel = useBulkDeleteUsers();
   const confirm = useConfirm();
   const toast = useToast();
 
-  function toggleSort(key: string) {
-    if (sortKey === key) {
-      const next = cycleSort(sortDir);
-      setSortDir(next);
-      if (next === null) setSortKey(null);
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
-
-  const sortedUsers = useMemo(() => {
-    const list = data?.users ?? [];
-    if (!sortKey || !sortDir) return list;
-    return [...list].sort((a, b) => {
-      let av: string | number;
-      let bv: string | number;
-      switch (sortKey) {
-        case "username":
-          av = a.username.toLowerCase();
-          bv = b.username.toLowerCase();
-          break;
-        case "status":
-          av = a.status;
-          bv = b.status;
-          break;
-        case "usage":
-          av = a.used_traffic;
-          bv = b.used_traffic;
-          break;
-        case "expires":
-          av = a.expire_at ?? "";
-          bv = b.expire_at ?? "";
-          break;
-        default:
-          return 0;
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuUserId(null);
       }
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [data?.users, sortKey, sortDir]);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
 
   function onSearch(v: string) {
     setSearch(v);
@@ -153,6 +126,7 @@ export function Users() {
   }
 
   async function remove(u: User) {
+    setMenuUserId(null);
     const ok = await confirm({
       title: `Delete ${u.username}?`,
       message: "This removes the user and revokes their access on all nodes.",
@@ -168,8 +142,12 @@ export function Users() {
     }
   }
 
+  const summaryLabel = t("users.showingOf")
+    .replace("{count}", String(showing))
+    .replace("{total}", String(total));
+
   return (
-    <div className="space-y-6 animate-page-enter">
+    <div className="space-y-5 animate-page-enter">
       <CreateUserModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <BulkCreateModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
       <ImportUsersModal open={importOpen} onClose={() => setImportOpen(false)} />
@@ -177,71 +155,43 @@ export function Users() {
       <UserUsageModal user={viewing} onClose={() => setViewing(null)} />
       <UserSubModal user={subbing} onClose={() => setSubbing(null)} />
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-fg">{t("users.title")}</h1>
-          <p className="text-sm text-fg-muted mt-0.5">
-            {total} {t("common.total")}
-            {statusFilter ? ` · ${statusFilter}` : ""}
+          <h1 className="text-2xl font-bold text-fg tracking-tight">{t("users.managementTitle")}</h1>
+          <p className="text-sm text-fg-muted mt-1">
+            {total} {t("users.totalUsers")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => setImportOpen(true)} disabled={!canWrite}>
-            <Download size={15} /> {t("users.import")}
-          </Button>
-          <Button variant="outline" onClick={() => setBulkOpen(true)} disabled={!canWrite}>
-            <Layers size={15} /> {t("users.bulk")}
-          </Button>
+          {canWrite && (
+            <>
+              <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => setImportOpen(true)}>
+                <Download size={14} /> {t("users.import")}
+              </Button>
+              <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => setBulkOpen(true)}>
+                <Layers size={14} /> {t("users.bulk")}
+              </Button>
+            </>
+          )}
           <Button onClick={() => setModalOpen(true)} disabled={!canWrite}>
             <Plus size={15} /> {t("users.new")}
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatsCard
-          title={t("users.statTotal")}
-          value={overview?.users.total ?? "—"}
-          icon={<UsersIcon size={18} />}
-          color="cyan"
-          delay={0.05}
-        />
-        <StatsCard
-          title={t("users.statActive")}
-          value={byStatus.active ?? 0}
-          icon={<UsersIcon size={18} />}
-          color="green"
-          delay={0.1}
-        />
-        <StatsCard
-          title={t("users.statLimited")}
-          value={byStatus.limited ?? 0}
-          icon={<UsersIcon size={18} />}
-          color="orange"
-          delay={0.15}
-        />
-        <StatsCard
-          title={t("users.statExpired")}
-          value={byStatus.expired ?? 0}
-          icon={<UsersIcon size={18} />}
-          color="red"
-          delay={0.2}
-        />
-      </div>
-
-      <GlassCard hover={false} className="!p-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <div className="relative flex-1 max-w-sm w-full">
+      <GlassCard hover={false} className="!p-0 overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 border-b border-border/40">
+          <div className="relative flex-1 max-w-md">
             <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-fg-subtle" />
             <input
               type="text"
-              placeholder={t("common.search")}
+              placeholder={`${t("common.search")} users...`}
               value={search}
               onChange={(e) => onSearch(e.target.value)}
-              className="w-full h-8 rounded-lg bg-surface/80 border border-border/60 ps-8 pe-3 text-xs text-fg placeholder:text-fg-subtle focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all input-surface"
+              className="w-full h-9 rounded-lg bg-surface/80 border border-border/60 ps-9 pe-3 text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all input-surface"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-1 bg-surface/60 rounded-lg p-0.5 border border-border/40">
+          <div className="flex flex-wrap items-center gap-1">
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.value || "all"}
@@ -251,196 +201,97 @@ export function Users() {
                   setPage(0);
                 }}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-[11px] font-medium transition-all capitalize",
+                  "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all",
                   statusFilter === f.value
-                    ? "bg-primary/15 text-primary"
-                    : "text-fg-muted hover:text-fg",
+                    ? "bg-primary text-primary-fg shadow-sm"
+                    : "text-fg-muted hover:text-fg hover:bg-surface/60",
                 )}
               >
-                {statusFilterLabel(f.value, t)}
+                {t(f.labelKey)}
               </button>
             ))}
           </div>
-          <Select
-            className="w-28 h-8 text-xs hidden lg:block"
-            value={String(pageSize)}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(0);
-            }}
-          >
-            {[10, 20, 50, 100].map((s) => (
-              <option key={s} value={s}>
-                {s}/page
-              </option>
-            ))}
-          </Select>
         </div>
-      </GlassCard>
 
-      {canWrite && selected.size > 0 && (
-        <GlassCard hover={false} className="!py-3 !px-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-fg">{selected.size} selected</span>
-            <div className="ms-auto flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  if (
-                    await confirm({
-                      title: `Delete ${selected.size} users?`,
-                      confirmLabel: "Delete",
-                      destructive: true,
-                    })
-                  ) {
-                    try {
-                      const res = await bulkDel.mutateAsync([...selected]);
-                      setSelected(new Set());
-                      toast.success(`Deleted ${res.deleted} users`);
-                      if (res.failures.length > 0) toast.error(`${res.failures.length} deletions failed`);
-                    } catch {
-                      toast.error("Bulk delete failed");
-                    }
-                  }
-                }}
-              >
-                Delete selected
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
-                Clear
-              </Button>
-            </div>
-          </div>
-        </GlassCard>
-      )}
+        {isLoading && <div className="p-8 text-sm text-fg-muted text-center">{t("common.loading")}</div>}
+        {error && <div className="p-8 text-sm text-danger text-center">Failed to load users</div>}
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
-        {isLoading && <div className="p-6 text-sm text-fg-muted">{t("common.loading")}</div>}
-        {error && <div className="p-6 text-sm text-danger">Failed to load users</div>}
         {data && (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/40">
-                  <th className="py-3 px-3 w-10">
-                    {canWrite && (
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        checked={selected.size === data.users.length && selected.size > 0}
-                        onChange={(e) =>
-                          setSelected(
-                            e.target.checked ? new Set(data.users.map((u) => u.id)) : new Set(),
-                          )
-                        }
-                      />
-                    )}
+                <tr className="border-b border-border/40 bg-surface/30">
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
+                    {t("users.username")}
                   </th>
-                  <th className="text-start py-3 px-3 text-fg-subtle font-medium">
-                    <SortHeader
-                      label={t("users.username")}
-                      active={sortKey === "username"}
-                      dir={sortKey === "username" ? sortDir : null}
-                      onClick={() => toggleSort("username")}
-                    />
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden md:table-cell">
+                    {t("users.protocol")}
                   </th>
-                  <th className="text-start py-3 px-3 text-fg-subtle font-medium hidden md:table-cell">
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
+                    {t("users.dataUsage")}
+                  </th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden sm:table-cell">
                     {t("users.devices")}
                   </th>
-                  <th className="text-start py-3 px-3 text-fg-subtle font-medium">
-                    <SortHeader
-                      label={t("users.usage")}
-                      active={sortKey === "usage"}
-                      dir={sortKey === "usage" ? sortDir : null}
-                      onClick={() => toggleSort("usage")}
-                    />
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
+                    {t("common.status")}
                   </th>
-                  <th className="text-start py-3 px-3 text-fg-subtle font-medium">
-                    <SortHeader
-                      label={t("common.status")}
-                      active={sortKey === "status"}
-                      dir={sortKey === "status" ? sortDir : null}
-                      onClick={() => toggleSort("status")}
-                    />
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden lg:table-cell">
+                    {t("users.expires")}
                   </th>
-                  <th className="text-start py-3 px-3 text-fg-subtle font-medium hidden lg:table-cell">
-                    <SortHeader
-                      label={t("users.expires")}
-                      active={sortKey === "expires"}
-                      dir={sortKey === "expires" ? sortDir : null}
-                      onClick={() => toggleSort("expires")}
-                    />
+                  <th className="text-end py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide w-12">
+                    {t("common.actions")}
                   </th>
-                  <th className="text-end py-3 px-3 text-fg-subtle font-medium">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedUsers.map((u, i) => {
+                {users.map((u, i) => {
                   const usagePct =
                     u.data_limit > 0 ? Math.min(100, (u.used_traffic / u.data_limit) * 100) : 0;
+                  const st = statusDisplay(u.status);
+                  const globalIndex = page * pageSize + i;
                   return (
-                    <motion.tr
+                    <tr
                       key={u.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.02 }}
-                      className="border-b border-border/20 hover:bg-surface/40 transition-colors group"
+                      className="border-b border-border/20 hover:bg-surface/40 transition-colors"
                     >
-                      <td className="py-3 px-3">
-                        {canWrite && (
-                          <input
-                            type="checkbox"
-                            className="rounded"
-                            checked={selected.has(u.id)}
-                            onChange={(e) => {
-                              const s = new Set(selected);
-                              if (e.target.checked) s.add(u.id);
-                              else s.delete(u.id);
-                              setSelected(s);
-                            }}
-                          />
-                        )}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-lg bg-surface-2 flex items-center justify-center text-fg-subtle flex-shrink-0">
-                            {u.username.slice(0, 2).toUpperCase()}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3 min-w-[160px]">
+                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                            <UserIcon size={16} />
                           </div>
                           <div className="min-w-0">
                             <button
                               type="button"
                               onClick={() => nav(`/users/${u.id}`)}
-                              className="font-medium text-fg font-mono text-[11px] hover:text-primary transition truncate block max-w-[140px] sm:max-w-none"
+                              className="font-semibold text-fg text-sm hover:text-primary transition truncate block max-w-[180px]"
                             >
                               {u.username}
                             </button>
-                            {u.note && (
-                              <p className="text-[10px] text-fg-subtle truncate max-w-[160px]">{u.note}</p>
-                            )}
+                            <p className="text-[11px] text-fg-subtle font-mono">
+                              ID: {shortUserId(globalIndex)}
+                            </p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3 hidden md:table-cell text-fg-muted">
-                        {u.device_limit > 0 ? u.device_limit : "∞"}
+                      <td className="py-3.5 px-4 hidden md:table-cell">
+                        <ProtocolBadge label={u.protocol_label ?? "—"} />
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="space-y-1 w-28">
-                          <div className="flex justify-between text-[10px]">
-                            <span className="text-fg-muted">{formatBytes(u.used_traffic, false)}</span>
-                            <span className="text-fg-subtle">
-                              {u.data_limit > 0 ? formatBytes(u.data_limit, false) : "∞"}
-                            </span>
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1.5 min-w-[140px] max-w-[200px]">
+                          <div className="text-xs text-fg-muted whitespace-nowrap">
+                            {formatBytes(u.used_traffic, false)} /{" "}
+                            {u.data_limit > 0 ? formatBytes(u.data_limit, false) : "∞"}
                           </div>
                           {u.data_limit > 0 && (
                             <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
                               <div
                                 className={cn(
                                   "h-full rounded-full transition-all duration-500",
-                                  usagePct > 90
-                                    ? "bg-danger"
+                                  usagePct > 90 || u.status === "limited"
+                                    ? "bg-warning"
                                     : usagePct > 70
-                                      ? "bg-warning"
+                                      ? "bg-warning/80"
                                       : "bg-primary",
                                 )}
                                 style={{ width: `${usagePct}%` }}
@@ -449,52 +300,61 @@ export function Users() {
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-3">
-                        <StatusBadge
-                          status={statusBadgeType(u.status)}
-                          label={u.status}
-                          pulse={u.status === "active"}
-                        />
+                      <td className="py-3.5 px-4 hidden sm:table-cell text-fg-muted tabular-nums">
+                        {devicesLabel(u)}
                       </td>
-                      <td className="py-3 px-3 hidden lg:table-cell">
-                        <div className="flex items-center gap-1 text-fg-muted">
-                          <Clock size={11} />
+                      <td className="py-3.5 px-4">
+                        <StatusBadge status={st.type} label={st.label} pulse={st.pulse} />
+                      </td>
+                      <td className="py-3.5 px-4 hidden lg:table-cell">
+                        <div className="flex items-center gap-1.5 text-fg-muted text-xs whitespace-nowrap">
+                          <Clock size={12} className="text-fg-subtle" />
                           {u.expire_at ? new Date(u.expire_at).toLocaleDateString() : "Never"}
                         </div>
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center justify-end gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="sm" onClick={() => setSubbing(u)} title="Subscription / QR">
-                            <QrCode size={14} />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setViewing(u)} title={t("users.usage")}>
-                            <BarChart3 size={14} />
-                          </Button>
-                          {canWrite && (
-                            <>
-                              <Button variant="ghost" size="sm" onClick={() => setEditing(u)} title={t("common.edit")}>
-                                <Pencil size={14} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-danger"
-                                onClick={() => remove(u)}
-                                title={t("common.delete")}
-                              >
-                                <Trash2 size={14} />
-                              </Button>
-                            </>
+                      <td className="py-3.5 px-4 text-end">
+                        <div className="relative inline-block" ref={menuUserId === u.id ? menuRef : undefined}>
+                          <button
+                            type="button"
+                            onClick={() => setMenuUserId(menuUserId === u.id ? null : u.id)}
+                            className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2/80 transition"
+                            aria-label={t("common.actions")}
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                          {menuUserId === u.id && (
+                            <div className="absolute end-0 top-full mt-1 z-20 min-w-[160px] rounded-lg border border-border/60 bg-surface shadow-lg py-1 text-xs">
+                              <MenuAction icon={<QrCode size={14} />} onClick={() => { setSubbing(u); setMenuUserId(null); }}>
+                                {t("users.subscription")}
+                              </MenuAction>
+                              <MenuAction icon={<BarChart3 size={14} />} onClick={() => { setViewing(u); setMenuUserId(null); }}>
+                                {t("users.usage")}
+                              </MenuAction>
+                              {canWrite && (
+                                <>
+                                  <MenuAction icon={<Pencil size={14} />} onClick={() => { setEditing(u); setMenuUserId(null); }}>
+                                    {t("common.edit")}
+                                  </MenuAction>
+                                  <MenuAction
+                                    icon={<Trash2 size={14} />}
+                                    className="text-danger hover:bg-danger/10"
+                                    onClick={() => remove(u)}
+                                  >
+                                    {t("common.delete")}
+                                  </MenuAction>
+                                </>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
-                    </motion.tr>
+                    </tr>
                   );
                 })}
-                {sortedUsers.length === 0 && (
+                {users.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-10 text-center text-fg-muted">
-                      No users found
+                    <td colSpan={7} className="px-5 py-12 text-center text-fg-muted">
+                      {t("users.none")}
                     </td>
                   </tr>
                 )}
@@ -502,21 +362,46 @@ export function Users() {
             </table>
           </div>
         )}
-        {data && total > pageSize && (
+
+        {data && total > 0 && (
           <div className="border-t border-border/40 px-4 py-3">
             <Pagination
               page={page}
               total={total}
               pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={(s) => {
-                setPageSize(s);
-                setPage(0);
-              }}
+              summaryLabel={summaryLabel}
+              alwaysShow
             />
           </div>
         )}
       </GlassCard>
     </div>
+  );
+}
+
+function MenuAction({
+  children,
+  icon,
+  onClick,
+  className,
+}: {
+  children: React.ReactNode;
+  icon: React.ReactNode;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center gap-2 px-3 py-2 text-start text-fg hover:bg-surface-2/60 transition",
+        className,
+      )}
+    >
+      {icon}
+      {children}
+    </button>
   );
 }

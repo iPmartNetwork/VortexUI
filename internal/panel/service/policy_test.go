@@ -94,6 +94,9 @@ func (f *fakeBalancerRepo) Delete(context.Context, uuid.UUID) error { return nil
 func (f *fakeBalancerRepo) ListByNode(context.Context, uuid.UUID) ([]*domain.Balancer, error) {
 	return f.items, nil
 }
+func (f *fakeBalancerRepo) ListFleet(context.Context) ([]domain.BalancerListItem, error) {
+	return nil, nil
+}
 
 // newSync builds a SyncService whose syncer captures the pushed config.
 func newSyncWith(t *testing.T, outs *fakeOutboundRepo, routes *fakeRoutingRepo, bals *fakeBalancerRepo) (*SyncService, *fakeSyncer) {

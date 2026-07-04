@@ -70,6 +70,16 @@ type Node struct {
 	// tunnel/CDN/relay setups where the user should connect via an intermediate.
 	Endpoint string `json:"endpoint,omitempty"`
 
+	// Region is a display label for dashboards (e.g. "Frankfurt, DE"). When
+	// LocationAuto is true and Region is empty, it is derived from GeoIP.
+	Region string `json:"region,omitempty"`
+	// CountryCode is ISO 3166-1 alpha-2, resolved from the public endpoint host.
+	CountryCode string `json:"country_code,omitempty"`
+	// PingMs is the last gRPC health-check round-trip in milliseconds.
+	PingMs int `json:"ping_ms,omitempty"`
+	// LocationAuto when true keeps Region/CountryCode in sync with endpoint GeoIP.
+	LocationAuto bool `json:"location_auto"`
+
 	// Live health, refreshed by the hub from the agent's heartbeat.
 	LastSeen  *time.Time `json:"last_seen,omitempty"`
 	Health    NodeHealth `json:"health"`
@@ -81,6 +91,13 @@ type Node struct {
 	CreatedAt       time.Time            `json:"created_at"`
 }
 
+// NodeListItem is a node row enriched for the fleet management table.
+type NodeListItem struct {
+	Node
+	Location   string `json:"location,omitempty"`
+	UsersCount int    `json:"users_count"`
+}
+
 // NodeHealth is the resource snapshot pushed by an agent heartbeat.
 type NodeHealth struct {
 	CPUPercent   float64 `json:"cpu_percent"`
@@ -90,6 +107,7 @@ type NodeHealth struct {
 	Connections  int     `json:"connections"`
 	CoreVersion  string  `json:"core_version,omitempty"`
 	AgentVersion string  `json:"agent_version,omitempty"`
+	PingMs       int     `json:"ping_ms,omitempty"`
 }
 
 // IsHealthy is the gate used by failover: an unhealthy node should not receive users.

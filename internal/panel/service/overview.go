@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/geoip"
 	"github.com/vortexui/vortexui/internal/panel/port"
 )
 
@@ -62,6 +63,9 @@ type NodeSnapshot struct {
 	Name        string            `json:"name"`
 	Core        domain.CoreType   `json:"core"`
 	Online      bool              `json:"online"`
+	Location    string            `json:"location,omitempty"`
+	CountryCode string            `json:"country_code,omitempty"`
+	PingMs      int               `json:"ping_ms,omitempty"`
 	LastSeen    *time.Time        `json:"last_seen,omitempty"`
 	Health      domain.NodeHealth `json:"health"`
 	CoreVersion string            `json:"core_version,omitempty"`
@@ -98,6 +102,9 @@ func (s *OverviewService) Build(ctx context.Context, adminID *uuid.UUID, sudo bo
 			Name:        n.Name,
 			Core:        n.Core,
 			Online:      online,
+			Location:    nodeDisplayLocation(n),
+			CountryCode: n.CountryCode,
+			PingMs:      n.PingMs,
 			LastSeen:    n.LastSeen,
 			Health:      n.Health,
 			CoreVersion: n.CoreVer,
@@ -106,4 +113,22 @@ func (s *OverviewService) Build(ctx context.Context, adminID *uuid.UUID, sudo bo
 	}
 	widgets := s.buildWidgets(ctx, summary, stats, adminID, sudo)
 	return &Overview{Users: stats, Nodes: summary, Widgets: widgets}, nil
+}
+
+// NodeDisplayLocation returns a human-readable location label for dashboards.
+func NodeDisplayLocation(n *domain.Node) string {
+	return nodeDisplayLocation(n)
+}
+
+func nodeDisplayLocation(n *domain.Node) string {
+	if n == nil {
+		return ""
+	}
+	if loc := geoip.FormatLocation(n.Region, n.CountryCode); loc != "" {
+		return loc
+	}
+	if geoip.IsLocal(nodePublicHost(n)) {
+		return "Local"
+	}
+	return n.Name
 }

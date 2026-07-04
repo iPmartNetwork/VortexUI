@@ -6,43 +6,34 @@ import { Overview } from "@/pages/Overview";
 import { Users } from "@/pages/Users";
 import { UserDetail } from "@/pages/UserDetail";
 import { Nodes } from "@/pages/Nodes";
-import { Outbounds } from "@/pages/Outbounds";
+import { Inbounds } from "@/pages/Inbounds";
+import { RoutingBalancers } from "@/pages/RoutingBalancers";
 import { Routing } from "@/pages/Routing";
-import { RoutingPacks } from "@/pages/RoutingPacks";
-import { Balancers } from "@/pages/Balancers";
-import { Admins } from "@/pages/Admins";
 import { ResellerDashboard } from "@/pages/ResellerDashboard";
 import { ResellerAccount } from "@/pages/ResellerAccount";
 import { ResellerQuotaAlerts } from "@/pages/ResellerQuotaAlerts";
-import { Audit } from "@/pages/Audit";
 import { Logs } from "@/pages/Logs";
 import { Settings } from "@/pages/Settings";
-import { Plans } from "@/pages/Plans";
-import { WalletBilling } from "@/pages/WalletBilling";
+import { ResellerPlatform } from "@/pages/ResellerPlatform";
 import { Orders } from "@/pages/Orders";
-import { Evasion } from "@/pages/Evasion";
+import { SecuritySuite } from "@/pages/SecuritySuite";
 import { Monitor } from "@/pages/Monitor";
-import { RealityScanner } from "@/pages/RealityScanner";
-import { CleanIPScanner } from "@/pages/CleanIPScanner";
 import { SmartQuota } from "@/pages/SmartQuota";
 import { RelayChains } from "@/pages/RelayChains";
-import { DecoyWebsite } from "@/pages/DecoyWebsite";
 import { Analytics } from "@/pages/Analytics";
 import { Tickets } from "@/pages/Tickets";
 import { Migration } from "@/pages/Migration";
-import { ProbingProtection } from "@/pages/ProbingProtection";
 import { FamilyGroups } from "@/pages/FamilyGroups";
 import { Referrals } from "@/pages/Referrals";
 import { DoHSettings } from "@/pages/DoHSettings";
 import { SNIManager } from "@/pages/SNIManager";
-import { TLSTricks } from "@/pages/TLSTricks";
 import { Fingerprint } from "@/pages/Fingerprint";
 import { Federation } from "@/pages/Federation";
 import { DeepLinks } from "@/pages/DeepLinks";
 import { QuotaNotifications } from "@/pages/QuotaNotifications";
 import { IPLimit } from "@/pages/IPLimit";
 import { ResellerPaymentSettings } from "@/pages/ResellerPaymentSettings";
-import { PendingOrders } from "@/pages/PendingOrders";
+import { ResellerDetail } from "@/pages/admins/ResellerDetail";
 import { PortalLogin } from "@/pages/portal/PortalLogin";
 import { PortalLayout } from "@/pages/portal/PortalLayout";
 import { PortalDashboard } from "@/pages/portal/PortalDashboard";
@@ -73,41 +64,44 @@ export function App() {
         <Route path="/reseller-account" element={<ResellerAccount />} />
         <Route path="/my-quota" element={<Navigate to="/reseller-dashboard" replace />} />
         <Route path="/nodes" element={<Nodes />} />
-        <Route path="/outbounds" element={<Outbounds />} />
-        <Route path="/routing" element={<Routing />} />
-        <Route path="/routing-packs" element={<RoutingPacks />} />
-        <Route path="/balancers" element={<Balancers />} />
-        <Route path="/admins" element={<Admins />} />
-        <Route path="/plans" element={<Plans />} />
-        <Route path="/wallet-billing" element={<WalletBilling />} />
+        <Route path="/inbounds" element={<Inbounds />} />
+        <Route path="/outbounds" element={<Navigate to="/routing?tab=outbounds" replace />} />
+        <Route path="/routing" element={<RoutingBalancers />} />
+        <Route path="/routing/node-rules" element={<Routing />} />
+        <Route path="/routing-packs" element={<Navigate to="/routing?tab=packs" replace />} />
+        <Route path="/balancers" element={<Navigate to="/routing?tab=balancers" replace />} />
+        <Route path="/admins" element={<Navigate to="/settings?tab=admins" replace />} />
+        <Route path="/plans" element={<Navigate to="/wallet-billing?tab=plans" replace />} />
+        <Route path="/wallet-billing" element={<ResellerPlatform />} />
         <Route path="/orders" element={<Orders />} />
-        <Route path="/evasion" element={<Evasion />} />
+        <Route path="/evasion" element={<SecuritySuite />} />
         <Route path="/monitor" element={<Monitor />} />
-        <Route path="/reality-scanner" element={<RealityScanner />} />
-        <Route path="/clean-ip" element={<CleanIPScanner />} />
+        <Route path="/reality-scanner" element={<Navigate to="/evasion?tab=reality" replace />} />
+        <Route path="/clean-ip" element={<Navigate to="/evasion?tab=cleanip" replace />} />
         <Route path="/smart-quota" element={<SmartQuota />} />
         <Route path="/relay-chains" element={<RelayChains />} />
-        <Route path="/decoy-website" element={<DecoyWebsite />} />
+        <Route path="/decoy-website" element={<Navigate to="/evasion?tab=decoy" replace />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/tickets" element={<Tickets />} />
         <Route path="/migration" element={<Migration />} />
-        <Route path="/probing-protection" element={<ProbingProtection />} />
+        <Route path="/probing-protection" element={<Navigate to="/evasion?tab=decoy" replace />} />
         <Route path="/ip-limit" element={<IPLimit />} />
         <Route path="/family-groups" element={<FamilyGroups />} />
         <Route path="/referrals" element={<Referrals />} />
         <Route path="/doh" element={<DoHSettings />} />
         <Route path="/sni-manager" element={<SNIManager />} />
-        <Route path="/tls-tricks" element={<TLSTricks />} />
+        <Route path="/tls-tricks" element={<Navigate to="/evasion?tab=tls" replace />} />
         <Route path="/fingerprint" element={<Fingerprint />} />
         <Route path="/federation" element={<Federation />} />
         <Route path="/deep-links" element={<DeepLinks />} />
         <Route path="/quota-notifications" element={<QuotaNotifications />} />
         <Route path="/reseller-quota-alerts" element={<ResellerQuotaAlerts />} />
         <Route path="/reseller-payment" element={<ResellerPaymentSettings />} />
-        <Route path="/pending-orders" element={<PendingOrders />} />
-        <Route path="/audit" element={<Audit />} />
+        <Route path="/pending-orders" element={<Navigate to="/wallet-billing?tab=orders" replace />} />
+        <Route path="/audit" element={<Navigate to="/overview" replace />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/admins/:id" element={<ResellerDetail />} />
       </Route>
       <Route path="*" element={<NotFound />} />
       {/* Portal (end-user self-service) */}

@@ -24,3 +24,9 @@ DELETE FROM inbounds WHERE id = $1;
 
 -- name: ListInboundsByNode :many
 SELECT * FROM inbounds WHERE node_id = $1 ORDER BY tag;
+
+-- name: ListInboundsFleet :many
+SELECT sqlc.embed(i), n.name AS node_name
+FROM inbounds i
+JOIN nodes n ON n.id = i.node_id
+ORDER BY n.name, i.tag;

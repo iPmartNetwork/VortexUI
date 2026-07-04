@@ -95,20 +95,30 @@ func (r *UserRepo) List(ctx context.Context, f port.UserFilter) ([]*domain.User,
 	if limit <= 0 {
 		limit = 50
 	}
+	statuses := make([]string, len(f.Statuses))
+	for i, s := range f.Statuses {
+		statuses[i] = string(s)
+	}
+	var statusesArg []string
+	if len(statuses) > 0 {
+		statusesArg = statuses
+	}
 	rows, err := r.q.ListUsers(ctx, db.ListUsersParams{
-		Search:  f.Search,
-		Status:  string(f.Status),
-		AdminID: ptrToUUID(f.AdminID),
-		Off:     int32(f.Offset),
-		Lim:     limit,
+		Search:   f.Search,
+		Status:   string(f.Status),
+		Statuses: statusesArg,
+		AdminID:  ptrToUUID(f.AdminID),
+		Off:      int32(f.Offset),
+		Lim:      limit,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 	total, err := r.q.CountUsers(ctx, db.CountUsersParams{
-		Search:  f.Search,
-		Status:  string(f.Status),
-		AdminID: ptrToUUID(f.AdminID),
+		Search:   f.Search,
+		Status:   string(f.Status),
+		Statuses: statusesArg,
+		AdminID:  ptrToUUID(f.AdminID),
 	})
 	if err != nil {
 		return nil, 0, err
@@ -179,6 +189,21 @@ func (r *UserRepo) InboundsFor(ctx context.Context, userID uuid.UUID) ([]domain.
 	out := make([]domain.Inbound, len(rows))
 	for i := range rows {
 		out[i] = inboundToDomain(rows[i])
+	}
+	return out, nil
+}
+
+func (r *UserRepo) PrimaryInboundProtocols(ctx context.Context, userIDs []uuid.UUID) (map[uuid.UUID]string, error) {
+	out := make(map[uuid.UUID]string)
+	if len(userIDs) == 0 {
+		return out, nil
+	}
+	rows, err := r.q.PrimaryInboundProtocols(ctx, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		out[row.UserID] = ProtocolLabel(row.Protocol, row.Network, row.Security)
 	}
 	return out, nil
 }

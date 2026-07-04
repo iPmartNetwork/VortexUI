@@ -43,6 +43,9 @@ func (r *listUserRepo) SetInbounds(context.Context, uuid.UUID, []uuid.UUID) erro
 func (r *listUserRepo) InboundsFor(_ context.Context, id uuid.UUID) ([]domain.Inbound, error) {
 	return r.bindings[id], nil
 }
+func (r *listUserRepo) PrimaryInboundProtocols(context.Context, []uuid.UUID) (map[uuid.UUID]string, error) {
+	return map[uuid.UUID]string{}, nil
+}
 func (r *listUserRepo) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
 	return domain.AdminUserStats{}, nil
 }
@@ -132,4 +135,7 @@ func (a inboundRepoAdapter) Update(context.Context, *domain.Inbound) error { ret
 func (a inboundRepoAdapter) Delete(context.Context, uuid.UUID) error       { return nil }
 func (a inboundRepoAdapter) ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Inbound, error) {
 	return a.l.ListByNode(ctx, nodeID)
+}
+func (a inboundRepoAdapter) ListFleet(context.Context) ([]domain.InboundListItem, error) {
+	return nil, nil
 }

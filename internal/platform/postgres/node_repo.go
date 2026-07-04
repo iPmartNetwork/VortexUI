@@ -17,14 +17,17 @@ var _ port.NodeRepository = (*NodeRepo)(nil)
 
 func (r *NodeRepo) Create(ctx context.Context, n *domain.Node) error {
 	return r.q.CreateNode(ctx, db.CreateNodeParams{
-		ID:         n.ID,
-		Name:       n.Name,
-		Address:    n.Address,
-		Core:       string(n.Core),
-		Status:     string(n.Status),
-		UsageRatio: n.UsageRatio,
-		Endpoint:   n.Endpoint,
-		CreatedAt:  timeToTS(n.CreatedAt),
+		ID:           n.ID,
+		Name:         n.Name,
+		Address:      n.Address,
+		Core:         string(n.Core),
+		Status:       string(n.Status),
+		UsageRatio:   n.UsageRatio,
+		Endpoint:     n.Endpoint,
+		Region:       n.Region,
+		CountryCode:  n.CountryCode,
+		LocationAuto: n.LocationAuto,
+		CreatedAt:    timeToTS(n.CreatedAt),
 	})
 }
 
@@ -38,13 +41,16 @@ func (r *NodeRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Node, err
 
 func (r *NodeRepo) Update(ctx context.Context, n *domain.Node) error {
 	return r.q.UpdateNode(ctx, db.UpdateNodeParams{
-		ID:         n.ID,
-		Name:       n.Name,
-		Address:    n.Address,
-		Core:       string(n.Core),
-		Status:     string(n.Status),
-		UsageRatio: n.UsageRatio,
-		Endpoint:   n.Endpoint,
+		ID:           n.ID,
+		Name:         n.Name,
+		Address:      n.Address,
+		Core:         string(n.Core),
+		Status:       string(n.Status),
+		UsageRatio:   n.UsageRatio,
+		Endpoint:     n.Endpoint,
+		Region:       n.Region,
+		CountryCode:  n.CountryCode,
+		LocationAuto: n.LocationAuto,
 	})
 }
 
@@ -74,25 +80,35 @@ func (r *NodeRepo) UpdateHealth(ctx context.Context, id uuid.UUID, h domain.Node
 		Connections:  int32(h.Connections),
 		CoreVersion:  h.CoreVersion,
 		AgentVersion: h.AgentVersion,
+		PingMs:       int32(h.PingMs),
 	})
 }
 
 func nodeToDomain(n db.Node) *domain.Node {
+	locAuto := true
+	if !n.LocationAuto {
+		locAuto = false
+	}
 	return &domain.Node{
-		ID:         n.ID,
-		Name:       n.Name,
-		Address:    n.Address,
-		Core:       domain.CoreType(n.Core),
-		Status:     domain.NodeStatus(n.Status),
-		UsageRatio: n.UsageRatio,
-		Endpoint:   n.Endpoint,
-		LastSeen:   tsToPtr(n.LastSeen),
+		ID:           n.ID,
+		Name:         n.Name,
+		Address:      n.Address,
+		Core:         domain.CoreType(n.Core),
+		Status:       domain.NodeStatus(n.Status),
+		UsageRatio:   n.UsageRatio,
+		Endpoint:     n.Endpoint,
+		Region:       n.Region,
+		CountryCode:  n.CountryCode,
+		PingMs:       int(n.PingMs),
+		LocationAuto: locAuto,
+		LastSeen:     tsToPtr(n.LastSeen),
 		Health: domain.NodeHealth{
 			CPUPercent:  n.CpuPercent,
 			MemPercent:  n.MemPercent,
 			DiskPercent: n.DiskPercent,
 			CoreRunning: n.CoreRunning,
 			Connections: int(n.Connections),
+			PingMs:      int(n.PingMs),
 		},
 		CoreVer:   n.CoreVersion,
 		AgentVer:  n.AgentVersion,

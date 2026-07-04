@@ -178,3 +178,12 @@ func (h *RoutingPackHandlers) SetDefault(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, echo.Map{"pack_id": req.PackID})
 }
+
+// GetDefault returns the global default routing pack id ("" when none).
+func (h *RoutingPackHandlers) GetDefault(c echo.Context) error {
+	packID, err := h.Packs.GetGlobalDefault(c.Request().Context())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"pack_id": packID})
+}

@@ -85,6 +85,11 @@ func (s *BalancerService) ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*
 	return s.repo.ListByNode(ctx, nodeID)
 }
 
+// ListFleet returns every balancer with its node name.
+func (s *BalancerService) ListFleet(ctx context.Context) ([]domain.BalancerListItem, error) {
+	return s.repo.ListFleet(ctx)
+}
+
 func balancerFromInput(id, nodeID uuid.UUID, in BalancerInput, defEnabled bool) *domain.Balancer {
 	return &domain.Balancer{
 		ID:            id,

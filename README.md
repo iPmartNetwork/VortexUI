@@ -20,7 +20,7 @@
 
   <br />
   
-  [Features](#-features) · [What's New in 1.2.8](#-whats-new-in-128) · [What's New in 1.2.7](#-whats-new-in-127) · [What's New in 1.2.6](#-whats-new-in-126) · [What's New in 1.2.5](#-whats-new-in-125) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+  [Features](#-features) · [What's New in 1.2.9](#-whats-new-in-129) · [What's New in 1.2.8](#-whats-new-in-128) · [What's New in 1.2.7](#-whats-new-in-127) · [What's New in 1.2.6](#-whats-new-in-126) · [What's New in 1.2.5](#-whats-new-in-125) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 </div>
 
 ---
@@ -117,6 +117,29 @@
 </td>
 </tr>
 </table>
+
+---
+
+## 🆕 What's New in 1.2.9
+
+<div align="center">
+
+**Command Tower UI · merged pages · Settings hub · reseller profiles · fleet telemetry**
+
+</div>
+
+| Feature | Description |
+|---------|-------------|
+| **Merged pages** | Routing & Balancers, Security Suite, and Reseller Platform each use one route with `?tab=` sub-navigation |
+| **Settings hub** | Sidebar tabs for General, Security, Appearance, API, Backup, and Admins (sudo) |
+| **Reseller profiles** | Click any reseller → wallet, quota bars, consumption, ledger, policies at `/settings/admins/:id` |
+| **Admins sub-tabs** | Admins list, Roles, and Reseller access matrix inside Settings |
+| **Command Tower Overview** | Live widgets with traffic ranges, top users + protocol, node geo/ping |
+| **Inbounds page** | Dedicated `/inbounds` view separate from node fleet |
+| **Node telemetry** | Region, country code, ping ms (migration `0030`) |
+| **Admin APIs** | `GET /api/admins/:id/quota` and `GET /api/admins/:id/wallet` |
+
+📖 Full details: [CHANGELOG.md](CHANGELOG.md) · [Docs — Panel redesign (v1.2.9)](https://ipmartnetwork.github.io/VortexUI/en/17-v129-panel-redesign/)
 
 ---
 
@@ -327,7 +350,7 @@ See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup deta
 
 </div>
 
-| | VortexUI 1.2.8 | 3x-ui | Marzban | Hiddify |
+| | VortexUI 1.2.9 | 3x-ui | Marzban | Hiddify |
 |:--|:--:|:--:|:--:|:--:|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |
@@ -515,6 +538,7 @@ make run-panel          # start panel
 - [x] Command palette + keyboard shortcuts
 - [x] Dashboard widgets + onboarding tour
 - [x] Mobile-first portal
+- [x] Command Tower UI — merged pages, Settings hub, reseller profiles (v1.2.9)
 - [x] Veltrix UI redesign (v1.2.8)
 - [x] Complete 8-language i18n — admin + portal (v1.2.8)
 - [x] Per-reseller payment configuration (v1.2.7)

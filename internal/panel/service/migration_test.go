@@ -26,6 +26,9 @@ func (f *fakeMigrationInbounds) Delete(context.Context, uuid.UUID) error        
 func (f *fakeMigrationInbounds) ListByNode(_ context.Context, nodeID uuid.UUID) ([]*domain.Inbound, error) {
 	return f.byNode[nodeID], nil
 }
+func (f *fakeMigrationInbounds) ListFleet(context.Context) ([]domain.InboundListItem, error) {
+	return nil, nil
+}
 
 type fakeMigrationUsers struct {
 	users    []*domain.User
@@ -63,6 +66,9 @@ func (f *fakeMigrationUsers) SetInbounds(_ context.Context, userID uuid.UUID, id
 }
 func (f *fakeMigrationUsers) InboundsFor(_ context.Context, userID uuid.UUID) ([]domain.Inbound, error) {
 	return f.inbounds[userID], nil
+}
+func (f *fakeMigrationUsers) PrimaryInboundProtocols(context.Context, []uuid.UUID) (map[uuid.UUID]string, error) {
+	return map[uuid.UUID]string{}, nil
 }
 func (f *fakeMigrationUsers) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
 	return domain.AdminUserStats{}, nil

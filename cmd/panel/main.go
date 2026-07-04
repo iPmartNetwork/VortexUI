@@ -34,7 +34,7 @@ import (
 
 // version is the panel build version. It defaults to the contents of the VERSION
 // file and is overridden at build time via -ldflags "-X main.version=...".
-var version = "1.2.8"
+var version = "1.2.9"
 
 func main() {
 	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)
@@ -339,6 +339,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		log.Warn("geoip database unavailable; Traffic by Country disabled", "path", cfg.GeoIPDB, "err", gerr)
 		geoResolver = geoip.Disabled()
 	}
+	nodeSvc.SetGeoResolver(geoResolver)
 	defer func() { _ = geoResolver.Close() }()
 	geoSvc := service.NewGeoService(geoResolver, store.UserGeo())
 
@@ -366,6 +367,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Inbounds: inboundSvc, Admins: adminSvc, Devices: devices,
 			Outbounds: outboundSvc, Routing: routingSvc, Balancers: balancerSvc,
 			Overview: overviewSvc, Backup: backupSvc,
+			Counters: store.Dashboard(),
 			Plans:    planSvc,
 			ZarinPal: zarinPal,
 			NowPayments: nowPayments,

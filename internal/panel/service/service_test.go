@@ -65,6 +65,9 @@ func (f *fakeUserRepo) SetInbounds(_ context.Context, _ uuid.UUID, ids []uuid.UU
 func (f *fakeUserRepo) InboundsFor(context.Context, uuid.UUID) ([]domain.Inbound, error) {
 	return f.inbounds, nil
 }
+func (f *fakeUserRepo) PrimaryInboundProtocols(context.Context, []uuid.UUID) (map[uuid.UUID]string, error) {
+	return map[uuid.UUID]string{}, nil
+}
 func (f *fakeUserRepo) StatsForAdmin(context.Context, uuid.UUID) (domain.AdminUserStats, error) {
 	return domain.AdminUserStats{}, nil
 }

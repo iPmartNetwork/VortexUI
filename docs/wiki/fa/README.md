@@ -1,13 +1,17 @@
 # مستندات VortexUI
 
 <div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.4rem;">VortexUI نسخه ۱.۲.۸</strong><br/>
-  <em style="font-size: 1.1rem;">پنل مدیریت پروکسی نسل جدید — Veltrix UI، i18n کامل، مستقل از هسته، کاربرمحور، بلادرنگ</em>
+  <strong style="font-size: 1.4rem;">VortexUI نسخه ۱.۲.۹</strong><br/>
+  <em style="font-size: 1.1rem;">پنل مدیریت پروکسی نسل جدید — Command Tower UI، Veltrix، i18n کامل، مستقل از هسته، کاربرمحور، بلادرنگ</em>
 </div>
 
 ---
 
 <div class="grid cards" markdown>
+
+- :material-palette: **Command Tower UI (نسخه ۱.۲.۹)**
+
+    ادغام صفحات، مرکز تنظیمات، پروفایل ریسلر، تله‌متری ناوگان و صفحه Inbounds.
 
 - :material-palette: **Veltrix UI (نسخه ۱.۲.۸)**
 

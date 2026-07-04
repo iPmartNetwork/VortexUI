@@ -116,7 +116,7 @@ curl https://panel.example.com/api/health
     "redis": "ok",
     "nodes": { "online": 3, "offline": 0 }
   },
-  "version": "1.2.8"
+  "version": "1.2.9"
 }
 ```
 

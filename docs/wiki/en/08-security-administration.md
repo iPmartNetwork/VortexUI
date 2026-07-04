@@ -27,7 +27,10 @@
 
 ## RBAC & Roles
 
-**Admins → Roles**
+**Settings → Admins** (sudo) — sub-tabs: **Admins**, **Roles**, **Reseller access**.
+
+Click a reseller username to open their **profile** (`/settings/admins/:id`) with wallet,
+quota usage, ledger, and policy limits.
 
 | Concept | Description |
 |---------|-------------|

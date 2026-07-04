@@ -86,7 +86,48 @@ func (s *OverviewService) buildWidgets(ctx context.Context, summary NodeSummary,
 	}
 
 	w.Telemetry = pickTelemetry(summary)
+	w.NodeFleet = buildNodeFleet(summary, dep, ctx)
+	if dep.Counters != nil {
+		if top, err := dep.Counters.TopUsersOverview(ctx, 5, adminID, sudo); err == nil {
+			w.TopUsers = top
+		}
+	}
 	return w
+}
+
+func buildNodeFleet(summary NodeSummary, dep *WidgetDeps, ctx context.Context) []domain.NodeFleetRow {
+	var usersByNode map[uuid.UUID]int
+	if dep != nil && dep.Counters != nil {
+		usersByNode, _ = dep.Counters.UsersCountByNode(ctx)
+	}
+	out := make([]domain.NodeFleetRow, 0, len(summary.Items))
+	for _, n := range summary.Items {
+		load := math.Max(n.Health.CPUPercent, n.Health.MemPercent)
+		st := "inactive"
+		if n.Online && n.Health.CoreRunning {
+			if load > 75 {
+				st = "warning"
+			} else {
+				st = "active"
+			}
+		}
+		id, _ := uuid.Parse(n.ID)
+		out = append(out, domain.NodeFleetRow{
+			ID:          n.ID,
+			Name:        n.Name,
+			Core:        string(n.Core),
+			Location:    n.Location,
+			CountryCode: n.CountryCode,
+			PingMs:      n.PingMs,
+			UsersCount:  usersByNode[id],
+			Connections: n.Health.Connections,
+			CPUPercent:  n.Health.CPUPercent,
+			MemPercent:  n.Health.MemPercent,
+			Online:      n.Online,
+			Status:      st,
+		})
+	}
+	return out
 }
 
 func pickTelemetry(summary NodeSummary) *domain.TelemetryWidget {
@@ -98,6 +139,8 @@ func pickTelemetry(summary NodeSummary) *domain.TelemetryWidget {
 				Connections: n.Health.Connections,
 				CPUPercent:  n.Health.CPUPercent,
 				Online:      true,
+				Location:    n.Location,
+				PingMs:      n.PingMs,
 			}
 		}
 	}
@@ -109,6 +152,8 @@ func pickTelemetry(summary NodeSummary) *domain.TelemetryWidget {
 			Connections: n.Health.Connections,
 			CPUPercent:  n.Health.CPUPercent,
 			Online:      n.Online,
+			Location:    n.Location,
+			PingMs:      n.PingMs,
 		}
 	}
 	return nil

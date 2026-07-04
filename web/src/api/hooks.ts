@@ -23,7 +23,13 @@ export function useVersion() {
 
 // --- users ---
 
-export function useUsers(params: { search?: string; status?: string; limit?: number; offset?: number }) {
+export function useUsers(params: {
+  search?: string;
+  status?: string;
+  status_group?: string;
+  limit?: number;
+  offset?: number;
+}) {
   return useQuery({
     queryKey: ["users", params],
     queryFn: () => api<ListUsersResponse>("/api/users", { query: params }),
@@ -157,7 +163,7 @@ export function useCreateNode() {
 export function useUpdateNode() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: { name?: string; address?: string; usage_ratio?: number; endpoint?: string; speed_limit?: number; geo_block?: string[] } }) =>
+    mutationFn: ({ id, input }: { id: string; input: { name?: string; address?: string; usage_ratio?: number; endpoint?: string; region?: string; location_auto?: boolean; speed_limit?: number; geo_block?: string[] } }) =>
       api<{ node: Node; warning?: string }>(`/api/nodes/${id}`, { method: "PUT", body: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nodes"] }),
   });
@@ -170,6 +176,7 @@ export function useDeleteNode() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["nodes"] });
       qc.invalidateQueries({ queryKey: ["inbounds-all"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-fleet"] });
     },
   });
 }
@@ -246,6 +253,7 @@ export interface Inbound {
   path?: string;
   host?: string[];
   flow?: string;
+  evasion_profile_id?: string;
   enabled: boolean;
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
   raw?: Record<string, unknown>;
@@ -283,6 +291,7 @@ export function useCreateInbound() {
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["inbounds", v.node_id] });
       qc.invalidateQueries({ queryKey: ["inbounds-all"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-fleet"] });
     },
   });
 }
@@ -309,6 +318,7 @@ export function useUpdateInbound() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbounds"] });
       qc.invalidateQueries({ queryKey: ["inbounds-all"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-fleet"] });
     },
   });
 }
@@ -320,6 +330,7 @@ export function useDeleteInbound() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbounds"] });
       qc.invalidateQueries({ queryKey: ["inbounds-all"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-fleet"] });
     },
   });
 }
@@ -333,18 +344,28 @@ export interface InboundOption {
   nodeName: string;
 }
 
+export interface InboundFleetRow extends Inbound {
+  node_name: string;
+}
+
+export function useInboundsFleet() {
+  return useQuery({
+    queryKey: ["inbounds-fleet"],
+    queryFn: () => api<{ inbounds: InboundFleetRow[] }>("/api/inbounds"),
+  });
+}
+
 export function useAllInbounds() {
   return useQuery({
     queryKey: ["inbounds-all"],
     queryFn: async (): Promise<InboundOption[]> => {
-      const { nodes } = await api<{ nodes?: Node[] | null }>("/api/nodes");
-      const nodeList = ensureArray(nodes);
-      const lists = await Promise.all(
-        nodeList.map((n) => api<{ inbounds: { id: string; tag: string; protocol: string }[] }>("/api/inbounds", { query: { node_id: n.id } })),
-      );
-      return lists.flatMap((l, i) =>
-        ensureArray(l.inbounds).map((ib) => ({ id: ib.id, tag: ib.tag, protocol: ib.protocol, nodeName: nodeList[i].name })),
-      );
+      const { inbounds } = await api<{ inbounds: InboundFleetRow[] }>("/api/inbounds");
+      return ensureArray(inbounds).map((ib) => ({
+        id: ib.id,
+        tag: ib.tag,
+        protocol: ib.protocol,
+        nodeName: ib.node_name,
+      }));
     },
   });
 }
@@ -455,6 +476,15 @@ export interface PackRoutingRule {
   balancer_tag?: string;
 }
 
+import type { BalancerFleetRow } from "./types";
+
+export function useBalancersFleet() {
+  return useQuery({
+    queryKey: ["balancers-fleet"],
+    queryFn: () => api<{ balancers: BalancerFleetRow[] }>("/api/balancers"),
+  });
+}
+
 // RoutingPack mirrors the backend domain.RoutingPack. Built-in packs use their
 // name as id and are flagged builtin (not editable/deletable); custom packs use
 // a uuid id.
@@ -520,12 +550,22 @@ export function useApplyRoutingPack() {
   });
 }
 
+export function useDefaultRoutingPack() {
+  return useQuery({
+    queryKey: ["routing-packs-default"],
+    queryFn: () => api<{ pack_id: string }>("/api/routing-packs/default"),
+  });
+}
+
 export function useSetDefaultRoutingPack() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (packId: string) =>
       api<{ pack_id: string }>("/api/routing-packs/default", { method: "PUT", body: { pack_id: packId } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["routing-packs"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["routing-packs"] });
+      qc.invalidateQueries({ queryKey: ["routing-packs-default"] });
+    },
   });
 }
 

@@ -21,6 +21,9 @@ export interface User {
   expire_at: string | null;
   reset_strategy: "no_reset" | "daily" | "weekly" | "monthly";
   device_limit: number;
+  allowed_hwids?: string[];
+  protocol_label?: string;
+  device_count?: number;
   proxies: Credentials;
   sub_token: string;
   created_at: string;
@@ -33,6 +36,7 @@ export interface NodeHealth {
   disk_percent: number;
   core_running: boolean;
   connections: number;
+  ping_ms?: number;
 }
 
 export type NodeDiagCode = "ok" | "unreachable" | "mtls_fail" | "core_down" | "unknown";
@@ -61,6 +65,12 @@ export interface Node {
   status: "connected" | "disconnected" | "error" | "disabled";
   usage_ratio: number;
   endpoint?: string;
+  region?: string;
+  country_code?: string;
+  ping_ms?: number;
+  location_auto?: boolean;
+  location?: string;
+  users_count?: number;
   speed_limit?: number;
   geo_block?: string[];
   last_seen: string | null;
@@ -118,6 +128,10 @@ export interface Balancer {
   enabled: boolean;
 }
 
+export interface BalancerFleetRow extends Balancer {
+  node_name: string;
+}
+
 export interface Overview {
   users: { total: number; by_status: Record<string, number>; total_used: number };
   nodes: {
@@ -163,7 +177,36 @@ export interface DashboardWidgets {
     connections: number;
     cpu_percent: number;
     online: boolean;
+    location?: string;
+    ping_ms?: number;
   };
+  node_fleet: NodeFleetRow[];
+  top_users: OverviewUserRow[];
+}
+
+export interface NodeFleetRow {
+  id: string;
+  name: string;
+  core: string;
+  location: string;
+  country_code?: string;
+  ping_ms: number;
+  users_count: number;
+  connections: number;
+  cpu_percent: number;
+  mem_percent: number;
+  online: boolean;
+  status: "active" | "warning" | "inactive";
+}
+
+export interface OverviewUserRow {
+  id: string;
+  username: string;
+  protocol_label: string;
+  expire_at?: string | null;
+  used_traffic: number;
+  data_limit: number;
+  status: UserStatus;
 }
 
 export interface AuditEntry {

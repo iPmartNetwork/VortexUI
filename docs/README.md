@@ -6,6 +6,8 @@
 
 Four languages: **English · فارسی · العربية · Türkçe** — search, dark/light theme, sidebar navigation, Mermaid diagrams.
 
+Wiki pages follow the design patterns in [`review/DOC-TEMPLATE.md`](../review/DOC-TEMPLATE.md) (hero block, card grid, admonitions, Veltrix cyan styling).
+
 ### Local preview
 
 ```bash

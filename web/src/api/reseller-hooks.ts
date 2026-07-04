@@ -96,10 +96,20 @@ export function useTopUpAdminWallet() {
         method: "POST",
         body: { traffic_bytes: args.traffic_bytes, user_credits: args.user_credits, reason: args.reason },
       }),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["account-wallet"] });
       qc.invalidateQueries({ queryKey: ["reseller-quota-usage"] });
+      qc.invalidateQueries({ queryKey: ["admin-quota", vars.adminId] });
+      qc.invalidateQueries({ queryKey: ["admin-wallet", vars.adminId] });
     },
+  });
+}
+
+export function useAdminWallet(adminId: string | null) {
+  return useQuery({
+    queryKey: ["admin-wallet", adminId],
+    queryFn: () => api<{ wallet: AdminWallet; ledger: WalletLedgerEntry[] }>(`/api/admins/${adminId}/wallet`),
+    enabled: !!adminId,
   });
 }
 

@@ -6,6 +6,46 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.9] - 2026-07-04
+
+Command Tower UI rollout: merged admin pages, Settings hub with reseller management,
+reseller profile detail, and fleet telemetry on the dashboard.
+
+### Added
+- **Merged admin pages** — Routing & Balancers (`/routing?tab=packs|balancers|outbounds`),
+  Security Suite (`/evasion?tab=reality|cleanip|tls|decoy`), Reseller Platform
+  (`/wallet-billing?tab=orders|plans|wallet`).
+- **Settings hub** — sidebar tab navigation (General, Security, Notifications,
+  Appearance, API, Backup, Admins); Admins moved from standalone route.
+- **Admins sub-tabs** — Admins list, Roles, and Reseller access matrix under
+  `/settings?tab=admins&section=list|roles|access`.
+- **Reseller profile page** — `/settings/admins/:id` with wallet balance, quota bars,
+  consumption stats, policy limits, panel-settings access, wallet ledger, and actions
+  (edit, top-up, login-as, unsuspend).
+- **Dedicated Inbounds page** — `/inbounds` separated from Nodes fleet view.
+- **Overview widgets (API)** — richer command-tower stats: traffic range tabs, top users
+  with protocol labels, node geo/ping telemetry.
+- **Node location fields** — migration `0030`: `region`, `country_code`, `ping_ms`,
+  `location_auto` on nodes; editable in node UI.
+- **Admin detail APIs** — `GET /api/admins/:id/quota` and `GET /api/admins/:id/wallet`
+  (sudo or self).
+- **Docs template** — `review/DOC-TEMPLATE.md` design reference for GitHub Pages wiki.
+
+### Changed
+- **App shell** — fixed `h-screen` layout; sticky sidebar; scrollable main content only;
+  compact sidebar (236px) with VORTEXUI header, version badge, core status card, and
+  Self-Service Portal shortcut.
+- **Redesigned pages** — Overview, Users, Nodes, Inbounds, Tickets, Settings; tabbed
+  shells match Arena/Veltrix mock layouts with live API data.
+- **Route consolidation** — `/outbounds` → routing tab; `/admins` → settings tab;
+  `/audit` → overview; legacy security/reseller routes redirect to merged pages.
+- **Command palette** — updated targets for consolidated routes.
+- **Wallet billing UI** — absorbed into Reseller Platform wallet tab (removed standalone
+  `/wallet-billing` page component in favour of tab shell).
+
+### Fixed
+- Reseller names in admin/quota tables link to the new profile page for quick drill-down.
+
 ## [1.2.8] - 2026-07-04
 
 Major frontend release: **Veltrix UI** design system across the admin panel and user
@@ -470,7 +510,8 @@ First stable release.
 
 ---
 
-[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.8...HEAD
+[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.9...HEAD
+[1.2.9]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.8...v1.2.9
 [1.2.8]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.6...v1.2.7
 [1.2.6]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.5...v1.2.6

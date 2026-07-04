@@ -264,6 +264,11 @@ func (s *InboundService) ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*d
 	return s.repo.ListByNode(ctx, nodeID)
 }
 
+// ListFleet returns every inbound with its node name (single query).
+func (s *InboundService) ListFleet(ctx context.Context) ([]domain.InboundListItem, error) {
+	return s.repo.ListFleet(ctx)
+}
+
 func orStr(v, def string) string {
 	if v == "" {
 		return def

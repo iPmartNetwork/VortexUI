@@ -32,7 +32,7 @@ export function AdminInboundPicker({
           </label>
         ))}
         {ensureArray(inbounds.data).length === 0 && (
-          <p className="text-xs text-muted-foreground">No inbounds yet — create them under Nodes first.</p>
+          <p className="text-xs text-muted-foreground">No inbounds yet — create them under Inbounds first.</p>
         )}
       </div>
     </div>

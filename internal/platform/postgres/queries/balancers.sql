@@ -19,3 +19,9 @@ DELETE FROM balancers WHERE id = $1;
 
 -- name: ListBalancersByNode :many
 SELECT * FROM balancers WHERE node_id = $1 ORDER BY tag;
+
+-- name: ListBalancersFleet :many
+SELECT sqlc.embed(b), n.name AS node_name
+FROM balancers b
+JOIN nodes n ON n.id = b.node_id
+ORDER BY n.name, b.tag;

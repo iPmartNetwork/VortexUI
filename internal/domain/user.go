@@ -109,7 +109,13 @@ func (u *User) DerivedStatus(now time.Time) UserStatus {
 	}
 }
 
-// UserStats is an aggregate snapshot of the user base for the dashboard overview.
+// UserListItem is a user row enriched for the management table.
+type UserListItem struct {
+	User
+	ProtocolLabel string `json:"protocol_label,omitempty"`
+	DeviceCount   int    `json:"device_count"`
+}
+
 type UserStats struct {
 	Total      int                `json:"total"`
 	ByStatus   map[UserStatus]int `json:"by_status"`
