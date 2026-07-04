@@ -293,12 +293,12 @@ export function Overview() {
       </div>
 
       {/* ── Traffic chart + Protocol donut ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Traffic chart — 2/3 width */}
-        <GlassCard className="xl:col-span-2 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+        <GlassCard compact className="xl:col-span-2 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-2.5">
             <div>
-              <h3 className="text-base font-bold text-fg flex items-center gap-2">
+              <h3 className="text-sm font-bold text-fg flex items-center gap-2">
                 {t("overview.liveTrafficStream")}
                 <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-success">
                   <span className="relative flex h-1.5 w-1.5">
@@ -308,19 +308,19 @@ export function Overview() {
                   Live
                 </span>
               </h3>
-              <p className="text-[11px] text-fg-subtle mt-0.5">{t("overview.trafficDeltaHint")}</p>
+              <p className="text-[10px] text-fg-subtle mt-0.5">{t("overview.trafficDeltaHint")}</p>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 rounded-lg bg-surface-2/60 p-0.5">
               {(["24h", "7d", "30d"] as TrafficRange[]).map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setTrafficRange(r)}
                   className={cn(
-                    "px-3 py-1 rounded-lg text-[11px] font-bold uppercase transition-colors",
+                    "px-2.5 py-1 rounded-md text-[10px] font-bold uppercase transition-all",
                     trafficRange === r
-                      ? "bg-primary/15 text-primary"
-                      : "text-fg-muted hover:text-fg hover:bg-surface-2/60",
+                      ? "bg-bg-elevated text-primary shadow-sm"
+                      : "text-fg-muted hover:text-fg",
                   )}
                 >
                   {r}
@@ -329,17 +329,17 @@ export function Overview() {
             </div>
           </div>
           {trafficSeries.isLoading ? (
-            <div className="h-52 animate-pulse rounded-xl bg-surface-2/50" />
+            <div className="h-36 animate-pulse rounded-xl bg-surface-2/50" />
           ) : (
             <TrafficSeriesChart points={trafficSeries.data?.points ?? []} />
           )}
         </GlassCard>
 
         {/* Protocol breakdown — 1/3 width */}
-        <GlassCard className="space-y-4">
-          <div className="border-b border-border/60 pb-3">
-            <h3 className="text-base font-bold text-fg">{t("overview.protocolBreakdown")}</h3>
-            <p className="text-[11px] text-fg-subtle mt-0.5">Active connections by transport type</p>
+        <GlassCard compact className="space-y-3">
+          <div className="border-b border-border/60 pb-2.5">
+            <h3 className="text-sm font-bold text-fg">{t("overview.protocolBreakdown")}</h3>
+            <p className="text-[10px] text-fg-subtle mt-0.5">Active connections by transport type</p>
           </div>
           <ProtocolDonutChart
             slices={protocolSlices}

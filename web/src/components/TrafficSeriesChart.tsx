@@ -34,15 +34,15 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   if (points.length < 2) {
-    return <div className="flex h-52 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
+    return <div className="flex h-36 items-center justify-center text-xs text-fg-subtle">Collecting data…</div>;
   }
 
   const w = 620;
-  const h = 190;
-  const padL = 30;
+  const h = 148;
+  const padL = 28;
   const padR = 4;
-  const padTop = 12;
-  const padBottom = 24;
+  const padTop = 10;
+  const padBottom = 20;
   const innerH = h - padTop - padBottom;
   const max = Math.max(1, ...points.map((p) => p.up + p.down));
   const n = points.length;
@@ -110,11 +110,11 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
   const hx = hoverIdx !== null ? px(hoverIdx) : 0;
 
   // Keep tooltip box inside chart bounds.
-  const tooltipW = 108;
+  const tooltipW = 100;
   const tooltipX = Math.min(Math.max(hx - tooltipW / 2, padL), w - padR - tooltipW);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <svg
         ref={svgRef}
         viewBox={`0 0 ${w} ${h}`}
@@ -126,17 +126,17 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
       >
         <defs>
           <linearGradient id="ts-down-g" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8B7CF6" stopOpacity="0.38" />
+            <stop offset="0%" stopColor="#8B7CF6" stopOpacity="0.4" />
             <stop offset="55%" stopColor="#8B7CF6" stopOpacity="0.12" />
             <stop offset="100%" stopColor="#8B7CF6" stopOpacity="0.02" />
           </linearGradient>
           <linearGradient id="ts-up-g" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.4" />
+            <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.42" />
             <stop offset="60%" stopColor="#2DD4BF" stopOpacity="0.1" />
             <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0.02" />
           </linearGradient>
-          <filter id="ts-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.6" result="blur" />
+          <filter id="ts-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="1.4" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -144,9 +144,23 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
           </filter>
         </defs>
 
+        {/* Subtle horizontal grid */}
+        {yTicks.map((v, i) => (
+          <line
+            key={`grid-${i}`}
+            x1={padL}
+            y1={py(v)}
+            x2={w - padR}
+            y2={py(v)}
+            stroke="currentColor"
+            strokeOpacity={v === 0 ? 0.1 : 0.045}
+            strokeDasharray={v === 0 ? undefined : "2 4"}
+          />
+        ))}
+
         {/* Y-axis labels */}
         {yTicks.map((v, i) => (
-          <text key={i} x={padL - 6} y={py(v) + 3} textAnchor="end" className="fill-current opacity-35" style={{ fontSize: 9 }}>
+          <text key={i} x={padL - 6} y={py(v) + 3} textAnchor="end" className="fill-current opacity-35" style={{ fontSize: 8.5 }}>
             {v === 0 ? "0" : formatBytes(v, false).replace(/\.\d+/, "")}
           </text>
         ))}
@@ -157,7 +171,7 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
           d={smoothPath(totals)}
           fill="none"
           stroke="#8B7CF6"
-          strokeWidth="2"
+          strokeWidth="1.9"
           strokeLinecap="round"
           strokeLinejoin="round"
           filter="url(#ts-glow)"
@@ -169,24 +183,21 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
           d={smoothPath(ups)}
           fill="none"
           stroke="#2DD4BF"
-          strokeWidth="1.75"
+          strokeWidth="1.6"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeOpacity="0.95"
         />
-
-        {/* Baseline */}
-        <line x1={padL} y1={h - padBottom} x2={w - padR} y2={h - padBottom} stroke="currentColor" strokeOpacity="0.08" />
 
         {/* X-axis ticks */}
         {xTicks.map(({ x, label }, i) => (
           <text
             key={i}
             x={x}
-            y={h - 6}
+            y={h - 5}
             textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
             className="fill-current opacity-35"
-            style={{ fontSize: 9 }}
+            style={{ fontSize: 8.5 }}
           >
             {label}
           </text>
@@ -204,11 +215,11 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
               strokeOpacity="0.25"
               strokeDasharray="3 3"
             />
-            <circle cx={hx} cy={py(hp.up + hp.down)} r="3.5" fill="#8B7CF6" stroke="white" strokeWidth="1.5" />
-            <circle cx={hx} cy={py(hp.up)} r="3.5" fill="#2DD4BF" stroke="white" strokeWidth="1.5" />
+            <circle cx={hx} cy={py(hp.up + hp.down)} r="3" fill="#8B7CF6" stroke="white" strokeWidth="1.25" />
+            <circle cx={hx} cy={py(hp.up)} r="3" fill="#2DD4BF" stroke="white" strokeWidth="1.25" />
 
-            <foreignObject x={tooltipX} y={padTop} width={tooltipW} height={62}>
-              <div className="rounded-lg border border-border/70 bg-bg-elevated/95 backdrop-blur-sm px-2.5 py-2 shadow-lg text-[10px] leading-tight">
+            <foreignObject x={tooltipX} y={padTop} width={tooltipW} height={56}>
+              <div className="rounded-lg border border-border/70 bg-bg-elevated/95 backdrop-blur-sm px-2 py-1.5 shadow-lg text-[9.5px] leading-tight">
                 <p className="text-fg-subtle font-semibold mb-1">{fmtTooltipTime(hp.time, spanMs)}</p>
                 <p className="flex items-center justify-between gap-2 text-fg">
                   <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full inline-block" style={{ background: "#8B7CF6" }} />DL</span>
@@ -224,14 +235,14 @@ export function TrafficSeriesChart({ points }: { points: TrafficSeriesPoint[] })
         )}
       </svg>
 
-      <div className="flex items-center justify-between text-[11px] text-fg-muted">
-        <span className="flex items-center gap-4">
+      <div className="flex items-center justify-between text-[10px] text-fg-muted">
+        <span className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#2DD4BF" }} />
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#2DD4BF" }} />
             <span>Upload</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#8B7CF6" }} />
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: "#8B7CF6" }} />
             <span>Download</span>
           </span>
         </span>
