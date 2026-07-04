@@ -1,26 +1,37 @@
+VortexUI README.md Preview
+👁 Preview
+📄 Raw Markdown
+20,063 chars · 1 lines
+Copy Markdown
 <div align="center">
-  <img src="img/Logo.svg" alt="VortexUI" width="300" />
-  <p><strong>Next-generation proxy management panel</strong></p>
-  <p>Core-agnostic · User-centric · Real-time · Anti-censorship</p>
 
-  [![Release](https://img.shields.io/github/v/release/iPmartNetwork/VortexUI?style=flat-square&color=blue)](https://github.com/iPmartNetwork/VortexUI/releases)
-  [![Stars](https://img.shields.io/github/stars/iPmartNetwork/VortexUI?style=flat-square&color=yellow)](https://github.com/iPmartNetwork/VortexUI/stargazers)
-  [![License](https://img.shields.io/github/license/iPmartNetwork/VortexUI?style=flat-square)](LICENSE)
-  [![CI](https://img.shields.io/github/actions/workflow/status/iPmartNetwork/VortexUI/ci.yml?style=flat-square&label=CI)](https://github.com/iPmartNetwork/VortexUI/actions)
-  [![GHCR](https://img.shields.io/badge/ghcr.io-images-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/iPmartNetwork/VortexUI/pkgs/container/vortexui-panel)
-  [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat-square&logo=go)](https://go.dev)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
-  [![Telegram](https://img.shields.io/badge/Telegram-@vortex__ui-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/vortex_ui)
-  
-  ![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FiPmartNetwork%2FVortexUI&countColor=%23263759)
+<img src="img/Logo.svg" alt="VortexUI Logo" width="200">
 
-  <br />
+# VortexUI
 
-  <strong>English</strong> · <a href="README.fa.md">فارسی</a>
+**Next-generation, core-agnostic proxy management panel**
 
-  <br />
-  
-  [Features](#-features) · [What's New in 1.2.9](#-whats-new-in-129) · [What's New in 1.2.8](#-whats-new-in-128) · [What's New in 1.2.7](#-whats-new-in-127) · [What's New in 1.2.6](#-whats-new-in-126) · [What's New in 1.2.5](#-whats-new-in-125) · [What's New in 1.2.3](#-whats-new-in-123) · [What's New in 1.2](#-whats-new-in-12) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+`Xray + sing-box` · User-centric · Real-time · Multi-node · Anti-censorship
+
+[![Release](https://img.shields.io/github/v/release/iPmartNetwork/VortexUI?style=flat-square&color=00b4d8&label=Release)](https://github.com/iPmartNetwork/VortexUI/releases)
+[![Stars](https://img.shields.io/github/stars/iPmartNetwork/VortexUI?style=flat-square&color=f5a623)](https://github.com/iPmartNetwork/VortexUI/stargazers)
+[![License](https://img.shields.io/github/license/iPmartNetwork/VortexUI?style=flat-square&color=22c55e)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/iPmartNetwork/VortexUI/ci.yml?style=flat-square&label=CI)](https://github.com/iPmartNetwork/VortexUI/actions)
+[![GHCR](https://img.shields.io/badge/ghcr.io-images-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/iPmartNetwork/VortexUI/pkgs/container/vortexui-panel)
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat-square&logo=go)](https://go.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
+[![Telegram](https://img.shields.io/badge/Telegram-@vortex__ui-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/vortex_ui)
+
+[![Visitors](https://api.visitorbadge.io/api/visitors?path=https%3A%2F%2Fgithub.com%2FiPmartNetwork%2FVortexUI&countColor=%23263759)](https://github.com/iPmartNetwork/VortexUI)
+
+**English** · [فارسی](README.fa.md)
+
+<sub>
+
+[Features](#-features) · [What's New](#-whats-new-in-129) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Docs](#-documentation) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+
+</sub>
+
 </div>
 
 ---
@@ -29,25 +40,25 @@
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
 ### 🔧 Core Engine
-- **Xray-core** and **sing-box** — choose per node
-- In-process local node (no separate agent needed)
+- **Xray-core** & **sing-box** — choose per node
+- In-process local node (no separate agent)
 - Hot-reload config, runtime user add/remove
 - REALITY key generation built-in
 - **Reality Scanner** — auto-discover best SNIs
 
 ### 👥 User Management
 - User-centric model (one identity → many protocols)
-- Subscription: auto-detect Clash/sing-box/base64
+- Subscription: auto-detect Clash / sing-box / base64
 - **Self-service portal** (login with sub token, view usage, buy plans, open tickets)
-- **Subscription Hosts** — per-inbound CDN/SNI/host overrides in share links
+- **Subscription Hosts** — per-inbound CDN/SNI/host overrides
 - **Family/group subscriptions** (shared data pool)
 - **Smart Quota** — progressive speed reduction instead of hard-cut
-- **Self-service shop** (per-reseller plans + card/crypto/ZarinPal)
+- **Self-service shop** (per-reseller plans + card / crypto / ZarinPal)
 - **Referral system** — invite codes with rewards
-- Config templates (custom Clash/sing-box routing)
+- Config templates (custom Clash / sing-box routing)
 - QR codes + deep links (`vortex://` scheme)
 - Traffic accounting: delta-based, restart-safe
 - Quota enforcement + scheduled reset
@@ -55,63 +66,53 @@
 - Bulk actions + import from 3x-ui / Marzban
 
 ### 🌐 Network & Routing
-- Outbounds: freedom/blackhole/dns + proxy chaining
+- Outbounds: freedom / blackhole / dns + proxy chaining
 - **CDN/Relay chain builder** (multi-hop paths)
-- **Smart routing rule packs** (apply to node or embed in subscription)
-- Routing rules: domain/IP/port/protocol matchers
+- **Smart routing rule packs** (per node or embedded in subscription)
+- Routing rules: domain / IP / port / protocol matchers
 - **Multi-domain SNI routing** + auto SSL
 - Load balancers with health probing
 - GeoIP/Geosite updater with Iran rules
 - **Panel Federation** — sync users/nodes across panels
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
 ### 🖥 Node Fleet
 - mTLS connections (panel ↔ node)
 - **Auto-migration** — move users from unhealthy nodes
-- Live health monitoring (CPU/RAM/Disk)
+- Live health monitoring (CPU / RAM / Disk)
 - Remote restart / stop core
-- Custom endpoint (tunnel/CDN/relay)
+- Custom endpoint (tunnel / CDN / relay)
 - Cloudflare DNS automation
 - Per-node logs streaming
 
 ### 🛡 Security & Anti-Censorship
-- **TLS Tricks Manager** — ISP-specific profiles (Hamrah Aval, Irancell, Mokhaberat)
+- **TLS Tricks Manager** — ISP-specific profiles
 - **Active probing protection** — detect & block GFW probes
-- **Client fingerprint validator** — block curl/Go/Python
+- **Client fingerprint validator** — block curl / Go / Python
 - **Decoy website** — serve fake site to probers
 - **Evasion profiles** (fragment, mux, uTLS, ECH)
-- **Clean-IP scanner** (Cloudflare) and **IP-limit enforcement**
+- **Clean-IP scanner** (Cloudflare) & **IP-limit enforcement**
 - WARP+ integration
 - **DNS-over-HTTPS** server (built-in, ad/malware blocking)
-- IP whitelist/blacklist
-- Geo-blocking per inbound
+- IP whitelist/blacklist · Geo-blocking per inbound
 
 ### 🔐 Auth & Admin
 - JWT + TOTP 2FA
-- RBAC + **full reseller platform** (wallet, per-reseller plans/payments, sub-resellers, whitelabel, webhooks, policy limits, auto-suspend)
-- API tokens (PAT)
-- Login brute-force protection
-- Account-sharing guard
-- Audit log
+- RBAC + **full reseller platform** (wallet, sub-resellers, whitelabel, webhooks)
+- API tokens (PAT) · Login brute-force protection
+- Account-sharing guard · Audit log
 - **Support ticket system**
 
 ### 🎨 Frontend & UX
 - React 18 + TypeScript + Tailwind + **framer-motion**
-- **Veltrix UI** — glass cards, stat tiles, status badges, cyan/sky theme
-- 8 languages with **639 translated keys** and full RTL (EN/FA/TR/AR/RU/ZH/JA/ES)
-- Collapsible sidebar shell + sticky header with language/theme controls
-- Dark + Light themes (smooth transition)
-- **Command palette** (Ctrl+K / ⌘K)
+- **Veltrix UI** — glass cards, stat tiles, cyan/sky theme
+- 8 languages with **639 translated keys** and full RTL
+- Dark + Light themes · **Command palette** (Ctrl+K)
 - **Customizable dashboard widgets** (drag & drop)
 - **Onboarding tour** for new admins
-- **Mobile-first portal** (bottom nav, pull-to-refresh)
-- Real-time charts + animated gauges
-- **World map** geo-visualization
-- Skeleton loading states
-- Keyboard shortcuts
-- Error boundaries with retry
+- Real-time charts + animated gauges + **World map**
 - PWA (installable mobile app)
 
 </td>
@@ -122,11 +123,7 @@
 
 ## 🆕 What's New in 1.2.9
 
-<div align="center">
-
-**Command Tower UI · merged pages · Settings hub · reseller profiles · fleet telemetry**
-
-</div>
+> **Command Tower UI · merged pages · Settings hub · reseller profiles · fleet telemetry**
 
 | Feature | Description |
 |---------|-------------|
@@ -136,222 +133,142 @@
 | **Admins sub-tabs** | Admins list, Roles, and Reseller access matrix inside Settings |
 | **Command Tower Overview** | Live widgets with traffic ranges, top users + protocol, node geo/ping |
 | **Inbounds page** | Dedicated `/inbounds` view separate from node fleet |
-| **Node telemetry** | Region, country code, ping ms (migration `0030`) |
+| **Node telemetry** | Region, country code, ping ms (migration 0030) |
 | **Admin APIs** | `GET /api/admins/:id/quota` and `GET /api/admins/:id/wallet` |
+
+<details>
+<summary><strong>🔽 Previous Releases (1.2.8 → 1.2)</strong></summary>
+
+### 🆕 What's New in 1.2.8
+
+> **Veltrix UI · complete i18n · redesigned admin + portal shell**
+
+| Feature | Description |
+|---------|-------------|
+| **Veltrix design system** | Glass cards, stat tiles, status badges, page-enter animations, cyan/sky palette |
+| **New app shell** | Collapsible sidebar + header with mini mode, mobile drawer, theme/language switcher |
+| **Command palette** | Fuzzy page search via Ctrl+K / ⌘K |
+| **Live core pages** | Overview, Users, Nodes rebuilt with real-time API stat cards and fleet health |
+| **Portal refresh** | Redesigned login, dashboard, desktop sidebar, mobile bottom navigation |
+| **Full i18n** | 639 keys in 8 languages — billing, reseller payment, pending orders, shell, portal |
+
+### 🆕 What's New in 1.2.7
+
+> **Per-reseller commerce · owned plans · payment proof · self-service renewal**
+
+| Feature | Description |
+|---------|-------------|
+| **Self-service renewal** | Users purchase plans from `/sub/:token/shop`; traffic + duration stack additively |
+| **Per-reseller payment config** | Each reseller sets their own card number, crypto addresses, and ZarinPal merchant |
+| **Per-reseller owned plans** | Resellers create plans with custom pricing; users only see their reseller's plans |
+| **Payment proof upload** | Card-to-card requires receipt image; crypto accepts TX hash + screenshot |
+| **Pending order review** | Admins see proof thumbnails, approve or reject manual payments |
+
+### 🆕 What's New in 1.2.6
+
+> **Node enrollment wizard · wallet billing · diagnostics · doctor CLI**
+
+| Feature | Description |
+|---------|-------------|
+| **Node enrollment wizard** | Four-step UI: copy mTLS bundle → install → register → connectivity test |
+| **Node health diagnostics** | Classify disconnects (mTLS failure / unreachable / core down); debug bundle |
+| **`vortexui doctor`** | CLI checks certs, services, ports, and `/health` for panel/node/docker |
+| **Reseller wallet billing** | Multi-currency packages, ZarinPal + NowPayments, card-to-card and crypto |
+| **Wallet UI** | Top-up from Admins page, CSV ledger export, parent → sub-reseller top-up |
+
+### 🆕 What's New in 1.2.5
+
+> **Reseller platform · wallet & sub-resellers · whitelabel · webhooks · policy limits**
+
+| Feature | Description |
+|---------|-------------|
+| **Allowlists** | Per-reseller plan, node, and inbound pickers |
+| **Quota modes** | Allocated vs consumed traffic pool enforcement |
+| **Reseller dashboard** | Accounts, traffic pool, top consumers, expiring users, CSV export |
+| **Sub-resellers** | Hierarchical child resellers with role + quota |
+| **Whitelabel** | Custom panel title, logo, accent, slug, footer |
+| **Auto-suspend** | IP violation and quota overage suspension worker |
+| **i18n** | All reseller pages in 8 languages |
+
+See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup details.
+
+### 🆕 What's New in 1.2.3
+
+> **Subscription Hosts · routing packs · clean-IP scanner · IP-limit enforcement**
+
+| Feature | Description |
+|---------|-------------|
+| **Subscription Hosts** | Marzban-style per-inbound host overrides projected into subscription links |
+| **New output formats** | Raw Xray/V2Ray JSON, Outline `ss://`, plain V2rayN links |
+| **Smart routing rule packs** | Reusable rulesets applicable per node or embedded in Clash/sing-box subscriptions |
+| **Clean-IP scanner** | Scan & score CDN candidate IPs by latency + packet loss (SSRF-protected) |
+| **IP-limit enforcement** | Warn / temp-disable / disconnect when user exceeds device limit |
+| **New protocols** | SOCKS, HTTP, Naive, Dokodemo, Hysteria v1, ShadowTLS, AnyTLS, mKCP transport |
+
+### 🆕 What's New in 1.2
+
+> **17 new features + 24 UX improvements in a single release**
+
+<table>
+<tr><td>
+
+**🚀 Major Features:**
+Self-Service Portal · Reality Scanner · Smart Quota · CDN/Relay Chain Builder · Decoy Website · Advanced Analytics · Node Auto-Migration · Active Probing Protection · Family/Group Subscriptions · Referral System · DNS-over-HTTPS · Multi-Domain SNI + SSL · TLS Tricks Manager · Client Fingerprint Validator · Multi-Panel Federation · Deep Links + QR · Quota Notifications
+
+</td></tr>
+<tr><td>
+
+**🎨 UX Improvements (24):**
+Collapsible sidebar · Command palette · Skeleton loading · Data tables · Page transitions · Code splitting · Toast notifications · Notification center · Keyboard shortcuts · Error boundaries · Animated gauges · World map · Multi-step wizard · Help tooltips · Optimistic UI · PWA · Accessibility · Theme transition · Onboarding tour · Dashboard widgets · Mobile portal · Bottom sheets · Pull-to-refresh · Safe-area support
+
+</td></tr>
+</table>
+
+</details>
 
 📖 Full details: [CHANGELOG.md](CHANGELOG.md) · [Documentation](https://ipmartnetwork.github.io/VortexUI/)
 
 ---
 
-## 🆕 What's New in 1.2.8
-
-<div align="center">
-
-**Veltrix UI · complete i18n · redesigned admin + portal shell**
-
-</div>
-
-| Feature | Description |
-|---------|-------------|
-| **Veltrix design system** | Glass cards, stat tiles, status badges, page-enter animations, cyan/sky palette |
-| **New app shell** | Collapsible sidebar + header with mini mode, mobile drawer, theme and language switcher |
-| **Command palette** | Fuzzy page search via Ctrl+K / ⌘K from header, sidebar, or keyboard |
-| **Live core pages** | Overview, Users, and Nodes rebuilt with real-time API stat cards and fleet health |
-| **Portal refresh** | Redesigned login, dashboard, desktop sidebar, and mobile bottom navigation |
-| **Full i18n** | 639 keys in all 8 languages — billing, reseller payment, pending orders, shell, portal |
-| **Locale tooling** | JSON locale files + apply/check scripts for translation maintenance |
-
----
-
-## 🆕 What's New in 1.2.7
-
-<div align="center">
-
-**Per-reseller commerce · owned plans · payment proof · self-service renewal**
-
-</div>
-
-| Feature | Description |
-|---------|-------------|
-| **Self-service renewal** | Users purchase plans from `/sub/:token/shop`; traffic + duration stack additively onto current balance |
-| **Per-reseller payment config** | Each reseller sets their own card number, crypto addresses, and ZarinPal merchant; gated by "billing" setting |
-| **Per-reseller owned plans** | Resellers create plans with custom pricing; users only see their reseller's plans in shop |
-| **Payment proof upload** | Card-to-card requires receipt image (فیش); crypto accepts TX hash + transfer screenshot |
-| **Pending order review** | Admins see proof thumbnails, approve or reject manual payments |
-| **Manual payment methods** | Card-to-card + crypto alongside ZarinPal in both server-side shop and React portal |
-| **Plan ownership** | Resellers can create/delete their own plans (user:write); cross-reseller purchase blocked |
-| **Scrollable Edit Admin** | Modal properly scrolls with sticky save button |
-
----
-
-## 🆕 What's New in 1.2.6
-
-<div align="center">
-
-**Node enrollment wizard · wallet billing · reseller wallet top-up · diagnostics · doctor CLI**
-
-</div>
-
-| Feature | Description |
-|---------|-------------|
-| **Node enrollment wizard** | Four-step UI: copy mTLS bundle → install → register → connectivity test |
-| **Node health diagnostics** | Classify disconnects (mTLS failure / unreachable / core down); badges + debug bundle |
-| **`vortexui doctor`** | CLI checks certs, services, ports, and `/health` for panel/node/docker installs |
-| **Reseller wallet billing** | Multi-currency packages, ZarinPal + NowPayments online top-up, card-to-card and crypto with TX ID |
-| **Wallet deposit approval** | Sudo approval queue for manual deposits; crypto coin picker (TRX, TON, USDT-BEP20, LTC, BNB) |
-| **Wallet quota stacking** | Approved purchases immediately add to reseller's main quota (no reserve mode) |
-| **Wallet UI** | Top-up from Admins page, CSV ledger export, parent → sub-reseller top-up |
-| **Enrollment polish** | QR code, phase badges, TCP vs mTLS status, CA comparison, Telegram disconnect alert |
-
----
-
-## 🆕 What's New in 1.2.5
-
-<div align="center">
-
-**Reseller platform · wallet & sub-resellers · whitelabel · webhooks · policy limits · auto-suspend · full i18n**
-
-</div>
-
-| Feature | Description |
-|---------|-------------|
-| **Allowlists** | Per-reseller plan, node, and inbound pickers — resellers only see what you assign |
-| **Quota modes** | `allocated` vs `consumed` traffic pool enforcement |
-| **Reseller dashboard** | Accounts, traffic pool, top consumers, expiring users, CSV export |
-| **Quota alerts** | Telegram + webhook when resellers approach limits |
-| **Wallet & ledger** | Traffic/user credits with top-up and history |
-| **Sub-resellers** | Hierarchical child resellers with role + quota |
-| **Whitelabel** | Custom panel title, logo, accent, slug, footer |
-| **Outbound webhook** | Signed `user.created` / `user.deleted` events |
-| **Impersonate** | Sudo **Login as** for reseller support |
-| **Scoped audit** | Resellers see only their own audit entries |
-| **Policy limits** | Max data/expire, bulk create/delete gates |
-| **Auto-suspend** | IP violation and quota overage suspension worker |
-| **Bulk quota adjust** | +50 accounts / +10 GB / +50 GB from Admins table |
-| **i18n** | All reseller pages in 8 languages (EN/FA/TR/AR/RU/ZH/JA/ES) |
-
-See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup details.
-
----
-
-## 🆕 What's New in 1.2.3
-
-<div align="center">
-
-**Subscription Hosts · new output formats · smart routing packs · clean-IP scanner · IP-limit enforcement · more protocols**
-
-</div>
-
-| Feature | Description |
-|---------|-------------|
-| **Subscription Hosts** | Marzban-style per-inbound host overrides (address/SNI/Host/path/ALPN/fingerprint/security/fragment/mux) projected into subscription links, with template variables (`{USERNAME}`, `{SERVER_IP}`, …) |
-| **New subscription output formats** | Raw Xray/V2Ray JSON, Outline `ss://`, and plain V2rayN links (`?format=xray\|outline\|links`) |
-| **Smart routing rule packs** | Reusable routing rule sets applied to nodes and/or embedded into Clash/sing-box subscriptions; global + per-user selection |
-| **Clean-IP scanner (Cloudflare)** | Scan and score candidate CDN IPs by latency + loss, SSRF-guarded |
-| **IP-limit enforcement** | Warn / temporary-disable / kill-connections when a user exceeds its device-IP limit (kill applies to Xray; sing-box degrades to temporary disable) |
-| **New protocols** | `socks`, `http`, `naive` (sing-box), `dokodemo` (xray); sing-box hysteria v1, shadowtls, anytls; mKCP transport; per-protocol capability matrix |
-
----
-
-## 🆕 What's New in 1.2
-
-<div align="center">
-
-**17 new features + 24 UX improvements in a single release**
-
-</div>
-
-<details open>
-<summary><strong>🚀 Major Features</strong></summary>
-
-| Feature | Description |
-|---------|-------------|
-| **User Self-Service Portal** | End-users login with their sub token, view usage, buy plans, submit support tickets |
-| **Reality Scanner** | Built-in TLS probe — scan SNIs, measure latency, score compatibility (0-100) |
-| **Smart Quota (Fair Use)** | Progressive speed reduction at configurable thresholds instead of hard-cut |
-| **CDN/Relay Chain Builder** | Define multi-hop relay paths with per-hop protocol/SNI/path config |
-| **Decoy Website** | Serve fake site (reverse-proxy or static HTML) to active probers |
-| **Advanced Analytics** | Geo-IP breakdown, top users, peak hours, CSV export |
-| **Node Auto-Migration** | Automatic user migration when nodes become unhealthy |
-| **Active Probing Protection** | Detect and block GFW/DPI probes with IP blocklist |
-| **Family/Group Subscriptions** | Shared data pools for multiple devices under one parent |
-| **Invite/Referral System** | Referral codes with configurable rewards (data/days/discount) |
-| **DNS-over-HTTPS** | Built-in DoH server with ad/malware blocking |
-| **Multi-Domain SNI + SSL** | Multiple domains per inbound, auto Let's Encrypt/ZeroSSL |
-| **TLS Tricks Manager** | ISP-specific anti-DPI profiles with one-click presets |
-| **Client Fingerprint Validator** | JA3-based filtering — allow Chrome/Firefox, block curl/Go |
-| **Multi-Panel Federation** | Sync users and nodes across multiple VortexUI panels |
-| **Deep Links + QR** | Custom URL scheme (`vortex://`) for one-tap subscription import |
-| **Quota Notifications** | Telegram/webhook alerts at configurable usage thresholds |
-
-</details>
-
-<details>
-<summary><strong>🎨 UX Improvements (24)</strong></summary>
-
-- Collapsible sidebar sections (Dashboard, Users, Network, Security, System)
-- Command palette with fuzzy search (Ctrl+K)
-- Skeleton loading states (shimmer placeholders)
-- Professional data table with sort, filter, pagination
-- Animated page transitions (CSS-based)
-- Code splitting with lazy routes
-- Redesigned toast notifications (progress bar + undo)
-- Notification center (bell dropdown)
-- Keyboard shortcuts (N/S/?)
-- Error boundaries with retry button
-- Animated circular gauges (CPU/RAM/Bandwidth)
-- World map heatmap (geo analytics)
-- Multi-step wizard component
-- Contextual help tooltips
-- Optimistic UI updates
-- Enhanced PWA support
-- Accessibility improvements (aria, focus management)
-- Smooth dark/light theme transition
-- Onboarding tour for first-time users
-- Customizable dashboard widgets (drag & drop)
-- Mobile-first portal layout (bottom nav)
-- Bottom sheet modals
-- Pull-to-refresh gesture
-- Safe-area support (iPhone notch)
-
-</details>
-
----
-
 ## 📸 Screenshots
 
-<details>
-<summary><strong>🌙 Dark Mode</strong></summary>
-<br />
-
-| Dashboard | Nodes | Users |
-|:---------:|:-----:|:-----:|
-| ![Overview Dark](img/panel/overview_dark.png) | ![Nodes Dark](img/panel/Node_dark.png) | ![Users Dark](img/panel/User_dark.png) |
-
-</details>
-
-<details open>
-<summary><strong>☀️ Light Mode</strong></summary>
-<br />
-
-| Dashboard | Nodes | Users |
-|:---------:|:-----:|:-----:|
-| ![Overview Light](img/panel/overview_light.png) | ![Nodes Light](img/panel/Node_light.png) | ![Users Light](img/panel/User_light.png) |
-
-</details>
+<table>
+<tr>
+<td align="center" colspan="3"><strong>🌙 Dark Mode</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Dashboard</strong></td>
+<td align="center"><strong>Nodes</strong></td>
+<td align="center"><strong>Users</strong></td>
+</tr>
+<tr>
+<td><a href="img/panel/overview_dark.png"><img src="img/panel/overview_dark.png" alt="Dashboard Dark" width="300"></a></td>
+<td><a href="img/panel/Node_dark.png"><img src="img/panel/Node_dark.png" alt="Nodes Dark" width="300"></a></td>
+<td><a href="img/panel/User_dark.png"><img src="img/panel/User_dark.png" alt="Users Dark" width="300"></a></td>
+</tr>
+<tr>
+<td align="center" colspan="3"><strong>☀️ Light Mode</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Dashboard</strong></td>
+<td align="center"><strong>Nodes</strong></td>
+<td align="center"><strong>Users</strong></td>
+</tr>
+<tr>
+<td><a href="img/panel/overview_light.png"><img src="img/panel/overview_light.png" alt="Dashboard Light" width="300"></a></td>
+<td><a href="img/panel/Node_light.png"><img src="img/panel/Node_light.png" alt="Nodes Light" width="300"></a></td>
+<td><a href="img/panel/User_light.png"><img src="img/panel/User_light.png" alt="Users Light" width="300"></a></td>
+</tr>
+</table>
 
 ---
 
 ## ⚖️ Comparison
 
-<div align="center">
-
 ### How VortexUI stacks up against other panels
 
-</div>
-
-| | VortexUI 1.2.9 | 3x-ui | Marzban | Hiddify |
-|:--|:--:|:--:|:--:|:--:|
+|  | VortexUI 1.2.9 | 3x-ui | Marzban | Hiddify |
+|--|----------------|-------|---------|---------|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |
 | **Traffic method** | Push delta | Polling | Polling | Polling |
@@ -384,10 +301,8 @@ See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup deta
 
 ## 📡 Supported Protocols
 
-<div align="center">
-
 | Protocol | Inbound | Outbound | Transport |
-|----------|:-------:|:--------:|:---------:|
+|----------|---------|----------|-----------|
 | **VLESS** | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, xHTTP, mKCP |
 | **VMess** | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, mKCP |
 | **Trojan** | ✅ | ✅ | TCP, WS, gRPC, mKCP |
@@ -402,8 +317,6 @@ See the [v1.2.5 features guide](docs/wiki/en/18-v125-features.md) for setup deta
 | **ShadowTLS** | ✅ (sing-box) | — | TCP |
 | **AnyTLS** | ✅ (sing-box) | — | TCP |
 | **WireGuard** | ✅ | — | UDP |
-
-</div>
 
 **Subscription output:** base64 · Clash/Clash.Meta · sing-box · Xray JSON · Outline · plain links (auto-detected by client).
 
@@ -420,21 +333,24 @@ bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/
 ```
 
 The installer asks:
-1. **Method** — Docker Compose *(recommended)* or Native (systemd)
+
+1. **Method** — Docker Compose _(recommended)_ or Native (systemd)
 2. **Access** — Domain + auto HTTPS (Let's Encrypt) or IP + HTTP
 
 Then generates secrets, mTLS certs, starts the stack, creates your first admin, and installs the `vortexui` CLI.
 
-Non-interactive:
-```bash
-VORTEXUI_METHOD=docker VORTEXUI_NONINTERACTIVE=1 \
-  VORTEXUI_ADMIN_USER=admin VORTEXUI_ADMIN_PASS='s3cret' \
-  bash install.sh
-```
+> **💡 Non-interactive mode:**
+> ```bash
+> VORTEXUI_METHOD=docker VORTEXUI_NONINTERACTIVE=1 \
+>   VORTEXUI_ADMIN_USER=admin VORTEXUI_ADMIN_PASS='s3cret' \
+>   bash install.sh
+> ```
 
 ### Management Console
 
-```text
+After installation, type **`vortexui`** for the interactive menu:
+
+```
 $ vortexui
 
    1) Start            2) Stop
@@ -444,6 +360,8 @@ $ vortexui
    9) Domain / SSL    10) Settings / URL
   11) Uninstall        0) Exit
 ```
+
+Or use sub-commands: `vortexui start|stop|restart|status|logs|update|admin|settings|uninstall`
 
 ### Docker
 
@@ -482,80 +400,81 @@ make run-panel          # start panel
 | Topic | Link |
 |-------|------|
 | **Documentation site** | [ipmartnetwork.github.io/VortexUI](https://ipmartnetwork.github.io/VortexUI/) |
-| **Telegram** | [@vortex_ui](https://t.me/vortex_ui) |
+| **Telegram** | [@vortex\_ui](https://t.me/vortex_ui) |
 | **Discussions** | [GitHub Q&A](https://github.com/iPmartNetwork/VortexUI/discussions) |
 | **Wiki** | [EN](docs/wiki/en/README.md) · [FA](docs/wiki/fa/README.md) · [AR](docs/wiki/ar/README.md) · [TR](docs/wiki/tr/README.md) |
-| **API (OpenAPI 3.0)** | [`docs/openapi.yaml`](docs/openapi.yaml) |
-| **Protocols** | [`docs/protocols.md`](docs/protocols.md) |
-| **Changelog** | [`CHANGELOG.md`](CHANGELOG.md) |
-| **Contributing** | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| **API (OpenAPI 3.0)** | [docs/openapi.yaml](docs/openapi.yaml) |
+| **Protocols** | [docs/protocols.md](docs/protocols.md) |
+| **Changelog** | [CHANGELOG.md](CHANGELOG.md) |
+| **Contributing** | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ---
 
 ## 🗺 Roadmap
 
 <details>
-<summary><strong>Completed (v1.0 → v1.2)</strong></summary>
+<summary><strong>✅ Completed (v1.0 → v1.2.9)</strong></summary>
 
-- [x] Core-agnostic engine (Xray + sing-box)
-- [x] User-centric data model + push delta traffic
-- [x] Multi-node with mTLS + auto-failover
-- [x] Outbound/Routing/Balancer management
-- [x] REALITY key generation + scanner
-- [x] Webhook + Telegram notifications
-- [x] Interactive Telegram bot
-- [x] Backup/Restore + auto-backup (TG/S3)
-- [x] Audit log + API tokens
-- [x] Account-sharing guard
-- [x] Import from 3x-ui / Marzban
-- [x] 8-language frontend + RTL
-- [x] Real-time dashboard (SSE)
-- [x] Automatic HTTPS (Caddy)
-- [x] One-line installer + CLI
-- [x] Hysteria2 + TUIC + WireGuard
-- [x] Reseller platform (v1.2.5)
-- [x] Payment gateways (ZarinPal + crypto)
-- [x] Evasion profiles + WARP+
-- [x] Cluster mode (HA)
-- [x] Grafana/Prometheus metrics
-- [x] Self-service portal
-- [x] Reality Scanner
-- [x] Smart Quota (fair use)
-- [x] CDN/Relay chains
-- [x] Decoy website
-- [x] Advanced analytics (geo)
-- [x] Node auto-migration
-- [x] Active probing protection
-- [x] Family/group subscriptions
-- [x] Referral system
-- [x] DNS-over-HTTPS
-- [x] Multi-domain SNI + auto SSL
-- [x] TLS Tricks (ISP profiles)
-- [x] Client fingerprint validator
-- [x] Multi-panel federation
-- [x] Deep links + QR
-- [x] Quota notifications
-- [x] Command palette + keyboard shortcuts
-- [x] Dashboard widgets + onboarding tour
-- [x] Mobile-first portal
-- [x] Command Tower UI — merged pages, Settings hub, reseller profiles (v1.2.9)
-- [x] Veltrix UI redesign (v1.2.8)
-- [x] Complete 8-language i18n — admin + portal (v1.2.8)
-- [x] Per-reseller payment configuration (v1.2.7)
-- [x] Per-reseller owned plans (v1.2.7)
-- [x] Payment proof/receipt uploads (v1.2.7)
-- [x] Node enrollment wizard (v1.2.6)
-- [x] Reseller wallet billing (v1.2.6)
+- Core-agnostic engine (Xray + sing-box)
+- User-centric data model + push delta traffic
+- Multi-node with mTLS + auto-failover
+- Outbound/Routing/Balancer management
+- REALITY key generation + scanner
+- Webhook + Telegram notifications
+- Interactive Telegram bot
+- Backup/Restore + auto-backup (TG/S3)
+- Audit log + API tokens
+- Account-sharing guard
+- Import from 3x-ui / Marzban
+- 8-language frontend + RTL
+- Real-time dashboard (SSE)
+- Automatic HTTPS (Caddy)
+- One-line installer + CLI
+- Hysteria2 + TUIC + WireGuard
+- Reseller platform (v1.2.5)
+- Payment gateways (ZarinPal + crypto)
+- Evasion profiles + WARP+
+- Cluster mode (HA)
+- Grafana/Prometheus metrics
+- Self-service portal
+- Reality Scanner
+- Smart Quota (fair use)
+- CDN/Relay chains
+- Decoy website
+- Advanced analytics (geo)
+- Node auto-migration
+- Active probing protection
+- Family/group subscriptions
+- Referral system
+- DNS-over-HTTPS
+- Multi-domain SNI + auto SSL
+- TLS Tricks (ISP profiles)
+- Client fingerprint validator
+- Multi-panel federation
+- Deep links + QR
+- Quota notifications
+- Command palette + keyboard shortcuts
+- Dashboard widgets + onboarding tour
+- Mobile-first portal
+- Command Tower UI (v1.2.9)
+- Veltrix UI redesign (v1.2.8)
+- Complete 8-language i18n (v1.2.8)
+- Per-reseller payment configuration (v1.2.7)
+- Per-reseller owned plans (v1.2.7)
+- Payment proof/receipt uploads (v1.2.7)
+- Node enrollment wizard (v1.2.6)
+- Reseller wallet billing (v1.2.6)
 
 </details>
 
-### Coming Next
-- [ ] Mobile app (React Native / Flutter)
-- [ ] AI-powered anomaly detection
-- [ ] Multi-language docs expansion
-- [ ] Proxy-level rate limiting per user
-- [ ] Plugin system for custom extensions
-- [ ] WebSocket transport support for sing-box
+### 🔜 Coming Next
+
+- 📱 Mobile app (React Native / Flutter)
+- 🤖 AI-powered anomaly detection
+- 📚 Multi-language docs expansion
+- ⚡ Proxy-level rate limiting per user
+- 🔌 Plugin system for custom extensions
+- 🌊 WebSocket transport support for sing-box
 
 ---
 
@@ -566,17 +485,13 @@ If VortexUI is useful to you:
 - ⭐ **Star** this repository
 - 🍴 **Fork** and contribute
 - 📢 **Share** with your community
-- 💬 **Join** [@vortex_ui](https://t.me/vortex_ui) on Telegram
-
-<div align="center">
+- 💬 **Join** [@vortex\_ui](https://t.me/vortex_ui) on Telegram
 
 | Network | Address |
-|:-------:|---------|
+|---------|---------|
 | **USDT (TRC20)** | `TRLnjZ7YDSwjh3oay28qigEYNieGPMs6ew` |
 | **BTC** | `bc1qszt4g7jdv7ev2t3pexctc07ults8nfflht3nj5` |
 | **TON** | `UQAYSSSirtQ9_67ZHYUgLVLMx9Ir9vvh3vpcq2qbpit_8-Db` |
-
-</div>
 
 ---
 
@@ -594,13 +509,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 🌐 Internationalization
 
-<div align="center">
-
 | 🇺🇸 English | 🇮🇷 فارسی | 🇹🇷 Türkçe | 🇸🇦 العربية |
-|:-----------:|:---------:|:----------:|:-----------:|
+|------------|----------|-----------|-----------|
 | 🇷🇺 Русский | 🇨🇳 中文 | 🇯🇵 日本語 | 🇪🇸 Español |
-
-</div>
 
 Full RTL support for Persian and Arabic.
 
@@ -613,15 +524,9 @@ GPL-3.0 — see [LICENSE](LICENSE).
 ---
 
 <div align="center">
-  <br />
-  <img src="img/Logo.svg" alt="VortexUI" width="200" />
-  <br /><br />
-  <sub>© 2026 iPmart Network. All rights reserved.</sub>
-  <br /><br />
-  
-  **Made with ❤️ by [iPmart Network](https://github.com/iPmartNetwork)**
-  
-  [Telegram @vortex_ui](https://t.me/vortex_ui) · [Documentation](https://ipmartnetwork.github.io/VortexUI/)
-  
-  ⭐ Star this repo if you find it useful!
+
+**Built with ❤️ by [iPmart Network](https://github.com/iPmartNetwork)**
+
+<sub>If you find VortexUI useful, please consider giving it a ⭐</sub>
+
 </div>
