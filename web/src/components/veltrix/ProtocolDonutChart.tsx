@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn, formatBytes } from "@/lib/utils";
 
 export interface ProtocolSlice {
@@ -19,6 +20,7 @@ export function ProtocolDonutChart({
   centerValue: string | number;
   className?: string;
 }) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const total = slices.reduce((s, x) => s + x.value, 0);
   if (total === 0) {
     return (
@@ -31,27 +33,16 @@ export function ProtocolDonutChart({
   const r = 44;
   const circ = 2 * Math.PI * r;
   let offset = 0;
-  const rings = slices.map((slice, i) => {
+  const arcs = slices.map((slice, i) => {
     const pct = slice.value / total;
     const dash = pct * circ;
-    const ring = (
-      <circle
-        key={slice.label}
-        cx="50"
-        cy="50"
-        r={r}
-        fill="none"
-        stroke={slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length]}
-        strokeWidth="9"
-        strokeDasharray={`${dash} ${circ - dash}`}
-        strokeDashoffset={-offset}
-        strokeLinecap="round"
-        className="transition-all duration-500"
-      />
-    );
+    const arcOffset = offset;
     offset += dash;
-    return ring;
+    return { slice, i, dash, arcOffset, pct };
   });
+
+  const hovered = hoverIdx !== null ? slices[hoverIdx] : null;
+  const hoveredPct = hovered ? ((hovered.value / total) * 100).toFixed(0) : null;
 
   return (
     <div className={cn("flex flex-col items-center gap-5", className)}>
@@ -59,11 +50,40 @@ export function ProtocolDonutChart({
       <div className="relative h-44 w-44 flex-shrink-0">
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
           <circle cx="50" cy="50" r={r} fill="none" stroke="hsl(var(--border))" strokeWidth="9" opacity="0.3" />
-          {rings}
+          {arcs.map(({ slice, i, dash, arcOffset }) => (
+            <circle
+              key={slice.label}
+              cx="50"
+              cy="50"
+              r={r}
+              fill="none"
+              stroke={slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length]}
+              strokeWidth={hoverIdx === i ? "11" : "9"}
+              strokeDasharray={`${dash} ${circ - dash}`}
+              strokeDashoffset={-arcOffset}
+              strokeLinecap="round"
+              opacity={hoverIdx !== null && hoverIdx !== i ? 0.35 : 1}
+              className="transition-all duration-200 cursor-pointer"
+              onMouseEnter={() => setHoverIdx(i)}
+              onMouseLeave={() => setHoverIdx(null)}
+            />
+          ))}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3">
-          <span className="text-2xl font-black text-fg tabular-nums leading-none">{centerValue}</span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1">{centerLabel}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3 pointer-events-none">
+          {hovered ? (
+            <>
+              <span className="text-lg font-black text-fg tabular-nums leading-none">{hoveredPct}%</span>
+              <span className="text-[9px] font-bold uppercase tracking-wide text-fg-subtle mt-1 max-w-[90px] truncate">
+                {hovered.label}
+              </span>
+              <span className="text-[9px] text-fg-subtle mt-0.5">{formatBytes(hovered.value, false)}</span>
+            </>
+          ) : (
+            <>
+              <span className="text-2xl font-black text-fg tabular-nums leading-none">{centerValue}</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1">{centerLabel}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -72,12 +92,25 @@ export function ProtocolDonutChart({
         {slices.map((slice, i) => {
           const pct = ((slice.value / total) * 100).toFixed(0);
           return (
-            <div key={slice.label} className="flex items-center gap-1.5 text-xs min-w-0">
+            <div
+              key={slice.label}
+              onMouseEnter={() => setHoverIdx(i)}
+              onMouseLeave={() => setHoverIdx(null)}
+              className={cn(
+                "flex items-center gap-1.5 text-xs min-w-0 rounded-md px-1 -mx-1 py-0.5 cursor-pointer transition-colors",
+                hoverIdx === i ? "bg-surface-2/70" : "hover:bg-surface-2/40",
+              )}
+            >
               <span
                 className="h-2.5 w-2.5 rounded-full flex-shrink-0"
                 style={{ background: slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length] }}
               />
-              <span className="text-fg-muted text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">
+              <span
+                className={cn(
+                  "text-[11px] whitespace-nowrap overflow-hidden text-ellipsis",
+                  hoverIdx === i ? "text-fg font-semibold" : "text-fg-muted",
+                )}
+              >
                 {slice.label}
               </span>
               <span className="font-bold text-fg tabular-nums text-[11px] ms-auto flex-shrink-0">{pct}%</span>
