@@ -23,17 +23,17 @@ export function ProtocolDonutChart({
   if (total === 0) {
     return (
       <div className={cn("flex h-48 items-center justify-center text-xs text-fg-subtle", className)}>
-        No inbound protocols yet
+        No protocol data yet
       </div>
     );
   }
 
-  const r = 42;
-  const c = 2 * Math.PI * r;
+  const r = 44;
+  const circ = 2 * Math.PI * r;
   let offset = 0;
   const rings = slices.map((slice, i) => {
     const pct = slice.value / total;
-    const dash = pct * c;
+    const dash = pct * circ;
     const ring = (
       <circle
         key={slice.label}
@@ -42,8 +42,8 @@ export function ProtocolDonutChart({
         r={r}
         fill="none"
         stroke={slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length]}
-        strokeWidth="10"
-        strokeDasharray={`${dash} ${c - dash}`}
+        strokeWidth="9"
+        strokeDasharray={`${dash} ${circ - dash}`}
         strokeDashoffset={-offset}
         strokeLinecap="round"
         className="transition-all duration-500"
@@ -53,35 +53,44 @@ export function ProtocolDonutChart({
     return ring;
   });
 
+  // 2×2 grid — pair slices into rows of 2
+  const pairs: ProtocolSlice[][] = [];
+  for (let i = 0; i < slices.length; i += 2) {
+    pairs.push(slices.slice(i, i + 2));
+  }
+
   return (
-    <div className={cn("flex flex-col sm:flex-row items-center gap-6", className)}>
-      <div className="relative h-40 w-40 flex-shrink-0">
+    <div className={cn("flex flex-col items-center gap-5", className)}>
+      {/* Donut */}
+      <div className="relative h-44 w-44 flex-shrink-0">
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-          <circle cx="50" cy="50" r={r} fill="none" stroke="hsl(var(--border))" strokeWidth="10" opacity="0.35" />
+          <circle cx="50" cy="50" r={r} fill="none" stroke="hsl(var(--border))" strokeWidth="9" opacity="0.3" />
           {rings}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
-          <span className="text-lg font-black text-fg tabular-nums leading-none">{centerValue}</span>
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-fg-subtle mt-1">{centerLabel}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3">
+          <span className="text-2xl font-black text-fg tabular-nums leading-none">{centerValue}</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1">{centerLabel}</span>
         </div>
       </div>
-      <ul className="flex-1 space-y-2.5 w-full min-w-0">
+
+      {/* 2×2 legend grid */}
+      <div className="w-full grid grid-cols-2 gap-x-4 gap-y-2.5">
         {slices.map((slice, i) => {
           const pct = ((slice.value / total) * 100).toFixed(0);
           return (
-            <li key={slice.label} className="flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 min-w-0">
+            <div key={slice.label} className="flex items-center justify-between gap-1.5 text-xs min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <span
                   className="h-2.5 w-2.5 rounded-full flex-shrink-0"
                   style={{ background: slice.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length] }}
                 />
-                <span className="text-fg-muted truncate">{slice.label}</span>
+                <span className="text-fg-muted truncate text-[11px]">{slice.label}</span>
               </div>
-              <span className="font-bold text-fg tabular-nums flex-shrink-0">{pct}%</span>
-            </li>
+              <span className="font-bold text-fg tabular-nums flex-shrink-0 text-[11px]">{pct}%</span>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }
@@ -110,7 +119,7 @@ export function buildProtocolSlices(
 }
 
 export function formatDailyBandwidth(bytes: number): string {
-  if (bytes >= 1024 ** 4) return `${(bytes / 1024 ** 4).toFixed(2)} TB`;
-  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+  if (bytes >= 1024 ** 4) return `${(bytes / 1024 ** 4).toFixed(2)} TiB`;
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GiB`;
   return formatBytes(bytes, false);
 }
