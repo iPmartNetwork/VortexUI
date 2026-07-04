@@ -7,12 +7,14 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - "img/**"
+      - ".github/workflows/docs.yml"
   pull_request:
     branches: [master, main]
     paths:
       - "docs/**"
       - "mkdocs.yml"
       - "img/**"
+      - ".github/workflows/docs.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -20,9 +22,10 @@ permissions:
   pages: write
   id-token: write
 
+# Do not cancel an in-flight Pages deploy — rapid pushes were wedging GitHub Pages.
 concurrency:
-  group: docs-${{ github.ref }}
-  cancel-in-progress: true
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -44,7 +47,7 @@ jobs:
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: site
 
@@ -52,6 +55,7 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
