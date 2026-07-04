@@ -23,7 +23,14 @@ npm run build
 
 echo "==> deploying static files to $WEB_ROOT"
 mkdir -p "$WEB_ROOT"
-cp -r dist/* "$WEB_ROOT/"
+# Wipe old hashed assets first so stale bundles never linger and mask a fresh
+# deploy (Vite renames every build, cp alone would just keep piling files up).
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --delete dist/ "$WEB_ROOT/"
+else
+  rm -rf "${WEB_ROOT:?}"/*
+  cp -r dist/* "$WEB_ROOT/"
+fi
 
 if [[ "$SKIP_BACKEND" -eq 0 ]]; then
   echo "==> building backend"
@@ -38,4 +45,4 @@ echo "==> reloading caddy"
 systemctl reload caddy
 
 echo "==> done. built files:"
-ls -la "$WEB_ROOT"/assets | head -5
+ls -la "$WEB_ROOT"/assets
