@@ -53,14 +53,23 @@ func (h *CleanIPHandlers) GetCached(c echo.Context) error {
 
 type cleanIPThroughputRequest struct {
 	ID   string `json:"id"`
-	IP   string `json:"ip"`
 	Port int    `json:"port"`
+}
+
+// isValidPort reports whether p is a usable TCP port. 0 is accepted as
+// "unset" (the service defaults it to 443).
+func isValidPort(p int) bool {
+	return p == 0 || (p > 0 && p <= 65535)
 }
 
 // Throughput runs a real download-speed test against one previously scanned
 // candidate and persists the measured Mbps. It is intentionally on-demand
 // (per-IP) rather than part of the bulk Scan, since a real transfer takes far
 // longer than a latency probe.
+//
+// The target IP is resolved server-side from the cached scan row (by ID), not
+// taken from the request body, so a caller can't point the probe at an IP
+// other than the one that ID's cached result actually refers to.
 func (h *CleanIPHandlers) Throughput(c echo.Context) error {
 	var req cleanIPThroughputRequest
 	if err := c.Bind(&req); err != nil {
@@ -70,12 +79,33 @@ func (h *CleanIPHandlers) Throughput(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
-	if req.IP == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "ip is required")
+	if !isValidPort(req.Port) {
+		return echo.NewHTTPError(http.StatusBadRequest, "port must be between 1 and 65535")
 	}
-	mbps, err := h.Scanner.MeasureThroughput(c.Request().Context(), id, req.IP, req.Port)
+	mbps, err := h.Scanner.MeasureThroughput(c.Request().Context(), id, req.Port)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadGateway, err.Error())
 	}
 	return c.JSON(http.StatusOK, echo.Map{"throughput_mbps": mbps})
+}
+
+type cleanIPThroughputAllRequest struct {
+	Port int `json:"port"`
+}
+
+// ThroughputAll runs the download-speed test against every reachable cached
+// candidate and returns the refreshed, best-first result set.
+func (h *CleanIPHandlers) ThroughputAll(c echo.Context) error {
+	var req cleanIPThroughputAllRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if !isValidPort(req.Port) {
+		return echo.NewHTTPError(http.StatusBadRequest, "port must be between 1 and 65535")
+	}
+	results, err := h.Scanner.MeasureAllThroughput(c.Request().Context(), req.Port)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadGateway, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"results": results})
 }
