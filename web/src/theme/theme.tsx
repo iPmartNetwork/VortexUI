@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { applyBrandingFromStorage } from "@/theme/branding";
 
 type Theme = "dark" | "light" | "system";
 
@@ -22,6 +23,7 @@ function apply(resolved: "dark" | "light") {
   root.classList.add("transitioning");
   root.classList.toggle("dark", resolved === "dark");
   root.classList.toggle("light", resolved === "light");
+  applyBrandingFromStorage(resolved);
   setTimeout(() => root.classList.remove("transitioning"), 400);
 }
 
