@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Play, Sparkles } from "lucide-react";
 import { api } from "@/api/client";
+import { useInboundsFleet, useUpdateInbound, type InboundFleetRow } from "@/api/hooks";
 import { Badge, Button, Input, Select } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
@@ -62,6 +63,11 @@ export function RealityTab() {
     queryKey: ["nodes"],
     queryFn: () => api<{ nodes: Node[] }>("/api/nodes"),
   });
+  const fleet = useInboundsFleet();
+  const realityInbounds = useMemo(
+    () => (fleet.data?.inbounds ?? []).filter((ib) => ib.node_id === nodeId && ib.security === "reality"),
+    [fleet.data, nodeId],
+  );
 
   const scanMut = useMutation({
     mutationFn: () =>
@@ -80,7 +86,7 @@ export function RealityTab() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function applySni(sni: string) {
+  function copySni(sni: string) {
     navigator.clipboard.writeText(sni);
     toast.success(t("security.reality.sniCopied"));
   }
@@ -165,9 +171,7 @@ export function RealityTab() {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <Button size="sm" variant="outline" onClick={() => applySni(r.sni)}>
-                        {t("security.reality.applyInbound")}
-                      </Button>
+                      <ApplyToInboundCell sni={r.sni} inbounds={realityInbounds} onCopyFallback={copySni} />
                     </td>
                   </tr>
                 ))}
@@ -180,6 +184,84 @@ export function RealityTab() {
       {results.length === 0 && !scanMut.isPending && (
         <p className="text-sm text-fg-muted text-center py-8">{t("security.reality.empty")}</p>
       )}
+    </div>
+  );
+}
+
+// ApplyToInboundCell lets an admin push a scanned SNI straight into a REALITY
+// inbound's server-name list. When the selected node has no REALITY inbound
+// yet, it falls back to copy-to-clipboard so the value isn't lost.
+function ApplyToInboundCell({
+  sni,
+  inbounds,
+  onCopyFallback,
+}: {
+  sni: string;
+  inbounds: InboundFleetRow[];
+  onCopyFallback: (sni: string) => void;
+}) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const update = useUpdateInbound();
+  const [targetId, setTargetId] = useState(inbounds[0]?.id ?? "");
+
+  if (inbounds.length === 0) {
+    return (
+      <Button size="sm" variant="outline" onClick={() => onCopyFallback(sni)}>
+        {t("security.reality.copySni")}
+      </Button>
+    );
+  }
+
+  const target = inbounds.find((ib) => ib.id === targetId) ?? inbounds[0];
+  const alreadyApplied = !!target?.sni?.includes(sni);
+
+  function apply() {
+    if (!target) return;
+    const nextSni = target.sni?.includes(sni) ? target.sni : [sni, ...(target.sni ?? [])];
+    update.mutate(
+      {
+        id: target.id,
+        input: {
+          listen: target.listen,
+          port: target.port,
+          network: target.network,
+          security: target.security,
+          sni: nextSni,
+          path: target.path,
+          host: target.host,
+          flow: target.flow,
+          raw: target.raw,
+          enabled: target.enabled,
+          geo_policy: target.geo_policy,
+        },
+      },
+      {
+        onSuccess: () => toast.success(t("security.reality.applied").replace("{tag}", target.tag)),
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "failed"),
+      },
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      {inbounds.length > 1 && (
+        <select
+          value={targetId || inbounds[0]?.id}
+          onChange={(e) => setTargetId(e.target.value)}
+          className="field !h-8 !py-0 text-xs w-28"
+          dir="ltr"
+        >
+          {inbounds.map((ib) => (
+            <option key={ib.id} value={ib.id}>
+              {ib.tag}
+            </option>
+          ))}
+        </select>
+      )}
+      <Button size="sm" variant={alreadyApplied ? "ghost" : "outline"} onClick={apply} disabled={update.isPending || alreadyApplied}>
+        {alreadyApplied ? t("common.applied") : t("security.reality.applyInbound")}
+      </Button>
     </div>
   );
 }

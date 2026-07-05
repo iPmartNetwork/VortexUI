@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { Crosshair } from "lucide-react";
+import { Copy, Crosshair } from "lucide-react";
 import { useCleanIPResults, useScanCleanIP, type CleanIPScan } from "@/api/hooks";
 import { Badge, Button, Input } from "@/components/ui";
-import { CopyField } from "@/components/CopyField";
 import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
@@ -63,6 +62,11 @@ export function CleanIPTab() {
     toast.info(t("cleanip.presetLoaded"));
   }
 
+  function copyIp(ip: string) {
+    navigator.clipboard?.writeText(ip);
+    toast.success(t("cleanip.copied"));
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -100,49 +104,47 @@ export function CleanIPTab() {
       </GlassCard>
 
       {results.length > 0 ? (
-        <GlassCard hover={false} className="!p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/40 text-[11px] uppercase tracking-wide text-fg-subtle bg-surface-2/30">
-                  <th className="py-3 px-4 text-left">{t("cleanip.ip")}</th>
-                  <th className="py-3 px-4 text-center">{t("cleanip.latency")}</th>
-                  <th className="py-3 px-4 text-center">{t("cleanip.loss")}</th>
-                  <th className="py-3 px-4 text-left">{t("cleanip.score")}</th>
-                  <th className="py-3 px-4 text-center">{t("cleanip.reachable")}</th>
-                  <th className="py-3 px-4 text-right">{t("cleanip.copy")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r) => (
-                  <tr key={r.id} className="border-b border-border/20 hover:bg-surface-2/40">
-                    <td className="py-3 px-4 font-mono text-xs text-fg" dir="ltr">{r.ip}</td>
-                    <td className="py-3 px-4 text-center text-xs tabular-nums text-fg-muted">{r.latency_ms} ms</td>
-                    <td className="py-3 px-4 text-center text-xs tabular-nums text-fg-muted">{r.loss_pct}%</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2 min-w-[100px]">
-                        <div className="flex-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
-                          <div className={cn("h-full rounded-full", scoreBarClass(r.score))} style={{ width: `${r.score}%` }} />
-                        </div>
-                        <span className="text-xs font-bold tabular-nums w-8 text-end">{r.score}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <Badge color={r.reachable ? "active" : "down"}>
-                        {r.reachable ? t("cleanip.reachable") : t("cleanip.unreachable")}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="ms-auto w-44">
-                        <CopyField value={r.ip} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </GlassCard>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {results.map((r) => (
+            <GlassCard key={r.id} hover className="!p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full flex-shrink-0",
+                    r.reachable ? (r.score >= 80 ? "bg-success" : "bg-warning") : "bg-danger",
+                  )}
+                />
+                <Badge color={r.reachable ? "active" : "down"}>
+                  {r.reachable ? t("cleanip.reachable") : t("cleanip.unreachable")}
+                </Badge>
+              </div>
+
+              <p className="font-mono text-sm font-bold text-fg text-center truncate" dir="ltr" title={r.ip}>
+                {r.ip}
+              </p>
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
+                  <div className={cn("h-full rounded-full", scoreBarClass(r.score))} style={{ width: `${r.score}%` }} />
+                </div>
+                <span className="text-xs font-bold tabular-nums">{r.score}</span>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-fg-muted">
+                <span>
+                  {t("cleanip.latency")}: <span className="font-medium text-fg">{r.latency_ms} ms</span>
+                </span>
+                <span>
+                  {t("cleanip.loss")}: <span className="font-medium text-fg">{r.loss_pct}%</span>
+                </span>
+              </div>
+
+              <Button variant="outline" size="sm" className="w-full" onClick={() => copyIp(r.ip)}>
+                <Copy size={13} /> {t("cleanip.copy")} IP
+              </Button>
+            </GlassCard>
+          ))}
+        </div>
       ) : (
         <p className="text-sm text-fg-muted text-center py-8">{t("cleanip.empty")}</p>
       )}

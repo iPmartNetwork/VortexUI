@@ -506,8 +506,11 @@ const en = {
   "security.reality.colTLS": "TLS / ALPN",
   "security.reality.colScore": "Compatibility Score",
   "security.reality.applyInbound": "Apply to Inbound",
+  "security.reality.copySni": "Copy SNI",
+  "security.reality.applied": "SNI applied to {tag}",
   "security.reality.sniCopied": "SNI copied — paste into inbound REALITY settings",
   "security.reality.empty": "Select a node and run a live TLS scan.",
+  "security.reality.noRealityInbound": "No REALITY inbound on this node yet — copied instead.",
   "security.cleanip.banner": "Probe Cloudflare and CDN anycast IPs to find the cleanest, lowest-latency front IPs for your subscription hosts.",
   "security.cleanip.editCandidates": "Edit candidate IPs",
   "security.cleanip.hideCandidates": "Hide candidates",
@@ -641,6 +644,7 @@ const en = {
 
   "common.search": "Search…",
   "common.create": "Create",
+  "common.applied": "Applied",
   "common.save": "Save",
   "common.cancel": "Cancel",
   "common.delete": "Delete",
@@ -1428,8 +1432,11 @@ const fa: Record<string, string> = {
   "security.reality.colTLS": "TLS / ALPN",
   "security.reality.colScore": "امتیاز سازگاری",
   "security.reality.applyInbound": "اعمال روی Inbound",
+  "security.reality.copySni": "کپی SNI",
+  "security.reality.applied": "SNI روی {tag} اعمال شد",
   "security.reality.sniCopied": "SNI کپی شد — در تنظیمات REALITY inbound بچسبانید",
   "security.reality.empty": "یک نود انتخاب کنید و اسکن TLS را اجرا کنید.",
+  "security.reality.noRealityInbound": "هنوز inbound از نوع REALITY روی این نود نیست — به‌جای آن کپی شد.",
   "security.cleanip.banner": "IPهای anycast Cloudflare و CDN را پروب کنید تا تمیزترین IP با کمترین تأخیر را پیدا کنید.",
   "security.cleanip.editCandidates": "ویرایش IPهای کاندید",
   "security.cleanip.hideCandidates": "پنهان کردن کاندیدها",
@@ -1556,6 +1563,7 @@ const fa: Record<string, string> = {
 
   "common.search": "جستجو…",
   "common.create": "ایجاد",
+  "common.applied": "اعمال شد",
   "common.save": "ذخیره",
   "common.cancel": "انصراف",
   "common.delete": "حذف",
@@ -2205,6 +2213,7 @@ const tr: Record<string, string> = {
 
   "common.search": "Ara…",
   "common.create": "Oluştur",
+  "common.applied": "Uygulandı",
   "common.save": "Kaydet",
   "common.cancel": "İptal",
   "common.delete": "Sil",
@@ -2856,6 +2865,7 @@ const ar: Record<string, string> = {
 
   "common.search": "بحث…",
   "common.create": "إنشاء",
+  "common.applied": "تم التطبيق",
   "common.save": "حفظ",
   "common.cancel": "إلغاء",
   "common.delete": "حذف",
@@ -3507,6 +3517,7 @@ const ru: Record<string, string> = {
 
   "common.search": "Поиск…",
   "common.create": "Создать",
+  "common.applied": "Применено",
   "common.save": "Сохранить",
   "common.cancel": "Отмена",
   "common.delete": "Удалить",
@@ -4158,6 +4169,7 @@ const zh: Record<string, string> = {
 
   "common.search": "搜索…",
   "common.create": "创建",
+  "common.applied": "已应用",
   "common.save": "保存",
   "common.cancel": "取消",
   "common.delete": "删除",
@@ -4809,6 +4821,7 @@ const ja: Record<string, string> = {
 
   "common.search": "検索…",
   "common.create": "作成",
+  "common.applied": "適用済み",
   "common.save": "保存",
   "common.cancel": "キャンセル",
   "common.delete": "削除",
@@ -5460,6 +5473,7 @@ const es: Record<string, string> = {
 
   "common.search": "Buscar…",
   "common.create": "Crear",
+  "common.applied": "Aplicado",
   "common.save": "Guardar",
   "common.cancel": "Cancelar",
   "common.delete": "Eliminar",
