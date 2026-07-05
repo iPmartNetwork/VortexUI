@@ -365,7 +365,7 @@ type updateInboundRequest struct {
 	Path       string            `json:"path"`
 	Host       []string          `json:"host"`
 	Flow       string            `json:"flow"`
-	Raw        map[string]any    `json:"raw"`
+	Raw        *map[string]any   `json:"raw"`
 	Enabled    bool              `json:"enabled"`
 	SpeedLimit int64             `json:"speed_limit"`
 	GeoPolicy  *domain.GeoPolicy `json:"geo_policy"`

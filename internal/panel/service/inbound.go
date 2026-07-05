@@ -186,6 +186,7 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 
 // UpdateInboundInput is the mutable subset of an inbound. NodeID, ID and tag are
 // not changed here (moving an inbound between nodes is delete+create).
+// Raw is a pointer so callers can omit it to leave the stored raw block untouched.
 type UpdateInboundInput struct {
 	Listen     string
 	Port       int
@@ -195,7 +196,7 @@ type UpdateInboundInput struct {
 	Path       string
 	Host       []string
 	Flow       string
-	Raw        map[string]any
+	Raw        *map[string]any
 	Enabled    bool
 	SpeedLimit int64
 	GeoPolicy  *domain.GeoPolicy
@@ -224,7 +225,9 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	existing.Path = in.Path
 	existing.Host = in.Host
 	existing.Flow = in.Flow
-	existing.Raw = in.Raw
+	if in.Raw != nil {
+		existing.Raw = *in.Raw
+	}
 	existing.Enabled = in.Enabled
 	existing.SpeedLimit = in.SpeedLimit
 	existing.GeoPolicy = in.GeoPolicy

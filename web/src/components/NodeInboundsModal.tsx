@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useCapabilities, useCreateInbound, useDeleteInbound, useNodeInbounds, useUpdateInbound, type Inbound } from "@/api/hooks";
+import { useCapabilities, useCreateInbound, useDeleteInbound, useNodeInbounds, useUpdateInbound, inboundToUpdateInput, type Inbound } from "@/api/hooks";
 import { useReality } from "@/api/policy-hooks";
 import type { Node } from "@/api/types";
 import { Badge, Button, Input, Select } from "./ui";
@@ -59,7 +59,15 @@ const DEFAULT_INBOUND_TEMPLATE = {
   },
 };
 
-export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClose: () => void }) {
+export function NodeInboundsModal({
+  node,
+  onClose,
+  initialEdit,
+}: {
+  node: Node | null;
+  onClose: () => void;
+  initialEdit?: Inbound | null;
+}) {
   const { can } = useAuth();
   const canWrite = can("inbound:write");
   const list = useNodeInbounds(node?.id ?? null);
@@ -70,6 +78,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   const toast = useToast();
   const { t } = useI18n();
   const [f, setF] = useState({ ...blank });
+  const [editSnapshot, setEditSnapshot] = useState<Inbound | null>(null);
   const [hostsFor, setHostsFor] = useState<Inbound | null>(null);
   const [realityKeys, setRealityKeys] = useState<{ private_key: string; public_key: string; short_id: string } | null>(null);
   const [tab, setTab] = useState<"basics" | "json">("basics");
@@ -81,6 +90,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
   const resetForm = () => {
     setF(newBlank());
     setRealityKeys(null);
+    setEditSnapshot(null);
   };
 
   // Per-core capability for the current node, with static fallbacks until the
@@ -139,14 +149,23 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     });
 
   function startEdit(ib: Inbound) {
+    setEditSnapshot(ib);
     setRealityKeys(null);
     const wg = (ib.raw?.wireguard ?? {}) as Record<string, unknown>;
     setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: udpNative.includes(ib.protocol) || noTransport.includes(ib.protocol) ? "" : ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", "), wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "", wgSubnet: typeof wg.subnet === "string" ? wg.subnet : "", wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "" });
   }
 
+  useEffect(() => {
+    if (!node || !initialEdit || initialEdit.node_id !== node.id) return;
+    startEdit(initialEdit);
+  }, [node?.id, initialEdit?.id]);
+
   async function toggleEnable(ib: Inbound) {
     try {
-      await update.mutateAsync({ id: ib.id, input: { port: ib.port, network: ib.network, security: ib.security, enabled: !ib.enabled } });
+      await update.mutateAsync({
+        id: ib.id,
+        input: inboundToUpdateInput(ib, { enabled: !ib.enabled }),
+      });
       toast.success(`${ib.tag} ${ib.enabled ? "disabled" : "enabled"}`);
     } catch {
       toast.error("Toggle failed");
@@ -186,8 +205,39 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
     }
     const network = isNoTransport ? "" : f.network;
     try {
-      if (editing) {
-        await update.mutateAsync({ id: f.editId, input: { port: Number(f.port), network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) } });
+      if (editing && editSnapshot) {
+        const mergedRaw = raw ?? editSnapshot.raw;
+        await update.mutateAsync({
+          id: f.editId,
+          input: inboundToUpdateInput(editSnapshot, {
+            port: Number(f.port),
+            network,
+            security: f.security,
+            sni,
+            path: f.path,
+            host,
+            flow: f.flow,
+            geo_policy,
+            ...(mergedRaw ? { raw: mergedRaw } : {}),
+          }),
+        });
+        toast.success(`Updated ${f.tag}`);
+      } else if (editing) {
+        await update.mutateAsync({
+          id: f.editId,
+          input: {
+            port: Number(f.port),
+            network,
+            security: f.security,
+            sni,
+            path: f.path,
+            host,
+            flow: f.flow,
+            geo_policy,
+            enabled: true,
+            ...(raw ? { raw } : {}),
+          },
+        });
         toast.success(`Updated ${f.tag}`);
       } else {
         await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) });
@@ -325,7 +375,7 @@ export function NodeInboundsModal({ node, onClose }: { node: Node | null; onClos
         {f.network === "grpc" && (
           <Input placeholder="gRPC serviceName" value={f.path} onChange={set("path")} />
         )}
-        {["ws", "httpupgrade", "http", "h2"].includes(f.network) && (
+        {["ws", "httpupgrade", "http", "h2", "xhttp"].includes(f.network) && (
           <Input placeholder="Host (comma-separated, optional)" value={f.host} onChange={set("host")} />
         )}
         {f.protocol === "vless" && (f.security === "tls" || f.security === "reality") && (
