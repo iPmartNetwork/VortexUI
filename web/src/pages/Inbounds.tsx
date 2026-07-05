@@ -58,6 +58,7 @@ export function Inbounds() {
   const nodes = useNodes();
   const [nodeFilter, setNodeFilter] = useState("");
   const [managing, setManaging] = useState<Node | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<Inbound | null>(null);
   const [subHostsFor, setSubHostsFor] = useState<Inbound | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -74,14 +75,24 @@ export function Inbounds() {
     [inbounds],
   );
 
-  function openNodeManager(nodeName: string) {
+  function openNodeManager(nodeName: string, edit?: Inbound) {
     const node = nodeList.find((n) => n.name === nodeName);
-    if (node) setManaging(node);
+    if (node) {
+      setPendingEdit(edit ?? null);
+      setManaging(node);
+    }
   }
 
   return (
     <div className="space-y-5 animate-page-enter">
-      <NodeInboundsModal node={managing} onClose={() => setManaging(null)} />
+      <NodeInboundsModal
+        node={managing}
+        initialEdit={pendingEdit}
+        onClose={() => {
+          setManaging(null);
+          setPendingEdit(null);
+        }}
+      />
       <SubHostsModal inbound={subHostsFor} onClose={() => setSubHostsFor(null)} />
 
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -180,7 +191,7 @@ export function Inbounds() {
                 expanded={expandedId === ib.id}
                 onToggleExpand={() => setExpandedId((cur) => (cur === ib.id ? null : ib.id))}
                 onAddSubHost={() => setSubHostsFor(ib)}
-                onEdit={() => openNodeManager(ib.node_name)}
+                onEdit={() => openNodeManager(ib.node_name, ib)}
               />
             ))}
           </div>

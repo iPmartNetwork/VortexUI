@@ -10,6 +10,7 @@ import {
   type SubHostBody,
   type HostSecurity,
 } from "@/api/hooks";
+import { ApiError } from "@/api/client";
 import { useI18n } from "@/i18n/i18n";
 import { Badge, Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
@@ -54,14 +55,15 @@ export function SubHostsModal({ inbound, onClose }: { inbound: Inbound | null; o
   const { t } = useI18n();
   const inboundId = inbound?.id ?? null;
   const list = useSubHosts(inboundId);
-  const create = useCreateSubHost(inboundId);
-  const update = useUpdateSubHost(inboundId);
-  const del = useDeleteSubHost(inboundId);
-  const reorder = useReorderSubHosts(inboundId);
+  const create = useCreateSubHost();
+  const update = useUpdateSubHost();
+  const del = useDeleteSubHost();
+  const reorder = useReorderSubHosts();
   const toast = useToast();
   const [f, setF] = useState({ ...blank });
 
   if (!inbound) return null;
+  const ib = inbound;
   const editing = f.editId !== "";
   const hosts = list.data?.hosts ?? [];
 
@@ -112,6 +114,10 @@ export function SubHostsModal({ inbound, onClose }: { inbound: Inbound | null; o
     };
   }
 
+  function apiErr(e: unknown): string {
+    return e instanceof ApiError ? e.message : t("hosts.saveFailed");
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (f.remark.trim() === "") {
@@ -121,14 +127,14 @@ export function SubHostsModal({ inbound, onClose }: { inbound: Inbound | null; o
     const body = buildBody();
     try {
       if (editing) {
-        await update.mutateAsync({ id: f.editId, body });
+        await update.mutateAsync({ id: f.editId, inbound_id: ib.id, body });
       } else {
-        await create.mutateAsync(body);
+        await create.mutateAsync({ ...body, inbound_id: ib.id });
       }
       toast.success(t("hosts.saved"));
       resetForm();
-    } catch {
-      toast.error(t("hosts.saveFailed"));
+    } catch (err) {
+      toast.error(apiErr(err));
     }
   }
 
@@ -136,6 +142,7 @@ export function SubHostsModal({ inbound, onClose }: { inbound: Inbound | null; o
     try {
       await update.mutateAsync({
         id: h.id,
+        inbound_id: ib.id,
         body: {
           remark: h.remark,
           address: h.address,
@@ -152,18 +159,18 @@ export function SubHostsModal({ inbound, onClose }: { inbound: Inbound | null; o
           enabled: !h.enabled,
         },
       });
-    } catch {
-      toast.error(t("hosts.saveFailed"));
+    } catch (err) {
+      toast.error(apiErr(err));
     }
   }
 
   async function remove(h: SubHost) {
     try {
-      await del.mutateAsync(h.id);
+      await del.mutateAsync({ id: h.id, inbound_id: ib.id });
       toast.success(t("hosts.deleted"));
       if (f.editId === h.id) resetForm();
-    } catch {
-      toast.error(t("hosts.deleteFailed"));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("hosts.deleteFailed"));
     }
   }
 
@@ -175,14 +182,14 @@ export function SubHostsModal({ inbound, onClose }: { inbound: Inbound | null; o
     const ids = hosts.map((h) => h.id);
     [ids[index], ids[target]] = [ids[target], ids[index]];
     try {
-      await reorder.mutateAsync(ids);
-    } catch {
-      toast.error(t("hosts.reorderFailed"));
+      await reorder.mutateAsync({ ids, inbound_id: ib.id });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("hosts.reorderFailed"));
     }
   }
 
   return (
-    <Modal open={!!inbound} onClose={onClose} title={`${t("hosts.title")} · ${inbound.tag}`} className="max-w-lg">
+    <Modal open={!!inbound} onClose={onClose} title={`${t("hosts.title")} · ${ib.tag}`} className="max-w-lg">
       <p className="mb-3 text-xs text-fg-muted">{t("hosts.help")}</p>
 
       <div className="space-y-2">
@@ -195,7 +202,7 @@ export function SubHostsModal({ inbound, onClose }: { inbound: Inbound | null; o
               />
               <span className="truncate font-medium">{h.remark || "—"}</span>
               <span className="truncate text-xs text-muted-foreground" dir="ltr">
-                {h.address || inbound.tag}
+                {h.address || ib.tag}
                 {h.port != null ? `:${h.port}` : ""}
               </span>
               <Badge color={securityColor(h.security)}>{h.security === "inbound_default" ? "default" : h.security}</Badge>

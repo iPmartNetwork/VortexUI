@@ -310,6 +310,24 @@ export interface UpdateInboundInput {
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
 }
 
+/** Build a full PUT body from an inbound row so partial toggles never wipe host/raw. */
+export function inboundToUpdateInput(ib: Inbound, overrides: Partial<UpdateInboundInput> = {}): UpdateInboundInput {
+  return {
+    listen: ib.listen,
+    port: ib.port,
+    network: ib.network,
+    security: ib.security,
+    sni: ib.sni ?? [],
+    path: ib.path ?? "",
+    host: ib.host ?? [],
+    flow: ib.flow ?? "",
+    raw: ib.raw,
+    enabled: ib.enabled,
+    geo_policy: ib.geo_policy ?? null,
+    ...overrides,
+  };
+}
+
 export function useUpdateInbound() {
   const qc = useQueryClient();
   return useMutation({
@@ -424,37 +442,39 @@ export function useSubHosts(inboundId: string | null) {
   });
 }
 
-export function useCreateSubHost(inboundId: string | null) {
+export function useCreateSubHost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: SubHostBody) =>
-      api<{ host: SubHost }>("/api/sub-hosts", { method: "POST", body: { ...body, inbound_id: inboundId } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sub-hosts", inboundId] }),
+    mutationFn: (body: SubHostBody & { inbound_id: string }) =>
+      api<{ host: SubHost }>("/api/sub-hosts", { method: "POST", body }),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["sub-hosts", v.inbound_id] }),
   });
 }
 
-export function useUpdateSubHost(inboundId: string | null) {
+export function useUpdateSubHost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: string; body: SubHostBody }) =>
+    mutationFn: ({ id, body }: { id: string; inbound_id: string; body: SubHostBody }) =>
       api<{ host: SubHost }>(`/api/sub-hosts/${id}`, { method: "PUT", body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sub-hosts", inboundId] }),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["sub-hosts", v.inbound_id] }),
   });
 }
 
-export function useDeleteSubHost(inboundId: string | null) {
+export function useDeleteSubHost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api<void>(`/api/sub-hosts/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sub-hosts", inboundId] }),
+    mutationFn: ({ id }: { id: string; inbound_id: string }) =>
+      api<void>(`/api/sub-hosts/${id}`, { method: "DELETE" }),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["sub-hosts", v.inbound_id] }),
   });
 }
 
-export function useReorderSubHosts(inboundId: string | null) {
+export function useReorderSubHosts() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ids: string[]) => api<void>("/api/sub-hosts/reorder", { method: "POST", body: { ids } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["sub-hosts", inboundId] }),
+    mutationFn: ({ ids }: { ids: string[]; inbound_id: string }) =>
+      api<void>("/api/sub-hosts/reorder", { method: "POST", body: { ids } }),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["sub-hosts", v.inbound_id] }),
   });
 }
 
