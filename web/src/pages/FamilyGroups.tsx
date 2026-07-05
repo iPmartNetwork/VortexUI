@@ -175,7 +175,7 @@ function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => voi
           )}
           {f.owner_id && <p className="mt-1 text-[10px] text-fg-subtle">Selected: {ownerSearch}</p>}
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Input placeholder="Pool (GB)" value={f.data_limit} onChange={(e) => setF((s) => ({ ...s, data_limit: e.target.value }))} inputMode="numeric" />
           <Input placeholder="Max members" value={f.max_members} onChange={(e) => setF((s) => ({ ...s, max_members: e.target.value }))} inputMode="numeric" />
           <Input placeholder="Per-member cap (GB)" value={f.member_quota} onChange={(e) => setF((s) => ({ ...s, member_quota: e.target.value }))} inputMode="numeric" />

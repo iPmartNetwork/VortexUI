@@ -111,7 +111,7 @@ export function DoHSettings() {
               Enabled
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
             <div>
               <label className="text-xs text-fg-subtle">{t("doh.listenAddr")}</label>
               <Input value={config.listen_addr} onChange={(e) => update("listen_addr", e.target.value)} placeholder=":8053" />

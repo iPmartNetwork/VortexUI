@@ -292,6 +292,8 @@ func NewRouter(d Deps) *echo.Echo {
 	cleanip.GET("/results", d.CleanIP.GetCached, RequirePermission(d.Auth, domain.PermInboundRead))
 	cleanip.POST("/throughput", d.CleanIP.Throughput, RequirePermission(d.Auth, domain.PermInboundWrite))
 	cleanip.POST("/throughput/all", d.CleanIP.ThroughputAll, RequirePermission(d.Auth, domain.PermInboundWrite))
+	cleanip.GET("/schedule", d.CleanIP.GetSchedule, RequirePermission(d.Auth, domain.PermInboundRead))
+	cleanip.PUT("/schedule", d.CleanIP.UpdateSchedule, RequirePermission(d.Auth, domain.PermInboundWrite))
 
 	// --- Subscription Hosts (Marzban-style per-inbound overrides) ---
 	hosts := authed.Group("/sub-hosts")

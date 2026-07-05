@@ -309,6 +309,8 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	planSvc := service.NewPlanService(store.Plans(), userSvc)
 	realitySvc := service.NewRealityScannerService(store.RealityScans(), nodes)
 	cleanIPSvc := service.NewCleanIPScannerService(store.CleanIPScans())
+	cleanIPSvc.SetScheduleRepo(store.CleanIPSchedule())
+	go cleanIPSvc.RunScheduler(ctx)
 	subHostSvc := service.NewSubHostService(store.SubHosts())
 	routingPackSvc := service.NewRoutingPackService(store.RoutingPacks(), routingSvc, outboundSvc)
 	// Embed a selected routing pack's rules into Clash/sing-box subscriptions

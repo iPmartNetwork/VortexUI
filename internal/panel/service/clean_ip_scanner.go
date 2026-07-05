@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"sort"
@@ -48,6 +49,14 @@ const (
 	// cleanIPThroughputMinDuration guards against unreliable measurements
 	// from samples that finished too quickly (e.g. a tiny cached response).
 	cleanIPThroughputMinDuration = 300 * time.Millisecond
+
+	// cleanIPSchedulePollInterval is how often the scheduler checks whether
+	// a due recurring scan should run. It is independent of, and much
+	// shorter than, the configurable interval_minutes itself.
+	cleanIPSchedulePollInterval = time.Minute
+	// cleanIPScheduleMinIntervalMinutes floors the configurable cadence so a
+	// misconfigured schedule can't hammer the network.
+	cleanIPScheduleMinIntervalMinutes = 15
 )
 
 // cleanIPProbeResult is the raw measurement for one candidate IP.
@@ -70,16 +79,24 @@ type cleanIPThroughputFunc func(ctx context.Context, ip string, port int) (float
 // and packet loss, scores them, and caches the best-first results. It mirrors
 // RealityScannerService end to end.
 type CleanIPScannerService struct {
-	repo       port.CleanIPScanRepository
-	probe      cleanIPProbeFunc
-	throughput cleanIPThroughputFunc
-	now        func() time.Time
+	repo         port.CleanIPScanRepository
+	scheduleRepo port.CleanIPScheduleRepository
+	probe        cleanIPProbeFunc
+	throughput   cleanIPThroughputFunc
+	now          func() time.Time
 }
 
 // NewCleanIPScannerService wires the service with the default TCP-connect
 // probe and real HTTPS download-speed test.
 func NewCleanIPScannerService(repo port.CleanIPScanRepository) *CleanIPScannerService {
 	return &CleanIPScannerService{repo: repo, probe: probeCleanIPTCP, throughput: measureCleanIPThroughput, now: time.Now}
+}
+
+// SetScheduleRepo wires the recurring-scan config store. Until this is
+// called, GetSchedule reports defaults, UpdateSchedule is rejected, and
+// RunScheduler is a no-op — so scheduling is entirely optional.
+func (s *CleanIPScannerService) SetScheduleRepo(repo port.CleanIPScheduleRepository) {
+	s.scheduleRepo = repo
 }
 
 // Scan validates the candidate IPs, probes them under a bounded worker pool,
@@ -226,6 +243,89 @@ func (s *CleanIPScannerService) MeasureAllThroughput(ctx context.Context, scanPo
 	wg.Wait()
 
 	return s.repo.List(ctx)
+}
+
+// GetSchedule returns the current recurring-scan configuration, falling
+// back to defaults when unset or unreadable.
+func (s *CleanIPScannerService) GetSchedule(ctx context.Context) (*domain.CleanIPSchedule, error) {
+	if s.scheduleRepo == nil {
+		def := domain.DefaultCleanIPSchedule()
+		return &def, nil
+	}
+	sched, err := s.scheduleRepo.GetSchedule(ctx)
+	if err != nil {
+		def := domain.DefaultCleanIPSchedule()
+		return &def, nil
+	}
+	return sched, nil
+}
+
+// UpdateSchedule validates and persists the recurring-scan configuration.
+// The same SSRF guard and candidate cap used by Scan apply here, since the
+// scheduler ultimately calls Scan with these IPs unattended.
+func (s *CleanIPScannerService) UpdateSchedule(ctx context.Context, sched *domain.CleanIPSchedule) error {
+	if s.scheduleRepo == nil {
+		return fmt.Errorf("scheduling is not available")
+	}
+	if sched.IntervalMinutes < cleanIPScheduleMinIntervalMinutes {
+		sched.IntervalMinutes = cleanIPScheduleMinIntervalMinutes
+	}
+	if sched.Port <= 0 {
+		sched.Port = 443
+	}
+	if len(sched.IPs) > cleanIPMaxCandidates {
+		return fmt.Errorf("too many candidates: %d (max %d)", len(sched.IPs), cleanIPMaxCandidates)
+	}
+	if sched.Enabled {
+		if len(sched.IPs) == 0 {
+			return fmt.Errorf("ips list is required to enable scheduling")
+		}
+		for _, ip := range sched.IPs {
+			if !isPublicIP(ip) {
+				return fmt.Errorf("invalid or non-public IP: %q", ip)
+			}
+		}
+	}
+	return s.scheduleRepo.SaveSchedule(ctx, sched)
+}
+
+// RunScheduler polls the schedule every cleanIPSchedulePollInterval and,
+// when enabled and due, runs a full Scan over the configured candidates. It
+// blocks until ctx is cancelled, so callers should invoke it in a goroutine.
+// It is safe to call even when no schedule repo is wired (becomes a no-op)
+// so callers don't need to special-case that.
+func (s *CleanIPScannerService) RunScheduler(ctx context.Context) {
+	if s.scheduleRepo == nil {
+		return
+	}
+	ticker := time.NewTicker(cleanIPSchedulePollInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.tickScheduler(ctx)
+		}
+	}
+}
+
+func (s *CleanIPScannerService) tickScheduler(ctx context.Context) {
+	sched, err := s.scheduleRepo.GetSchedule(ctx)
+	if err != nil || !sched.Enabled || len(sched.IPs) == 0 {
+		return
+	}
+	interval := time.Duration(sched.IntervalMinutes) * time.Minute
+	if sched.LastRunAt != nil && s.now().Sub(*sched.LastRunAt) < interval {
+		return
+	}
+	if _, err := s.Scan(ctx, sched.IPs, sched.Port); err != nil {
+		slog.Default().Warn("scheduled clean-ip scan failed", "err", err)
+		return
+	}
+	if err := s.scheduleRepo.MarkScheduleRun(ctx, s.now()); err != nil {
+		slog.Default().Warn("failed to record scheduled clean-ip scan run", "err", err)
+	}
 }
 
 // scoreCleanIP maps latency + loss to a 0-100 score (higher is better):

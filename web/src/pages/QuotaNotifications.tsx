@@ -40,7 +40,7 @@ export function QuotaNotifications() {
               <input type="checkbox" checked={cfg.enabled} onChange={(e) => update("enabled", e.target.checked)} className="rounded" /> Enabled
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs text-fg-subtle">Notify at (%)</label>
               <Input

@@ -650,6 +650,37 @@ export function useMeasureAllThroughput() {
   });
 }
 
+// CleanIPSchedule mirrors the backend domain.CleanIPSchedule JSON shape: a
+// single-row config that lets the panel re-scan the saved candidate list
+// unattended, on a cadence, instead of only on demand.
+export interface CleanIPSchedule {
+  enabled: boolean;
+  interval_minutes: number;
+  port: number;
+  ips: string[];
+  last_run_at?: string | null;
+  updated_at: string;
+}
+
+// useCleanIPSchedule reads the current recurring-scan configuration.
+export function useCleanIPSchedule() {
+  return useQuery({
+    queryKey: ["clean-ip-schedule"],
+    queryFn: () => api<CleanIPSchedule>("/api/clean-ip/schedule"),
+  });
+}
+
+// useUpdateCleanIPSchedule persists the recurring-scan configuration
+// (enabled flag, cadence, port, candidate IPs).
+export function useUpdateCleanIPSchedule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { enabled: boolean; interval_minutes: number; port?: number; ips: string[] }) =>
+      api<{ ok: boolean }>("/api/clean-ip/schedule", { method: "PUT", body: input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clean-ip-schedule"] }),
+  });
+}
+
 // --- IP-limit enforcement ---
 
 // IPLimitAction is the enforcement action taken when a user exceeds its device

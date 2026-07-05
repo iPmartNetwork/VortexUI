@@ -175,7 +175,7 @@ function CreateChainModal({ open, onClose, nodes }: { open: boolean; onClose: ()
         }}
         className="space-y-4"
       >
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Input placeholder="Chain name" value={name} onChange={(e) => setName(e.target.value)} required />
           <Select value={nodeId} onChange={(e) => setNodeId(e.target.value)}>
             <option value="">Target node…</option>
@@ -199,7 +199,7 @@ function CreateChainModal({ open, onClose, nodes }: { open: boolean; onClose: ()
                   <Trash2 size={12} />
                 </Button>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <select className="field text-xs" value={h.type} onChange={(e) => updateHop(i, "type", e.target.value)}>
                   <option value="cdn">CDN</option>
                   <option value="relay">Relay</option>
@@ -208,7 +208,7 @@ function CreateChainModal({ open, onClose, nodes }: { open: boolean; onClose: ()
                 <Input placeholder="Address" value={h.address} onChange={(e) => updateHop(i, "address", e.target.value)} />
                 <Input placeholder="Port" value={h.port} onChange={(e) => updateHop(i, "port", Number(e.target.value))} inputMode="numeric" />
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <select className="field text-xs" value={h.protocol} onChange={(e) => updateHop(i, "protocol", e.target.value)}>
                   <option value="ws">WebSocket</option>
                   <option value="grpc">gRPC</option>

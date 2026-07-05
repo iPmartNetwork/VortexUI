@@ -64,7 +64,7 @@ export function Fingerprint() {
               <input type="checkbox" checked={policy.enabled} onChange={(e) => update("enabled", e.target.checked)} className="rounded" /> Enabled
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs text-fg-subtle">Default action (unknown FPs)</label>
               <Select value={policy.default_action} onChange={(e) => update("default_action", e.target.value)}>

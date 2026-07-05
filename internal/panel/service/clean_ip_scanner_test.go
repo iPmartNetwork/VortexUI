@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/vortexui/vortexui/internal/domain"
@@ -39,6 +40,29 @@ func (r *fakeCleanIPRepo) List(_ context.Context) ([]*domain.CleanIPScan, error)
 func (r *fakeCleanIPRepo) DeleteAll(_ context.Context) error {
 	r.deleteCalls++
 	r.saved = nil
+	return nil
+}
+
+// fakeCleanIPScheduleRepo is an in-memory CleanIPScheduleRepository for
+// scheduler unit tests.
+type fakeCleanIPScheduleRepo struct {
+	sched     domain.CleanIPSchedule
+	markCalls int
+}
+
+func (r *fakeCleanIPScheduleRepo) GetSchedule(_ context.Context) (*domain.CleanIPSchedule, error) {
+	s := r.sched
+	return &s, nil
+}
+
+func (r *fakeCleanIPScheduleRepo) SaveSchedule(_ context.Context, s *domain.CleanIPSchedule) error {
+	r.sched = *s
+	return nil
+}
+
+func (r *fakeCleanIPScheduleRepo) MarkScheduleRun(_ context.Context, at time.Time) error {
+	r.markCalls++
+	r.sched.LastRunAt = &at
 	return nil
 }
 
@@ -334,5 +358,111 @@ func TestGetCachedResultsPassthrough(t *testing.T) {
 	}
 	if len(out) != 1 || out[0].IP != "1.1.1.1" {
 		t.Errorf("passthrough mismatch: %+v", out)
+	}
+}
+
+func TestGetScheduleReturnsDefaultsWhenNoScheduleRepo(t *testing.T) {
+	s := NewCleanIPScannerService(&fakeCleanIPRepo{})
+	sched, err := s.GetSchedule(context.Background())
+	if err != nil {
+		t.Fatalf("GetSchedule: %v", err)
+	}
+	if sched.Enabled {
+		t.Errorf("expected disabled default, got %+v", sched)
+	}
+	if sched.IntervalMinutes != domain.DefaultCleanIPSchedule().IntervalMinutes {
+		t.Errorf("interval = %d, want default", sched.IntervalMinutes)
+	}
+}
+
+func TestUpdateScheduleRejectsWithoutScheduleRepo(t *testing.T) {
+	s := NewCleanIPScannerService(&fakeCleanIPRepo{})
+	if err := s.UpdateSchedule(context.Background(), &domain.CleanIPSchedule{}); err == nil {
+		t.Fatal("expected error when no schedule repo is wired")
+	}
+}
+
+func TestUpdateScheduleRejectsEnablingWithoutCandidates(t *testing.T) {
+	s := NewCleanIPScannerService(&fakeCleanIPRepo{})
+	s.SetScheduleRepo(&fakeCleanIPScheduleRepo{})
+	if err := s.UpdateSchedule(context.Background(), &domain.CleanIPSchedule{Enabled: true}); err == nil {
+		t.Fatal("expected error when enabling with no candidate IPs")
+	}
+}
+
+func TestUpdateScheduleRejectsNonPublicIP(t *testing.T) {
+	s := NewCleanIPScannerService(&fakeCleanIPRepo{})
+	s.SetScheduleRepo(&fakeCleanIPScheduleRepo{})
+	sched := &domain.CleanIPSchedule{Enabled: true, IPs: []string{"192.168.1.1"}}
+	if err := s.UpdateSchedule(context.Background(), sched); err == nil {
+		t.Fatal("expected error for non-public candidate IP")
+	}
+}
+
+func TestUpdateScheduleFloorsIntervalAndDefaultsPort(t *testing.T) {
+	scheduleRepo := &fakeCleanIPScheduleRepo{}
+	s := NewCleanIPScannerService(&fakeCleanIPRepo{})
+	s.SetScheduleRepo(scheduleRepo)
+	sched := &domain.CleanIPSchedule{Enabled: false, IntervalMinutes: 1, IPs: []string{"1.1.1.1"}}
+	if err := s.UpdateSchedule(context.Background(), sched); err != nil {
+		t.Fatalf("UpdateSchedule: %v", err)
+	}
+	if scheduleRepo.sched.IntervalMinutes != cleanIPScheduleMinIntervalMinutes {
+		t.Errorf("interval = %d, want floored to %d", scheduleRepo.sched.IntervalMinutes, cleanIPScheduleMinIntervalMinutes)
+	}
+	if scheduleRepo.sched.Port != 443 {
+		t.Errorf("port = %d, want default 443", scheduleRepo.sched.Port)
+	}
+}
+
+func TestTickSchedulerRunsScanWhenDueAndMarksRun(t *testing.T) {
+	scanRepo := &fakeCleanIPRepo{}
+	scheduleRepo := &fakeCleanIPScheduleRepo{sched: domain.CleanIPSchedule{
+		Enabled: true, IntervalMinutes: cleanIPScheduleMinIntervalMinutes, Port: 443, IPs: []string{"1.1.1.1"},
+	}}
+	s := NewCleanIPScannerService(scanRepo)
+	s.SetScheduleRepo(scheduleRepo)
+	s.probe = func(context.Context, string, int) cleanIPProbeResult {
+		return cleanIPProbeResult{latencyMS: 20, reachable: true}
+	}
+
+	s.tickScheduler(context.Background())
+
+	if scanRepo.deleteCalls != 1 || len(scanRepo.saved) != 1 {
+		t.Fatalf("expected scheduled scan to run, got deleteCalls=%d saved=%d", scanRepo.deleteCalls, len(scanRepo.saved))
+	}
+	if scheduleRepo.markCalls != 1 {
+		t.Errorf("MarkScheduleRun calls = %d, want 1", scheduleRepo.markCalls)
+	}
+	if scheduleRepo.sched.LastRunAt == nil {
+		t.Error("expected LastRunAt to be set after a run")
+	}
+}
+
+func TestTickSchedulerSkipsWhenDisabledOrNotDue(t *testing.T) {
+	scanRepo := &fakeCleanIPRepo{}
+	now := time.Now()
+	scheduleRepo := &fakeCleanIPScheduleRepo{sched: domain.CleanIPSchedule{
+		Enabled: true, IntervalMinutes: 60, Port: 443, IPs: []string{"1.1.1.1"}, LastRunAt: &now,
+	}}
+	s := NewCleanIPScannerService(scanRepo)
+	s.SetScheduleRepo(scheduleRepo)
+	s.probe = func(context.Context, string, int) cleanIPProbeResult {
+		t.Fatal("scan should not run before the interval elapses")
+		return cleanIPProbeResult{}
+	}
+
+	s.tickScheduler(context.Background())
+
+	if scanRepo.deleteCalls != 0 {
+		t.Error("scan ran despite not being due yet")
+	}
+
+	// Disabled schedule, even if "due", must not run either.
+	scheduleRepo.sched.Enabled = false
+	scheduleRepo.sched.LastRunAt = nil
+	s.tickScheduler(context.Background())
+	if scanRepo.deleteCalls != 0 {
+		t.Error("scan ran despite schedule being disabled")
 	}
 }

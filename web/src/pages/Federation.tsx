@@ -63,7 +63,7 @@ export function Federation() {
               <input type="checkbox" checked={cfg.enabled} onChange={(e) => update("enabled", e.target.checked)} className="rounded" /> Enabled
             </label>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div><label className="text-xs text-fg-subtle">Cluster name</label><Input value={cfg.cluster_name} onChange={(e) => update("cluster_name", e.target.value)} /></div>
             <div><label className="text-xs text-fg-subtle">Sync interval (s)</label><Input value={cfg.sync_interval} onChange={(e) => update("sync_interval", Number(e.target.value))} inputMode="numeric" /></div>
             <label className="flex items-end gap-2 text-sm text-fg pb-2">

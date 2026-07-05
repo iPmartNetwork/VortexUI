@@ -101,6 +101,9 @@ func (s *Store) RealityScans() *RealityScanRepo { return &RealityScanRepo{pool: 
 // CleanIPScans returns the clean-IP scan repository.
 func (s *Store) CleanIPScans() *CleanIPScanRepo { return &CleanIPScanRepo{pool: s.pool} }
 
+// CleanIPSchedule returns the clean-IP recurring-scan config repository.
+func (s *Store) CleanIPSchedule() *CleanIPScheduleRepo { return &CleanIPScheduleRepo{pool: s.pool} }
+
 // SubHosts returns the subscription host repository.
 func (s *Store) SubHosts() *SubHostRepo { return &SubHostRepo{pool: s.pool} }
 
