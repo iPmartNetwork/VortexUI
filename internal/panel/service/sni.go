@@ -12,9 +12,18 @@ import (
 
 // SNIService manages multi-domain SNI routing and SSL certificates.
 type SNIService struct {
-	repo port.SNIDomainRepository
-	now  func() time.Time
+	repo   port.SNIDomainRepository
+	now    func() time.Time
+	issuer CertIssuer
 }
+
+// CertIssuer obtains TLS certificates for domains (ACME or self-signed).
+type CertIssuer interface {
+	ObtainOrRenew(ctx context.Context, domain string) (certPEM, keyPEM string, err error)
+}
+
+// SetCertIssuer wires automatic certificate issuance.
+func (s *SNIService) SetCertIssuer(i CertIssuer) { s.issuer = i }
 
 // NewSNIService wires the service.
 func NewSNIService(repo port.SNIDomainRepository) *SNIService {
@@ -86,7 +95,17 @@ func (s *SNIService) IssueCert(ctx context.Context, in IssueCertInput) (*domain.
 	if err := s.repo.CreateCert(ctx, c); err != nil {
 		return nil, err
 	}
-	// In production: trigger ACME challenge here asynchronously.
+	if s.issuer != nil {
+		_, _, err := s.issuer.ObtainOrRenew(ctx, in.Domain)
+		if err != nil {
+			c.Status = domain.CertFailed
+		} else {
+			c.Status = domain.CertActive
+			exp := s.now().Add(90 * 24 * time.Hour)
+			c.ExpiresAt = &exp
+		}
+		_ = s.repo.UpdateCert(ctx, c)
+	}
 	return c, nil
 }
 
@@ -107,7 +126,17 @@ func (s *SNIService) RenewCert(ctx context.Context, id uuid.UUID) (*domain.SSLCe
 	if err := s.repo.UpdateCert(ctx, c); err != nil {
 		return nil, err
 	}
-	// In production: trigger ACME renewal here.
+	if s.issuer != nil {
+		_, _, err := s.issuer.ObtainOrRenew(ctx, c.Domain)
+		if err != nil {
+			c.Status = domain.CertFailed
+		} else {
+			c.Status = domain.CertActive
+			exp := s.now().Add(90 * 24 * time.Hour)
+			c.ExpiresAt = &exp
+		}
+		_ = s.repo.UpdateCert(ctx, c)
+	}
 	return c, nil
 }
 

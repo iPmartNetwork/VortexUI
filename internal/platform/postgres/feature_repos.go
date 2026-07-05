@@ -1639,6 +1639,39 @@ func (r *SubSettingsRepo) Save(ctx context.Context, s *domain.SubSettings) error
 }
 
 
+// --- PanelSettingsRepo ---
+
+type PanelSettingsRepo struct{ pool *pgxpool.Pool }
+
+func (r *PanelSettingsRepo) Get(ctx context.Context) (*domain.PanelSettings, error) {
+	row := r.pool.QueryRow(ctx, `SELECT data FROM panel_settings WHERE id = 1`)
+	var raw []byte
+	if err := row.Scan(&raw); err != nil {
+		return nil, err
+	}
+	var s domain.PanelSettings
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return nil, err
+		}
+	}
+	return &s, nil
+}
+
+func (r *PanelSettingsRepo) Save(ctx context.Context, s *domain.PanelSettings) error {
+	raw, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	_, err = r.pool.Exec(ctx, `
+		INSERT INTO panel_settings (id, data, updated_at)
+		VALUES (1, $1, now())
+		ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+		raw)
+	return err
+}
+
+
 // --- WireGuardPeerRepo ---
 
 type WireGuardPeerRepo struct{ pool *pgxpool.Pool }

@@ -12,6 +12,7 @@ import { Routing } from "@/pages/Routing";
 import { ResellerDashboard } from "@/pages/ResellerDashboard";
 import { ResellerAccount } from "@/pages/ResellerAccount";
 import { ResellerQuotaAlerts } from "@/pages/ResellerQuotaAlerts";
+import { Audit } from "@/pages/Audit";
 import { Logs } from "@/pages/Logs";
 import { Settings } from "@/pages/Settings";
 import { ResellerPlatform } from "@/pages/ResellerPlatform";
@@ -39,6 +40,7 @@ import { PortalLayout } from "@/pages/portal/PortalLayout";
 import { PortalDashboard } from "@/pages/portal/PortalDashboard";
 import { PortalPlans } from "@/pages/portal/PortalPlans";
 import { PortalTickets } from "@/pages/portal/PortalTickets";
+import { PortalReferral } from "@/pages/portal/PortalReferral";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -98,7 +100,7 @@ export function App() {
         <Route path="/reseller-quota-alerts" element={<ResellerQuotaAlerts />} />
         <Route path="/reseller-payment" element={<ResellerPaymentSettings />} />
         <Route path="/pending-orders" element={<Navigate to="/wallet-billing?tab=orders" replace />} />
-        <Route path="/audit" element={<Navigate to="/overview" replace />} />
+        <Route path="/audit" element={<Audit />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/admins/:id" element={<ResellerDetail />} />
@@ -109,6 +111,7 @@ export function App() {
       <Route element={<PortalLayout />}>
         <Route path="/portal/dashboard" element={<PortalDashboard />} />
         <Route path="/portal/plans" element={<PortalPlans />} />
+        <Route path="/portal/referral" element={<PortalReferral />} />
         <Route path="/portal/tickets" element={<PortalTickets />} />
       </Route>
     </Routes>

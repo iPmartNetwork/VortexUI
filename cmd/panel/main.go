@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/vortexui/vortexui/internal/acme"
 	"github.com/vortexui/vortexui/internal/auth"
 	"github.com/vortexui/vortexui/internal/config"
 	"github.com/vortexui/vortexui/internal/core"
@@ -34,7 +36,7 @@ import (
 
 // version is the panel build version. It defaults to the contents of the VERSION
 // file and is overridden at build time via -ldflags "-X main.version=...".
-var version = "1.2.9"
+var version = "1.3.0"
 
 func main() {
 	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)
@@ -325,10 +327,34 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	familySvc := service.NewFamilyService(store.Families(), users)
 	referralSvc := service.NewReferralService(store.Referrals(), users)
 	dohSvc := service.NewDoHService(store.DoH())
+
+	ipGuard := api.NewIPGuard(os.Getenv("VORTEX_IP_WHITELIST"), os.Getenv("VORTEX_IP_BLACKLIST"))
+	panelSettingsSvc := service.NewPanelSettingsService(store.PanelSettings(), service.PanelSettingsHooks{
+		OnIPGuard: func(wl, bl string) {
+			if strings.TrimSpace(wl) != "" {
+				ipGuard.SetWhitelist(wl)
+			}
+			ipGuard.SetBlacklist(bl)
+		},
+	})
+	if ps, err := panelSettingsSvc.Get(ctx); err == nil && ps != nil {
+		if ps.IPWhitelist != "" {
+			ipGuard.SetWhitelist(ps.IPWhitelist)
+		}
+		if ps.IPBlacklist != "" {
+			ipGuard.SetBlacklist(ps.IPBlacklist)
+		}
+	}
+
+	acmeMgr := acme.NewManager(acme.NewMemoryStore(), os.Getenv("VORTEX_ACME_EMAIL"), log)
+	acmeMgr.SetCloudflare(cfg.CloudflareToken, cfg.CloudflareZoneID)
+
 	sniSvc := service.NewSNIService(store.SNIDomains())
+	sniSvc.SetCertIssuer(acmeMgr)
 	tlsTricksSvc := service.NewTLSTricksService(store.TLSTricks())
 	fpSvc := service.NewFingerprintService(store.Fingerprints())
 	fedSvc := service.NewFederationService(store.Federation())
+	go fedSvc.RunSyncWorker(ctx, log)
 	deepLinkSvc := service.NewDeepLinkService(store.DeepLinks())
 	quotaNotifySvc := service.NewQuotaNotifyService(store.QuotaNotify())
 	adminQuotaNotifySvc := service.NewAdminQuotaNotifyService(store.AdminQuotaNotify())
@@ -360,6 +386,11 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	}
 	walletBillingSvc := service.NewWalletBillingService(store.WalletBilling(), adminSvc, zarinPal, nowPayments)
 	resellerPaymentSvc := service.NewResellerPaymentService(store.ResellerPayment())
+
+	autoBackup := service.NewAutoBackup(backupSvc, 24*time.Hour, log)
+	autoBackup.Settings = panelSettingsSvc
+	autoBackup.DefaultTelegramToken = cfg.TelegramToken
+	go autoBackup.Run(ctx)
 
 	router := api.NewRouter(api.Deps{
 		Version: version,
@@ -416,6 +447,8 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Auth:        authSvc,
 		Limiter:     limiter,
 		Audit:       store.Audit(),
+		IPGuard:     ipGuard,
+		PanelSettings: &api.PanelSettingsHandlers{Svc: panelSettingsSvc},
 	})
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: router, ReadHeaderTimeout: 10 * time.Second}

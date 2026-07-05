@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { CommandPalette } from "@/components/CommandPalette";
+import { PanelBrandingSync } from "@/components/PanelBrandingSync";
 import { useAuth } from "@/auth/auth";
 import { useLiveEvents } from "@/api/live";
 import { useStopImpersonation } from "@/api/reseller-hooks";
@@ -28,6 +29,7 @@ export function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg text-fg">
+      <PanelBrandingSync />
       <CommandPalette />
       <AppSidebar mobileOpen={mobileOpen} onMobileOpenChange={setMobileOpen} />
 

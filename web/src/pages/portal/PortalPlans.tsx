@@ -4,6 +4,7 @@ import { portalApi } from "./portalApi";
 import { Button, Select } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
+import { useI18n } from "@/i18n/i18n";
 import { formatBytes } from "@/lib/utils";
 
 interface Plan {
@@ -31,6 +32,7 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 export function PortalPlans() {
+  const { t } = useI18n();
   const toast = useToast();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [gateway, setGateway] = useState<string>("");
@@ -137,14 +139,12 @@ export function PortalPlans() {
     else setGateway("");
   }
 
-  if (isLoading) return <div className="p-8 text-center text-fg-muted">Loading plans...</div>;
+  if (isLoading) return <div className="p-8 text-center text-fg-muted">{t("portal.plans.loading")}</div>;
 
   return (
     <div className="space-y-6 animate-page-enter">
-      <h1 className="text-xl font-bold text-fg">Available Plans</h1>
-      <p className="text-sm text-fg-muted">
-        Purchase a plan to extend your subscription (traffic + duration are added to your current balance).
-      </p>
+      <h1 className="text-xl font-bold text-fg">{t("portal.plans.title")}</h1>
+      <p className="text-sm text-fg-muted">{t("portal.plans.subtitle")}</p>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {data?.plans?.map((p) => (
@@ -152,23 +152,23 @@ export function PortalPlans() {
             <h3 className="text-sm font-bold text-fg">{p.name}</h3>
             {p.description && <p className="text-xs text-fg-muted">{p.description}</p>}
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div><span className="text-fg-subtle">Data:</span> <strong>{formatBytes(p.data_limit, false)}</strong></div>
-              <div><span className="text-fg-subtle">Duration:</span> <strong>{p.duration_days}d</strong></div>
-              <div><span className="text-fg-subtle">Devices:</span> <strong>{p.device_limit || "\u221E"}</strong></div>
+              <div><span className="text-fg-subtle">{t("portal.plans.data")}:</span> <strong>{formatBytes(p.data_limit, false)}</strong></div>
+              <div><span className="text-fg-subtle">{t("portal.plans.duration")}:</span> <strong>{p.duration_days}d</strong></div>
+              <div><span className="text-fg-subtle">{t("portal.plans.devices")}:</span> <strong>{p.device_limit || "\u221E"}</strong></div>
             </div>
             <div className="flex items-center justify-between border-t border-border/40 pt-3">
               <div className="text-sm font-bold text-primary">
                 {p.price_toman > 0 ? `${p.price_toman.toLocaleString()} \u062A\u0648\u0645\u0627\u0646` : p.price_usd > 0 ? `$${p.price_usd}` : "Free"}
               </div>
               <Button size="sm" onClick={() => openGatewaySelector(p)}>
-                Purchase
+                {t("portal.plans.purchase")}
               </Button>
             </div>
 
             {/* Inline gateway selector */}
             {selectedPlan?.id === p.id && (
               <div className="space-y-3 border-t border-border/40 pt-3 animate-page-enter">
-                <label className="block text-xs font-medium text-fg-muted">Payment Gateway</label>
+                <label className="block text-xs font-medium text-fg-muted">{t("portal.plans.gateway")}</label>
                 <Select value={gateway} onChange={(e) => setGateway(e.target.value)}>
                   <option value="" disabled>Select gateway...</option>
                   {p.price_toman > 0 && <option value="zarinpal">ZarinPal (\u062A\u0648\u0645\u0627\u0646)</option>}
@@ -244,14 +244,14 @@ export function PortalPlans() {
                     disabled={!gateway || purchasing}
                     onClick={handlePurchase}
                   >
-                    {purchasing ? "Processing..." : "Confirm"}
+                    {purchasing ? t("portal.plans.processing") : t("portal.plans.confirm")}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => setSelectedPlan(null)}
                   >
-                    Cancel
+                    {t("portal.plans.cancel")}
                   </Button>
                 </div>
               </div>
@@ -259,7 +259,7 @@ export function PortalPlans() {
           </GlassCard>
         ))}
         {(!data?.plans || data.plans.length === 0) && (
-          <p className="col-span-full text-center text-sm text-fg-muted py-8">No plans available.</p>
+          <p className="col-span-full text-center text-sm text-fg-muted py-8">{t("portal.plans.empty")}</p>
         )}
       </div>
     </div>

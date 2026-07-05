@@ -51,6 +51,8 @@ type Manager struct {
 	log      *slog.Logger
 	mu       sync.Mutex
 	pending  map[string]bool // domains currently being issued
+	cfToken  string
+	cfZoneID string
 }
 
 // NewManager builds a certificate manager.
@@ -64,6 +66,12 @@ func NewManager(store CertStore, email string, log *slog.Logger) *Manager {
 		log:     log,
 		pending: make(map[string]bool),
 	}
+}
+
+// SetCloudflare configures DNS-01 issuance via Cloudflare.
+func (m *Manager) SetCloudflare(token, zoneID string) {
+	m.cfToken = token
+	m.cfZoneID = zoneID
 }
 
 // ObtainOrRenew gets a valid certificate for the domain, either from cache or
@@ -97,9 +105,24 @@ func (m *Manager) ObtainOrRenew(ctx context.Context, domain string) (certPEM, ke
 
 	m.log.Info("issuing certificate", "domain", domain)
 
-	// Generate a proper self-signed cert with the domain as SAN.
-	// TODO: Replace with real ACME (golang.org/x/crypto/acme/autocert) when
-	// HTTP-01 or DNS-01 challenge infrastructure is confirmed available.
+	cf := CloudflareDNS{Token: m.cfToken, ZoneID: m.cfZoneID}
+	if m.email != "" && cf.Token != "" && cf.ZoneID != "" {
+		certPEM, keyPEM, err = m.obtainViaLetsEncrypt(ctx, domain, cf)
+		if err == nil {
+			expires := time.Now().Add(90 * 24 * time.Hour)
+			cert := &Certificate{
+				Domain: domain, CertPEM: certPEM, KeyPEM: keyPEM,
+				ExpiresAt: expires, IssuedAt: time.Now(),
+			}
+			if err := m.store.Put(ctx, cert); err != nil {
+				m.log.Warn("failed to cache certificate", "domain", domain, "err", err)
+			}
+			return certPEM, keyPEM, nil
+		}
+		m.log.Warn("ACME issuance failed, falling back to self-signed", "domain", domain, "err", err)
+	}
+
+	// Fallback: self-signed cert with proper domain SAN.
 	certPEM, keyPEM, err = selfSignDomain(domain)
 	if err != nil {
 		return "", "", fmt.Errorf("issue cert for %s: %w", domain, err)
