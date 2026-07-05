@@ -1,9 +1,17 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Globe, Network, Plus, Server } from "lucide-react";
-import { useInboundsFleet, useNodes, type Inbound, type InboundFleetRow } from "@/api/hooks";
+import { ChevronDown, Globe, Info, Network, Plus, Server, Settings } from "lucide-react";
+import {
+  useInboundsFleet,
+  useNodes,
+  useSubHosts,
+  type HostSecurity,
+  type Inbound,
+  type InboundFleetRow,
+  type SubHost,
+} from "@/api/hooks";
 import type { Node } from "@/api/types";
-import { Button } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
 import { NodeInboundsModal } from "@/components/NodeInboundsModal";
 import { SubHostsModal } from "@/components/SubHostsModal";
 import { GlassCard, ProtocolBadge, StatusBadge } from "@/components/veltrix";
@@ -13,10 +21,31 @@ import { useAuth } from "@/auth/auth";
 import { cn } from "@/lib/utils";
 
 function transportLabel(ib: InboundFleetRow): string {
-  if (!ib.network && !ib.security) return "—";
   const net = ib.network || "tcp";
-  const sec = ib.security || "none";
-  return `${net}/${sec}`;
+  return net.toUpperCase();
+}
+
+// securityColor mirrors SubHostsModal's mapping so REALITY/TLS/none read
+// consistently everywhere a security mode is shown.
+function securityColor(s?: string): string {
+  switch (s) {
+    case "reality":
+      return "on_hold";
+    case "tls":
+      return "active";
+    case "none":
+    case "":
+    case undefined:
+      return "disabled";
+    default:
+      return "muted";
+  }
+}
+
+function securityLabel(s?: string): string {
+  if (!s || s === "none") return "none";
+  if (s === "inbound_default") return "default";
+  return s;
 }
 
 export function Inbounds() {
@@ -30,6 +59,7 @@ export function Inbounds() {
   const [nodeFilter, setNodeFilter] = useState("");
   const [managing, setManaging] = useState<Node | null>(null);
   const [subHostsFor, setSubHostsFor] = useState<Inbound | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const inbounds = fleet.data?.inbounds ?? [];
   const nodeList = nodes.data?.nodes ?? [];
@@ -74,6 +104,18 @@ export function Inbounds() {
           </Button>
         )}
       </div>
+
+      <GlassCard hover={false} className="!p-3.5 bg-primary/5 border-primary/20">
+        <div className="flex items-start gap-2.5">
+          <div className="h-7 w-7 rounded-lg bg-primary/15 flex items-center justify-center text-primary flex-shrink-0">
+            <Info size={14} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-fg">{t("hosts.title")}</p>
+            <p className="text-xs text-fg-muted mt-0.5 leading-relaxed">{t("hosts.help")}</p>
+          </div>
+        </div>
+      </GlassCard>
 
       <GlassCard hover={false} className="!p-0 overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 p-4 border-b border-border/40">
@@ -128,80 +170,19 @@ export function Inbounds() {
         )}
 
         {!fleet.isLoading && filtered.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/40 bg-surface/30">
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
-                    {t("nodes.title")}
-                  </th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
-                    Tag
-                  </th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden md:table-cell">
-                    {t("users.protocol")}
-                  </th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden sm:table-cell">
-                    Port
-                  </th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide hidden lg:table-cell">
-                    Transport
-                  </th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
-                    {t("common.status")}
-                  </th>
-                  <th className="text-end py-3 px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide">
-                    {t("common.actions")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((ib) => (
-                  <tr
-                    key={ib.id}
-                    className="border-b border-border/20 hover:bg-surface/40 transition-colors"
-                  >
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2.5 min-w-[120px]">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                          <Server size={14} />
-                        </div>
-                        <span className="font-medium text-fg text-sm">{ib.node_name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-xs text-fg">{ib.tag}</td>
-                    <td className="py-3.5 px-4 hidden md:table-cell">
-                      <ProtocolBadge label={ib.protocol} />
-                    </td>
-                    <td className="py-3.5 px-4 hidden sm:table-cell tabular-nums text-fg-muted">
-                      {ib.port}
-                    </td>
-                    <td className="py-3.5 px-4 hidden lg:table-cell text-xs text-fg-muted font-mono">
-                      {transportLabel(ib)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <StatusBadge
-                        status={ib.enabled ? "active" : "inactive"}
-                        label={ib.enabled ? "ENABLED" : "DISABLED"}
-                        pulse={false}
-                      />
-                    </td>
-                    <td className="py-3.5 px-4 text-end">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setSubHostsFor(ib)}>
-                          SubHosts
-                        </Button>
-                        {canWrite && (
-                          <Button variant="ghost" size="sm" onClick={() => openNodeManager(ib.node_name)}>
-                            {t("common.edit")}
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="divide-y divide-border/30">
+            {filtered.map((ib) => (
+              <InboundRow
+                key={ib.id}
+                ib={ib}
+                showNode={!nodeFilter}
+                canWrite={canWrite}
+                expanded={expandedId === ib.id}
+                onToggleExpand={() => setExpandedId((cur) => (cur === ib.id ? null : ib.id))}
+                onAddSubHost={() => setSubHostsFor(ib)}
+                onEdit={() => openNodeManager(ib.node_name)}
+              />
+            ))}
           </div>
         )}
 
@@ -214,6 +195,138 @@ export function Inbounds() {
           </div>
         )}
       </GlassCard>
+    </div>
+  );
+}
+
+function InboundRow({
+  ib,
+  showNode,
+  canWrite,
+  expanded,
+  onToggleExpand,
+  onAddSubHost,
+  onEdit,
+}: {
+  ib: InboundFleetRow;
+  showNode: boolean;
+  canWrite: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onAddSubHost: () => void;
+  onEdit: () => void;
+}) {
+  const { t } = useI18n();
+  const sniList = (ib.sni ?? []).filter(Boolean);
+
+  return (
+    <div className="p-4 hover:bg-surface/30 transition-colors">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <Globe size={16} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-semibold text-fg text-sm truncate">{ib.tag}</span>
+              <ProtocolBadge label={ib.protocol} />
+              <span className="inline-flex items-center rounded-md border border-border/60 bg-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted">
+                {transportLabel(ib)}
+              </span>
+              {showNode && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-surface-2/70 px-2 py-0.5 text-[10px] font-medium text-fg-subtle">
+                  <Server size={10} /> {ib.node_name}
+                </span>
+              )}
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted">
+              <span>
+                {t("hosts.port")}: <span className="font-mono text-fg">{ib.port}</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                {t("hosts.security")}:{" "}
+                <Badge color={securityColor(ib.security)}>{securityLabel(ib.security)}</Badge>
+              </span>
+              {sniList.length > 0 && (
+                <span className="truncate max-w-[320px]" title={sniList.join(", ")}>
+                  SNI: <span className="text-fg">{sniList.join(", ")}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <StatusBadge
+            status={ib.enabled ? "active" : "inactive"}
+            label={ib.enabled ? "ENABLED" : "DISABLED"}
+            pulse={false}
+          />
+          <Button variant="outline" size="sm" onClick={onAddSubHost}>
+            <Plus size={13} /> {t("hosts.add")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleExpand}
+            aria-label={t("hosts.title")}
+            className="!px-2"
+          >
+            <ChevronDown size={15} className={cn("transition-transform", expanded && "rotate-180")} />
+          </Button>
+          {canWrite && (
+            <Button variant="ghost" size="sm" onClick={onEdit} className="!px-2" aria-label={t("common.edit")}>
+              <Settings size={15} />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {expanded && <SubHostsPreview inboundId={ib.id} onOpen={onAddSubHost} />}
+    </div>
+  );
+}
+
+function SubHostsPreview({ inboundId, onOpen }: { inboundId: string; onOpen: () => void }) {
+  const { t } = useI18n();
+  const { data, isLoading } = useSubHosts(inboundId);
+  const hosts = data?.hosts ?? [];
+
+  return (
+    <div className="mt-3 ms-12 space-y-1.5">
+      {isLoading && <p className="text-xs text-fg-subtle">{t("common.loading")}</p>}
+      {!isLoading && hosts.length === 0 && (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="text-xs text-fg-subtle hover:text-primary transition-colors"
+        >
+          {t("hosts.empty")}
+        </button>
+      )}
+      {hosts.map((h: SubHost) => (
+        <button
+          key={h.id}
+          type="button"
+          onClick={onOpen}
+          className="w-full flex items-center justify-between gap-2 rounded-lg bg-surface/60 border border-border/30 px-3 py-1.5 text-xs hover:bg-surface-2/60 hover:border-primary/20 transition-colors text-start"
+        >
+          <span className="flex items-center gap-2 min-w-0">
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full flex-shrink-0",
+                h.enabled ? "bg-success" : "bg-fg-subtle",
+              )}
+            />
+            <span className="font-medium text-fg truncate">{h.remark || "—"}</span>
+            <span className="text-fg-subtle truncate" dir="ltr">
+              {h.address}
+              {h.port ? `:${h.port}` : ""}
+            </span>
+          </span>
+          <Badge color={securityColor(h.security as HostSecurity)}>{securityLabel(h.security)}</Badge>
+        </button>
+      ))}
     </div>
   );
 }
