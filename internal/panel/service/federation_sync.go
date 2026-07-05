@@ -69,10 +69,14 @@ func (s *FederationService) syncPeer(ctx context.Context, peer *domain.Federatio
 		peer.Status = domain.PeerDisconnected
 		_ = s.repo.UpdatePeer(ctx, peer)
 		s.recordEvent(ctx, peer, "health", 0, "failed", syncErrMsg(err, resp))
+		if resp != nil && resp.Body != nil {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+		}
 		return
 	}
+	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, resp.Body)
-	resp.Body.Close()
 
 	peer.Status = domain.PeerConnected
 	_ = s.repo.UpdatePeer(ctx, peer)
@@ -100,7 +104,7 @@ func (s *FederationService) fetchRemoteCount(ctx context.Context, client *http.C
 	if err != nil {
 		return 0
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
 		return 0
 	}
