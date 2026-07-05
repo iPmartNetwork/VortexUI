@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Gift } from "lucide-react";
 import { api } from "@/api/client";
-import { Button, Card, Input, PageHeader, Badge, Select } from "@/components/ui";
+import { Button, Input, Badge, Select } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { formatBytes } from "@/lib/utils";
+import { useTitle } from "@/lib/useTitle";
 
 interface ReferralConfig {
   enabled: boolean;
@@ -35,6 +38,7 @@ interface ReferralEvent {
 }
 
 export function Referrals() {
+  useTitle("Referrals");
   const qc = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState<ReferralConfig | null>(null);
@@ -56,22 +60,28 @@ export function Referrals() {
 
   const save = useMutation({
     mutationFn: (c: ReferralConfig) => api("/api/referrals/config", { method: "PUT", body: c }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["referral-config"] }); toast.success("Config saved"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["referral-config"] });
+      toast.success("Config saved");
+    },
   });
 
-  function update(field: keyof ReferralConfig, value: any) {
-    setForm(prev => ({ ...(prev ?? configData?.config ?? {} as any), [field]: value }));
+  function update<K extends keyof ReferralConfig>(field: K, value: ReferralConfig[K]) {
+    setForm((prev) => ({ ...(prev ?? configData?.config ?? ({} as ReferralConfig)), [field]: value }));
   }
 
   return (
-    <div className="space-y-6 animate-page-enter">
-      <PageHeader title="Referral System" subtitle="Invite codes, rewards, and tracking" />
+    <div className="space-y-5 animate-page-enter">
+      <div>
+        <h1 className="text-2xl font-bold text-fg tracking-tight">Referral System</h1>
+        <p className="text-sm text-fg-muted mt-1">Invite codes, rewards, and tracking</p>
+      </div>
 
       {config && (
-        <Card className="space-y-4">
+        <GlassCard hover={false} className="!p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-fg">Referral Program Settings</h3>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm text-fg">
               <input type="checkbox" checked={config.enabled} onChange={(e) => update("enabled", e.target.checked)} className="rounded" />
               Enabled
             </label>
@@ -94,24 +104,24 @@ export function Referrals() {
               <Input value={config.max_referrals} onChange={(e) => update("max_referrals", Number(e.target.value))} inputMode="numeric" />
             </div>
             <div className="flex items-end">
-              <label className="flex items-center gap-2 text-xs pb-2">
+              <label className="flex items-center gap-2 text-xs pb-2 text-fg">
                 <input type="checkbox" checked={config.require_paid} onChange={(e) => update("require_paid", e.target.checked)} className="rounded" />
                 Require paid
               </label>
             </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-1 border-t border-border/40">
             <Button onClick={() => config && save.mutate(config)} disabled={save.isPending}>Save</Button>
           </div>
-        </Card>
+        </GlassCard>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <h3 className="text-sm font-bold text-fg mb-3">Referral Codes ({codesData?.codes?.length ?? 0})</h3>
+        <GlassCard hover={false} className="!p-4 space-y-3">
+          <h3 className="text-sm font-bold text-fg">Referral Codes ({codesData?.codes?.length ?? 0})</h3>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {codesData?.codes?.map((c) => (
-              <div key={c.id} className="flex items-center justify-between rounded-lg bg-surface-2/40 px-3 py-2 text-xs">
+              <div key={c.id} className="flex items-center justify-between rounded-lg bg-surface-2/50 border border-border/40 px-3 py-2 text-xs">
                 <div>
                   <span className="font-mono text-fg font-bold">{c.code}</span>
                   <span className="ml-2 text-fg-muted">{c.username}</span>
@@ -123,25 +133,27 @@ export function Referrals() {
               <p className="text-xs text-fg-muted text-center py-4">No codes generated yet.</p>
             )}
           </div>
-        </Card>
+        </GlassCard>
 
-        <Card>
-          <h3 className="text-sm font-bold text-fg mb-3">Recent Referrals</h3>
+        <GlassCard hover={false} className="!p-4 space-y-3">
+          <h3 className="text-sm font-bold text-fg flex items-center gap-1.5"><Gift size={14} className="text-primary" /> Recent Referrals</h3>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {eventsData?.events?.map((e) => (
-              <div key={e.id} className="rounded-lg bg-surface-2/40 px-3 py-2 text-xs">
+              <div key={e.id} className="rounded-lg bg-surface-2/50 border border-border/40 px-3 py-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-fg">{e.referrer_name} → {e.referred_name}</span>
                   <Badge color={e.reward_applied ? "active" : "limited"}>{e.reward_applied ? "Rewarded" : "Pending"}</Badge>
                 </div>
-                <div className="text-fg-muted mt-0.5">{e.reward_type}: {e.reward_type === "data" ? formatBytes(e.reward_amount, false) : e.reward_amount} | {new Date(e.created_at).toLocaleDateString()}</div>
+                <div className="text-fg-muted mt-0.5">
+                  {e.reward_type}: {e.reward_type === "data" ? formatBytes(e.reward_amount, false) : e.reward_amount} | {new Date(e.created_at).toLocaleDateString()}
+                </div>
               </div>
             ))}
             {(!eventsData?.events || eventsData.events.length === 0) && (
               <p className="text-xs text-fg-muted text-center py-4">No referrals yet.</p>
             )}
           </div>
-        </Card>
+        </GlassCard>
       </div>
     </div>
   );

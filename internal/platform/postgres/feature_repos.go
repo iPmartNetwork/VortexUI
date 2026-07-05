@@ -1687,9 +1687,9 @@ func (r *CleanIPScanRepo) SaveBatch(ctx context.Context, results []*domain.Clean
 	batch := &pgx.Batch{}
 	for _, s := range results {
 		batch.Queue(
-			`INSERT INTO clean_ip_scans (id, ip, latency_ms, loss_pct, score, reachable, scanned_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			s.ID, s.IP, s.LatencyMS, s.LossPct, s.Score, s.Reachable, s.ScannedAt)
+			`INSERT INTO clean_ip_scans (id, ip, latency_ms, loss_pct, score, reachable, throughput_mbps, scanned_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			s.ID, s.IP, s.LatencyMS, s.LossPct, s.Score, s.Reachable, s.ThroughputMbps, s.ScannedAt)
 	}
 	br := r.pool.SendBatch(ctx, batch)
 	defer br.Close() //nolint:errcheck // batch result cleanup
@@ -1703,7 +1703,7 @@ func (r *CleanIPScanRepo) SaveBatch(ctx context.Context, results []*domain.Clean
 
 func (r *CleanIPScanRepo) List(ctx context.Context) ([]*domain.CleanIPScan, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, ip, latency_ms, loss_pct, score, reachable, scanned_at
+		`SELECT id, ip, latency_ms, loss_pct, score, reachable, throughput_mbps, scanned_at
 		 FROM clean_ip_scans
 		 ORDER BY score DESC`)
 	if err != nil {
@@ -1714,7 +1714,7 @@ func (r *CleanIPScanRepo) List(ctx context.Context) ([]*domain.CleanIPScan, erro
 	var results []*domain.CleanIPScan
 	for rows.Next() {
 		var s domain.CleanIPScan
-		if err := rows.Scan(&s.ID, &s.IP, &s.LatencyMS, &s.LossPct, &s.Score, &s.Reachable, &s.ScannedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.IP, &s.LatencyMS, &s.LossPct, &s.Score, &s.Reachable, &s.ThroughputMbps, &s.ScannedAt); err != nil {
 			return nil, err
 		}
 		results = append(results, &s)
@@ -1724,6 +1724,11 @@ func (r *CleanIPScanRepo) List(ctx context.Context) ([]*domain.CleanIPScan, erro
 
 func (r *CleanIPScanRepo) DeleteAll(ctx context.Context) error {
 	_, err := r.pool.Exec(ctx, `DELETE FROM clean_ip_scans`)
+	return err
+}
+
+func (r *CleanIPScanRepo) UpdateThroughput(ctx context.Context, id uuid.UUID, mbps float64) error {
+	_, err := r.pool.Exec(ctx, `UPDATE clean_ip_scans SET throughput_mbps = $1 WHERE id = $2`, mbps, id)
 	return err
 }
 

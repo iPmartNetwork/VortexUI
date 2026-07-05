@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2, Users } from "lucide-react";
 import { api } from "@/api/client";
-import { Button, Card, Input, PageHeader, Badge } from "@/components/ui";
+import { Button, Input, Badge } from "@/components/ui";
 import { Modal } from "@/components/Modal";
+import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
 import { formatBytes } from "@/lib/utils";
+import { useTitle } from "@/lib/useTitle";
 
 interface FamilyMember {
   id: string;
@@ -30,6 +33,7 @@ interface FamilyGroup {
 }
 
 export function FamilyGroups() {
+  useTitle("Family Groups");
   const qc = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
@@ -53,33 +57,58 @@ export function FamilyGroups() {
     toast.success("Deleted");
   }
 
+  const groups = data?.groups ?? [];
+
   return (
-    <div className="space-y-6 animate-page-enter">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Family Groups" subtitle="Shared subscription pools for multiple devices/users" />
-        <Button onClick={() => setCreateOpen(true)}>New Group</Button>
+    <div className="space-y-5 animate-page-enter">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-fg tracking-tight">Family Groups</h1>
+          <p className="text-sm text-fg-muted mt-1">Shared subscription pools for multiple devices/users</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="flex-shrink-0">
+          <Plus size={14} /> New Group
+        </Button>
       </div>
+
       <CreateGroupModal open={createOpen} onClose={() => setCreateOpen(false)} />
       {viewId && <GroupDetailModal groupId={viewId} onClose={() => setViewId(null)} />}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {data?.groups?.map((g) => (
-          <Card key={g.id} className="space-y-3 cursor-pointer hover:ring-1 hover:ring-primary/30" onClick={() => setViewId(g.id)}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-fg">{g.name}</h3>
+        {groups.map((g) => (
+          <GlassCard key={g.id} hover className="!p-4 space-y-3" onClick={() => setViewId(g.id)}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                  <Users size={16} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-fg truncate">{g.name}</h3>
+                  <p className="text-[11px] text-fg-subtle truncate">Owner: {g.owner_name}</p>
+                </div>
+              </div>
               <Badge color="active">{g.members?.length ?? 0}/{g.max_members}</Badge>
             </div>
-            <div className="text-xs text-fg-muted">Owner: {g.owner_name}</div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div><span className="text-fg-subtle">Pool:</span> <strong>{formatBytes(g.data_limit, false)}</strong></div>
-              <div><span className="text-fg-subtle">Used:</span> <strong>{formatBytes(g.used_traffic, false)}</strong></div>
+            <div className="grid grid-cols-2 gap-2 rounded-lg bg-surface-2/50 border border-border/40 px-3 py-2 text-xs">
+              <div><span className="text-fg-subtle">Pool:</span> <strong className="text-fg">{formatBytes(g.data_limit, false)}</strong></div>
+              <div><span className="text-fg-subtle">Used:</span> <strong className="text-fg">{formatBytes(g.used_traffic, false)}</strong></div>
             </div>
-            <div className="flex justify-end pt-1">
-              <Button variant="ghost" size="sm" className="text-destructive text-xs" onClick={(e) => { e.stopPropagation(); remove(g); }}>Delete</Button>
+            <div className="flex justify-end pt-1 border-t border-border/40">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-danger"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  remove(g);
+                }}
+              >
+                <Trash2 size={13} /> Delete
+              </Button>
             </div>
-          </Card>
+          </GlassCard>
         ))}
-        {(!data?.groups || data.groups.length === 0) && (
+        {groups.length === 0 && (
           <p className="col-span-full text-center text-sm text-fg-muted py-8">No family groups yet.</p>
         )}
       </div>
@@ -101,20 +130,44 @@ function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   const create = useMutation({
     mutationFn: (input: Record<string, unknown>) => api("/api/families", { method: "POST", body: input }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["family-groups"] }); onClose(); toast.success("Group created"); },
-    onError: (e: any) => toast.error(e.message),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["family-groups"] });
+      onClose();
+      toast.success("Group created");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "failed"),
   });
 
   return (
     <Modal open={open} onClose={onClose} title="New Family Group">
-      <form onSubmit={(e) => { e.preventDefault(); create.mutate({ name: f.name, owner_id: f.owner_id, data_limit: Number(f.data_limit) * 1024 * 1024 * 1024, max_members: Number(f.max_members), member_quota: Number(f.member_quota) * 1024 * 1024 * 1024 }); }} className="space-y-3">
-        <Input placeholder="Group name" value={f.name} onChange={(e) => setF(s => ({ ...s, name: e.target.value }))} required />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          create.mutate({
+            name: f.name,
+            owner_id: f.owner_id,
+            data_limit: Number(f.data_limit) * 1024 * 1024 * 1024,
+            max_members: Number(f.max_members),
+            member_quota: Number(f.member_quota) * 1024 * 1024 * 1024,
+          });
+        }}
+        className="space-y-3"
+      >
+        <Input placeholder="Group name" value={f.name} onChange={(e) => setF((s) => ({ ...s, name: e.target.value }))} required />
         <div>
-          <Input placeholder="Search user..." value={ownerSearch} onChange={(e) => { setOwnerSearch(e.target.value); }} />
+          <Input placeholder="Search user..." value={ownerSearch} onChange={(e) => setOwnerSearch(e.target.value)} />
           {usersData?.users && usersData.users.length > 0 && !f.owner_id && (
             <div className="mt-1 max-h-32 overflow-y-auto rounded-lg border border-border/40 bg-surface-2/40">
-              {usersData.users.map(u => (
-                <button key={u.id} type="button" className="w-full px-3 py-1.5 text-left text-xs text-fg hover:bg-primary/10" onClick={() => { setF(s => ({ ...s, owner_id: u.id })); setOwnerSearch(u.username); }}>
+              {usersData.users.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  className="w-full px-3 py-1.5 text-left text-xs text-fg hover:bg-primary/10"
+                  onClick={() => {
+                    setF((s) => ({ ...s, owner_id: u.id }));
+                    setOwnerSearch(u.username);
+                  }}
+                >
                   {u.username} <span className="text-fg-muted">({u.id.slice(0, 8)})</span>
                 </button>
               ))}
@@ -123,9 +176,9 @@ function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => voi
           {f.owner_id && <p className="mt-1 text-[10px] text-fg-subtle">Selected: {ownerSearch}</p>}
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Input placeholder="Pool (GB)" value={f.data_limit} onChange={(e) => setF(s => ({ ...s, data_limit: e.target.value }))} inputMode="numeric" />
-          <Input placeholder="Max members" value={f.max_members} onChange={(e) => setF(s => ({ ...s, max_members: e.target.value }))} inputMode="numeric" />
-          <Input placeholder="Per-member cap (GB)" value={f.member_quota} onChange={(e) => setF(s => ({ ...s, member_quota: e.target.value }))} inputMode="numeric" />
+          <Input placeholder="Pool (GB)" value={f.data_limit} onChange={(e) => setF((s) => ({ ...s, data_limit: e.target.value }))} inputMode="numeric" />
+          <Input placeholder="Max members" value={f.max_members} onChange={(e) => setF((s) => ({ ...s, max_members: e.target.value }))} inputMode="numeric" />
+          <Input placeholder="Per-member cap (GB)" value={f.member_quota} onChange={(e) => setF((s) => ({ ...s, member_quota: e.target.value }))} inputMode="numeric" />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
@@ -148,19 +201,26 @@ function GroupDetailModal({ groupId, onClose }: { groupId: string; onClose: () =
 
   const addMut = useMutation({
     mutationFn: (input: { user_id: string; label: string }) => api(`/api/families/${groupId}/members`, { method: "POST", body: input }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["family-group", groupId] }); setNewUser({ user_id: "", label: "" }); toast.success("Member added"); },
-    onError: (e: any) => toast.error(e.message),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["family-group", groupId] });
+      setNewUser({ user_id: "", label: "" });
+      toast.success("Member added");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "failed"),
   });
 
   const removeMut = useMutation({
     mutationFn: (uid: string) => api<void>(`/api/families/${groupId}/members/${uid}`, { method: "DELETE" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["family-group", groupId] }); toast.success("Removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["family-group", groupId] });
+      toast.success("Removed");
+    },
   });
 
   const group = data?.group;
 
   return (
-    <Modal open={true} onClose={onClose} title={group?.name || "Group"} className="max-w-lg">
+    <Modal open onClose={onClose} title={group?.name || "Group"} className="max-w-lg">
       <div className="space-y-4">
         <div className="text-xs text-fg-muted">Owner: {group?.owner_name} | Members: {group?.members?.length ?? 0}/{group?.max_members}</div>
         <div className="space-y-2 max-h-[200px] overflow-y-auto">
@@ -171,13 +231,21 @@ function GroupDetailModal({ groupId, onClose }: { groupId: string; onClose: () =
                 {m.label && <span className="ml-2 text-xs text-fg-muted">({m.label})</span>}
                 <div className="text-xs text-fg-subtle">{formatBytes(m.used_traffic, false)}</div>
               </div>
-              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeMut.mutate(m.user_id)}>Remove</Button>
+              <Button variant="ghost" size="sm" className="text-danger" onClick={() => removeMut.mutate(m.user_id)}>
+                <Trash2 size={13} />
+              </Button>
             </div>
           ))}
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); addMut.mutate(newUser); }} className="flex gap-2">
-          <Input placeholder="User ID" value={newUser.user_id} onChange={(e) => setNewUser(s => ({ ...s, user_id: e.target.value }))} className="flex-1" />
-          <Input placeholder="Label" value={newUser.label} onChange={(e) => setNewUser(s => ({ ...s, label: e.target.value }))} className="w-28" />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            addMut.mutate(newUser);
+          }}
+          className="flex gap-2"
+        >
+          <Input placeholder="User ID" value={newUser.user_id} onChange={(e) => setNewUser((s) => ({ ...s, user_id: e.target.value }))} className="flex-1" />
+          <Input placeholder="Label" value={newUser.label} onChange={(e) => setNewUser((s) => ({ ...s, label: e.target.value }))} className="w-28" />
           <Button type="submit" size="sm" disabled={addMut.isPending || !newUser.user_id}>Add</Button>
         </form>
       </div>

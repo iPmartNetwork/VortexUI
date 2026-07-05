@@ -290,6 +290,7 @@ func NewRouter(d Deps) *echo.Echo {
 	cleanip := authed.Group("/clean-ip")
 	cleanip.POST("/scan", d.CleanIP.Scan, RequirePermission(d.Auth, domain.PermInboundWrite))
 	cleanip.GET("/results", d.CleanIP.GetCached, RequirePermission(d.Auth, domain.PermInboundRead))
+	cleanip.POST("/throughput", d.CleanIP.Throughput, RequirePermission(d.Auth, domain.PermInboundWrite))
 
 	// --- Subscription Hosts (Marzban-style per-inbound overrides) ---
 	hosts := authed.Group("/sub-hosts")

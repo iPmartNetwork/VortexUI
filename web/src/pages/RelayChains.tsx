@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Info, Plus, Trash2, Waypoints } from "lucide-react";
 import { api } from "@/api/client";
-import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
+import { Button, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
+import { GlassCard, StatusBadge } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
 import { useI18n } from "@/i18n/i18n";
+import { useTitle } from "@/lib/useTitle";
 
 interface RelayHop {
   type: string;
@@ -27,9 +30,13 @@ interface RelayChain {
   created_at: string;
 }
 
-interface Node { id: string; name: string; }
+interface Node {
+  id: string;
+  name: string;
+}
 
 export function RelayChains() {
+  useTitle("Relay Chains");
   const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
@@ -45,55 +52,80 @@ export function RelayChains() {
   });
 
   async function remove(c: RelayChain) {
-    const ok = await confirm({ title: `Delete chain "${c.name}"?`, confirmLabel: "Delete", destructive: true });
+    const ok = await confirm({ title: `${t("common.delete")} "${c.name}"?`, confirmLabel: t("common.delete"), destructive: true });
     if (!ok) return;
     await delMut.mutateAsync(c.id);
-    toast.success("Deleted");
+    toast.success(t("common.delete"));
   }
 
-  const nodeMap = Object.fromEntries(nodesData?.nodes?.map(n => [n.id, n.name]) ?? []);
+  const nodeMap = Object.fromEntries(nodesData?.nodes?.map((n) => [n.id, n.name]) ?? []);
+  const chains = data?.chains ?? [];
 
   return (
-    <div className="space-y-6 animate-page-enter">
-      <div className="flex items-center justify-between">
-        <PageHeader title={t("relay.title")} subtitle={t("relay.subtitle")} />
-        <Button onClick={() => setCreateOpen(true)}>{t("relay.newChain")}</Button>
+    <div className="space-y-5 animate-page-enter">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-fg tracking-tight">{t("relay.title")}</h1>
+          <p className="text-sm text-fg-muted mt-1 max-w-2xl">{t("relay.subtitle")}</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="flex-shrink-0">
+          <Plus size={14} /> {t("relay.newChain")}
+        </Button>
       </div>
-      <div className="rounded-lg border border-border/40 bg-surface-2/20 p-4 text-xs text-fg-muted space-y-2">
-        <p className="font-medium text-fg text-sm">{t("relay.infoTitle")}</p>
-        <p>{t("relay.infoDesc")}</p>
-        <ul className="list-disc pl-4 space-y-1">
-          <li><strong>CDN</strong> — {t("relay.cdn")}</li>
-          <li><strong>Relay</strong> — {t("relay.relay")}</li>
-          <li><strong>Worker</strong> — {t("relay.worker")}</li>
-        </ul>
+
+      <div className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 flex items-start gap-3">
+        <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-primary flex-shrink-0">
+          <Info size={16} />
+        </div>
+        <div className="text-xs text-fg-muted leading-relaxed space-y-1.5">
+          <p className="font-semibold text-fg text-sm">{t("relay.infoTitle")}</p>
+          <p>{t("relay.infoDesc")}</p>
+          <ul className="space-y-1 pt-1">
+            <li><strong className="text-fg">CDN</strong> — {t("relay.cdn")}</li>
+            <li><strong className="text-fg">Relay</strong> — {t("relay.relay")}</li>
+            <li><strong className="text-fg">Worker</strong> — {t("relay.worker")}</li>
+          </ul>
+        </div>
       </div>
+
       <CreateChainModal open={createOpen} onClose={() => setCreateOpen(false)} nodes={nodesData?.nodes ?? []} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {data?.chains?.map((c) => (
-          <Card key={c.id} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-fg">{c.name}</h3>
-              <span className={`h-2 w-2 rounded-full ${c.enabled ? "bg-success" : "bg-fg-subtle"}`} />
+        {chains.map((c) => (
+          <GlassCard key={c.id} hover className="!p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                  <Waypoints size={16} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-fg truncate">{c.name}</h3>
+                  <p className="text-[11px] text-fg-subtle truncate">{nodeMap[c.node_id] || c.node_id.slice(0, 8)}</p>
+                </div>
+              </div>
+              <StatusBadge status={c.enabled ? "active" : "inactive"} label={c.enabled ? "ACTIVE" : "OFF"} pulse={c.enabled} />
             </div>
-            <div className="text-xs text-fg-muted">Node: {nodeMap[c.node_id] || c.node_id.slice(0, 8)}</div>
-            <div className="flex items-center gap-1 flex-wrap">
+
+            <div className="flex items-center gap-1.5 flex-wrap rounded-lg bg-surface-2/50 border border-border/40 px-3 py-2.5">
               {c.hops.map((h, i) => (
-                <span key={i} className="inline-flex items-center gap-1">
-                  <span className="rounded bg-surface-2 px-2 py-0.5 text-xs font-mono">{h.type}: {h.address}:{h.port}</span>
-                  {i < c.hops.length - 1 && <span className="text-fg-subtle">→</span>}
+                <span key={i} className="inline-flex items-center gap-1.5">
+                  <span className="rounded-md bg-surface-3 px-2 py-1 text-[11px] font-mono text-fg" dir="ltr">
+                    {h.type}: {h.address}:{h.port}
+                  </span>
+                  <ArrowRight size={11} className="text-fg-subtle flex-shrink-0" />
                 </span>
               ))}
-              <span className="text-fg-subtle">→</span>
-              <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Node</span>
+              <span className="rounded-md bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary">Node</span>
             </div>
-            <div className="flex justify-end pt-2">
-              <Button variant="ghost" size="sm" className="text-destructive text-xs" onClick={() => remove(c)}>Delete</Button>
+
+            <div className="flex justify-end pt-1 border-t border-border/40">
+              <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(c)}>
+                <Trash2 size={13} /> {t("common.delete")}
+              </Button>
             </div>
-          </Card>
+          </GlassCard>
         ))}
-        {(!data?.chains || data.chains.length === 0) && (
+        {chains.length === 0 && (
           <p className="col-span-full text-center text-sm text-fg-muted py-8">{t("relay.noChains")}</p>
         )}
       </div>
@@ -104,6 +136,7 @@ export function RelayChains() {
 function CreateChainModal({ open, onClose, nodes }: { open: boolean; onClose: () => void; nodes: Node[] }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [nodeId, setNodeId] = useState("");
   const [hops, setHops] = useState<RelayHop[]>([
@@ -113,40 +146,58 @@ function CreateChainModal({ open, onClose, nodes }: { open: boolean; onClose: ()
   const create = useMutation({
     mutationFn: (input: { name: string; node_id: string; hops: RelayHop[] }) =>
       api("/api/relays", { method: "POST", body: input }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["relay-chains"] }); onClose(); toast.success("Chain created"); },
-    onError: (e: any) => toast.error(e.message),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["relay-chains"] });
+      onClose();
+      toast.success(t("common.create"));
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "failed"),
   });
 
   function addHop() {
     setHops([...hops, { type: "relay", address: "", port: 443, protocol: "tcp", sni: "", path: "", host: "", note: "" }]);
   }
-  function removeHop(idx: number) { setHops(hops.filter((_, i) => i !== idx)); }
+  function removeHop(idx: number) {
+    setHops(hops.filter((_, i) => i !== idx));
+  }
   function updateHop(idx: number, field: keyof RelayHop, value: string | number) {
     const copy = [...hops];
-    (copy[idx] as any)[field] = value;
+    copy[idx] = { ...copy[idx], [field]: value } as RelayHop;
     setHops(copy);
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="New Relay Chain" className="max-w-xl">
-      <form onSubmit={(e) => { e.preventDefault(); create.mutate({ name, node_id: nodeId, hops }); }} className="space-y-4">
+    <Modal open={open} onClose={onClose} title={t("relay.newChain")} className="max-w-xl">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          create.mutate({ name, node_id: nodeId, hops });
+        }}
+        className="space-y-4"
+      >
         <div className="grid grid-cols-2 gap-2">
           <Input placeholder="Chain name" value={name} onChange={(e) => setName(e.target.value)} required />
           <Select value={nodeId} onChange={(e) => setNodeId(e.target.value)}>
-            <option value="">Target node...</option>
-            {nodes.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
+            <option value="">Target node…</option>
+            {nodes.map((n) => (
+              <option key={n.id} value={n.id}>{n.name}</option>
+            ))}
           </Select>
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-fg-subtle font-medium">Hops (in order)</span>
-            <Button type="button" variant="ghost" size="sm" onClick={addHop}>+ Add hop</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={addHop}>
+              <Plus size={13} /> Add hop
+            </Button>
           </div>
           {hops.map((h, i) => (
             <div key={i} className="rounded-lg border border-border/40 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-fg-muted">Hop {i + 1}</span>
-                <Button type="button" variant="ghost" size="sm" className="text-destructive h-6" onClick={() => removeHop(i)}>×</Button>
+                <Button type="button" variant="ghost" size="sm" className="text-danger h-6" onClick={() => removeHop(i)}>
+                  <Trash2 size={12} />
+                </Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <select className="field text-xs" value={h.type} onChange={(e) => updateHop(i, "type", e.target.value)}>
@@ -170,8 +221,8 @@ function CreateChainModal({ open, onClose, nodes }: { open: boolean; onClose: ()
           ))}
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={create.isPending || !name || !nodeId}>Create</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button type="submit" disabled={create.isPending || !name || !nodeId}>{t("common.create")}</Button>
         </div>
       </form>
     </Modal>

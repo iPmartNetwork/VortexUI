@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"sort"
 	"strconv"
 	"sync"
@@ -27,6 +29,25 @@ const (
 	// cleanIPUnreachableLatencyMS is the sentinel latency recorded when every
 	// probe attempt fails (so unreachable IPs sort last but stay representable).
 	cleanIPUnreachableLatencyMS = 9999
+
+	// cleanIPThroughputHost is the well-known, always-on endpoint used as the
+	// TLS SNI/Host for the real download-speed test. The TCP connection is
+	// made directly to the candidate IP (that's the whole point of a clean-IP
+	// scan) while TLS is validated against this hostname, exactly mirroring
+	// how a CDN-fronted proxy inbound would be reached in production.
+	cleanIPThroughputHost = "speed.cloudflare.com"
+	// cleanIPThroughputPath requests a bounded-size payload; the actual
+	// transfer is additionally capped by duration/bytes below so a slow or
+	// misbehaving candidate can't stall a scan.
+	cleanIPThroughputPath = "/__down?bytes=25000000"
+	// cleanIPThroughputMaxBytes hard-caps how much we ever read.
+	cleanIPThroughputMaxBytes = 25 * 1024 * 1024
+	// cleanIPThroughputMaxDuration bounds the download window; a good clean
+	// IP saturates the sample well before this elapses.
+	cleanIPThroughputMaxDuration = 4 * time.Second
+	// cleanIPThroughputMinDuration guards against unreliable measurements
+	// from samples that finished too quickly (e.g. a tiny cached response).
+	cleanIPThroughputMinDuration = 300 * time.Millisecond
 )
 
 // cleanIPProbeResult is the raw measurement for one candidate IP.
@@ -40,18 +61,25 @@ type cleanIPProbeResult struct {
 // network seam: tests inject a fake so no real connections are made.
 type cleanIPProbeFunc func(ctx context.Context, ip string, port int) cleanIPProbeResult
 
+// cleanIPThroughputFunc runs a real download-speed test against one IP:port
+// and returns the measured throughput in Mbps. It is the network seam for
+// MeasureThroughput; tests inject a fake so no real connections are made.
+type cleanIPThroughputFunc func(ctx context.Context, ip string, port int) (float64, error)
+
 // CleanIPScannerService probes candidate CDN IPs (e.g. Cloudflare) for latency
 // and packet loss, scores them, and caches the best-first results. It mirrors
 // RealityScannerService end to end.
 type CleanIPScannerService struct {
-	repo  port.CleanIPScanRepository
-	probe cleanIPProbeFunc
-	now   func() time.Time
+	repo       port.CleanIPScanRepository
+	probe      cleanIPProbeFunc
+	throughput cleanIPThroughputFunc
+	now        func() time.Time
 }
 
-// NewCleanIPScannerService wires the service with the default TCP-connect probe.
+// NewCleanIPScannerService wires the service with the default TCP-connect
+// probe and real HTTPS download-speed test.
 func NewCleanIPScannerService(repo port.CleanIPScanRepository) *CleanIPScannerService {
-	return &CleanIPScannerService{repo: repo, probe: probeCleanIPTCP, now: time.Now}
+	return &CleanIPScannerService{repo: repo, probe: probeCleanIPTCP, throughput: measureCleanIPThroughput, now: time.Now}
 }
 
 // Scan validates the candidate IPs, probes them under a bounded worker pool,
@@ -120,6 +148,28 @@ func (s *CleanIPScannerService) GetCachedResults(ctx context.Context) ([]*domain
 	return s.repo.List(ctx)
 }
 
+// MeasureThroughput runs a real download-speed test against one previously
+// scanned candidate (identified by its cached result ID + IP) and persists
+// the measured Mbps. It is deliberately separate from the bulk Scan so
+// operators pay the (slower) throughput cost only for the handful of
+// promising candidates they actually care about.
+func (s *CleanIPScannerService) MeasureThroughput(ctx context.Context, id uuid.UUID, ip string, scanPort int) (float64, error) {
+	if !isPublicIP(ip) {
+		return 0, fmt.Errorf("invalid or non-public IP: %q", ip)
+	}
+	if scanPort <= 0 {
+		scanPort = 443
+	}
+	mbps, err := s.throughput(ctx, ip, scanPort)
+	if err != nil {
+		return 0, err
+	}
+	if err := s.repo.UpdateThroughput(ctx, id, mbps); err != nil {
+		return 0, err
+	}
+	return mbps, nil
+}
+
 // scoreCleanIP maps latency + loss to a 0-100 score (higher is better):
 // unreachable IPs score 0; otherwise score = 100 - latencyMS/10 - lossPct,
 // clamped to [0,100]. A ~100ms IP with no loss scores 90; 1000ms or 100% loss
@@ -185,4 +235,47 @@ func probeCleanIPTCP(ctx context.Context, ip string, scanPort int) cleanIPProbeR
 		res.latencyMS = cleanIPUnreachableLatencyMS
 	}
 	return res
+}
+
+// measureCleanIPThroughput downloads a bounded sample through a direct TCP
+// connection to ip:scanPort, TLS-fronted as cleanIPThroughputHost (the
+// connection goes to the candidate IP; the TLS handshake — SNI and
+// certificate validation — is done against the well-known host, exactly as a
+// CDN-fronted inbound would see it in production). It returns the observed
+// download throughput in Mbps, measured over the response body transfer only
+// (connect + TLS handshake + response headers are excluded).
+func measureCleanIPThroughput(parentCtx context.Context, ip string, scanPort int) (float64, error) {
+	ctx, cancel := context.WithTimeout(parentCtx, cleanIPThroughputMaxDuration+cleanIPDialTimeout)
+	defer cancel()
+
+	dialer := &net.Dialer{Timeout: cleanIPDialTimeout}
+	addr := net.JoinHostPort(ip, strconv.Itoa(scanPort))
+	transport := &http.Transport{
+		DialContext: func(dialCtx context.Context, network, _ string) (net.Conn, error) {
+			return dialer.DialContext(dialCtx, network, addr)
+		},
+		TLSHandshakeTimeout:   cleanIPDialTimeout,
+		ResponseHeaderTimeout: cleanIPDialTimeout,
+		DisableCompression:    true,
+	}
+	client := &http.Client{Transport: transport}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+cleanIPThroughputHost+cleanIPThroughputPath, nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("throughput probe failed: %w", err)
+	}
+	defer resp.Body.Close() //nolint:errcheck // best-effort cleanup
+
+	start := time.Now()
+	n, _ := io.Copy(io.Discard, io.LimitReader(resp.Body, cleanIPThroughputMaxBytes))
+	elapsed := time.Since(start)
+	if elapsed < cleanIPThroughputMinDuration || n <= 0 {
+		return 0, fmt.Errorf("insufficient sample: %d bytes in %s", n, elapsed)
+	}
+	mbps := float64(n*8) / elapsed.Seconds() / 1_000_000
+	return mbps, nil
 }
