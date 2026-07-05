@@ -15,6 +15,7 @@ import { GlassCard } from "@/components/veltrix";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useTheme } from "@/theme/theme";
+import { applyAccentColor, readBranding, saveAndApplyBranding } from "@/theme/branding";
 import { useI18n } from "@/i18n/i18n";
 import { useAuth } from "@/auth/auth";
 import { mergeResellerSettings, type ResellerSettingKey } from "@/auth/permissions";
@@ -672,7 +673,7 @@ function AppearanceTab({
   registerSave: (id: SettingsTab, fn: () => void | Promise<void>) => void;
 }) {
   const { t, lang, setLang } = useI18n();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolved } = useTheme();
   const toast = useToast();
   const [accentColor, setAccentColor] = useState("#6366f1");
   const [logoURL, setLogoURL] = useState("");
@@ -681,22 +682,24 @@ function AppearanceTab({
   const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("vortex_branding");
-      if (raw) {
-        const b = JSON.parse(raw);
-        if (b.accentColor) setAccentColor(b.accentColor);
-        if (b.logoURL) setLogoURL(b.logoURL);
-        if (b.footerText) setFooterText(b.footerText);
-      }
-    } catch { /* ignore */ }
+    const b = readBranding();
+    if (b.accentColor) setAccentColor(b.accentColor);
+    if (b.logoURL) setLogoURL(b.logoURL);
+    if (b.footerText) setFooterText(b.footerText);
   }, []);
 
+  const selectAccent = useCallback(
+    (color: string) => {
+      setAccentColor(color);
+      applyAccentColor(color, resolved);
+    },
+    [resolved],
+  );
+
   const saveAll = useCallback(() => {
-    const existing = JSON.parse(localStorage.getItem("vortex_branding") || "{}");
-    localStorage.setItem("vortex_branding", JSON.stringify({ ...existing, accentColor, logoURL, footerText }));
+    saveAndApplyBranding({ accentColor, logoURL, footerText }, resolved);
     toast.success(t("common.save"));
-  }, [accentColor, logoURL, footerText, toast, t]);
+  }, [accentColor, logoURL, footerText, resolved, toast, t]);
 
   useEffect(() => {
     registerSave("appearance", saveAll);
@@ -736,7 +739,7 @@ function AppearanceTab({
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setAccentColor(color)}
+                  onClick={() => selectAccent(color)}
                   className={cn(
                     "h-10 w-10 rounded-xl transition-all",
                     accentColor === color ? "ring-2 ring-primary ring-offset-2 ring-offset-bg-elevated scale-105" : "hover:scale-105",
