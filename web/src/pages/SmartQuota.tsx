@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Gauge, Plus, Trash2 } from "lucide-react";
 import { api } from "@/api/client";
-import { Button, Card, Input, PageHeader } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
+import { useTitle } from "@/lib/useTitle";
 
 interface QuotaTier {
   usage_percent: number;
@@ -21,6 +24,7 @@ interface QuotaPolicy {
 }
 
 export function SmartQuota() {
+  useTitle("Smart Quota");
   const qc = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
@@ -44,32 +48,40 @@ export function SmartQuota() {
   }
 
   return (
-    <div className="space-y-6 animate-page-enter">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Smart Quota" subtitle="Fair-use policies with progressive speed reduction" />
-        <Button onClick={() => setCreateOpen(true)}>New Policy</Button>
+    <div className="space-y-5 animate-page-enter">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-fg tracking-tight">Smart Quota</h1>
+          <p className="text-sm text-fg-muted mt-1">Fair-use policies with progressive speed reduction</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}><Plus size={14} /> New Policy</Button>
       </div>
       <CreatePolicyModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {data?.policies?.map((p) => (
-          <Card key={p.id} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-fg">{p.name}</h3>
-              <span className={`h-2 w-2 rounded-full ${p.enabled ? "bg-success" : "bg-fg-subtle"}`} />
+          <GlassCard key={p.id} hover className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center text-primary flex-shrink-0">
+                  <Gauge size={15} />
+                </div>
+                <h3 className="text-sm font-bold text-fg truncate">{p.name}</h3>
+              </div>
+              <span className={`h-2 w-2 rounded-full flex-shrink-0 ${p.enabled ? "bg-success" : "bg-fg-subtle"}`} />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5 rounded-lg bg-surface-2/50 border border-border/40 px-3 py-2">
               {p.tiers.map((t, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs text-fg-muted">
-                  <span className="font-mono">{t.usage_percent}%</span>
+                  <span className="font-mono font-medium text-fg">{t.usage_percent}%</span>
                   <span>→</span>
-                  <span>{t.action === "block" ? "Block" : `${formatSpeed(t.speed_limit)}`}</span>
+                  <span>{t.action === "block" ? "Block" : formatSpeed(t.speed_limit)}</span>
                 </div>
               ))}
             </div>
-            <div className="flex justify-end pt-2">
-              <Button variant="ghost" size="sm" className="text-destructive text-xs" onClick={() => remove(p)}>Delete</Button>
+            <div className="flex justify-end pt-1 border-t border-border/40">
+              <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(p)}><Trash2 size={13} /> Delete</Button>
             </div>
-          </Card>
+          </GlassCard>
         ))}
         {(!data?.policies || data.policies.length === 0) && (
           <p className="col-span-full text-center text-sm text-fg-muted py-8">No policies defined. Users will be hard-cut at 100% usage.</p>
@@ -122,14 +134,14 @@ function CreatePolicyModal({ open, onClose }: { open: boolean; onClose: () => vo
             <Button type="button" variant="ghost" size="sm" onClick={addTier}>+ Add tier</Button>
           </div>
           {tiers.map((t, i) => (
-            <div key={i} className="grid grid-cols-4 gap-2 items-center">
+            <div key={i} className="grid grid-cols-2 gap-2 items-center sm:grid-cols-4">
               <Input placeholder="%" value={t.usage_percent} onChange={(e) => updateTier(i, "usage_percent", Number(e.target.value))} inputMode="numeric" />
               <Input placeholder="Speed (B/s)" value={t.speed_limit} onChange={(e) => updateTier(i, "speed_limit", Number(e.target.value))} inputMode="numeric" />
               <select className="field text-xs" value={t.action} onChange={(e) => updateTier(i, "action", e.target.value)}>
                 <option value="reduce">Reduce</option>
                 <option value="block">Block</option>
               </select>
-              <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => removeTier(i)}>×</Button>
+              <Button type="button" variant="ghost" size="sm" className="text-danger" onClick={() => removeTier(i)}>×</Button>
             </div>
           ))}
         </div>

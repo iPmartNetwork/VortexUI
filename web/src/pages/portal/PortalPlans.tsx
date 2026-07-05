@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { portalApi } from "./portalApi";
-import { Card, Button, Select } from "@/components/ui";
+import { Button, Select } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { formatBytes } from "@/lib/utils";
 
@@ -147,7 +148,7 @@ export function PortalPlans() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {data?.plans?.map((p) => (
-          <Card key={p.id} className="space-y-4">
+          <GlassCard key={p.id} className="space-y-4">
             <h3 className="text-sm font-bold text-fg">{p.name}</h3>
             {p.description && <p className="text-xs text-fg-muted">{p.description}</p>}
             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -255,7 +256,7 @@ export function PortalPlans() {
                 </div>
               </div>
             )}
-          </Card>
+          </GlassCard>
         ))}
         {(!data?.plans || data.plans.length === 0) && (
           <p className="col-span-full text-center text-sm text-fg-muted py-8">No plans available.</p>

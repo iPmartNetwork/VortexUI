@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
 import { useAdmins, useAdjustAdminQuota, useDeleteAdmin, useRoles, useUnsuspendAdmin } from "@/api/admin-hooks";
 import { useImpersonateAdmin } from "@/api/reseller-hooks";
 import { useResellerQuotaUsage } from "@/api/quota-hooks";
 import { setToken } from "@/api/client";
 import { useAuth } from "@/auth/auth";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { CreateAdminModal } from "@/components/CreateAdminModal";
 import { EditAdminModal } from "@/components/EditAdminModal";
 import { WalletTopUpModal } from "@/components/WalletTopUpModal";
@@ -46,11 +48,11 @@ export function AdminsListTab(_props: { embedded?: boolean }) {
   const usageList = quotaUsage.data?.usage ?? [];
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
+    return <p className="text-sm text-fg-muted">{t("common.loading")}</p>;
   }
 
   if (loadError) {
-    return <p className="text-sm text-destructive">{t("reseller.admins.loadFailed")}</p>;
+    return <p className="text-sm text-danger">{t("reseller.admins.loadFailed")}</p>;
   }
 
   async function loginAs(a: Admin) {
@@ -106,141 +108,145 @@ export function AdminsListTab(_props: { embedded?: boolean }) {
       )}
 
       <div className="flex justify-end">
-        <Button onClick={() => setAdminOpen(true)}>{t("reseller.admins.newAdmin")}</Button>
+        <Button onClick={() => setAdminOpen(true)}><Plus size={14} /> {t("reseller.admins.newAdmin")}</Button>
       </div>
 
       {usageList.length > 0 && (
-        <Card className="p-0">
-          <div className="border-b px-5 py-3 text-sm font-semibold">{t("reseller.admins.quotaUsage")}</div>
+        <GlassCard hover={false} className="!p-0 overflow-hidden">
+          <div className="border-b border-border/40 px-5 py-3 text-sm font-bold text-fg">{t("reseller.admins.quotaUsage")}</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/40 bg-surface-2/30 text-left text-[11px] uppercase tracking-wide text-fg-subtle">
+                  <th className="px-5 py-3 font-medium">{t("reseller.admins.colReseller")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.admins.colAccounts")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.admins.colAssigned")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.admins.colConsumed")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.admins.colPoolLeft")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.admins.colWallet")}</th>
+                  <th className="px-5 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {usageList.map((u) => (
+                  <tr key={u.admin_id} className="hover:bg-surface-2/40">
+                    <td className="px-5 py-3 font-medium">
+                      <Link
+                        to={`/settings/admins/${u.admin_id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {u.username}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-3 text-fg-muted">
+                      {u.user_count}{u.user_quota > 0 ? ` / ${u.user_quota}` : ""}
+                      {u.users_remaining != null && (
+                        <span className="ms-1 text-xs">({u.users_remaining} {t("reseller.admins.left")})</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-fg-muted">{formatBytes(u.traffic_allocated, false)}</td>
+                    <td className="px-5 py-3 text-fg-muted">{formatBytes(u.traffic_used, false)}</td>
+                    <td className="px-5 py-3 text-fg-muted">
+                      {u.traffic_remaining != null ? formatBytes(u.traffic_remaining, false) : "∞"}
+                    </td>
+                    <td className="px-5 py-3 text-fg-muted">
+                      {formatBytes(u.wallet_traffic_bytes ?? 0, false)} · {u.wallet_user_credits ?? 0}
+                    </td>
+                    <td className="px-5 py-3 text-right space-x-1">
+                      <Button variant="ghost" size="sm" onClick={() => setWalletTopUp({ id: u.admin_id, username: u.username })}>
+                        {t("reseller.admins.walletTopUp")}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, 50)}>{t("reseller.admins.addUsers")}</Button>
+                      <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, undefined, 10)}>{t("reseller.admins.addTraffic10")}</Button>
+                      <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, undefined, 50)}>{t("reseller.admins.addTraffic50")}</Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </GlassCard>
+      )}
+
+      <GlassCard hover={false} className="!p-0 overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b text-left text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3 font-medium">{t("reseller.admins.colReseller")}</th>
-                <th className="px-5 py-3 font-medium">{t("reseller.admins.colAccounts")}</th>
-                <th className="px-5 py-3 font-medium">{t("reseller.admins.colAssigned")}</th>
-                <th className="px-5 py-3 font-medium">{t("reseller.admins.colConsumed")}</th>
-                <th className="px-5 py-3 font-medium">{t("reseller.admins.colPoolLeft")}</th>
-                <th className="px-5 py-3 font-medium">{t("reseller.admins.colWallet")}</th>
-                <th className="px-5 py-3 font-medium"></th>
+            <thead>
+              <tr className="border-b border-border/40 bg-surface-2/30 text-left text-[11px] uppercase tracking-wide text-fg-subtle">
+                <th className="px-5 py-3 font-medium">{t("reseller.admins.colUsername")}</th>
+                <th className="px-5 py-3 font-medium">{t("reseller.admins.colAccess")}</th>
+                <th className="px-5 py-3 font-medium">{t("reseller.admins.colRole")}</th>
+                <th className="px-5 py-3 font-medium">{t("reseller.admins.col2fa")}</th>
+                <th className="px-5 py-3 font-medium hidden lg:table-cell">{t("reseller.admins.colUsage")}</th>
+                <th className="px-5 py-3"></th>
               </tr>
             </thead>
-            <tbody>
-              {usageList.map((u) => (
-                <tr key={u.admin_id} className="border-b last:border-0 hover:bg-muted/40">
+            <tbody className="divide-y divide-border/20">
+              {adminList.map((a) => (
+                <tr key={a.id} className="hover:bg-surface-2/40">
                   <td className="px-5 py-3 font-medium">
-                    <Link
-                      to={`/settings/admins/${u.admin_id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {u.username}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3 text-muted-foreground">
-                    {u.user_count}{u.user_quota > 0 ? ` / ${u.user_quota}` : ""}
-                    {u.users_remaining != null && (
-                      <span className="ms-1 text-xs">({u.users_remaining} {t("reseller.admins.left")})</span>
+                    {!a.sudo ? (
+                      <Link to={`/settings/admins/${a.id}`} className="text-primary hover:underline">
+                        {a.username}
+                      </Link>
+                    ) : (
+                      a.username
+                    )}
+                    {a.suspended && (
+                      <span className="ms-2">
+                        <Badge color="expired">{t("reseller.admins.suspended")}</Badge>
+                      </span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{formatBytes(u.traffic_allocated, false)}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{formatBytes(u.traffic_used, false)}</td>
-                  <td className="px-5 py-3 text-muted-foreground">
-                    {u.traffic_remaining != null ? formatBytes(u.traffic_remaining, false) : "∞"}
+                  <td className="px-5 py-3">
+                    {a.sudo ? <Badge color="active">{t("reseller.admins.sudo")}</Badge> : <Badge>{t("reseller.admins.reseller")}</Badge>}
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">
-                    {formatBytes(u.wallet_traffic_bytes ?? 0, false)} · {u.wallet_user_credits ?? 0}
+                  <td className="px-5 py-3 text-fg-muted">{a.sudo ? "—" : roleName(a.role_id)}</td>
+                  <td className="px-5 py-3 text-fg-muted">{a.totp_enabled ? t("reseller.admins.totpOn") : t("reseller.admins.totpOff")}</td>
+                  <td className="px-5 py-3 text-fg-muted hidden lg:table-cell">
+                    {!a.sudo && (() => {
+                      const u = usageFor(a.id);
+                      if (!u) return "—";
+                      return `${u.user_count}${u.user_quota > 0 ? `/${u.user_quota}` : ""} · ${formatBytes(u.traffic_used, false)} ${t("reseller.admins.used")}`;
+                    })()}
                   </td>
                   <td className="px-5 py-3 text-right space-x-1">
-                    <Button variant="ghost" size="sm" onClick={() => setWalletTopUp({ id: u.admin_id, username: u.username })}>
-                      {t("reseller.admins.walletTopUp")}
+                    {sudo && !a.sudo && (
+                      <Button variant="ghost" onClick={() => loginAs(a)}>{t("reseller.admins.loginAs")}</Button>
+                    )}
+                    {sudo && !a.sudo && (
+                      <Button variant="ghost" onClick={() => setWalletTopUp({ id: a.id, username: a.username })}>
+                        {t("reseller.admins.walletTopUp")}
+                      </Button>
+                    )}
+                    {!a.sudo && (
+                      <Button variant="ghost" onClick={() => setEditAdmin(a)}>{t("common.edit")}</Button>
+                    )}
+                    {sudo && a.suspended && (
+                      <Button
+                        variant="ghost"
+                        onClick={async () => {
+                          try {
+                            await unsuspend.mutateAsync(a.id);
+                            toast.success(fill(t("reseller.admins.unsuspendOk"), { name: a.username }));
+                          } catch {
+                            toast.error(t("reseller.admins.unsuspendFail"));
+                          }
+                        }}
+                      >
+                        {t("reseller.admins.unsuspend")}
+                      </Button>
+                    )}
+                    <Button variant="ghost" className="text-danger" onClick={() => remove(a)}>
+                      {t("common.delete")}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, 50)}>{t("reseller.admins.addUsers")}</Button>
-                    <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, undefined, 10)}>{t("reseller.admins.addTraffic10")}</Button>
-                    <Button variant="ghost" size="sm" onClick={() => quickAdjust(u.admin_id, undefined, 50)}>{t("reseller.admins.addTraffic50")}</Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </Card>
-      )}
-
-      <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead className="border-b text-left text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3 font-medium">{t("reseller.admins.colUsername")}</th>
-              <th className="px-5 py-3 font-medium">{t("reseller.admins.colAccess")}</th>
-              <th className="px-5 py-3 font-medium">{t("reseller.admins.colRole")}</th>
-              <th className="px-5 py-3 font-medium">{t("reseller.admins.col2fa")}</th>
-              <th className="px-5 py-3 font-medium hidden lg:table-cell">{t("reseller.admins.colUsage")}</th>
-              <th className="px-5 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {adminList.map((a) => (
-              <tr key={a.id} className="border-b last:border-0 hover:bg-muted/40">
-                <td className="px-5 py-3 font-medium">
-                  {!a.sudo ? (
-                    <Link to={`/settings/admins/${a.id}`} className="text-primary hover:underline">
-                      {a.username}
-                    </Link>
-                  ) : (
-                    a.username
-                  )}
-                  {a.suspended && (
-                    <span className="ms-2">
-                      <Badge color="expired">{t("reseller.admins.suspended")}</Badge>
-                    </span>
-                  )}
-                </td>
-                <td className="px-5 py-3">
-                  {a.sudo ? <Badge color="active">{t("reseller.admins.sudo")}</Badge> : <Badge>{t("reseller.admins.reseller")}</Badge>}
-                </td>
-                <td className="px-5 py-3 text-muted-foreground">{a.sudo ? "—" : roleName(a.role_id)}</td>
-                <td className="px-5 py-3 text-muted-foreground">{a.totp_enabled ? t("reseller.admins.totpOn") : t("reseller.admins.totpOff")}</td>
-                <td className="px-5 py-3 text-muted-foreground hidden lg:table-cell">
-                  {!a.sudo && (() => {
-                    const u = usageFor(a.id);
-                    if (!u) return "—";
-                    return `${u.user_count}${u.user_quota > 0 ? `/${u.user_quota}` : ""} · ${formatBytes(u.traffic_used, false)} ${t("reseller.admins.used")}`;
-                  })()}
-                </td>
-                <td className="px-5 py-3 text-right space-x-1">
-                  {sudo && !a.sudo && (
-                    <Button variant="ghost" onClick={() => loginAs(a)}>{t("reseller.admins.loginAs")}</Button>
-                  )}
-                  {sudo && !a.sudo && (
-                    <Button variant="ghost" onClick={() => setWalletTopUp({ id: a.id, username: a.username })}>
-                      {t("reseller.admins.walletTopUp")}
-                    </Button>
-                  )}
-                  {!a.sudo && (
-                    <Button variant="ghost" onClick={() => setEditAdmin(a)}>{t("common.edit")}</Button>
-                  )}
-                  {sudo && a.suspended && (
-                    <Button
-                      variant="ghost"
-                      onClick={async () => {
-                        try {
-                          await unsuspend.mutateAsync(a.id);
-                          toast.success(fill(t("reseller.admins.unsuspendOk"), { name: a.username }));
-                        } catch {
-                          toast.error(t("reseller.admins.unsuspendFail"));
-                        }
-                      }}
-                    >
-                      {t("reseller.admins.unsuspend")}
-                    </Button>
-                  )}
-                  <Button variant="ghost" className="text-destructive" onClick={() => remove(a)}>
-                    {t("common.delete")}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+        </div>
+      </GlassCard>
     </div>
   );
 }
