@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import { Button, Card, Input, PageHeader } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
+import { useTitle } from "@/lib/useTitle";
 
 interface AdminQuotaNotifyConfig {
   enabled: boolean;
@@ -13,6 +15,7 @@ interface AdminQuotaNotifyConfig {
 }
 
 export function ResellerQuotaAlerts() {
+  useTitle("Quota Alerts");
   const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
@@ -35,19 +38,22 @@ export function ResellerQuotaAlerts() {
   });
 
   const cfg = data?.config;
-  if (!cfg) return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
+  if (!cfg) return <p className="text-sm text-fg-muted text-center py-8">{t("common.loading")}</p>;
 
   return (
-    <div className="space-y-6 animate-page-enter">
-      <PageHeader title={t("reseller.alerts.title")} subtitle={t("reseller.alerts.subtitle")} />
+    <div className="space-y-5 animate-page-enter">
+      <div>
+        <h1 className="text-2xl font-bold text-fg tracking-tight">{t("reseller.alerts.title")}</h1>
+        <p className="text-sm text-fg-muted mt-1">{t("reseller.alerts.subtitle")}</p>
+      </div>
 
-      <Card className="space-y-4 p-5">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={cfg.enabled} onChange={(e) => save.mutate({ ...cfg, enabled: e.target.checked })} />
+      <GlassCard hover={false} className="!p-5 space-y-4">
+        <label className="flex items-center gap-2 text-sm text-fg">
+          <input type="checkbox" checked={cfg.enabled} onChange={(e) => save.mutate({ ...cfg, enabled: e.target.checked })} className="rounded" />
           {t("common.enabled")}
         </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={cfg.notify_telegram} onChange={(e) => save.mutate({ ...cfg, notify_telegram: e.target.checked })} />
+        <label className="flex items-center gap-2 text-sm text-fg">
+          <input type="checkbox" checked={cfg.notify_telegram} onChange={(e) => save.mutate({ ...cfg, notify_telegram: e.target.checked })} className="rounded" />
           {t("reseller.alerts.telegram")}
         </label>
         <Input
@@ -69,32 +75,41 @@ export function ResellerQuotaAlerts() {
           defaultValue={cfg.cooldown_minutes}
           onBlur={(e) => save.mutate({ ...cfg, cooldown_minutes: Number(e.target.value) || 1440 })}
         />
-        <Button onClick={() => save.mutate(cfg)} disabled={save.isPending}>{t("common.save")}</Button>
-      </Card>
+        <div className="flex justify-end pt-1 border-t border-border/40">
+          <Button onClick={() => save.mutate(cfg)} disabled={save.isPending}>{t("common.save")}</Button>
+        </div>
+      </GlassCard>
 
-      <Card className="p-0">
-        <div className="border-b px-5 py-3 text-sm font-semibold">{t("reseller.alerts.recent")}</div>
-        <table className="w-full text-sm">
-          <thead className="border-b text-left text-muted-foreground">
-            <tr>
-              <th className="px-5 py-2">{t("reseller.alerts.colTime")}</th>
-              <th className="px-5 py-2">{t("reseller.alerts.colMetric")}</th>
-              <th className="px-5 py-2">{t("reseller.alerts.colThreshold")}</th>
-              <th className="px-5 py-2">{t("reseller.alerts.colUsage")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.data?.events.map((ev, i) => (
-              <tr key={i} className="border-b last:border-0">
-                <td className="px-5 py-2 text-muted-foreground">{new Date(ev.created_at).toLocaleString()}</td>
-                <td className="px-5 py-2">{ev.metric}</td>
-                <td className="px-5 py-2">{ev.threshold}%</td>
-                <td className="px-5 py-2">{ev.usage_pct}%</td>
+      <GlassCard hover={false} className="!p-0 overflow-hidden">
+        <div className="px-4 pt-4 pb-1">
+          <h3 className="text-sm font-bold text-fg">{t("reseller.alerts.recent")}</h3>
+        </div>
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/40 text-[11px] uppercase tracking-wide text-fg-subtle bg-surface-2/30">
+                <th className="px-4 py-3 text-left">{t("reseller.alerts.colTime")}</th>
+                <th className="px-4 py-3 text-left">{t("reseller.alerts.colMetric")}</th>
+                <th className="px-4 py-3 text-left">{t("reseller.alerts.colThreshold")}</th>
+                <th className="px-4 py-3 text-left">{t("reseller.alerts.colUsage")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+            </thead>
+            <tbody>
+              {events.data?.events.map((ev, i) => (
+                <tr key={i} className="border-b border-border/20 last:border-0 hover:bg-surface-2/40">
+                  <td className="px-4 py-2.5 text-fg-muted">{new Date(ev.created_at).toLocaleString()}</td>
+                  <td className="px-4 py-2.5 text-fg">{ev.metric}</td>
+                  <td className="px-4 py-2.5 text-fg-muted">{ev.threshold}%</td>
+                  <td className="px-4 py-2.5 text-fg-muted">{ev.usage_pct}%</td>
+                </tr>
+              ))}
+              {(!events.data?.events || events.data.events.length === 0) && (
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-fg-muted">{t("common.none")}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </GlassCard>
     </div>
   );
 }

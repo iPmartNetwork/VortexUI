@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { useResellerPaymentConfig, useSaveResellerPaymentConfig } from "@/api/reseller-payment-hooks";
-import { Button, Card, Input, PageHeader } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
+import { useTitle } from "@/lib/useTitle";
 import { Plus, Trash2 } from "lucide-react";
 
 const METHODS = ["zarinpal", "card_to_card", "crypto"] as const;
 
 export function ResellerPaymentSettings() {
+  useTitle("Payment Settings");
   const { t } = useI18n();
   const toast = useToast();
   const config = useResellerPaymentConfig();
@@ -81,10 +84,13 @@ export function ResellerPaymentSettings() {
   }
 
   return (
-    <div className="space-y-6 animate-page-enter">
-      <PageHeader title={t("resellerPayment.title")} subtitle={t("resellerPayment.subtitle")} />
+    <div className="space-y-5 animate-page-enter">
+      <div>
+        <h1 className="text-2xl font-bold text-fg tracking-tight">{t("resellerPayment.title")}</h1>
+        <p className="text-sm text-fg-muted mt-1">{t("resellerPayment.subtitle")}</p>
+      </div>
 
-      <Card>
+      <GlassCard hover={false} className="!p-5">
         <p className="mb-6 text-sm text-fg-muted">
           {t("resellerPayment.hint")}
         </p>
@@ -178,7 +184,7 @@ export function ResellerPaymentSettings() {
             {save.isPending ? t("common.loading") : t("common.save")}
           </Button>
         </form>
-      </Card>
+      </GlassCard>
     </div>
   );
 }

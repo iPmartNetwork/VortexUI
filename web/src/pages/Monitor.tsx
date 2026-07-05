@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Globe, Users, Wifi } from "lucide-react";
+import { Activity, Globe, Radio, Users, Wifi } from "lucide-react";
 import { api } from "@/api/client";
-import { Card, PageHeader } from "@/components/ui";
+import { Badge } from "@/components/ui";
+import { GlassCard, StatsCard } from "@/components/veltrix";
 import { useI18n } from "@/i18n/i18n";
+import { useTitle } from "@/lib/useTitle";
 
 interface LiveConnection {
   user_id: string;
@@ -21,81 +23,112 @@ function useLiveConnections() {
   });
 }
 
-export function Monitor() {
-  const { t } = useI18n();
-  const { data, isLoading, isError } = useLiveConnections();
-  const connections = data?.connections ?? [];
-  const total = data?.total ?? 0;
-
-  return (
-    <div className="space-y-6 animate-page-enter">
-      <div className="flex items-center justify-between">
-        <PageHeader title={t("monitor.title")} />
-        <div className="flex items-center gap-2 rounded-full bg-success/10 px-3 py-1.5 text-xs font-medium text-success">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60" />
-            <span className="inline-flex h-2 w-2 rounded-full bg-success" />
-          </span>
-          {total} {t("monitor.connections")}
-        </div>
-      </div>
-
-      {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard icon={<Users size={16} />} label={t("monitor.usersOnline")} value={new Set(connections.map(c => c.user_id)).size} />
-        <StatCard icon={<Wifi size={16} />} label={t("monitor.connections")} value={total} />
-        <StatCard icon={<Globe size={16} />} label={t("monitor.uniqueIPs")} value={new Set(connections.map(c => c.ip)).size} />
-        <StatCard icon={<Activity size={16} />} label={t("monitor.nodesActive")} value={new Set(connections.map(c => c.node_name)).size} />
-      </div>
-
-      {/* Connection table */}
-      <Card className="p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-surface-2/30 text-left text-xs text-fg-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">User</th>
-              <th className="px-4 py-3 font-medium">Node</th>
-              <th className="px-4 py-3 font-medium">IP</th>
-              <th className="px-4 py-3 font-medium">Protocol</th>
-              <th className="px-4 py-3 font-medium">Duration</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/30">
-            {connections.map((c, i) => (
-              <tr key={i} className="hover:bg-surface-2/20 transition">
-                <td className="px-4 py-2.5 font-medium">{c.username}</td>
-                <td className="px-4 py-2.5 text-fg-muted">{c.node_name}</td>
-                <td className="px-4 py-2.5 font-mono text-xs text-fg-subtle">{c.ip}</td>
-                <td className="px-4 py-2.5"><span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary uppercase">{c.protocol}</span></td>
-                <td className="px-4 py-2.5 text-xs text-fg-subtle">{timeSince(c.connected_since)}</td>
-              </tr>
-            ))}
-            {isLoading && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">Loading...</td></tr>}
-            {isError && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">{t("monitor.apiError")}</td></tr>}
-            {!isLoading && !isError && connections.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-fg-muted">{t("monitor.noActive")}</td></tr>}
-          </tbody>
-        </table>
-      </Card>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <Card className="flex items-center gap-3 p-4">
-      <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">{icon}</div>
-      <div>
-        <div className="text-lg font-bold text-fg">{value}</div>
-        <div className="text-[10px] text-fg-subtle uppercase">{label}</div>
-      </div>
-    </Card>
-  );
-}
-
 function timeSince(iso: string): string {
   const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (sec < 60) return `${sec}s`;
   const min = Math.floor(sec / 60);
   if (min < 60) return `${min}m`;
   return `${Math.floor(min / 60)}h ${min % 60}m`;
+}
+
+export function Monitor() {
+  useTitle("Monitor");
+  const { t } = useI18n();
+  const { data, isLoading, isError } = useLiveConnections();
+  const connections = data?.connections ?? [];
+  const total = data?.total ?? 0;
+
+  return (
+    <div className="space-y-5 animate-page-enter">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold text-fg tracking-tight">{t("monitor.title")}</h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60" />
+                <span className="inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+              </span>
+              {total} {t("monitor.connections")}
+            </span>
+          </div>
+          <p className="text-sm text-fg-muted mt-1 max-w-2xl">{t("monitor.subtitle")}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatsCard
+          title={t("monitor.usersOnline")}
+          value={new Set(connections.map((c) => c.user_id)).size}
+          icon={<Users size={18} />}
+          color="blue"
+        />
+        <StatsCard
+          title={t("monitor.connections")}
+          value={total}
+          icon={<Wifi size={18} />}
+          color="cyan"
+        />
+        <StatsCard
+          title={t("monitor.uniqueIPs")}
+          value={new Set(connections.map((c) => c.ip)).size}
+          icon={<Globe size={18} />}
+          color="purple"
+        />
+        <StatsCard
+          title={t("monitor.nodesActive")}
+          value={new Set(connections.map((c) => c.node_name)).size}
+          icon={<Activity size={18} />}
+          color="green"
+        />
+      </div>
+
+      <GlassCard hover={false} className="!p-0 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/40 text-[11px] uppercase tracking-wide text-fg-subtle bg-surface-2/30">
+                <th className="py-3 px-4 text-left">{t("monitor.colUser")}</th>
+                <th className="py-3 px-4 text-left">{t("monitor.colNode")}</th>
+                <th className="py-3 px-4 text-left">{t("monitor.colIP")}</th>
+                <th className="py-3 px-4 text-center">{t("monitor.colProtocol")}</th>
+                <th className="py-3 px-4 text-right">{t("monitor.colDuration")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {connections.map((c, i) => (
+                <tr key={`${c.user_id}-${c.ip}-${i}`} className="border-b border-border/20 hover:bg-surface-2/40">
+                  <td className="py-3 px-4 font-medium text-fg">{c.username}</td>
+                  <td className="py-3 px-4 text-fg-muted flex items-center gap-1.5">
+                    <Radio size={12} className="text-success flex-shrink-0" />
+                    {c.node_name}
+                  </td>
+                  <td className="py-3 px-4 font-mono text-xs text-fg-subtle" dir="ltr">{c.ip}</td>
+                  <td className="py-3 px-4 text-center">
+                    <Badge color="muted">{c.protocol}</Badge>
+                  </td>
+                  <td className="py-3 px-4 text-right text-xs tabular-nums text-fg-muted">{timeSince(c.connected_since)}</td>
+                </tr>
+              ))}
+              {isLoading && (
+                <tr>
+                  <td colSpan={5} className="py-8 px-4 text-center text-fg-muted">…</td>
+                </tr>
+              )}
+              {isError && (
+                <tr>
+                  <td colSpan={5} className="py-8 px-4 text-center text-fg-muted">{t("monitor.apiError")}</td>
+                </tr>
+              )}
+              {!isLoading && !isError && connections.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 px-4 text-center text-fg-muted">{t("monitor.noActive")}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </GlassCard>
+    </div>
+  );
 }

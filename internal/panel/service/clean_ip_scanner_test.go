@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/vortexui/vortexui/internal/domain"
 )
 
@@ -13,6 +14,16 @@ import (
 type fakeCleanIPRepo struct {
 	saved      []*domain.CleanIPScan
 	deleteCalls int
+}
+
+func (r *fakeCleanIPRepo) UpdateThroughput(_ context.Context, id uuid.UUID, mbps float64) error {
+	for _, s := range r.saved {
+		if s.ID == id {
+			s.ThroughputMbps = mbps
+			return nil
+		}
+	}
+	return nil
 }
 
 func (r *fakeCleanIPRepo) SaveBatch(_ context.Context, results []*domain.CleanIPScan) error {
@@ -183,6 +194,54 @@ func TestScanAcceptsPublicIPsAndDefaultsPort(t *testing.T) {
 	}
 	if captured != 443 {
 		t.Errorf("default port = %d, want 443", captured)
+	}
+}
+
+func TestMeasureThroughputPersistsAndDefaultsPort(t *testing.T) {
+	id := uuid.New()
+	repo := &fakeCleanIPRepo{saved: []*domain.CleanIPScan{{ID: id, IP: "1.1.1.1"}}}
+	s := NewCleanIPScannerService(repo)
+	capturedPort := -1
+	s.throughput = func(_ context.Context, ip string, port int) (float64, error) {
+		capturedPort = port
+		return 123.45, nil
+	}
+
+	got, err := s.MeasureThroughput(context.Background(), id, "1.1.1.1", 0)
+	if err != nil {
+		t.Fatalf("MeasureThroughput: %v", err)
+	}
+	if got != 123.45 {
+		t.Errorf("got %v, want 123.45", got)
+	}
+	if capturedPort != 443 {
+		t.Errorf("default port = %d, want 443", capturedPort)
+	}
+	if repo.saved[0].ThroughputMbps != 123.45 {
+		t.Errorf("repo not updated: %+v", repo.saved[0])
+	}
+}
+
+func TestMeasureThroughputRejectsNonPublicIP(t *testing.T) {
+	repo := &fakeCleanIPRepo{}
+	s := NewCleanIPScannerService(repo)
+	s.throughput = func(context.Context, string, int) (float64, error) {
+		t.Fatal("throughput func should not be called for a rejected IP")
+		return 0, nil
+	}
+	if _, err := s.MeasureThroughput(context.Background(), uuid.New(), "192.168.1.1", 443); err == nil {
+		t.Fatal("expected error for non-public IP")
+	}
+}
+
+func TestMeasureThroughputPropagatesProbeError(t *testing.T) {
+	repo := &fakeCleanIPRepo{saved: []*domain.CleanIPScan{{ID: uuid.New(), IP: "1.1.1.1"}}}
+	s := NewCleanIPScannerService(repo)
+	s.throughput = func(context.Context, string, int) (float64, error) {
+		return 0, fmt.Errorf("boom")
+	}
+	if _, err := s.MeasureThroughput(context.Background(), uuid.New(), "1.1.1.1", 443); err == nil {
+		t.Fatal("expected error to propagate")
 	}
 }
 

@@ -12,14 +12,17 @@ import {
   useSubAdmins,
 } from "@/api/reseller-hooks";
 import { useAuth } from "@/auth/auth";
-import { Badge, Button, Card, Input, PageHeader } from "@/components/ui";
+import { Badge, Button, Input } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { WalletTopUpModal } from "@/components/WalletTopUpModal";
 import { WalletRechargeSection } from "@/components/WalletRechargeSection";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
+import { useTitle } from "@/lib/useTitle";
 import { formatBytes } from "@/lib/utils";
 
 export function ResellerAccount() {
+  useTitle("Reseller Account");
   const { sudo, session } = useAuth();
   const { t } = useI18n();
   const toast = useToast();
@@ -59,9 +62,11 @@ export function ResellerAccount() {
 
   if (sudo) {
     return (
-      <div className="space-y-4">
-        <PageHeader title={t("reseller.account.title")} subtitle={t("reseller.account.sudoHint")} />
-        <Card className="p-6 text-sm text-muted-foreground">{t("reseller.account.sudoCard")}</Card>
+      <div className="space-y-4 animate-page-enter">
+        <h1 className="text-2xl font-bold text-fg tracking-tight">{t("reseller.account.title")}</h1>
+        <GlassCard hover={false} className="!p-6">
+          <p className="text-sm text-fg-muted">{t("reseller.account.sudoCard")}</p>
+        </GlassCard>
       </div>
     );
   }
@@ -102,7 +107,7 @@ export function ResellerAccount() {
   const allowSubResellers = !!session?.admin.allow_sub_resellers;
 
   return (
-    <div className="space-y-8 animate-page-enter">
+    <div className="space-y-6 animate-page-enter">
       {walletTopUp && (
         <WalletTopUpModal
           open
@@ -111,74 +116,81 @@ export function ResellerAccount() {
           onClose={() => setWalletTopUp(null)}
         />
       )}
-      <PageHeader title={t("reseller.account.title")} subtitle={t("reseller.account.subtitle")} />
+      <div>
+        <h1 className="text-2xl font-bold text-fg tracking-tight">{t("reseller.account.title")}</h1>
+        <p className="text-sm text-fg-muted mt-1">{t("reseller.account.subtitle")}</p>
+      </div>
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-lg font-semibold"><Wallet size={18} /> {t("reseller.account.wallet")}</h2>
+          <h2 className="flex items-center gap-2 text-sm font-bold text-fg">
+            <Wallet size={16} className="text-primary" /> {t("reseller.account.wallet")}
+          </h2>
           <Button variant="ghost" size="sm" onClick={exportAccountWalletStatement}>
             {t("reseller.account.exportStatement")}
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">{t("reseller.account.walletHint")}</p>
+        <p className="text-sm text-fg-muted">{t("reseller.account.walletHint")}</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Card className="p-5">
-            <div className="text-xs text-muted-foreground">{t("reseller.account.trafficCredits")}</div>
-            <div className="text-2xl font-bold">{w ? formatBytes(w.traffic_bytes, false) : "—"}</div>
-          </Card>
-          <Card className="p-5">
-            <div className="text-xs text-muted-foreground">{t("reseller.account.userCredits")}</div>
-            <div className="text-2xl font-bold">{w?.user_credits ?? "—"}</div>
-          </Card>
+          <GlassCard hover={false} className="!p-5">
+            <div className="text-xs text-fg-subtle uppercase tracking-wide">{t("reseller.account.trafficCredits")}</div>
+            <div className="text-2xl font-black text-fg mt-1 tabular-nums">{w ? formatBytes(w.traffic_bytes, false) : "—"}</div>
+          </GlassCard>
+          <GlassCard hover={false} className="!p-5">
+            <div className="text-xs text-fg-subtle uppercase tracking-wide">{t("reseller.account.userCredits")}</div>
+            <div className="text-2xl font-black text-fg mt-1 tabular-nums">{w?.user_credits ?? "—"}</div>
+          </GlassCard>
         </div>
         {ledger.length > 0 && (
-          <Card className="p-0 overflow-x-auto">
+          <GlassCard hover={false} className="!p-0 overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b text-left text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2">{t("reseller.account.when")}</th>
-                  <th className="px-4 py-2">{t("reseller.account.traffic")}</th>
-                  <th className="px-4 py-2">{t("reseller.account.users")}</th>
-                  <th className="px-4 py-2">{t("reseller.account.reason")}</th>
+              <thead>
+                <tr className="border-b border-border/40 text-[11px] uppercase tracking-wide text-fg-subtle bg-surface-2/30">
+                  <th className="px-4 py-3 text-left">{t("reseller.account.when")}</th>
+                  <th className="px-4 py-3 text-left">{t("reseller.account.traffic")}</th>
+                  <th className="px-4 py-3 text-left">{t("reseller.account.users")}</th>
+                  <th className="px-4 py-3 text-left">{t("reseller.account.reason")}</th>
                 </tr>
               </thead>
               <tbody>
                 {ledger.map((e) => (
-                  <tr key={e.id} className="border-b last:border-0">
-                    <td className="px-4 py-2 text-muted-foreground">{new Date(e.created_at).toLocaleString()}</td>
-                    <td className="px-4 py-2">{e.delta_traffic ? formatBytes(e.delta_traffic, false) : "—"}</td>
-                    <td className="px-4 py-2">{e.delta_users || "—"}</td>
-                    <td className="px-4 py-2">{e.reason}</td>
+                  <tr key={e.id} className="border-b border-border/20 last:border-0 hover:bg-surface-2/40">
+                    <td className="px-4 py-2.5 text-fg-muted">{new Date(e.created_at).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-fg">{e.delta_traffic ? formatBytes(e.delta_traffic, false) : "—"}</td>
+                    <td className="px-4 py-2.5 text-fg">{e.delta_users || "—"}</td>
+                    <td className="px-4 py-2.5 text-fg-muted">{e.reason}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </Card>
+          </GlassCard>
         )}
       </section>
 
       <WalletRechargeSection />
 
       <section className="space-y-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold"><Users size={18} /> {t("reseller.account.subResellers")}</h2>
-        <Card className="p-0">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-fg">
+          <Users size={16} className="text-primary" /> {t("reseller.account.subResellers")}
+        </h2>
+        <GlassCard hover={false} className="!p-0 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="border-b text-left text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2">{t("reseller.account.colUsername")}</th>
-                <th className="px-4 py-2">{t("reseller.account.colUserQuota")}</th>
-                <th className="px-4 py-2">{t("reseller.account.colTrafficQuota")}</th>
-                {allowSubResellers && <th className="px-4 py-2"></th>}
+            <thead>
+              <tr className="border-b border-border/40 text-[11px] uppercase tracking-wide text-fg-subtle bg-surface-2/30">
+                <th className="px-4 py-3 text-left">{t("reseller.account.colUsername")}</th>
+                <th className="px-4 py-3 text-left">{t("reseller.account.colUserQuota")}</th>
+                <th className="px-4 py-3 text-left">{t("reseller.account.colTrafficQuota")}</th>
+                {allowSubResellers && <th className="px-4 py-3"></th>}
               </tr>
             </thead>
             <tbody>
               {(subAdmins.data?.admins ?? []).map((a) => (
-                <tr key={a.id} className="border-b last:border-0">
-                  <td className="px-4 py-2 font-medium">{a.username}</td>
-                  <td className="px-4 py-2">{a.user_quota || "∞"}</td>
-                  <td className="px-4 py-2">{a.traffic_quota ? formatBytes(a.traffic_quota, false) : "∞"}</td>
+                <tr key={a.id} className="border-b border-border/20 last:border-0 hover:bg-surface-2/40">
+                  <td className="px-4 py-2.5 font-medium text-fg">{a.username}</td>
+                  <td className="px-4 py-2.5 text-fg-muted">{a.user_quota || "∞"}</td>
+                  <td className="px-4 py-2.5 text-fg-muted">{a.traffic_quota ? formatBytes(a.traffic_quota, false) : "∞"}</td>
                   {allowSubResellers && (
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-4 py-2.5 text-right">
                       <Button variant="ghost" size="sm" onClick={() => setWalletTopUp({ id: a.id, username: a.username })}>
                         {t("reseller.account.topUpSub")}
                       </Button>
@@ -187,40 +199,42 @@ export function ResellerAccount() {
                 </tr>
               ))}
               {(subAdmins.data?.admins ?? []).length === 0 && (
-                <tr><td colSpan={allowSubResellers ? 4 : 3} className="px-4 py-4 text-muted-foreground">{t("reseller.account.noSubResellers")}</td></tr>
+                <tr><td colSpan={allowSubResellers ? 4 : 3} className="px-4 py-4 text-fg-muted">{t("reseller.account.noSubResellers")}</td></tr>
               )}
             </tbody>
           </table>
-        </Card>
+        </GlassCard>
         {allowSubResellers && (
-        <Card className="space-y-3 p-5">
-          <div className="text-sm font-medium">{t("reseller.account.createSubReseller")}</div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input placeholder={t("reseller.account.ph.username")} value={subForm.username} onChange={(e) => setSubForm({ ...subForm, username: e.target.value })} />
-            <Input type="password" placeholder={t("reseller.account.ph.password")} value={subForm.password} onChange={(e) => setSubForm({ ...subForm, password: e.target.value })} />
-            <select className="input" value={subForm.role_id} onChange={(e) => setSubForm({ ...subForm, role_id: e.target.value })}>
-              <option value="">{t("reseller.account.selectRole")}</option>
-              {(roles.data?.roles ?? []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-            <Input type="number" placeholder={t("reseller.account.ph.userQuota")} value={subForm.user_quota} onChange={(e) => setSubForm({ ...subForm, user_quota: Number(e.target.value) })} />
-            <Input type="number" placeholder={t("reseller.account.ph.trafficQuota")} value={subForm.traffic_quota} onChange={(e) => setSubForm({ ...subForm, traffic_quota: Number(e.target.value) })} />
-          </div>
-          <Button onClick={onCreateSub} disabled={createSub.isPending}>{t("common.create")}</Button>
-        </Card>
+          <GlassCard hover={false} className="!p-5 space-y-3">
+            <div className="text-sm font-bold text-fg">{t("reseller.account.createSubReseller")}</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input placeholder={t("reseller.account.ph.username")} value={subForm.username} onChange={(e) => setSubForm({ ...subForm, username: e.target.value })} />
+              <Input type="password" placeholder={t("reseller.account.ph.password")} value={subForm.password} onChange={(e) => setSubForm({ ...subForm, password: e.target.value })} />
+              <select className="field" value={subForm.role_id} onChange={(e) => setSubForm({ ...subForm, role_id: e.target.value })}>
+                <option value="">{t("reseller.account.selectRole")}</option>
+                {(roles.data?.roles ?? []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+              <Input type="number" placeholder={t("reseller.account.ph.userQuota")} value={subForm.user_quota} onChange={(e) => setSubForm({ ...subForm, user_quota: Number(e.target.value) })} />
+              <Input type="number" placeholder={t("reseller.account.ph.trafficQuota")} value={subForm.traffic_quota} onChange={(e) => setSubForm({ ...subForm, traffic_quota: Number(e.target.value) })} />
+            </div>
+            <Button onClick={onCreateSub} disabled={createSub.isPending}>{t("common.create")}</Button>
+          </GlassCard>
         )}
       </section>
 
       <section className="space-y-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold"><Palette size={18} /> {t("reseller.account.branding")}</h2>
+        <h2 className="flex items-center gap-2 text-sm font-bold text-fg">
+          <Palette size={16} className="text-primary" /> {t("reseller.account.branding")}
+        </h2>
         {branding && (
-          <Card className="grid gap-3 p-5 sm:grid-cols-2">
+          <GlassCard hover={false} className="!p-5 grid gap-3 sm:grid-cols-2">
             <Input placeholder={t("reseller.account.ph.panelTitle")} value={branding.panel_title} onChange={(e) => setBranding({ ...branding, panel_title: e.target.value })} />
             <div className="space-y-2">
-              <label className="block text-xs text-muted-foreground">{t("reseller.account.ph.logoUrl")}</label>
+              <label className="block text-xs text-fg-subtle">{t("reseller.account.ph.logoUrl")}</label>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
-                className="block w-full text-sm"
+                className="block w-full text-sm text-fg-muted"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file || file.size > 512_000) return;
@@ -230,17 +244,17 @@ export function ResellerAccount() {
                 }}
               />
               {branding.logo_url && (
-                <img src={branding.logo_url} alt="" className="h-12 max-w-[160px] rounded border object-contain" />
+                <img src={branding.logo_url} alt="" className="h-12 max-w-[160px] rounded border border-border object-contain" />
               )}
             </div>
             <div className="space-y-2">
-              <label className="block text-xs text-muted-foreground">{t("reseller.account.ph.accentColor")}</label>
+              <label className="block text-xs text-fg-subtle">{t("reseller.account.ph.accentColor")}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={/^#[0-9a-fA-F]{6}$/.test(branding.accent_color) ? branding.accent_color : "#6366f1"}
                   onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
-                  className="h-10 w-14 cursor-pointer rounded border bg-transparent"
+                  className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent"
                 />
                 <Input value={branding.accent_color} onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })} />
               </div>
@@ -248,13 +262,15 @@ export function ResellerAccount() {
             <Input placeholder={t("reseller.account.ph.portalSlug")} value={branding.portal_slug ?? ""} onChange={(e) => setBranding({ ...branding, portal_slug: e.target.value })} />
             <Input className="sm:col-span-2" placeholder={t("reseller.account.ph.footerText")} value={branding.footer_text} disabled readOnly />
             <Button onClick={onSaveBranding} disabled={saveBranding.isPending}>{t("reseller.account.saveBranding")}</Button>
-          </Card>
+          </GlassCard>
         )}
       </section>
 
       <section className="space-y-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold"><Webhook size={18} /> {t("reseller.account.webhook")}</h2>
-        <Card className="space-y-3 p-5">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-fg">
+          <Webhook size={16} className="text-primary" /> {t("reseller.account.webhook")}
+        </h2>
+        <GlassCard hover={false} className="!p-5 space-y-3">
           <Input placeholder={t("reseller.account.ph.webhookUrl")} value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
           <Input
             type="password"
@@ -262,14 +278,14 @@ export function ResellerAccount() {
             value={webhookSecret}
             onChange={(e) => setWebhookSecret(e.target.value)}
           />
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={webhookEnabled} onChange={(e) => setWebhookEnabled(e.target.checked)} />
+          <label className="flex items-center gap-2 text-sm text-fg">
+            <input type="checkbox" checked={webhookEnabled} onChange={(e) => setWebhookEnabled(e.target.checked)} className="rounded" />
             {t("common.enabled")}
-            {webhookQ.data?.has_secret && <Badge>{t("reseller.account.secretSet")}</Badge>}
+            {webhookQ.data?.has_secret && <Badge color="muted">{t("reseller.account.secretSet")}</Badge>}
           </label>
-          <p className="text-xs text-muted-foreground">{t("reseller.account.webhookHint")}</p>
+          <p className="text-xs text-fg-subtle">{t("reseller.account.webhookHint")}</p>
           <Button onClick={onSaveWebhook} disabled={saveWebhook.isPending}>{t("reseller.account.saveWebhook")}</Button>
-        </Card>
+        </GlassCard>
       </section>
     </div>
   );

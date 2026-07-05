@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"github.com/vortexui/vortexui/internal/panel/service"
@@ -48,4 +49,33 @@ func (h *CleanIPHandlers) GetCached(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusOK, echo.Map{"results": results})
+}
+
+type cleanIPThroughputRequest struct {
+	ID   string `json:"id"`
+	IP   string `json:"ip"`
+	Port int    `json:"port"`
+}
+
+// Throughput runs a real download-speed test against one previously scanned
+// candidate and persists the measured Mbps. It is intentionally on-demand
+// (per-IP) rather than part of the bulk Scan, since a real transfer takes far
+// longer than a latency probe.
+func (h *CleanIPHandlers) Throughput(c echo.Context) error {
+	var req cleanIPThroughputRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	id, err := uuid.Parse(req.ID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	if req.IP == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "ip is required")
+	}
+	mbps, err := h.Scanner.MeasureThroughput(c.Request().Context(), id, req.IP, req.Port)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadGateway, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"throughput_mbps": mbps})
 }

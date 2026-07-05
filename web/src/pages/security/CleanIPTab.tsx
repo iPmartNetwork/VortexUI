@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Copy, Crosshair } from "lucide-react";
-import { useCleanIPResults, useScanCleanIP, type CleanIPScan } from "@/api/hooks";
+import { Copy, Crosshair, Gauge } from "lucide-react";
+import { useCleanIPResults, useScanCleanIP, useMeasureThroughput, type CleanIPScan } from "@/api/hooks";
 import { Badge, Button, Input } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
@@ -33,6 +33,7 @@ export function CleanIPTab() {
 
   const { data: cached } = useCleanIPResults();
   const scanMut = useScanCleanIP();
+  const throughputMut = useMeasureThroughput();
 
   useEffect(() => {
     if (cached?.results && results.length === 0) setResults(cached.results);
@@ -65,6 +66,18 @@ export function CleanIPTab() {
   function copyIp(ip: string) {
     navigator.clipboard?.writeText(ip);
     toast.success(t("cleanip.copied"));
+  }
+
+  function measureSpeed(r: CleanIPScan) {
+    throughputMut.mutate(
+      { id: r.id, ip: r.ip, port: Number(port) || 443 },
+      {
+        onSuccess: (data) => {
+          setResults((prev) => prev.map((x) => (x.id === r.id ? { ...x, throughput_mbps: data.throughput_mbps } : x)));
+        },
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : t("cleanip.speedError")),
+      },
+    );
   }
 
   return (
@@ -139,9 +152,28 @@ export function CleanIPTab() {
                 </span>
               </div>
 
-              <Button variant="outline" size="sm" className="w-full" onClick={() => copyIp(r.ip)}>
-                <Copy size={13} /> {t("cleanip.copy")} IP
-              </Button>
+              <div className="flex items-center justify-between text-[11px] text-fg-muted">
+                <span>{t("cleanip.speed")}</span>
+                <span className="font-medium text-fg">
+                  {r.throughput_mbps > 0 ? `${r.throughput_mbps.toFixed(1)} Mbps` : t("cleanip.notMeasured")}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={!r.reachable || (throughputMut.isPending && throughputMut.variables?.id === r.id)}
+                  onClick={() => measureSpeed(r)}
+                >
+                  <Gauge size={13} />
+                  {throughputMut.isPending && throughputMut.variables?.id === r.id ? t("cleanip.measuring") : t("cleanip.measureSpeed")}
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => copyIp(r.ip)}>
+                  <Copy size={13} /> {t("cleanip.copy")}
+                </Button>
+              </div>
             </GlassCard>
           ))}
         </div>

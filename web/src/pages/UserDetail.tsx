@@ -1,20 +1,23 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, RotateCcw, KeyRound, Wifi, ShieldAlert, Globe } from "lucide-react";
+import { ArrowLeft, RotateCcw, KeyRound, Wifi, ShieldAlert, Globe, Database, CalendarClock, Smartphone } from "lucide-react";
 import { api } from "@/api/client";
 import { useUserUsage, useRoutingPacks, useUserRoutingPack, useSetUserRoutingPack } from "@/api/hooks";
 import { useResetUser, useRevokeSub, useUserSub, useUserOnline, useUserOnlineIPs } from "@/api/policy-hooks";
 import type { User } from "@/api/types";
-import { Badge, Button, Card, Select } from "@/components/ui";
+import { Badge, Button, Select } from "@/components/ui";
+import { GlassCard, StatsCard } from "@/components/veltrix";
 import { UsageChart } from "@/components/UsageChart";
 import { CopyField } from "@/components/CopyField";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useAuth } from "@/auth/auth";
+import { useTitle } from "@/lib/useTitle";
 import { formatBytes } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 
 export function UserDetail() {
+  useTitle("User Detail");
   const { can } = useAuth();
   const canWrite = can("user:write");
   const { id } = useParams<{ id: string }>();
@@ -84,34 +87,22 @@ export function UserDetail() {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card className="p-4 text-center">
-          <div className="text-xs text-fg-muted">Used</div>
-          <div className="mt-1 text-lg font-bold text-fg">{formatBytes(user.used_traffic, false)}</div>
-        </Card>
-        <Card className="p-4 text-center">
-          <div className="text-xs text-fg-muted">Limit</div>
-          <div className="mt-1 text-lg font-bold text-fg">{formatBytes(user.data_limit)}</div>
-        </Card>
-        <Card className="p-4 text-center">
-          <div className="text-xs text-fg-muted">Expires</div>
-          <div className="mt-1 text-sm font-bold text-fg">{user.expire_at ? new Date(user.expire_at).toLocaleDateString() : "Never"}</div>
-        </Card>
-        <Card className="p-4 text-center">
-          <div className="text-xs text-fg-muted">Devices</div>
-          <div className="mt-1 text-lg font-bold text-fg">{on?.active_devices ?? 0} / {user.device_limit || "∞"}</div>
-        </Card>
+        <StatsCard title="Used" value={formatBytes(user.used_traffic, false)} icon={<Database size={18} />} color="blue" />
+        <StatsCard title="Limit" value={formatBytes(user.data_limit)} icon={<Database size={18} />} color="purple" />
+        <StatsCard title="Expires" value={user.expire_at ? new Date(user.expire_at).toLocaleDateString() : "Never"} icon={<CalendarClock size={18} />} color="orange" />
+        <StatsCard title="Devices" value={`${on?.active_devices ?? 0} / ${user.device_limit || "∞"}`} icon={<Smartphone size={18} />} color="cyan" />
       </div>
 
       {/* Chart */}
-      <Card>
+      <GlassCard hover={false} className="!p-5">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Traffic (7 days)</h3>
         {usage.isLoading && <div className="h-40 animate-pulse rounded-lg bg-surface-2/50" />}
         {usage.data && <UsageChart points={usage.data.points} />}
-      </Card>
+      </GlassCard>
 
       {/* Online IPs — account-sharing detection */}
       {onlineIPs.data?.tracking && (
-        <Card>
+        <GlassCard hover={false} className="!p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Online IPs</h3>
             {(() => {
@@ -138,7 +129,7 @@ export function UserDetail() {
               ))}
             </div>
           )}
-        </Card>
+        </GlassCard>
       )}
 
       {/* Routing pack — per-subscription override */}
@@ -146,7 +137,7 @@ export function UserDetail() {
 
       {/* Subscription */}
       {d && (
-        <Card className="space-y-4">
+        <GlassCard hover={false} className="!p-5 space-y-4">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Subscription</h3>
           <div className="flex flex-col items-center gap-4 sm:flex-row">
             <div className="rounded-xl bg-white p-3">
@@ -169,7 +160,7 @@ export function UserDetail() {
               </div>
             </div>
           )}
-        </Card>
+        </GlassCard>
       )}
     </div>
   );
@@ -193,7 +184,7 @@ function RoutingPackSelector({ userId }: { userId: string | null }) {
   }
 
   return (
-    <Card className="space-y-3">
+    <GlassCard hover={false} className="!p-5 space-y-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Routing pack</h3>
       <p className="text-xs text-fg-muted">
         Embeds the selected pack's rules into this user's Clash/sing-box subscription. Overrides the global default.
@@ -211,6 +202,6 @@ function RoutingPackSelector({ userId }: { userId: string | null }) {
           </option>
         ))}
       </Select>
-    </Card>
+    </GlassCard>
   );
 }

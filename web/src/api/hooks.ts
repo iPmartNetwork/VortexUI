@@ -599,6 +599,7 @@ export interface CleanIPScan {
   loss_pct: number;
   score: number;
   reachable: boolean;
+  throughput_mbps: number;
   scanned_at: string;
 }
 
@@ -617,6 +618,19 @@ export function useScanCleanIP() {
   return useMutation({
     mutationFn: (input: { ips: string[]; port?: number }) =>
       api<{ results: CleanIPScan[] }>("/api/clean-ip/scan", { method: "POST", body: input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clean-ip-results"] }),
+  });
+}
+
+// useMeasureThroughput runs a real download-speed test against one cached
+// candidate and persists the measured Mbps. This is a real network transfer
+// (not a simulation), so it's slower than a latency probe and is invoked
+// per-IP, on demand, rather than for the whole list at once.
+export function useMeasureThroughput() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; ip: string; port?: number }) =>
+      api<{ throughput_mbps: number }>("/api/clean-ip/throughput", { method: "POST", body: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clean-ip-results"] }),
   });
 }
