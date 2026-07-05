@@ -7,7 +7,7 @@ Copy Markdown
 
 <img src="img/Logo.svg" alt="VortexUI Logo" width="200">
 
-# VortexUI
+
 
 **Next-generation, core-agnostic proxy management panel**
 
