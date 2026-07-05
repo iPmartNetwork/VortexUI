@@ -1,13 +1,9 @@
-VortexUI README.md Preview
-👁 Preview
-📄 Raw Markdown
-20,063 chars · 1 lines
-Copy Markdown
+
 <div align="center">
 
 <img src="img/Logo.svg" alt="VortexUI Logo" width="200">
 
-# VortexUI
+
 
 **Next-generation, core-agnostic proxy management panel**
 
