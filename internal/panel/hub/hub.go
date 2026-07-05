@@ -209,7 +209,16 @@ func (h *Hub) StartWatchdog(ctx context.Context) {
 
 // Register brings a node under management: it dials, then starts the traffic and
 // health loops. Re-registering an already-managed node is a no-op.
+//
+// The traffic/health loops deliberately do NOT inherit the caller's ctx: callers
+// commonly invoke Register from an HTTP request handler (e.g. node create/update),
+// whose context is cancelled the moment that request finishes. Tying the
+// long-lived loops to it would silently kill them within moments of a node
+// edit — no error, no log, just a permanently "pending" node until the next
+// panel restart. The only supported ways to stop these loops are Deregister
+// and Close, both of which call managedNode.stop explicitly.
 func (h *Hub) Register(ctx context.Context, node *domain.Node) error {
+	_ = ctx // kept for interface stability; loop lifetime is Deregister/Close-controlled.
 	h.mu.Lock()
 	if _, exists := h.conns[node.ID]; exists {
 		h.mu.Unlock()
@@ -219,7 +228,7 @@ func (h *Hub) Register(ctx context.Context, node *domain.Node) error {
 	h.conns[node.ID] = mn
 	h.mu.Unlock()
 
-	loopCtx, cancel := context.WithCancel(ctx)
+	loopCtx, cancel := context.WithCancel(context.Background())
 	mn.cancel = cancel
 	go mn.runTraffic(loopCtx)
 	go mn.runHealth(loopCtx)
