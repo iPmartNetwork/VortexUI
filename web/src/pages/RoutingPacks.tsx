@@ -1,22 +1,14 @@
 import { useEffect, useState } from "react";
-import { Trash2, Pencil, CheckCircle2, Server, Copy } from "lucide-react";
-import {
-  useApplyRoutingPack,
-  useCreateRoutingPack,
-  useDeleteRoutingPack,
-  useNodes,
-  useRoutingPacks,
-  useSetDefaultRoutingPack,
-  useUpdateRoutingPack,
-  type PackRoutingRule,
-  type RoutingPack,
-  type RoutingPackBody,
-} from "@/api/hooks";
-import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui";
+import { Trash2 } from "lucide-react";
+import { useNodes, type PackRoutingRule, type RoutingPack, type RoutingPackBody } from "@/api/hooks";
+import { Button, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
-import { useConfirm } from "@/components/confirm";
-import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
+
+// This module only exports the shared PackEditor/ApplyModal dialogs used by
+// RoutingBalancers.tsx (the live "/routing" page). There is no standalone
+// RoutingPacks page/route anymore — the list UI lives inline in
+// RoutingBalancers.tsx's RoutingPacksTab, styled with the Veltrix components.
 
 const csv = (s: string) => (s ? s.split(",").map((x) => x.trim()).filter(Boolean) : []);
 
@@ -62,145 +54,6 @@ function formToRule(f: RuleForm): PackRoutingRule {
     outbound_tag: kind === "out" ? tag : "",
     balancer_tag: kind === "bal" ? tag : "",
   };
-}
-
-export function RoutingPacks() {
-  const { t } = useI18n();
-  const toast = useToast();
-  const confirm = useConfirm();
-
-  const packs = useRoutingPacks();
-  const create = useCreateRoutingPack();
-  const update = useUpdateRoutingPack();
-  const del = useDeleteRoutingPack();
-  const apply = useApplyRoutingPack();
-  const setDefault = useSetDefaultRoutingPack();
-
-  const [editorOpen, setEditorOpen] = useState(false);
-  // `editing` is the existing custom pack we update on save; null means we're
-  // creating a brand-new pack. `seed` carries the values used to prefill the
-  // form — for a clone it's a deep copy of a (possibly built-in) source pack so
-  // the original is never mutated.
-  const [editing, setEditing] = useState<RoutingPack | null>(null);
-  const [seed, setSeed] = useState<RoutingPack | null>(null);
-  const [applyFor, setApplyFor] = useState<RoutingPack | null>(null);
-
-  const list = packs.data?.packs ?? [];
-
-  function openCreate() {
-    setEditing(null);
-    setSeed(null);
-    setEditorOpen(true);
-  }
-  function openEdit(p: RoutingPack) {
-    setEditing(p);
-    setSeed(p);
-    setEditorOpen(true);
-  }
-  // Clone seeds the create form with a deep copy of `p`'s values (rules and
-  // outbounds included) and a "(custom)" name, then switches into create mode
-  // so Save produces a NEW editable custom pack via useCreateRoutingPack.
-  function openClone(p: RoutingPack) {
-    const clone: RoutingPack = {
-      ...p,
-      id: "",
-      builtin: false,
-      name: `${p.name} (custom)`,
-      rules: JSON.parse(JSON.stringify(p.rules ?? [])) as PackRoutingRule[],
-      outbounds: p.outbounds ? (JSON.parse(JSON.stringify(p.outbounds)) as unknown[]) : undefined,
-    };
-    setEditing(null);
-    setSeed(clone);
-    setEditorOpen(true);
-  }
-
-  async function remove(p: RoutingPack) {
-    if (await confirm({ title: `${t("common.delete")} "${p.name}"?`, confirmLabel: t("common.delete"), destructive: true })) {
-      await del.mutateAsync(p.id);
-      toast.success(t("common.delete"));
-    }
-  }
-
-  async function makeDefault(p: RoutingPack) {
-    await setDefault.mutateAsync(p.id);
-    toast.success(`Default: ${p.name}`);
-  }
-
-  return (
-    <div className="space-y-6 animate-page-enter">
-      <PageHeader title={t("nav.routingPacks")} subtitle="Reusable smart-routing rule sets">
-        <Button onClick={openCreate}>{t("common.add")}</Button>
-      </PageHeader>
-
-      <p className="-mt-2 text-xs text-fg-muted">
-        Clone a built-in pack to customize its rules (e.g. change the target outbound).
-      </p>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {list.map((p) => (
-          <Card key={p.id} className="space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="truncate text-sm font-bold text-fg">{p.name}</h3>
-                  <Badge color={p.builtin ? "muted" : "on_hold"}>{p.builtin ? "Built-in" : "Custom"}</Badge>
-                </div>
-                {p.description && <p className="mt-0.5 truncate text-xs text-fg-muted">{p.description}</p>}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
-              {p.category && <span className="rounded-md bg-surface-2/60 px-2 py-0.5">{p.category}</span>}
-              <span>{p.rules.length} {p.rules.length === 1 ? "rule" : "rules"}</span>
-            </div>
-            <div className="flex flex-wrap justify-end gap-1.5 pt-1">
-              <Button variant="ghost" size="sm" onClick={() => setApplyFor(p)}><Server size={14} /> Apply</Button>
-              <Button variant="ghost" size="sm" onClick={() => makeDefault(p)}><CheckCircle2 size={14} /> Default</Button>
-              <Button variant="ghost" size="sm" onClick={() => openClone(p)}><Copy size={14} /> Clone</Button>
-              {!p.builtin && (
-                <>
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Pencil size={14} /></Button>
-                  <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(p)}><Trash2 size={14} /></Button>
-                </>
-              )}
-            </div>
-          </Card>
-        ))}
-        {list.length === 0 && (
-          <p className="col-span-full py-8 text-center text-sm text-fg-muted">{t("common.none")}</p>
-        )}
-      </div>
-
-      <PackEditor
-        open={editorOpen}
-        seed={seed}
-        isEdit={!!editing}
-        onClose={() => setEditorOpen(false)}
-        onSubmit={async (body) => {
-          if (editing) {
-            await update.mutateAsync({ id: editing.id, body });
-            toast.success(t("common.save"));
-          } else {
-            await create.mutateAsync(body);
-            toast.success(t("common.create"));
-          }
-          setEditorOpen(false);
-        }}
-        pending={create.isPending || update.isPending}
-      />
-
-      <ApplyModal
-        pack={applyFor}
-        onClose={() => setApplyFor(null)}
-        onApply={async (nodeId) => {
-          const res = await apply.mutateAsync({ node_id: nodeId, pack_id: applyFor!.id });
-          if (res.warning) toast.error(res.warning);
-          else toast.success("Applied");
-          setApplyFor(null);
-        }}
-        pending={apply.isPending}
-      />
-    </div>
-  );
 }
 
 export function PackEditor({

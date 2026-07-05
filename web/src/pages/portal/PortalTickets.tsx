@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { portalApi } from "./portalApi";
-import { Button, Card, Input, Badge, Select, PageHeader } from "@/components/ui";
+import { Button, Input, Badge, Select, PageHeader } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
@@ -37,12 +39,12 @@ export function PortalTickets() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-page-enter">
       <PageHeader
         title={t("portal.ticketsTitle")}
         subtitle={t("portal.ticketsCount").replace("{count}", String(data?.tickets?.length ?? 0))}
       >
-        <Button onClick={() => setCreateOpen(true)}>{t("portal.newTicket")}</Button>
+        <Button onClick={() => setCreateOpen(true)}><Plus size={14} /> {t("portal.newTicket")}</Button>
       </PageHeader>
 
       <CreateTicketModal open={createOpen} onClose={() => setCreateOpen(false)} />
@@ -50,7 +52,7 @@ export function PortalTickets() {
 
       <div className="space-y-3">
         {data?.tickets?.map((t) => (
-          <Card key={t.id} className="flex items-center justify-between cursor-pointer hover:ring-1 hover:ring-primary/30" onClick={() => setViewId(t.id)}>
+          <GlassCard key={t.id} hover className="flex items-center justify-between" onClick={() => setViewId(t.id)}>
             <div className="space-y-1">
               <h3 className="text-sm font-medium text-fg">{t.subject}</h3>
               <div className="flex gap-2">
@@ -60,7 +62,7 @@ export function PortalTickets() {
                 <span className="text-xs text-fg-subtle">{new Date(t.updated_at).toLocaleDateString()}</span>
               </div>
             </div>
-          </Card>
+          </GlassCard>
         ))}
         {(!data?.tickets || data.tickets.length === 0) && (
           <p className="text-center text-sm text-fg-muted py-8">No tickets yet.</p>

@@ -9,7 +9,8 @@ import { useAdminWallet, useImpersonateAdmin } from "@/api/reseller-hooks";
 import { setToken } from "@/api/client";
 import { useAuth } from "@/auth/auth";
 import { mergeResellerSettings, RESELLER_SETTING_KEYS, type ResellerSettingKey } from "@/auth/permissions";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { EditAdminModal } from "@/components/EditAdminModal";
 import { WalletTopUpModal } from "@/components/WalletTopUpModal";
 import { useToast } from "@/components/toast";
@@ -39,20 +40,20 @@ function QuotaBar({ label, used, limit, format = "number" }: { label: string; us
   const displayLimit = unlimited ? "∞" : format === "bytes" ? formatBytes(limit, false) : String(limit);
   const p = unlimited ? 0 : pct(used, limit);
   return (
-    <Card className="space-y-3 p-5">
+    <GlassCard className="space-y-3">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">{label}</span>
-        <span className="text-muted-foreground">{displayUsed} / {displayLimit}</span>
+        <span className="font-medium text-fg">{label}</span>
+        <span className="text-fg-muted">{displayUsed} / {displayLimit}</span>
       </div>
       {!unlimited && (
-        <div className="h-2 rounded-full bg-muted">
+        <div className="h-2 rounded-full bg-surface-2">
           <div
-            className={`h-full rounded-full transition-all ${p >= 90 ? "bg-destructive" : p >= 75 ? "bg-amber-500" : "bg-primary"}`}
+            className={`h-full rounded-full transition-all ${p >= 90 ? "bg-danger" : p >= 75 ? "bg-warning" : "bg-primary"}`}
             style={{ width: `${Math.min(p, 100)}%` }}
           />
         </div>
       )}
-    </Card>
+    </GlassCard>
   );
 }
 
@@ -85,13 +86,13 @@ export function ResellerDetail() {
   }
 
   if (admins.isLoading) {
-    return <p className="py-20 text-center text-muted-foreground">{t("common.loading")}</p>;
+    return <p className="py-20 text-center text-fg-muted">{t("common.loading")}</p>;
   }
 
   if (!admin) {
     return (
       <div className="space-y-4 py-12 text-center">
-        <p className="text-muted-foreground">{t("reseller.detail.notFound")}</p>
+        <p className="text-fg-muted">{t("reseller.detail.notFound")}</p>
         <Button variant="outline" onClick={() => navigate("/settings?tab=admins")}>
           {t("reseller.detail.back")}
         </Button>
@@ -103,7 +104,7 @@ export function ResellerDetail() {
     return (
       <div className="space-y-4 animate-page-enter">
         <Header username={admin.username} onBack={() => navigate("/settings?tab=admins")} />
-        <Card className="p-6 text-sm text-muted-foreground">{t("reseller.detail.sudoAdmin")}</Card>
+        <GlassCard className="text-sm text-fg-muted">{t("reseller.detail.sudoAdmin")}</GlassCard>
       </div>
     );
   }
@@ -161,7 +162,7 @@ export function ResellerDetail() {
         </div>
       </div>
 
-      {quota.isLoading && <p className="text-sm text-muted-foreground">{t("common.loading")}</p>}
+      {quota.isLoading && <p className="text-sm text-fg-muted">{t("common.loading")}</p>}
 
       {u && (
         <>
@@ -200,8 +201,8 @@ export function ResellerDetail() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="space-y-4 p-5">
-          <h3 className="text-sm font-semibold">{t("reseller.detail.info")}</h3>
+        <GlassCard className="space-y-4">
+          <h3 className="text-sm font-bold text-fg">{t("reseller.detail.info")}</h3>
           <dl className="space-y-2 text-sm">
             <Row label={t("reseller.admins.colRole")} value={roleName} />
             <Row label={t("reseller.detail.created")} value={new Date(admin.created_at).toLocaleString()} />
@@ -215,10 +216,10 @@ export function ResellerDetail() {
               value={admin.traffic_quota <= 0 ? "∞" : formatBytes(admin.traffic_quota, false)}
             />
           </dl>
-        </Card>
+        </GlassCard>
 
-        <Card className="space-y-4 p-5">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
+        <GlassCard className="space-y-4">
+          <h3 className="text-sm font-bold text-fg flex items-center gap-2">
             <Shield size={16} />
             {t("reseller.detail.policies")}
           </h3>
@@ -235,54 +236,56 @@ export function ResellerDetail() {
             <Row label={t("reseller.editAdmin.allowBulkDelete")} value={admin.policy_allow_bulk_delete ? t("common.enabled") : t("common.disabled")} />
             <Row label={t("reseller.editAdmin.enableAutoSuspend")} value={admin.auto_suspend_enabled ? t("common.enabled") : t("common.disabled")} />
           </dl>
-        </Card>
+        </GlassCard>
       </div>
 
-      <Card className="space-y-3 p-5">
-        <h3 className="text-sm font-semibold">{t("reseller.detail.resellerSettings")}</h3>
+      <GlassCard className="space-y-3">
+        <h3 className="text-sm font-bold text-fg">{t("reseller.detail.resellerSettings")}</h3>
         <div className="flex flex-wrap gap-1.5">
           {enabledSettings.length === 0 ? (
-            <span className="text-sm text-muted-foreground">—</span>
+            <span className="text-sm text-fg-muted">—</span>
           ) : (
             enabledSettings.map((k) => <Badge key={k}>{t(SETTING_LABEL_KEYS[k])}</Badge>)
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-fg-muted">
           <Link to={`/settings?tab=admins&section=access`} className="text-primary hover:underline">
             {t("settings.adminsSection.access")}
           </Link>
         </p>
-      </Card>
+      </GlassCard>
 
-      <Card className="p-0">
-        <div className="border-b px-5 py-3 text-sm font-semibold">{t("reseller.detail.ledger")}</div>
-        {wallet.isLoading && <p className="px-5 py-4 text-sm text-muted-foreground">{t("common.loading")}</p>}
+      <GlassCard className="!p-0 overflow-hidden">
+        <div className="border-b border-border/40 px-5 py-3 text-sm font-bold text-fg">{t("reseller.detail.ledger")}</div>
+        {wallet.isLoading && <p className="px-5 py-4 text-sm text-fg-muted">{t("common.loading")}</p>}
         {!wallet.isLoading && ledger.length === 0 && (
-          <p className="px-5 py-6 text-sm text-muted-foreground">{t("reseller.detail.noLedger")}</p>
+          <p className="px-5 py-6 text-sm text-fg-muted">{t("reseller.detail.noLedger")}</p>
         )}
         {ledger.length > 0 && (
-          <table className="w-full text-sm">
-            <thead className="border-b text-left text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3 font-medium">{t("reseller.detail.ledgerColDate")}</th>
-                <th className="px-5 py-3 font-medium">{t("reseller.detail.ledgerColTraffic")}</th>
-                <th className="px-5 py-3 font-medium">{t("reseller.detail.ledgerColUsers")}</th>
-                <th className="px-5 py-3 font-medium">{t("reseller.detail.ledgerColReason")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ledger.map((e) => (
-                <tr key={e.id} className="border-b last:border-0">
-                  <td className="px-5 py-3 text-muted-foreground">{new Date(e.created_at).toLocaleString()}</td>
-                  <td className="px-5 py-3">{e.delta_traffic !== 0 ? formatBytes(e.delta_traffic, false) : "—"}</td>
-                  <td className="px-5 py-3">{e.delta_users !== 0 ? (e.delta_users > 0 ? `+${e.delta_users}` : e.delta_users) : "—"}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{e.reason || "—"}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/40 bg-surface-2/30 text-left text-[11px] uppercase tracking-wide text-fg-subtle">
+                  <th className="px-5 py-3 font-medium">{t("reseller.detail.ledgerColDate")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.detail.ledgerColTraffic")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.detail.ledgerColUsers")}</th>
+                  <th className="px-5 py-3 font-medium">{t("reseller.detail.ledgerColReason")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {ledger.map((e) => (
+                  <tr key={e.id} className="hover:bg-surface-2/40">
+                    <td className="px-5 py-3 text-fg-muted">{new Date(e.created_at).toLocaleString()}</td>
+                    <td className="px-5 py-3">{e.delta_traffic !== 0 ? formatBytes(e.delta_traffic, false) : "—"}</td>
+                    <td className="px-5 py-3">{e.delta_users !== 0 ? (e.delta_users > 0 ? `+${e.delta_users}` : e.delta_users) : "—"}</td>
+                    <td className="px-5 py-3 text-fg-muted">{e.reason || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </Card>
+      </GlassCard>
     </div>
   );
 }
@@ -314,9 +317,9 @@ function Header({
         <h1 className="text-xl font-bold text-fg">{username}</h1>
         <div className="mt-0.5 flex flex-wrap items-center gap-2">
           <Badge>{t("reseller.admins.reseller")}</Badge>
-          {role && <span className="text-xs text-muted-foreground">{role}</span>}
+          {role && <span className="text-xs text-fg-muted">{role}</span>}
           {suspended && <Badge color="expired">{t("reseller.admins.suspended")}</Badge>}
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-fg-muted">
             2FA: {totp ? t("reseller.admins.totpOn") : t("reseller.admins.totpOff")}
           </span>
         </div>
@@ -337,24 +340,24 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <Card className="flex items-center gap-3 p-5">
+    <GlassCard className="flex items-center gap-3">
       <Icon className="text-primary shrink-0" size={22} />
       <div>
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="text-lg font-bold capitalize">
+        <div className="text-xs text-fg-muted">{label}</div>
+        <div className="text-lg font-bold text-fg capitalize">
           {value}
-          {sub && <span className="ms-1 text-xs font-normal text-muted-foreground">{sub}</span>}
+          {sub && <span className="ms-1 text-xs font-normal text-fg-muted">{sub}</span>}
         </div>
       </div>
-    </Card>
+    </GlassCard>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium text-end">{value}</dd>
+      <dt className="text-fg-muted">{label}</dt>
+      <dd className="font-medium text-fg text-end">{value}</dd>
     </div>
   );
 }

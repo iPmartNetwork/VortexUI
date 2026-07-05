@@ -1,17 +1,20 @@
 import { useState } from "react";
-import { Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Waypoints } from "lucide-react";
 import { routingHooks } from "@/api/policy-hooks";
 import type { RoutingRule } from "@/api/types";
-import { Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Input, Select } from "@/components/ui";
+import { GlassCard } from "@/components/veltrix";
 import { Modal } from "@/components/Modal";
 import { NodePicker } from "@/components/NodePicker";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
+import { useTitle } from "@/lib/useTitle";
 
 const csv = (s: string) => (s ? s.split(",").map((x) => x.trim()).filter(Boolean) : []);
 
 export function Routing() {
+  useTitle("Routing");
   const { t } = useI18n();
   const [node, setNode] = useState("");
   const [open, setOpen] = useState(false);
@@ -65,44 +68,55 @@ export function Routing() {
   const sorted = [...(list.data?.routing ?? [])].sort((a, b) => a.priority - b.priority);
 
   return (
-    <div className="space-y-6 animate-page-enter">
-      <PageHeader title={t("nav.routing")} subtitle="Traffic steering rules">
-        <NodePicker value={node} onChange={setNode} />
-        <Button onClick={() => setOpen(true)}>{t("common.add")}</Button>
-      </PageHeader>
+    <div className="space-y-5 animate-page-enter">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-fg tracking-tight">{t("nav.routing")}</h1>
+          <p className="text-sm text-fg-muted mt-1">Traffic steering rules</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <NodePicker value={node} onChange={setNode} />
+          <Button onClick={() => setOpen(true)}><Plus size={14} /> {t("common.add")}</Button>
+        </div>
+      </div>
 
-      <Card className="p-0">
-        <div className="divide-y divide-white/[0.05]">
+      <GlassCard hover={false} className="!p-0 overflow-hidden">
+        <div className="divide-y divide-border/20">
           {sorted.map((r) => (
-            <div key={r.id} className="flex items-center justify-between px-5 py-3 text-sm">
-              <div className="flex items-center gap-3">
-                <span className="grid h-6 w-6 place-items-center rounded-md bg-white/[0.06] text-xs text-fg-muted">{r.priority}</span>
-                <span className="font-medium">{r.name || "rule"}</span>
-                <span className="text-fg-subtle">→</span>
+            <div key={r.id} className="flex items-center justify-between gap-2 px-5 py-3 text-sm hover:bg-surface-2/40">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-md bg-surface-2 text-xs text-fg-muted">{r.priority}</span>
+                <span className="font-medium text-fg truncate">{r.name || "rule"}</span>
+                <span className="text-fg-subtle flex-shrink-0">→</span>
                 <Badge color={r.balancer_tag ? "on_hold" : "muted"}>{r.outbound_tag || r.balancer_tag || "—"}</Badge>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-shrink-0">
                 <Button variant="ghost" size="sm" onClick={() => edit(r)}><Pencil size={15} /></Button>
                 <Button variant="ghost" size="sm" className="text-danger" onClick={() => remove(r)}><Trash2 size={15} /></Button>
               </div>
             </div>
           ))}
-          {sorted.length === 0 && <p className="px-5 py-8 text-center text-sm text-fg-muted">{t("common.none")}</p>}
+          {sorted.length === 0 && (
+            <div className="flex flex-col items-center gap-2 px-5 py-10 text-center">
+              <Waypoints size={22} className="text-fg-subtle" />
+              <p className="text-sm text-fg-muted">{t("common.none")}</p>
+            </div>
+          )}
         </div>
-      </Card>
+      </GlassCard>
 
       <Modal open={open} onClose={() => { setOpen(false); setEditing(null); }} title={editing ? `Edit ${editing.name || "rule"}` : t("nav.routing")} className="max-w-lg">
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-3 gap-2">
-            <Input className="col-span-2" placeholder="Name" value={f.name} onChange={set("name")} />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Input className="sm:col-span-2" placeholder="Name" value={f.name} onChange={set("name")} />
             <Input placeholder="Priority" value={f.priority} onChange={set("priority")} inputMode="numeric" />
           </div>
           <Input placeholder="Inbound tags (comma)" value={f.inbound_tags} onChange={set("inbound_tags")} />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Input placeholder="Domains (comma)" value={f.domains} onChange={set("domains")} />
             <Input placeholder="IP / CIDR (comma)" value={f.ip} onChange={set("ip")} />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Input placeholder='Port ("443" / "1-1000")' value={f.port} onChange={set("port")} />
             <Select value={f.network} onChange={set("network")}>
               <option value="">any network</option><option value="tcp">tcp</option><option value="udp">udp</option>
