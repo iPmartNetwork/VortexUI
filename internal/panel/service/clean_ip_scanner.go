@@ -149,18 +149,23 @@ func (s *CleanIPScannerService) GetCachedResults(ctx context.Context) ([]*domain
 }
 
 // MeasureThroughput runs a real download-speed test against one previously
-// scanned candidate (identified by its cached result ID + IP) and persists
-// the measured Mbps. It is deliberately separate from the bulk Scan so
-// operators pay the (slower) throughput cost only for the handful of
-// promising candidates they actually care about.
-func (s *CleanIPScannerService) MeasureThroughput(ctx context.Context, id uuid.UUID, ip string, scanPort int) (float64, error) {
-	if !isPublicIP(ip) {
-		return 0, fmt.Errorf("invalid or non-public IP: %q", ip)
+// scanned candidate (identified by its cached result ID) and persists the
+// measured Mbps. It is deliberately separate from the bulk Scan so operators
+// pay the (slower) throughput cost only for the handful of promising
+// candidates they actually care about.
+//
+// The target IP is resolved from the cached scan row rather than trusted
+// from the caller, so a request can't be used to make the server probe an
+// arbitrary IP under someone else's result ID.
+func (s *CleanIPScannerService) MeasureThroughput(ctx context.Context, id uuid.UUID, scanPort int) (float64, error) {
+	target, err := s.findCached(ctx, id)
+	if err != nil {
+		return 0, err
 	}
 	if scanPort <= 0 {
 		scanPort = 443
 	}
-	mbps, err := s.throughput(ctx, ip, scanPort)
+	mbps, err := s.throughput(ctx, target.IP, scanPort)
 	if err != nil {
 		return 0, err
 	}
@@ -168,6 +173,59 @@ func (s *CleanIPScannerService) MeasureThroughput(ctx context.Context, id uuid.U
 		return 0, err
 	}
 	return mbps, nil
+}
+
+// findCached looks up one cached scan row by ID and re-validates its IP,
+// guarding against a stale/tampered cache entry ever reaching the network
+// probe.
+func (s *CleanIPScannerService) findCached(ctx context.Context, id uuid.UUID) (*domain.CleanIPScan, error) {
+	cached, err := s.repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range cached {
+		if c.ID == id {
+			if !isPublicIP(c.IP) {
+				return nil, fmt.Errorf("invalid or non-public IP: %q", c.IP)
+			}
+			return c, nil
+		}
+	}
+	return nil, fmt.Errorf("clean-ip result %s not found", id)
+}
+
+// MeasureAllThroughput runs the download-speed test against every reachable
+// cached candidate, bounded by the same worker limit as Scan, and persists
+// each measurement as it completes. It returns the refreshed, best-first
+// result set.
+func (s *CleanIPScannerService) MeasureAllThroughput(ctx context.Context, scanPort int) ([]*domain.CleanIPScan, error) {
+	cached, err := s.repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if scanPort <= 0 {
+		scanPort = 443
+	}
+
+	sem := make(chan struct{}, cleanIPWorkers)
+	var wg sync.WaitGroup
+	for _, c := range cached {
+		if !c.Reachable || !isPublicIP(c.IP) {
+			continue
+		}
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(target *domain.CleanIPScan) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			if mbps, err := s.throughput(ctx, target.IP, scanPort); err == nil {
+				_ = s.repo.UpdateThroughput(ctx, target.ID, mbps)
+			}
+		}(c)
+	}
+	wg.Wait()
+
+	return s.repo.List(ctx)
 }
 
 // scoreCleanIP maps latency + loss to a 0-100 score (higher is better):

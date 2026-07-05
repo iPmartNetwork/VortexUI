@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Copy, Crosshair, Gauge } from "lucide-react";
-import { useCleanIPResults, useScanCleanIP, useMeasureThroughput, type CleanIPScan } from "@/api/hooks";
+import { Copy, Crosshair, Gauge, Zap } from "lucide-react";
+import { useCleanIPResults, useScanCleanIP, useMeasureThroughput, useMeasureAllThroughput, type CleanIPScan } from "@/api/hooks";
 import { Badge, Button, Input } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
+import { useAuth } from "@/auth/auth";
 import { cn } from "@/lib/utils";
 
 const CLOUDFLARE_PRESET = [
@@ -26,6 +27,8 @@ function scoreBarClass(score: number): string {
 export function CleanIPTab() {
   const toast = useToast();
   const { t } = useI18n();
+  const { can } = useAuth();
+  const canWrite = can("inbound:write");
   const [ipsText, setIpsText] = useState("");
   const [port, setPort] = useState("443");
   const [results, setResults] = useState<CleanIPScan[]>([]);
@@ -34,6 +37,7 @@ export function CleanIPTab() {
   const { data: cached } = useCleanIPResults();
   const scanMut = useScanCleanIP();
   const throughputMut = useMeasureThroughput();
+  const throughputAllMut = useMeasureAllThroughput();
 
   useEffect(() => {
     if (cached?.results && results.length === 0) setResults(cached.results);
@@ -70,10 +74,23 @@ export function CleanIPTab() {
 
   function measureSpeed(r: CleanIPScan) {
     throughputMut.mutate(
-      { id: r.id, ip: r.ip, port: Number(port) || 443 },
+      { id: r.id, port: Number(port) || 443 },
       {
         onSuccess: (data) => {
           setResults((prev) => prev.map((x) => (x.id === r.id ? { ...x, throughput_mbps: data.throughput_mbps } : x)));
+        },
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : t("cleanip.speedError")),
+      },
+    );
+  }
+
+  function measureAllSpeeds() {
+    throughputAllMut.mutate(
+      { port: Number(port) || 443 },
+      {
+        onSuccess: (data) => {
+          setResults(data.results);
+          toast.success(t("cleanip.allMeasured"));
         },
         onError: (e: unknown) => toast.error(e instanceof Error ? e.message : t("cleanip.speedError")),
       },
@@ -89,9 +106,22 @@ export function CleanIPTab() {
           </div>
           <p className="text-xs text-fg-muted leading-relaxed">{t("security.cleanip.banner")}</p>
         </div>
-        <Button size="sm" className="flex-shrink-0" onClick={runScan} disabled={scanMut.isPending}>
-          {scanMut.isPending ? t("cleanip.scanning") : t("cleanip.scan")}
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {results.some((r) => r.reachable) && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={measureAllSpeeds}
+              disabled={!canWrite || throughputAllMut.isPending || throughputMut.isPending}
+            >
+              <Zap size={13} />
+              {throughputAllMut.isPending ? t("cleanip.measuring") : t("cleanip.measureAll")}
+            </Button>
+          )}
+          <Button size="sm" onClick={runScan} disabled={!canWrite || scanMut.isPending}>
+            {scanMut.isPending ? t("cleanip.scanning") : t("cleanip.scan")}
+          </Button>
+        </div>
       </div>
 
       <GlassCard hover={false} className="!p-4 space-y-3">
@@ -164,7 +194,12 @@ export function CleanIPTab() {
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  disabled={!r.reachable || (throughputMut.isPending && throughputMut.variables?.id === r.id)}
+                  disabled={
+                    !canWrite ||
+                    !r.reachable ||
+                    throughputAllMut.isPending ||
+                    (throughputMut.isPending && throughputMut.variables?.id === r.id)
+                  }
                   onClick={() => measureSpeed(r)}
                 >
                   <Gauge size={13} />

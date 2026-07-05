@@ -623,14 +623,29 @@ export function useScanCleanIP() {
 }
 
 // useMeasureThroughput runs a real download-speed test against one cached
-// candidate and persists the measured Mbps. This is a real network transfer
-// (not a simulation), so it's slower than a latency probe and is invoked
-// per-IP, on demand, rather than for the whole list at once.
+// candidate (identified by its result ID; the backend resolves the IP from
+// the cached row) and persists the measured Mbps. This is a real network
+// transfer (not a simulation), so it's slower than a latency probe and is
+// invoked per-IP, on demand, rather than for the whole list at once.
 export function useMeasureThroughput() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id: string; ip: string; port?: number }) =>
+    mutationFn: (input: { id: string; port?: number }) =>
       api<{ throughput_mbps: number }>("/api/clean-ip/throughput", { method: "POST", body: input }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clean-ip-results"] }),
+  });
+}
+
+// useMeasureAllThroughput runs the download-speed test against every
+// reachable cached candidate and returns the refreshed result set. Slower
+// than a single measurement since it performs one real transfer per IP
+// (bounded by the same worker pool as a scan), but avoids clicking "test
+// speed" one card at a time.
+export function useMeasureAllThroughput() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { port?: number }) =>
+      api<{ results: CleanIPScan[] }>("/api/clean-ip/throughput/all", { method: "POST", body: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clean-ip-results"] }),
   });
 }

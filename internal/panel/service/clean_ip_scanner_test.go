@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -207,7 +208,7 @@ func TestMeasureThroughputPersistsAndDefaultsPort(t *testing.T) {
 		return 123.45, nil
 	}
 
-	got, err := s.MeasureThroughput(context.Background(), id, "1.1.1.1", 0)
+	got, err := s.MeasureThroughput(context.Background(), id, 0)
 	if err != nil {
 		t.Fatalf("MeasureThroughput: %v", err)
 	}
@@ -222,26 +223,105 @@ func TestMeasureThroughputPersistsAndDefaultsPort(t *testing.T) {
 	}
 }
 
+// TestMeasureThroughputResolvesIPServerSide verifies the IP probed is always
+// the one attached to the cached row for `id`, never a caller-supplied
+// value: MeasureThroughput no longer even accepts an IP argument.
+func TestMeasureThroughputResolvesIPServerSide(t *testing.T) {
+	id := uuid.New()
+	repo := &fakeCleanIPRepo{saved: []*domain.CleanIPScan{
+		{ID: id, IP: "104.16.0.1", Reachable: true},
+		{ID: uuid.New(), IP: "1.1.1.1", Reachable: true},
+	}}
+	s := NewCleanIPScannerService(repo)
+	var capturedIP string
+	s.throughput = func(_ context.Context, ip string, _ int) (float64, error) {
+		capturedIP = ip
+		return 10, nil
+	}
+	if _, err := s.MeasureThroughput(context.Background(), id, 443); err != nil {
+		t.Fatalf("MeasureThroughput: %v", err)
+	}
+	if capturedIP != "104.16.0.1" {
+		t.Errorf("probed IP = %q, want %q", capturedIP, "104.16.0.1")
+	}
+}
+
+func TestMeasureThroughputRejectsUnknownID(t *testing.T) {
+	repo := &fakeCleanIPRepo{saved: []*domain.CleanIPScan{{ID: uuid.New(), IP: "1.1.1.1"}}}
+	s := NewCleanIPScannerService(repo)
+	s.throughput = func(context.Context, string, int) (float64, error) {
+		t.Fatal("throughput func should not be called for an unknown id")
+		return 0, nil
+	}
+	if _, err := s.MeasureThroughput(context.Background(), uuid.New(), 443); err == nil {
+		t.Fatal("expected error for unknown id")
+	}
+}
+
 func TestMeasureThroughputRejectsNonPublicIP(t *testing.T) {
-	repo := &fakeCleanIPRepo{}
+	id := uuid.New()
+	repo := &fakeCleanIPRepo{saved: []*domain.CleanIPScan{{ID: id, IP: "192.168.1.1"}}}
 	s := NewCleanIPScannerService(repo)
 	s.throughput = func(context.Context, string, int) (float64, error) {
 		t.Fatal("throughput func should not be called for a rejected IP")
 		return 0, nil
 	}
-	if _, err := s.MeasureThroughput(context.Background(), uuid.New(), "192.168.1.1", 443); err == nil {
+	if _, err := s.MeasureThroughput(context.Background(), id, 443); err == nil {
 		t.Fatal("expected error for non-public IP")
 	}
 }
 
 func TestMeasureThroughputPropagatesProbeError(t *testing.T) {
-	repo := &fakeCleanIPRepo{saved: []*domain.CleanIPScan{{ID: uuid.New(), IP: "1.1.1.1"}}}
+	id := uuid.New()
+	repo := &fakeCleanIPRepo{saved: []*domain.CleanIPScan{{ID: id, IP: "1.1.1.1"}}}
 	s := NewCleanIPScannerService(repo)
 	s.throughput = func(context.Context, string, int) (float64, error) {
 		return 0, fmt.Errorf("boom")
 	}
-	if _, err := s.MeasureThroughput(context.Background(), uuid.New(), "1.1.1.1", 443); err == nil {
+	if _, err := s.MeasureThroughput(context.Background(), id, 443); err == nil {
 		t.Fatal("expected error to propagate")
+	}
+}
+
+func TestMeasureAllThroughputSkipsUnreachableAndUpdatesEachRow(t *testing.T) {
+	reachableA := uuid.New()
+	reachableB := uuid.New()
+	unreachable := uuid.New()
+	repo := &fakeCleanIPRepo{saved: []*domain.CleanIPScan{
+		{ID: reachableA, IP: "104.16.0.1", Reachable: true},
+		{ID: reachableB, IP: "1.1.1.1", Reachable: true},
+		{ID: unreachable, IP: "8.8.8.8", Reachable: false},
+	}}
+	s := NewCleanIPScannerService(repo)
+	var mu sync.Mutex
+	probed := map[string]bool{}
+	s.throughput = func(_ context.Context, ip string, _ int) (float64, error) {
+		mu.Lock()
+		probed[ip] = true
+		mu.Unlock()
+		return 42, nil
+	}
+
+	out, err := s.MeasureAllThroughput(context.Background(), 0)
+	if err != nil {
+		t.Fatalf("MeasureAllThroughput: %v", err)
+	}
+	if len(out) != 3 {
+		t.Fatalf("got %d results, want 3", len(out))
+	}
+	if probed["8.8.8.8"] {
+		t.Error("unreachable candidate should not have been probed")
+	}
+	if !probed["104.16.0.1"] || !probed["1.1.1.1"] {
+		t.Error("both reachable candidates should have been probed")
+	}
+	for _, r := range out {
+		if r.Reachable && r.ThroughputMbps != 42 {
+			t.Errorf("reachable row %s not updated: %+v", r.IP, r)
+		}
+		if !r.Reachable && r.ThroughputMbps != 0 {
+			t.Errorf("unreachable row %s should stay at 0: %+v", r.IP, r)
+		}
 	}
 }
 
