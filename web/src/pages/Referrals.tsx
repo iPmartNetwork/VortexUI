@@ -86,7 +86,7 @@ export function Referrals() {
               Enabled
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <div>
               <label className="text-xs text-fg-subtle">Reward type</label>
               <Select value={config.reward_type} onChange={(e) => update("reward_type", e.target.value)}>

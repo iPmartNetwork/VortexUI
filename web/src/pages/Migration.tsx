@@ -89,7 +89,7 @@ export function Migration() {
               Enabled
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
             <div>
               <label className="text-xs text-fg-subtle">{t("migration.healthInterval")}</label>
               <Input value={policy.health_check_interval} onChange={(e) => update("health_check_interval", Number(e.target.value))} inputMode="numeric" />

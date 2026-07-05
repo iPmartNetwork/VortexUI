@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/vortexui/vortexui/internal/domain"
@@ -17,4 +18,13 @@ type CleanIPScanRepository interface {
 	// UpdateThroughput records a real download-speed measurement (Mbps) for
 	// one previously scanned IP, identified by its result ID.
 	UpdateThroughput(ctx context.Context, id uuid.UUID, mbps float64) error
+}
+
+// CleanIPScheduleRepository persists the recurring-scan configuration used
+// by the scheduler: a single row holding enabled/interval/port/candidate
+// IPs plus the last-run timestamp used to decide when the next run is due.
+type CleanIPScheduleRepository interface {
+	GetSchedule(ctx context.Context) (*domain.CleanIPSchedule, error)
+	SaveSchedule(ctx context.Context, s *domain.CleanIPSchedule) error
+	MarkScheduleRun(ctx context.Context, at time.Time) error
 }

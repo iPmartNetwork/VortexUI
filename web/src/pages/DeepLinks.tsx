@@ -46,7 +46,7 @@ export function DeepLinks() {
               <input type="checkbox" checked={cfg.enabled} onChange={(e) => update("enabled", e.target.checked)} className="rounded" /> Enabled
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div><label className="text-xs text-fg-subtle">URL Scheme</label><Input value={cfg.scheme} onChange={(e) => update("scheme", e.target.value)} placeholder="vortex" /></div>
             <div><label className="text-xs text-fg-subtle">Base URL</label><Input value={cfg.base_url} onChange={(e) => update("base_url", e.target.value)} placeholder="https://panel.example.com" /></div>
             <div><label className="text-xs text-fg-subtle">App Store URL</label><Input value={cfg.app_store_url} onChange={(e) => update("app_store_url", e.target.value)} /></div>

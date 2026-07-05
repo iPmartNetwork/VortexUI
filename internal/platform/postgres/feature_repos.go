@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -1732,6 +1733,56 @@ func (r *CleanIPScanRepo) UpdateThroughput(ctx context.Context, id uuid.UUID, mb
 	return err
 }
 
+// --- CleanIPScheduleRepo ---
+
+type CleanIPScheduleRepo struct{ pool *pgxpool.Pool }
+
+var _ port.CleanIPScheduleRepository = (*CleanIPScheduleRepo)(nil)
+
+func (r *CleanIPScheduleRepo) GetSchedule(ctx context.Context) (*domain.CleanIPSchedule, error) {
+	row := r.pool.QueryRow(ctx,
+		`SELECT enabled, interval_minutes, port, ips, last_run_at, updated_at FROM clean_ip_schedule WHERE id = 1`)
+	var s domain.CleanIPSchedule
+	var ipsRaw string
+	if err := row.Scan(&s.Enabled, &s.IntervalMinutes, &s.Port, &ipsRaw, &s.LastRunAt, &s.UpdatedAt); err != nil {
+		return nil, err
+	}
+	s.IPs = splitCleanIPList(ipsRaw)
+	return &s, nil
+}
+
+func (r *CleanIPScheduleRepo) SaveSchedule(ctx context.Context, s *domain.CleanIPSchedule) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO clean_ip_schedule (id, enabled, interval_minutes, port, ips, updated_at)
+		VALUES (1, $1, $2, $3, $4, now())
+		ON CONFLICT (id) DO UPDATE SET
+			enabled = EXCLUDED.enabled,
+			interval_minutes = EXCLUDED.interval_minutes,
+			port = EXCLUDED.port,
+			ips = EXCLUDED.ips,
+			updated_at = now()`,
+		s.Enabled, s.IntervalMinutes, s.Port, strings.Join(s.IPs, "\n"))
+	return err
+}
+
+func (r *CleanIPScheduleRepo) MarkScheduleRun(ctx context.Context, at time.Time) error {
+	_, err := r.pool.Exec(ctx, `UPDATE clean_ip_schedule SET last_run_at = $1 WHERE id = 1`, at)
+	return err
+}
+
+// splitCleanIPList parses the newline/comma-separated IP list stored in
+// clean_ip_schedule.ips back into a slice, mirroring the frontend's textarea
+// parsing so the same string round-trips.
+func splitCleanIPList(raw string) []string {
+	fields := strings.FieldsFunc(raw, func(r rune) bool { return r == '\n' || r == ',' || r == '\r' })
+	out := make([]string, 0, len(fields))
+	for _, f := range fields {
+		if f = strings.TrimSpace(f); f != "" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
 
 // --- SubHostRepo ---
 

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/service"
 )
 
@@ -108,4 +109,46 @@ func (h *CleanIPHandlers) ThroughputAll(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadGateway, err.Error())
 	}
 	return c.JSON(http.StatusOK, echo.Map{"results": results})
+}
+
+// GetSchedule returns the current recurring-scan configuration.
+func (h *CleanIPHandlers) GetSchedule(c echo.Context) error {
+	sched, err := h.Scanner.GetSchedule(c.Request().Context())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, sched)
+}
+
+type cleanIPScheduleRequest struct {
+	Enabled         bool     `json:"enabled"`
+	IntervalMinutes int      `json:"interval_minutes"`
+	Port            int      `json:"port"`
+	IPs             []string `json:"ips"`
+}
+
+// UpdateSchedule validates and persists the recurring-scan configuration
+// (enabled flag, cadence, port, and candidate list). The service applies
+// the same SSRF guard and candidate cap used by Scan.
+func (h *CleanIPHandlers) UpdateSchedule(c echo.Context) error {
+	var req cleanIPScheduleRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if req.Port != 0 && !isValidPort(req.Port) {
+		return echo.NewHTTPError(http.StatusBadRequest, "port must be between 1 and 65535")
+	}
+	if len(req.IPs) > maxCleanIPScan {
+		return echo.NewHTTPError(http.StatusBadRequest, "max 256 IPs per schedule")
+	}
+	sched := &domain.CleanIPSchedule{
+		Enabled:         req.Enabled,
+		IntervalMinutes: req.IntervalMinutes,
+		Port:            req.Port,
+		IPs:             req.IPs,
+	}
+	if err := h.Scanner.UpdateSchedule(c.Request().Context(), sched); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"ok": true})
 }
