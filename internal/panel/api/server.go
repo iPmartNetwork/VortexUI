@@ -47,6 +47,8 @@ type Deps struct {
 	Auth       *service.AuthService
 	Limiter    RateLimiter   // nil disables login rate limiting
 	Audit      AuditRecorder // nil disables audit logging
+	IPGuard    *IPGuard      // nil disables IP access control
+	PanelSettings *PanelSettingsHandlers
 }
 
 // NewRouter builds the Echo instance with all routes and middleware mounted.
@@ -58,6 +60,9 @@ func NewRouter(d Deps) *echo.Echo {
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestID())
 	e.Use(middleware.Logger())
+	if d.IPGuard != nil {
+		e.Use(d.IPGuard.Middleware())
+	}
 
 	// Thread the build version into the handlers so GET /api/version can report it.
 	if d.Handlers != nil {
@@ -92,6 +97,12 @@ func NewRouter(d Deps) *echo.Echo {
 	authed.GET("/system", d.Handlers.GetSystem, RequirePermission(d.Auth, domain.PermSystemRead))
 	// Panel build version (for the UI footer).
 	authed.GET("/version", d.Handlers.GetVersion, RequirePermission(d.Auth, domain.PermSystemRead))
+
+	// Panel-wide settings (persisted in DB).
+	if d.PanelSettings != nil {
+		authed.GET("/settings", d.PanelSettings.GetSettings, RequirePermission(d.Auth, domain.PermSystemRead))
+		authed.PUT("/settings", d.PanelSettings.UpdateSettings, RequirePermission(d.Auth, domain.PermSystemRead))
+	}
 
 	// Live connection monitor.
 	authed.GET("/monitor/connections", d.Monitor.GetLiveConnections, RequirePermission(d.Auth, domain.PermSystemRead))

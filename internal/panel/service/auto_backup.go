@@ -18,8 +18,12 @@ type AutoBackup struct {
 	backup   *BackupService
 	interval time.Duration
 	log      *slog.Logger
+	Settings AutoBackupSettingsProvider
 
-	// Telegram destination (optional).
+	// DefaultTelegramToken comes from VORTEX_TELEGRAM_TOKEN when not set per backup job.
+	DefaultTelegramToken string
+
+	// Telegram destination (optional, legacy direct fields).
 	TelegramToken  string
 	TelegramChatID string
 
@@ -28,6 +32,11 @@ type AutoBackup struct {
 	S3Bucket    string
 	S3AccessKey string
 	S3SecretKey string
+}
+
+// AutoBackupSettingsProvider supplies runtime auto-backup configuration.
+type AutoBackupSettingsProvider interface {
+	Snapshot(ctx context.Context) AutoBackupConfig
 }
 
 // NewAutoBackup wires the auto-backup loop.
@@ -56,6 +65,14 @@ func (ab *AutoBackup) Run(ctx context.Context) {
 }
 
 func (ab *AutoBackup) tick(ctx context.Context) {
+	cfg := AutoBackupConfig{IntervalHours: 24}
+	if ab.Settings != nil {
+		cfg = ab.Settings.Snapshot(ctx)
+	}
+	if !cfg.Enabled {
+		return
+	}
+
 	data, err := ab.backup.Export(ctx)
 	if err != nil {
 		ab.log.Warn("auto-backup export failed", "err", err)
@@ -64,28 +81,52 @@ func (ab *AutoBackup) tick(ctx context.Context) {
 	raw, _ := json.Marshal(data)
 	filename := fmt.Sprintf("vortexui-backup-%s.json", time.Now().Format("2006-01-02"))
 
-	if ab.TelegramToken != "" && ab.TelegramChatID != "" {
-		if err := ab.sendToTelegram(ctx, raw, filename); err != nil {
+	tgToken := ab.DefaultTelegramToken
+	if tgToken == "" {
+		tgToken = ab.TelegramToken
+	}
+	tgChat := cfg.TelegramChatID
+	if tgChat == "" {
+		tgChat = ab.TelegramChatID
+	}
+	if tgToken != "" && tgChat != "" {
+		if err := ab.sendToTelegram(ctx, raw, filename, tgToken, tgChat); err != nil {
 			ab.log.Warn("auto-backup telegram send failed", "err", err)
 		} else {
 			ab.log.Info("auto-backup sent to telegram")
 		}
 	}
 
-	if ab.S3Endpoint != "" && ab.S3Bucket != "" {
-		if err := ab.uploadToS3(ctx, raw, filename); err != nil {
+	s3Endpoint := cfg.S3Endpoint
+	if s3Endpoint == "" {
+		s3Endpoint = ab.S3Endpoint
+	}
+	s3Bucket := cfg.S3Bucket
+	if s3Bucket == "" {
+		s3Bucket = ab.S3Bucket
+	}
+	s3Key := cfg.S3AccessKey
+	if s3Key == "" {
+		s3Key = ab.S3AccessKey
+	}
+	s3Secret := cfg.S3SecretKey
+	if s3Secret == "" {
+		s3Secret = ab.S3SecretKey
+	}
+	if s3Endpoint != "" && s3Bucket != "" {
+		if err := ab.uploadToS3(ctx, raw, filename, s3Endpoint, s3Bucket, s3Key, s3Secret); err != nil {
 			ab.log.Warn("auto-backup S3 upload failed", "err", err)
 		} else {
-			ab.log.Info("auto-backup uploaded to S3", "bucket", ab.S3Bucket)
+			ab.log.Info("auto-backup uploaded to S3", "bucket", s3Bucket)
 		}
 	}
 }
 
-func (ab *AutoBackup) sendToTelegram(ctx context.Context, data []byte, filename string) error {
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendDocument", ab.TelegramToken)
+func (ab *AutoBackup) sendToTelegram(ctx context.Context, data []byte, filename, token, chatID string) error {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendDocument", token)
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	_ = writer.WriteField("chat_id", ab.TelegramChatID)
+	_ = writer.WriteField("chat_id", chatID)
 	_ = writer.WriteField("caption", "📦 Auto backup — "+time.Now().Format("2006-01-02 15:04"))
 	part, err := writer.CreateFormFile("document", filename)
 	if err != nil {
@@ -111,17 +152,17 @@ func (ab *AutoBackup) sendToTelegram(ctx context.Context, data []byte, filename 
 	return nil
 }
 
-func (ab *AutoBackup) uploadToS3(ctx context.Context, data []byte, filename string) error {
+func (ab *AutoBackup) uploadToS3(ctx context.Context, data []byte, filename, endpoint, bucket, accessKey, secretKey string) error {
 	// Simple PUT to S3-compatible endpoint (MinIO, Cloudflare R2, etc.)
-	url := fmt.Sprintf("%s/%s/%s", ab.S3Endpoint, ab.S3Bucket, filename)
+	url := fmt.Sprintf("%s/%s/%s", endpoint, bucket, filename)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	// Basic auth for simple S3 endpoints (production: use AWS SDK v4 signing)
-	if ab.S3AccessKey != "" {
-		req.SetBasicAuth(ab.S3AccessKey, ab.S3SecretKey)
+	if accessKey != "" {
+		req.SetBasicAuth(accessKey, secretKey)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

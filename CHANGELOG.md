@@ -6,6 +6,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-06
+
+Backend–frontend integration release: persisted panel settings, audit log UI, portal
+whitelabel/referral, real ACME (Cloudflare DNS-01), and federation sync worker.
+
+### Added
+- **Panel settings API** — `GET/PUT /api/settings` persists general, security, appearance,
+  notifications, and auto-backup options in PostgreSQL (replaces browser localStorage).
+- **IP Guard runtime** — whitelist/blacklist from settings applied via middleware on save and startup.
+- **Auto-backup worker** — scheduled export to Telegram/S3 driven by panel settings + `VORTEX_TELEGRAM_TOKEN`.
+- **Audit Log page** — `/audit` restored with live table from `GET /api/audit`.
+- **Portal referral UI** — `/portal/referral` for end-user codes and apply flow.
+- **Portal branding** — portal shell loads title/logo from `GET /api/portal/branding?slug=`.
+- **ACME Let's Encrypt** — DNS-01 via Cloudflare when `VORTEX_ACME_EMAIL` + CF credentials are set.
+- **Federation sync worker** — periodic peer health checks and user/node count sync events.
+
+### Changed
+- Settings tabs (General, Security, Appearance, Notifications, Backup) read/write via API.
+- Portal Plans page fully i18n'd (8 languages).
+- Panel accent color applied from server settings after login.
+
 ## [1.2.9] - 2026-07-04
 
 Command Tower UI rollout: merged admin pages, Settings hub with reseller management,

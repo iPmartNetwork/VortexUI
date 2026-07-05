@@ -1,6 +1,7 @@
 import { Navigate, NavLink, Outlet } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { getPortalToken, clearPortalToken } from "./PortalLogin";
-import { LayoutDashboard, CreditCard, LifeBuoy, LogOut, Zap } from "lucide-react";
+import { LayoutDashboard, CreditCard, LifeBuoy, LogOut, Zap, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/i18n";
 
@@ -11,6 +12,23 @@ function PortalProtected({ children }: { children: React.ReactNode }) {
 
 export function PortalLayout() {
   const { t } = useI18n();
+  const slug = new URLSearchParams(window.location.search).get("slug")
+    || sessionStorage.getItem("portal_slug")
+    || "";
+
+  const { data: branding } = useQuery({
+    queryKey: ["portal-branding", slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const res = await fetch(`/api/portal/branding?slug=${encodeURIComponent(slug)}`);
+      if (!res.ok) return null;
+      return res.json() as Promise<{ branding: { panel_title?: string; logo_url?: string; accent_color?: string } }>;
+    },
+    staleTime: 60_000,
+  });
+
+  const title = branding?.branding?.panel_title || "VortexUI";
+  const logoURL = branding?.branding?.logo_url;
 
   return (
     <PortalProtected>
@@ -20,13 +38,15 @@ export function PortalLayout() {
           style={{ background: "var(--sidebar-bg)" }}
         >
           <div className="flex items-center gap-3 px-4 h-14 flex-shrink-0">
-            <div className="h-8 w-8 rounded-[10px] grad-bg flex items-center justify-center">
-              <Zap size={15} className="text-primary-fg" />
-            </div>
+            {logoURL ? (
+              <img src={logoURL} alt="" className="h-8 w-8 rounded-[10px] object-contain" />
+            ) : (
+              <div className="h-8 w-8 rounded-[10px] grad-bg flex items-center justify-center">
+                <Zap size={15} className="text-primary-fg" />
+              </div>
+            )}
             <div>
-              <p className="text-sm font-semibold leading-none">
-                Vortex<span className="text-primary">UI</span>
-              </p>
+              <p className="text-sm font-semibold leading-none">{title}</p>
               <p className="text-[10px] text-fg-subtle mt-0.5">{t("portal.brand")}</p>
             </div>
           </div>
@@ -39,6 +59,9 @@ export function PortalLayout() {
             </PortalNavLink>
             <PortalNavLink to="/portal/tickets" icon={<LifeBuoy size={18} />}>
               {t("portal.nav.support")}
+            </PortalNavLink>
+            <PortalNavLink to="/portal/referral" icon={<Gift size={18} />}>
+              {t("portal.nav.referral")}
             </PortalNavLink>
           </nav>
           <div className="p-2.5 border-t border-border/40">

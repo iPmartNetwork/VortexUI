@@ -151,6 +151,9 @@ func (s *Store) AdminQuotaNotify() *AdminQuotaNotifyRepo {
 // SubSettings returns the subscription-settings repository.
 func (s *Store) SubSettings() *SubSettingsRepo { return &SubSettingsRepo{pool: s.pool} }
 
+// PanelSettings returns the panel-wide settings repository.
+func (s *Store) PanelSettings() *PanelSettingsRepo { return &PanelSettingsRepo{pool: s.pool} }
+
 // UserGeo returns the per-user geo (country) repository.
 func (s *Store) UserGeo() *UserGeoRepo { return &UserGeoRepo{pool: s.pool} }
 

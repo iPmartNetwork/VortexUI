@@ -15,7 +15,8 @@ import { GlassCard } from "@/components/veltrix";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useTheme } from "@/theme/theme";
-import { applyAccentColor, readBranding, saveAndApplyBranding } from "@/theme/branding";
+import { usePanelSettings, useSavePanelSettings, mergePanelSettings } from "@/api/settings-hooks";
+import { applyAccentColor } from "@/theme/branding";
 import { useI18n } from "@/i18n/i18n";
 import { useAuth } from "@/auth/auth";
 import { mergeResellerSettings, type ResellerSettingKey } from "@/auth/permissions";
@@ -307,6 +308,8 @@ function GeneralTab({
   const { t } = useI18n();
   const toast = useToast();
   const qc = useQueryClient();
+  const { data: panelSettings } = usePanelSettings();
+  const saveSettings = useSavePanelSettings();
   const [panelName, setPanelName] = useState("VortexUI");
   const [panelDomain, setPanelDomain] = useState("panel.example.com");
   const [subUrlTemplate, setSubUrlTemplate] = useState("https://sub.example.com/{token}");
@@ -330,26 +333,15 @@ function GeneralTab({
   }
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("vortex_general");
-      if (raw) {
-        const g = JSON.parse(raw);
-        if (g.panelName) setPanelName(g.panelName);
-        if (g.panelDomain) setPanelDomain(g.panelDomain);
-        if (g.subUrlTemplate) setSubUrlTemplate(g.subUrlTemplate);
-        if (typeof g.autoSync === "boolean") setAutoSync(g.autoSync);
-        if (typeof g.debugMode === "boolean") setDebugMode(g.debugMode);
-      }
-      const branding = localStorage.getItem("vortex_branding");
-      if (branding) {
-        const b = JSON.parse(branding);
-        if (b.panelName) setPanelName(b.panelName);
-      }
-      setClashRules(localStorage.getItem("vortex_clash_rules") || clashRules);
-      setSingboxDNS(localStorage.getItem("vortex_singbox_dns") || singboxDNS);
-    } catch { /* ignore */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!panelSettings) return;
+    setPanelName(panelSettings.panel_name);
+    setPanelDomain(panelSettings.panel_domain);
+    setSubUrlTemplate(panelSettings.sub_url_template);
+    setAutoSync(panelSettings.auto_sync_nodes);
+    setDebugMode(panelSettings.debug_mode);
+    if (panelSettings.clash_rules_extra) setClashRules(panelSettings.clash_rules_extra);
+    if (panelSettings.singbox_dns_extra) setSingboxDNS(panelSettings.singbox_dns_extra);
+  }, [panelSettings]);
 
   const saveSub = useMutation({
     mutationFn: (interval: number) =>
@@ -360,22 +352,20 @@ function GeneralTab({
   });
 
   const saveAll = useCallback(async () => {
-    localStorage.setItem("vortex_general", JSON.stringify({ panelName, panelDomain, subUrlTemplate, autoSync, debugMode }));
-    localStorage.setItem("vortex_branding", JSON.stringify({
-      panelName,
-      accentColor: JSON.parse(localStorage.getItem("vortex_branding") || "{}").accentColor || "#6366f1",
-      footerText: JSON.parse(localStorage.getItem("vortex_branding") || "{}").footerText || "",
-      logoURL: JSON.parse(localStorage.getItem("vortex_branding") || "{}").logoURL || "",
+    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+      panel_name: panelName,
+      panel_domain: panelDomain,
+      sub_url_template: subUrlTemplate,
+      auto_sync_nodes: autoSync,
+      debug_mode: debugMode,
+      clash_rules_extra: clashRules,
+      singbox_dns_extra: singboxDNS,
     }));
-    if (show("config_template")) {
-      localStorage.setItem("vortex_clash_rules", clashRules);
-      localStorage.setItem("vortex_singbox_dns", singboxDNS);
-    }
     if (show("sub_update")) {
       await saveSub.mutateAsync(Number(hours) || 12);
     }
     toast.success(t("common.save"));
-  }, [panelName, panelDomain, subUrlTemplate, autoSync, debugMode, clashRules, singboxDNS, hours, show, saveSub, toast, t]);
+  }, [panelSettings, panelName, panelDomain, subUrlTemplate, autoSync, debugMode, clashRules, singboxDNS, hours, show, saveSub, saveSettings, toast, t]);
 
   useEffect(() => {
     registerSave("general", saveAll);
@@ -480,6 +470,8 @@ function SecurityTab({
 }) {
   const { t } = useI18n();
   const toast = useToast();
+  const { data: panelSettings } = usePanelSettings();
+  const saveSettings = useSavePanelSettings();
   const [require2FA, setRequire2FA] = useState(false);
   const [apiAccess, setApiAccess] = useState(true);
   const [cur, setCur] = useState("");
@@ -488,35 +480,31 @@ function SecurityTab({
   const [blacklist, setBlacklist] = useState("");
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("vortex_security");
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (typeof s.require2FA === "boolean") setRequire2FA(s.require2FA);
-        if (typeof s.apiAccess === "boolean") setApiAccess(s.apiAccess);
-      }
-      setWhitelist(localStorage.getItem("vortex_ip_whitelist") || "");
-      setBlacklist(localStorage.getItem("vortex_ip_blacklist") || "");
-    } catch { /* ignore */ }
-  }, []);
+    if (!panelSettings) return;
+    setRequire2FA(panelSettings.require_2fa);
+    setApiAccess(panelSettings.api_access_enabled);
+    setWhitelist(panelSettings.ip_whitelist);
+    setBlacklist(panelSettings.ip_blacklist);
+  }, [panelSettings]);
 
   const changePw = useMutation({
     mutationFn: (b: { current: string; new: string }) => api("/api/account/password", { method: "POST", body: b }),
   });
 
   const saveAll = useCallback(async () => {
-    localStorage.setItem("vortex_security", JSON.stringify({ require2FA, apiAccess }));
-    if (show("ip_guard")) {
-      localStorage.setItem("vortex_ip_whitelist", whitelist);
-      localStorage.setItem("vortex_ip_blacklist", blacklist);
-    }
+    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+      require_2fa: require2FA,
+      api_access_enabled: apiAccess,
+      ip_whitelist: whitelist,
+      ip_blacklist: blacklist,
+    }));
     if (show("password") && cur && nw) {
       await changePw.mutateAsync({ current: cur, new: nw });
       setCur("");
       setNw("");
     }
     toast.success(t("common.save"));
-  }, [require2FA, apiAccess, whitelist, blacklist, cur, nw, show, changePw, toast, t]);
+  }, [panelSettings, require2FA, apiAccess, whitelist, blacklist, cur, nw, show, changePw, saveSettings, toast, t]);
 
   useEffect(() => {
     registerSave("security", saveAll);
@@ -556,7 +544,7 @@ function SecurityTab({
               <p className="mb-1 text-xs font-medium text-fg-muted">Blacklist (block these IPs)</p>
               <Input placeholder="e.g. 10.0.0.0/8" value={blacklist} onChange={(e) => setBlacklist(e.target.value)} />
             </div>
-            <p className="text-[10px] text-fg-subtle">Set via env: VORTEX_IP_WHITELIST / VORTEX_IP_BLACKLIST</p>
+            <p className="text-[10px] text-fg-subtle">{t("settings.ipGuardHint")}</p>
           </div>
         </PanelBlock>
       )}
@@ -621,34 +609,27 @@ function NotificationsTab({
 }) {
   const { t } = useI18n();
   const toast = useToast();
+  const { data: panelSettings } = usePanelSettings();
+  const saveSettings = useSavePanelSettings();
   const [push, setPush] = useState(true);
   const [email, setEmail] = useState(false);
   const [tgToken, setTgToken] = useState("");
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("vortex_notifications");
-      if (raw) {
-        const n = JSON.parse(raw);
-        if (typeof n.push === "boolean") setPush(n.push);
-        if (typeof n.email === "boolean") setEmail(n.email);
-        if (n.tgToken) setTgToken(n.tgToken);
-      }
-      const ab = localStorage.getItem("vortex_autobackup");
-      if (ab) {
-        const a = JSON.parse(ab);
-        if (a.tgToken && !tgToken) setTgToken(a.tgToken);
-      }
-    } catch { /* ignore */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!panelSettings) return;
+    setPush(panelSettings.push_notifications);
+    setEmail(panelSettings.email_alerts);
+    setTgToken(panelSettings.notify_telegram_token);
+  }, [panelSettings]);
 
-  const saveAll = useCallback(() => {
-    localStorage.setItem("vortex_notifications", JSON.stringify({ push, email, tgToken }));
-    const ab = JSON.parse(localStorage.getItem("vortex_autobackup") || "{}");
-    localStorage.setItem("vortex_autobackup", JSON.stringify({ ...ab, tgToken }));
+  const saveAll = useCallback(async () => {
+    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+      push_notifications: push,
+      email_alerts: email,
+      notify_telegram_token: tgToken,
+    }));
     toast.success(t("common.save"));
-  }, [push, email, tgToken, toast, t]);
+  }, [panelSettings, push, email, tgToken, saveSettings, toast, t]);
 
   useEffect(() => {
     registerSave("notifications", saveAll);
@@ -675,6 +656,8 @@ function AppearanceTab({
   const { t, lang, setLang } = useI18n();
   const { theme, setTheme, resolved } = useTheme();
   const toast = useToast();
+  const { data: panelSettings } = usePanelSettings();
+  const saveSettings = useSavePanelSettings();
   const [accentColor, setAccentColor] = useState("#6366f1");
   const [logoURL, setLogoURL] = useState("");
   const [footerText, setFooterText] = useState("© 2026 iPmart Network. All rights reserved.");
@@ -682,11 +665,11 @@ function AppearanceTab({
   const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   useEffect(() => {
-    const b = readBranding();
-    if (b.accentColor) setAccentColor(b.accentColor);
-    if (b.logoURL) setLogoURL(b.logoURL);
-    if (b.footerText) setFooterText(b.footerText);
-  }, []);
+    if (!panelSettings) return;
+    if (panelSettings.accent_color) setAccentColor(panelSettings.accent_color);
+    setLogoURL(panelSettings.logo_url);
+    setFooterText(panelSettings.footer_text);
+  }, [panelSettings]);
 
   const selectAccent = useCallback(
     (color: string) => {
@@ -696,10 +679,15 @@ function AppearanceTab({
     [resolved],
   );
 
-  const saveAll = useCallback(() => {
-    saveAndApplyBranding({ accentColor, logoURL, footerText }, resolved);
+  const saveAll = useCallback(async () => {
+    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+      accent_color: accentColor,
+      logo_url: logoURL,
+      footer_text: footerText,
+    }));
+    applyAccentColor(accentColor, resolved);
     toast.success(t("common.save"));
-  }, [accentColor, logoURL, footerText, resolved, toast, t]);
+  }, [accentColor, logoURL, footerText, panelSettings, resolved, saveSettings, toast, t]);
 
   useEffect(() => {
     registerSave("appearance", saveAll);
@@ -856,6 +844,8 @@ function BackupTab({
   const { t } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
+  const { data: panelSettings } = usePanelSettings();
+  const saveSettings = useSavePanelSettings();
   const exportBackup = useExportBackup();
   const exportUsers = useExportUserBackup();
   const restoreBackup = useRestoreBackup();
@@ -870,23 +860,24 @@ function BackupTab({
   const canRestore = sudo && show("backup");
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("vortex_autobackup");
-      if (raw) {
-        const a = JSON.parse(raw);
-        if (a.s3Endpoint) setS3Endpoint(a.s3Endpoint);
-        if (a.s3Bucket) setS3Bucket(a.s3Bucket);
-        if (a.interval) setInterval(a.interval);
-        if (a.tgChat) setTgChat(a.tgChat);
-      }
-    } catch { /* ignore */ }
-  }, []);
+    if (!panelSettings) return;
+    setAutoBackup(panelSettings.auto_backup_enabled);
+    setS3Endpoint(panelSettings.auto_backup_s3_endpoint);
+    setS3Bucket(panelSettings.auto_backup_s3_bucket);
+    setInterval(String(panelSettings.auto_backup_interval_hours || 24));
+    setTgChat(panelSettings.auto_backup_telegram_chat_id);
+  }, [panelSettings]);
 
-  const saveAuto = useCallback(() => {
-    const existing = JSON.parse(localStorage.getItem("vortex_autobackup") || "{}");
-    localStorage.setItem("vortex_autobackup", JSON.stringify({ ...existing, s3Endpoint, s3Bucket, interval, tgChat }));
+  const saveAuto = useCallback(async () => {
+    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+      auto_backup_enabled: autoBackup,
+      auto_backup_s3_endpoint: s3Endpoint,
+      auto_backup_s3_bucket: s3Bucket,
+      auto_backup_interval_hours: Number(interval) || 24,
+      auto_backup_telegram_chat_id: tgChat,
+    }));
     toast.success(t("common.save"));
-  }, [s3Endpoint, s3Bucket, interval, tgChat, toast, t]);
+  }, [autoBackup, s3Endpoint, s3Bucket, interval, tgChat, panelSettings, saveSettings, toast, t]);
 
   useEffect(() => {
     registerSave("backup", saveAuto);
