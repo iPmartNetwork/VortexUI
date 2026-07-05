@@ -9,6 +9,7 @@ import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
 import { formatBytes } from "@/lib/utils";
 import { useTitle } from "@/lib/useTitle";
+import { useI18n } from "@/i18n/i18n";
 
 interface FamilyMember {
   id: string;
@@ -33,7 +34,8 @@ interface FamilyGroup {
 }
 
 export function FamilyGroups() {
-  useTitle("Family Groups");
+  const { t } = useI18n();
+  useTitle(t("nav.familyGroups"));
   const qc = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
@@ -51,10 +53,14 @@ export function FamilyGroups() {
   });
 
   async function remove(g: FamilyGroup) {
-    const ok = await confirm({ title: `Delete group "${g.name}"?`, confirmLabel: "Delete", destructive: true });
+    const ok = await confirm({
+      title: `${t("family.deleteConfirmPrefix")} "${g.name}"?`,
+      confirmLabel: t("common.delete"),
+      destructive: true,
+    });
     if (!ok) return;
     await delMut.mutateAsync(g.id);
-    toast.success("Deleted");
+    toast.success(t("common.deleted"));
   }
 
   const groups = data?.groups ?? [];
@@ -63,11 +69,11 @@ export function FamilyGroups() {
     <div className="space-y-5 animate-page-enter">
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-fg tracking-tight">Family Groups</h1>
-          <p className="text-sm text-fg-muted mt-1">Shared subscription pools for multiple devices/users</p>
+          <h1 className="text-2xl font-bold text-fg tracking-tight">{t("nav.familyGroups")}</h1>
+          <p className="text-sm text-fg-muted mt-1">{t("family.subtitle")}</p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="flex-shrink-0">
-          <Plus size={14} /> New Group
+          <Plus size={14} /> {t("family.newGroup")}
         </Button>
       </div>
 
@@ -84,14 +90,14 @@ export function FamilyGroups() {
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm font-bold text-fg truncate">{g.name}</h3>
-                  <p className="text-[11px] text-fg-subtle truncate">Owner: {g.owner_name}</p>
+                  <p className="text-[11px] text-fg-subtle truncate">{t("family.owner")} {g.owner_name}</p>
                 </div>
               </div>
               <Badge color="active">{g.members?.length ?? 0}/{g.max_members}</Badge>
             </div>
             <div className="grid grid-cols-2 gap-2 rounded-lg bg-surface-2/50 border border-border/40 px-3 py-2 text-xs">
-              <div><span className="text-fg-subtle">Pool:</span> <strong className="text-fg">{formatBytes(g.data_limit, false)}</strong></div>
-              <div><span className="text-fg-subtle">Used:</span> <strong className="text-fg">{formatBytes(g.used_traffic, false)}</strong></div>
+              <div><span className="text-fg-subtle">{t("family.pool")}</span> <strong className="text-fg">{formatBytes(g.data_limit, false)}</strong></div>
+              <div><span className="text-fg-subtle">{t("family.used")}</span> <strong className="text-fg">{formatBytes(g.used_traffic, false)}</strong></div>
             </div>
             <div className="flex justify-end pt-1 border-t border-border/40">
               <Button
@@ -103,13 +109,13 @@ export function FamilyGroups() {
                   remove(g);
                 }}
               >
-                <Trash2 size={13} /> Delete
+                <Trash2 size={13} /> {t("common.delete")}
               </Button>
             </div>
           </GlassCard>
         ))}
         {groups.length === 0 && (
-          <p className="col-span-full text-center text-sm text-fg-muted py-8">No family groups yet.</p>
+          <p className="col-span-full text-center text-sm text-fg-muted py-8">{t("family.empty")}</p>
         )}
       </div>
     </div>
@@ -117,6 +123,7 @@ export function FamilyGroups() {
 }
 
 function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
   const [f, setF] = useState({ name: "", owner_id: "", data_limit: "100", max_members: "5", member_quota: "0" });
@@ -133,13 +140,13 @@ function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => voi
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["family-groups"] });
       onClose();
-      toast.success("Group created");
+      toast.success(t("family.groupCreated"));
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "failed"),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : t("common.failed")),
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="New Family Group">
+    <Modal open={open} onClose={onClose} title={t("family.newGroupTitle")}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -153,9 +160,9 @@ function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => voi
         }}
         className="space-y-3"
       >
-        <Input placeholder="Group name" value={f.name} onChange={(e) => setF((s) => ({ ...s, name: e.target.value }))} required />
+        <Input placeholder={t("family.groupName")} value={f.name} onChange={(e) => setF((s) => ({ ...s, name: e.target.value }))} required />
         <div>
-          <Input placeholder="Search user..." value={ownerSearch} onChange={(e) => setOwnerSearch(e.target.value)} />
+          <Input placeholder={t("family.searchUser")} value={ownerSearch} onChange={(e) => setOwnerSearch(e.target.value)} />
           {usersData?.users && usersData.users.length > 0 && !f.owner_id && (
             <div className="mt-1 max-h-32 overflow-y-auto rounded-lg border border-border/40 bg-surface-2/40">
               {usersData.users.map((u) => (
@@ -173,16 +180,16 @@ function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => voi
               ))}
             </div>
           )}
-          {f.owner_id && <p className="mt-1 text-[10px] text-fg-subtle">Selected: {ownerSearch}</p>}
+          {f.owner_id && <p className="mt-1 text-[10px] text-fg-subtle">{t("family.selected")} {ownerSearch}</p>}
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Input placeholder="Pool (GB)" value={f.data_limit} onChange={(e) => setF((s) => ({ ...s, data_limit: e.target.value }))} inputMode="numeric" />
-          <Input placeholder="Max members" value={f.max_members} onChange={(e) => setF((s) => ({ ...s, max_members: e.target.value }))} inputMode="numeric" />
-          <Input placeholder="Per-member cap (GB)" value={f.member_quota} onChange={(e) => setF((s) => ({ ...s, member_quota: e.target.value }))} inputMode="numeric" />
+          <Input placeholder={t("family.poolGb")} value={f.data_limit} onChange={(e) => setF((s) => ({ ...s, data_limit: e.target.value }))} inputMode="numeric" />
+          <Input placeholder={t("family.maxMembers")} value={f.max_members} onChange={(e) => setF((s) => ({ ...s, max_members: e.target.value }))} inputMode="numeric" />
+          <Input placeholder={t("family.memberCapGb")} value={f.member_quota} onChange={(e) => setF((s) => ({ ...s, member_quota: e.target.value }))} inputMode="numeric" />
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={create.isPending}>Create</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button type="submit" disabled={create.isPending}>{t("common.create")}</Button>
         </div>
       </form>
     </Modal>
@@ -190,6 +197,7 @@ function CreateGroupModal({ open, onClose }: { open: boolean; onClose: () => voi
 }
 
 function GroupDetailModal({ groupId, onClose }: { groupId: string; onClose: () => void }) {
+  const { t } = useI18n();
   const qc = useQueryClient();
   const toast = useToast();
   const [newUser, setNewUser] = useState({ user_id: "", label: "" });
@@ -204,25 +212,27 @@ function GroupDetailModal({ groupId, onClose }: { groupId: string; onClose: () =
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["family-group", groupId] });
       setNewUser({ user_id: "", label: "" });
-      toast.success("Member added");
+      toast.success(t("family.memberAdded"));
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "failed"),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : t("common.failed")),
   });
 
   const removeMut = useMutation({
     mutationFn: (uid: string) => api<void>(`/api/families/${groupId}/members/${uid}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["family-group", groupId] });
-      toast.success("Removed");
+      toast.success(t("family.removed"));
     },
   });
 
   const group = data?.group;
 
   return (
-    <Modal open onClose={onClose} title={group?.name || "Group"} className="max-w-lg">
+    <Modal open onClose={onClose} title={group?.name || t("family.groupDefault")} className="max-w-lg">
       <div className="space-y-4">
-        <div className="text-xs text-fg-muted">Owner: {group?.owner_name} | Members: {group?.members?.length ?? 0}/{group?.max_members}</div>
+        <div className="text-xs text-fg-muted">
+          {t("family.owner")} {group?.owner_name} | {t("family.membersLabel")} {group?.members?.length ?? 0}/{group?.max_members}
+        </div>
         <div className="space-y-2 max-h-[200px] overflow-y-auto">
           {group?.members?.map((m) => (
             <div key={m.id} className="flex items-center justify-between rounded-lg bg-surface-2/40 px-3 py-2">
@@ -244,9 +254,9 @@ function GroupDetailModal({ groupId, onClose }: { groupId: string; onClose: () =
           }}
           className="flex gap-2"
         >
-          <Input placeholder="User ID" value={newUser.user_id} onChange={(e) => setNewUser((s) => ({ ...s, user_id: e.target.value }))} className="flex-1" />
-          <Input placeholder="Label" value={newUser.label} onChange={(e) => setNewUser((s) => ({ ...s, label: e.target.value }))} className="w-28" />
-          <Button type="submit" size="sm" disabled={addMut.isPending || !newUser.user_id}>Add</Button>
+          <Input placeholder={t("family.userId")} value={newUser.user_id} onChange={(e) => setNewUser((s) => ({ ...s, user_id: e.target.value }))} className="flex-1" />
+          <Input placeholder={t("family.label")} value={newUser.label} onChange={(e) => setNewUser((s) => ({ ...s, label: e.target.value }))} className="w-28" />
+          <Button type="submit" size="sm" disabled={addMut.isPending || !newUser.user_id}>{t("common.add")}</Button>
         </form>
       </div>
     </Modal>

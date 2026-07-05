@@ -1,0 +1,1082 @@
+{
+  "common.saved": {
+    "en": "Saved",
+    "fa": "ذخیره شد",
+    "tr": "Kaydedildi",
+    "ar": "تم الحفظ",
+    "ru": "Сохранено",
+    "zh": "已保存",
+    "ja": "保存しました",
+    "es": "Guardado"
+  },
+  "common.deleted": {
+    "en": "Deleted",
+    "fa": "حذف شد",
+    "tr": "Silindi",
+    "ar": "تم الحذف",
+    "ru": "Удалено",
+    "zh": "已删除",
+    "ja": "削除しました",
+    "es": "Eliminado"
+  },
+  "common.failed": {
+    "en": "Failed",
+    "fa": "ناموفق",
+    "tr": "Başarısız",
+    "ar": "فشل",
+    "ru": "Ошибка",
+    "zh": "失败",
+    "ja": "失敗",
+    "es": "Error"
+  },
+  "family.subtitle": {
+    "en": "Shared subscription pools for multiple devices/users",
+    "fa": "استخر اشتراک مشترک برای چند دستگاه/کاربر",
+    "tr": "Birden fazla cihaz/kullanıcı için paylaşımlı abonelik havuzları",
+    "ar": "مجموعات اشتراك مشتركة لعدة أجهزة/مستخدمين",
+    "ru": "Общие пулы подписок для нескольких устройств/пользователей",
+    "zh": "多设备/用户共享订阅池",
+    "ja": "複数デバイス/ユーザー向け共有サブスクリプションプール",
+    "es": "Pools de suscripción compartidos para varios dispositivos/usuarios"
+  },
+  "family.newGroup": {
+    "en": "New Group",
+    "fa": "گروه جدید",
+    "tr": "Yeni Grup",
+    "ar": "مجموعة جديدة",
+    "ru": "Новая группа",
+    "zh": "新建组",
+    "ja": "新規グループ",
+    "es": "Nuevo grupo"
+  },
+  "family.owner": {
+    "en": "Owner:",
+    "fa": "مالک:",
+    "tr": "Sahip:",
+    "ar": "المالك:",
+    "ru": "Владелец:",
+    "zh": "所有者：",
+    "ja": "所有者:",
+    "es": "Propietario:"
+  },
+  "family.pool": {
+    "en": "Pool:",
+    "fa": "استخر:",
+    "tr": "Havuz:",
+    "ar": "المجموعة:",
+    "ru": "Пул:",
+    "zh": "池：",
+    "ja": "プール:",
+    "es": "Pool:"
+  },
+  "family.used": {
+    "en": "Used:",
+    "fa": "مصرف:",
+    "tr": "Kullanılan:",
+    "ar": "المستخدم:",
+    "ru": "Использовано:",
+    "zh": "已用：",
+    "ja": "使用:",
+    "es": "Usado:"
+  },
+  "family.empty": {
+    "en": "No family groups yet.",
+    "fa": "هنوز گروه خانوادگی وجود ندارد.",
+    "tr": "Henüz aile grubu yok.",
+    "ar": "لا توجد مجموعات عائلية بعد.",
+    "ru": "Семейных групп пока нет.",
+    "zh": "暂无家庭组。",
+    "ja": "ファミリーグループはまだありません。",
+    "es": "Aún no hay grupos familiares."
+  },
+  "family.newGroupTitle": {
+    "en": "New Family Group",
+    "fa": "گروه خانوادگی جدید",
+    "tr": "Yeni Aile Grubu",
+    "ar": "مجموعة عائلية جديدة",
+    "ru": "Новая семейная группа",
+    "zh": "新建家庭组",
+    "ja": "新規ファミリーグループ",
+    "es": "Nuevo grupo familiar"
+  },
+  "family.groupName": {
+    "en": "Group name",
+    "fa": "نام گروه",
+    "tr": "Grup adı",
+    "ar": "اسم المجموعة",
+    "ru": "Название группы",
+    "zh": "组名",
+    "ja": "グループ名",
+    "es": "Nombre del grupo"
+  },
+  "family.searchUser": {
+    "en": "Search user...",
+    "fa": "جستجوی کاربر...",
+    "tr": "Kullanıcı ara...",
+    "ar": "بحث عن مستخدم...",
+    "ru": "Поиск пользователя...",
+    "zh": "搜索用户...",
+    "ja": "ユーザーを検索...",
+    "es": "Buscar usuario..."
+  },
+  "family.selected": {
+    "en": "Selected:",
+    "fa": "انتخاب‌شده:",
+    "tr": "Seçilen:",
+    "ar": "المحدد:",
+    "ru": "Выбрано:",
+    "zh": "已选：",
+    "ja": "選択:",
+    "es": "Seleccionado:"
+  },
+  "family.poolGb": {
+    "en": "Pool (GB)",
+    "fa": "استخر (GB)",
+    "tr": "Havuz (GB)",
+    "ar": "المجموعة (GB)",
+    "ru": "Пул (ГБ)",
+    "zh": "池 (GB)",
+    "ja": "プール (GB)",
+    "es": "Pool (GB)"
+  },
+  "family.maxMembers": {
+    "en": "Max members",
+    "fa": "حداکثر اعضا",
+    "tr": "Maks. üye",
+    "ar": "الحد الأقصى للأعضاء",
+    "ru": "Макс. участников",
+    "zh": "最大成员数",
+    "ja": "最大メンバー数",
+    "es": "Máx. miembros"
+  },
+  "family.memberCapGb": {
+    "en": "Per-member cap (GB)",
+    "fa": "سقف هر عضو (GB)",
+    "tr": "Üye başına limit (GB)",
+    "ar": "حد لكل عضو (GB)",
+    "ru": "Лимит на участника (ГБ)",
+    "zh": "每成员上限 (GB)",
+    "ja": "メンバー上限 (GB)",
+    "es": "Límite por miembro (GB)"
+  },
+  "family.groupCreated": {
+    "en": "Group created",
+    "fa": "گروه ایجاد شد",
+    "tr": "Grup oluşturuldu",
+    "ar": "تم إنشاء المجموعة",
+    "ru": "Группа создана",
+    "zh": "组已创建",
+    "ja": "グループを作成しました",
+    "es": "Grupo creado"
+  },
+  "family.memberAdded": {
+    "en": "Member added",
+    "fa": "عضو اضافه شد",
+    "tr": "Üye eklendi",
+    "ar": "تمت إضافة العضو",
+    "ru": "Участник добавлен",
+    "zh": "成员已添加",
+    "ja": "メンバーを追加しました",
+    "es": "Miembro añadido"
+  },
+  "family.removed": {
+    "en": "Removed",
+    "fa": "حذف شد",
+    "tr": "Kaldırıldı",
+    "ar": "تمت الإزالة",
+    "ru": "Удалено",
+    "zh": "已移除",
+    "ja": "削除しました",
+    "es": "Eliminado"
+  },
+  "family.groupDefault": {
+    "en": "Group",
+    "fa": "گروه",
+    "tr": "Grup",
+    "ar": "مجموعة",
+    "ru": "Группа",
+    "zh": "组",
+    "ja": "グループ",
+    "es": "Grupo"
+  },
+  "family.membersLabel": {
+    "en": "Members:",
+    "fa": "اعضا:",
+    "tr": "Üyeler:",
+    "ar": "الأعضاء:",
+    "ru": "Участники:",
+    "zh": "成员：",
+    "ja": "メンバー:",
+    "es": "Miembros:"
+  },
+  "family.userId": {
+    "en": "User ID",
+    "fa": "شناسه کاربر",
+    "tr": "Kullanıcı ID",
+    "ar": "معرف المستخدم",
+    "ru": "ID пользователя",
+    "zh": "用户 ID",
+    "ja": "ユーザー ID",
+    "es": "ID de usuario"
+  },
+  "family.label": {
+    "en": "Label",
+    "fa": "برچسب",
+    "tr": "Etiket",
+    "ar": "تسمية",
+    "ru": "Метка",
+    "zh": "标签",
+    "ja": "ラベル",
+    "es": "Etiqueta"
+  },
+  "family.deleteConfirmPrefix": {
+    "en": "Delete group",
+    "fa": "حذف گروه",
+    "tr": "Grubu sil",
+    "ar": "حذف المجموعة",
+    "ru": "Удалить группу",
+    "zh": "删除组",
+    "ja": "グループを削除",
+    "es": "Eliminar grupo"
+  },
+  "smartQuota.subtitle": {
+    "en": "Fair-use policies with progressive speed reduction",
+    "fa": "سیاست‌های مصرف منصفانه با کاهش تدریجی سرعت",
+    "tr": "Kademeli hız düşürme ile adil kullanım politikaları",
+    "ar": "سياسات الاستخدام العادل مع تقليل تدريجي للسرعة",
+    "ru": "Политики fair-use с постепенным снижением скорости",
+    "zh": "公平使用策略，逐步降速",
+    "ja": "段階的な速度制限付きフェアユースポリシー",
+    "es": "Políticas de uso justo con reducción progresiva de velocidad"
+  },
+  "smartQuota.newPolicy": {
+    "en": "New Policy",
+    "fa": "سیاست جدید",
+    "tr": "Yeni Politika",
+    "ar": "سياسة جديدة",
+    "ru": "Новая политика",
+    "zh": "新建策略",
+    "ja": "新規ポリシー",
+    "es": "Nueva política"
+  },
+  "smartQuota.block": {
+    "en": "Block",
+    "fa": "مسدود",
+    "tr": "Engelle",
+    "ar": "حظر",
+    "ru": "Блок",
+    "zh": "阻断",
+    "ja": "ブロック",
+    "es": "Bloquear"
+  },
+  "smartQuota.fullSpeed": {
+    "en": "Full speed",
+    "fa": "سرعت کامل",
+    "tr": "Tam hız",
+    "ar": "السرعة الكاملة",
+    "ru": "Полная скорость",
+    "zh": "全速",
+    "ja": "フル速度",
+    "es": "Velocidad completa"
+  },
+  "smartQuota.empty": {
+    "en": "No policies defined. Users will be hard-cut at 100% usage.",
+    "fa": "سیاستی تعریف نشده. کاربران در ۱۰۰٪ مصرف قطع می‌شوند.",
+    "tr": "Politika tanımlı değil. Kullanıcılar %100 kullanımda kesilir.",
+    "ar": "لا توجد سياسات. سيتم قطع المستخدمين عند 100%.",
+    "ru": "Политики не заданы. При 100% пользователи будут отключены.",
+    "zh": "未定义策略。100% 用量时硬切断。",
+    "ja": "ポリシー未定義。100%使用時にハードカットされます。",
+    "es": "Sin políticas. Los usuarios se cortarán al 100% de uso."
+  },
+  "smartQuota.newPolicyTitle": {
+    "en": "New Quota Policy",
+    "fa": "سیاست سهمیه جدید",
+    "tr": "Yeni Kota Politikası",
+    "ar": "سياسة حصة جديدة",
+    "ru": "Новая политика квоты",
+    "zh": "新建配额策略",
+    "ja": "新規クォータポリシー",
+    "es": "Nueva política de cuota"
+  },
+  "smartQuota.policyName": {
+    "en": "Policy name",
+    "fa": "نام سیاست",
+    "tr": "Politika adı",
+    "ar": "اسم السياسة",
+    "ru": "Название политики",
+    "zh": "策略名称",
+    "ja": "ポリシー名",
+    "es": "Nombre de política"
+  },
+  "smartQuota.tiers": {
+    "en": "Tiers",
+    "fa": "سطوح",
+    "tr": "Kademeler",
+    "ar": "المستويات",
+    "ru": "Уровни",
+    "zh": "层级",
+    "ja": "ティア",
+    "es": "Niveles"
+  },
+  "smartQuota.addTier": {
+    "en": "+ Add tier",
+    "fa": "+ افزودن سطح",
+    "tr": "+ Kademe ekle",
+    "ar": "+ إضافة مستوى",
+    "ru": "+ Добавить уровень",
+    "zh": "+ 添加层级",
+    "ja": "+ ティア追加",
+    "es": "+ Añadir nivel"
+  },
+  "smartQuota.speedBps": {
+    "en": "Speed (B/s)",
+    "fa": "سرعت (B/s)",
+    "tr": "Hız (B/s)",
+    "ar": "السرعة (B/s)",
+    "ru": "Скорость (B/s)",
+    "zh": "速度 (B/s)",
+    "ja": "速度 (B/s)",
+    "es": "Velocidad (B/s)"
+  },
+  "smartQuota.reduce": {
+    "en": "Reduce",
+    "fa": "کاهش",
+    "tr": "Azalt",
+    "ar": "تقليل",
+    "ru": "Снизить",
+    "zh": "降速",
+    "ja": "削減",
+    "es": "Reducir"
+  },
+  "smartQuota.policyCreated": {
+    "en": "Policy created",
+    "fa": "سیاست ایجاد شد",
+    "tr": "Politika oluşturuldu",
+    "ar": "تم إنشاء السياسة",
+    "ru": "Политика создана",
+    "zh": "策略已创建",
+    "ja": "ポリシーを作成しました",
+    "es": "Política creada"
+  },
+  "smartQuota.deleteConfirmPrefix": {
+    "en": "Delete",
+    "fa": "حذف",
+    "tr": "Sil",
+    "ar": "حذف",
+    "ru": "Удалить",
+    "zh": "删除",
+    "ja": "削除",
+    "es": "Eliminar"
+  },
+  "deepLink.title": {
+    "en": "Deep Links & QR",
+    "fa": "دیپ‌لینک و QR",
+    "tr": "Derin Bağlantılar ve QR",
+    "ar": "روابط عميقة و QR",
+    "ru": "Глубокие ссылки и QR",
+    "zh": "深度链接与 QR",
+    "ja": "ディープリンクと QR",
+    "es": "Enlaces profundos y QR"
+  },
+  "deepLink.subtitle": {
+    "en": "One-tap subscription import via custom URL scheme",
+    "fa": "وارد کردن اشتراک با یک لمس از طریق URL scheme سفارشی",
+    "tr": "Özel URL şeması ile tek dokunuşla abonelik içe aktarma",
+    "ar": "استيراد الاشتراك بلمسة واحدة عبر مخطط URL مخصص",
+    "ru": "Импорт подписки одним нажатием через custom URL scheme",
+    "zh": "通过自定义 URL scheme 一键导入订阅",
+    "ja": "カスタム URL スキームでワンタップ購読インポート",
+    "es": "Importación de suscripción con un toque vía esquema URL personalizado"
+  },
+  "deepLink.config": {
+    "en": "Configuration",
+    "fa": "پیکربندی",
+    "tr": "Yapılandırma",
+    "ar": "الإعداد",
+    "ru": "Конфигурация",
+    "zh": "配置",
+    "ja": "設定",
+    "es": "Configuración"
+  },
+  "deepLink.urlScheme": {
+    "en": "URL Scheme",
+    "fa": "URL Scheme",
+    "tr": "URL Şeması",
+    "ar": "مخطط URL",
+    "ru": "URL Scheme",
+    "zh": "URL Scheme",
+    "ja": "URL スキーム",
+    "es": "Esquema URL"
+  },
+  "deepLink.baseUrl": {
+    "en": "Base URL",
+    "fa": "آدرس پایه",
+    "tr": "Temel URL",
+    "ar": "الرابط الأساسي",
+    "ru": "Базовый URL",
+    "zh": "基础 URL",
+    "ja": "ベース URL",
+    "es": "URL base"
+  },
+  "deepLink.appStore": {
+    "en": "App Store URL",
+    "fa": "لینک App Store",
+    "tr": "App Store URL",
+    "ar": "رابط App Store",
+    "ru": "URL App Store",
+    "zh": "App Store URL",
+    "ja": "App Store URL",
+    "es": "URL App Store"
+  },
+  "deepLink.playStore": {
+    "en": "Play Store URL",
+    "fa": "لینک Play Store",
+    "tr": "Play Store URL",
+    "ar": "رابط Play Store",
+    "ru": "URL Play Store",
+    "zh": "Play Store URL",
+    "ja": "Play Store URL",
+    "es": "URL Play Store"
+  },
+  "deepLink.testTitle": {
+    "en": "Test Deep Link",
+    "fa": "تست دیپ‌لینک",
+    "tr": "Derin Bağlantıyı Test Et",
+    "ar": "اختبار الرابط العميق",
+    "ru": "Тест глубокой ссылки",
+    "zh": "测试深度链接",
+    "ja": "ディープリンクをテスト",
+    "es": "Probar enlace profundo"
+  },
+  "deepLink.subToken": {
+    "en": "Sub token...",
+    "fa": "توکن اشتراک...",
+    "tr": "Abonelik token...",
+    "ar": "رمز الاشتراك...",
+    "ru": "Токен подписки...",
+    "zh": "订阅 token...",
+    "ja": "サブトークン...",
+    "es": "Token de suscripción..."
+  },
+  "deepLink.generate": {
+    "en": "Generate",
+    "fa": "تولید",
+    "tr": "Oluştur",
+    "ar": "إنشاء",
+    "ru": "Сгенерировать",
+    "zh": "生成",
+    "ja": "生成",
+    "es": "Generar"
+  },
+  "quotaNotify.subtitle": {
+    "en": "Notify users at each smart quota tier via Telegram or webhook",
+    "fa": "اطلاع‌رسانی به کاربران در هر سطح سهمیه هوشمند از طریق تلگرام یا webhook",
+    "tr": "Her akıllı kota kademesinde Telegram veya webhook ile bildir",
+    "ar": "إشعار المستخدمين عند كل مستوى حصة ذكية عبر Telegram أو webhook",
+    "ru": "Уведомления на каждом уровне умной квоты через Telegram или webhook",
+    "zh": "在每个智能配额层级通过 Telegram 或 webhook 通知用户",
+    "ja": "各スマートクォータティアで Telegram/webhook 通知",
+    "es": "Notificar en cada nivel de cuota inteligente vía Telegram o webhook"
+  },
+  "quotaNotify.settings": {
+    "en": "Settings",
+    "fa": "تنظیمات",
+    "tr": "Ayarlar",
+    "ar": "الإعدادات",
+    "ru": "Настройки",
+    "zh": "设置",
+    "ja": "設定",
+    "es": "Ajustes"
+  },
+  "quotaNotify.notifyAt": {
+    "en": "Notify at (%)",
+    "fa": "اطلاع در (%)",
+    "tr": "Bildir (%)",
+    "ar": "إشعار عند (%)",
+    "ru": "Уведомлять при (%)",
+    "zh": "通知阈值 (%)",
+    "ja": "通知 (%)",
+    "es": "Notificar en (%)"
+  },
+  "quotaNotify.cooldown": {
+    "en": "Cooldown (min)",
+    "fa": "فاصله (دقیقه)",
+    "tr": "Bekleme (dk)",
+    "ar": "فترة الانتظار (د)",
+    "ru": "Интервал (мин)",
+    "zh": "冷却 (分钟)",
+    "ja": "クールダウン (分)",
+    "es": "Enfriamiento (min)"
+  },
+  "quotaNotify.telegram": {
+    "en": "Telegram",
+    "fa": "تلگرام",
+    "tr": "Telegram",
+    "ar": "Telegram",
+    "ru": "Telegram",
+    "zh": "Telegram",
+    "ja": "Telegram",
+    "es": "Telegram"
+  },
+  "quotaNotify.webhook": {
+    "en": "Webhook",
+    "fa": "Webhook",
+    "tr": "Webhook",
+    "ar": "Webhook",
+    "ru": "Webhook",
+    "zh": "Webhook",
+    "ja": "Webhook",
+    "es": "Webhook"
+  },
+  "quotaNotify.webhookUrl": {
+    "en": "Webhook URL",
+    "fa": "آدرس Webhook",
+    "tr": "Webhook URL",
+    "ar": "رابط Webhook",
+    "ru": "URL Webhook",
+    "zh": "Webhook URL",
+    "ja": "Webhook URL",
+    "es": "URL Webhook"
+  },
+  "quotaNotify.recent": {
+    "en": "Recent Notifications",
+    "fa": "اطلاع‌رسانی‌های اخیر",
+    "tr": "Son Bildirimler",
+    "ar": "الإشعارات الأخيرة",
+    "ru": "Последние уведомления",
+    "zh": "最近通知",
+    "ja": "最近の通知",
+    "es": "Notificaciones recientes"
+  },
+  "quotaNotify.atPrefix": {
+    "en": "at",
+    "fa": "در",
+    "tr": "saat",
+    "ar": "عند",
+    "ru": "при",
+    "zh": "于",
+    "ja": "で",
+    "es": "a las"
+  },
+  "quotaNotify.viaPrefix": {
+    "en": "via",
+    "fa": "از طریق",
+    "tr": "üzerinden",
+    "ar": "عبر",
+    "ru": "через",
+    "zh": "通过",
+    "ja": "経由",
+    "es": "vía"
+  },
+  "quotaNotify.sent": {
+    "en": "Sent",
+    "fa": "ارسال شد",
+    "tr": "Gönderildi",
+    "ar": "تم الإرسال",
+    "ru": "Отправлено",
+    "zh": "已发送",
+    "ja": "送信済",
+    "es": "Enviado"
+  },
+  "quotaNotify.failed": {
+    "en": "Failed",
+    "fa": "ناموفق",
+    "tr": "Başarısız",
+    "ar": "فشل",
+    "ru": "Ошибка",
+    "zh": "失败",
+    "ja": "失敗",
+    "es": "Fallido"
+  },
+  "quotaNotify.empty": {
+    "en": "No notifications sent yet.",
+    "fa": "هنوز اطلاع‌رسانی ارسال نشده.",
+    "tr": "Henüz bildirim gönderilmedi.",
+    "ar": "لم تُرسل إشعارات بعد.",
+    "ru": "Уведомлений пока не отправлено.",
+    "zh": "尚未发送通知。",
+    "ja": "まだ通知は送信されていません。",
+    "es": "Aún no se han enviado notificaciones."
+  },
+  "referral.title": {
+    "en": "Referral System",
+    "fa": "سیستم معرفی",
+    "tr": "Referans Sistemi",
+    "ar": "نظام الإحالة",
+    "ru": "Реферальная система",
+    "zh": "推荐系统",
+    "ja": "紹介システム",
+    "es": "Sistema de referidos"
+  },
+  "referral.subtitle": {
+    "en": "Invite codes, rewards, and tracking",
+    "fa": "کدهای دعوت، پاداش و پیگیری",
+    "tr": "Davet kodları, ödüller ve takip",
+    "ar": "رموز الدعوة والمكافآت والتتبع",
+    "ru": "Коды приглашений, награды и отслеживание",
+    "zh": "邀请码、奖励与追踪",
+    "ja": "招待コード、報酬、追跡",
+    "es": "Códigos de invitación, recompensas y seguimiento"
+  },
+  "referral.settings": {
+    "en": "Referral Program Settings",
+    "fa": "تنظیمات برنامه معرفی",
+    "tr": "Referans Programı Ayarları",
+    "ar": "إعدادات برنامج الإحالة",
+    "ru": "Настройки реферальной программы",
+    "zh": "推荐计划设置",
+    "ja": "紹介プログラム設定",
+    "es": "Ajustes del programa de referidos"
+  },
+  "referral.rewardType": {
+    "en": "Reward type",
+    "fa": "نوع پاداش",
+    "tr": "Ödül türü",
+    "ar": "نوع المكافأة",
+    "ru": "Тип награды",
+    "zh": "奖励类型",
+    "ja": "報酬タイプ",
+    "es": "Tipo de recompensa"
+  },
+  "referral.rewardData": {
+    "en": "Extra data",
+    "fa": "حجم اضافه",
+    "tr": "Ek veri",
+    "ar": "بيانات إضافية",
+    "ru": "Доп. трафик",
+    "zh": "额外流量",
+    "ja": "追加データ",
+    "es": "Datos extra"
+  },
+  "referral.rewardDays": {
+    "en": "Extra days",
+    "fa": "روز اضافه",
+    "tr": "Ek gün",
+    "ar": "أيام إضافية",
+    "ru": "Доп. дни",
+    "zh": "额外天数",
+    "ja": "追加日数",
+    "es": "Días extra"
+  },
+  "referral.rewardDiscount": {
+    "en": "Discount",
+    "fa": "تخفیف",
+    "tr": "İndirim",
+    "ar": "خصم",
+    "ru": "Скидка",
+    "zh": "折扣",
+    "ja": "割引",
+    "es": "Descuento"
+  },
+  "referral.amountBytes": {
+    "en": "Amount (bytes)",
+    "fa": "مقدار (بایت)",
+    "tr": "Miktar (byte)",
+    "ar": "المقدار (بايت)",
+    "ru": "Количество (байты)",
+    "zh": "数量 (字节)",
+    "ja": "量 (バイト)",
+    "es": "Cantidad (bytes)"
+  },
+  "referral.amountDays": {
+    "en": "Amount (days)",
+    "fa": "مقدار (روز)",
+    "tr": "Miktar (gün)",
+    "ar": "المقدار (أيام)",
+    "ru": "Количество (дни)",
+    "zh": "数量 (天)",
+    "ja": "量 (日)",
+    "es": "Cantidad (días)"
+  },
+  "referral.amountPercent": {
+    "en": "Amount (%)",
+    "fa": "مقدار (%)",
+    "tr": "Miktar (%)",
+    "ar": "المقدار (%)",
+    "ru": "Количество (%)",
+    "zh": "数量 (%)",
+    "ja": "量 (%)",
+    "es": "Cantidad (%)"
+  },
+  "referral.maxReferrals": {
+    "en": "Max referrals (0=∞)",
+    "fa": "حداکثر معرفی (0=∞)",
+    "tr": "Maks. referans (0=∞)",
+    "ar": "الحد الأقصى للإحالات (0=∞)",
+    "ru": "Макс. рефералов (0=∞)",
+    "zh": "最大推荐数 (0=∞)",
+    "ja": "最大紹介数 (0=∞)",
+    "es": "Máx. referidos (0=∞)"
+  },
+  "referral.requirePaid": {
+    "en": "Require paid",
+    "fa": "نیاز به پرداخت",
+    "tr": "Ücretli gerekli",
+    "ar": "يتطلب الدفع",
+    "ru": "Требовать оплату",
+    "zh": "需付费",
+    "ja": "有料必須",
+    "es": "Requiere pago"
+  },
+  "referral.configSaved": {
+    "en": "Config saved",
+    "fa": "تنظیمات ذخیره شد",
+    "tr": "Yapılandırma kaydedildi",
+    "ar": "تم حفظ الإعداد",
+    "ru": "Конфиг сохранён",
+    "zh": "配置已保存",
+    "ja": "設定を保存しました",
+    "es": "Configuración guardada"
+  },
+  "referral.codesTitle": {
+    "en": "Referral Codes",
+    "fa": "کدهای معرفی",
+    "tr": "Referans Kodları",
+    "ar": "رموز الإحالة",
+    "ru": "Реферальные коды",
+    "zh": "推荐码",
+    "ja": "紹介コード",
+    "es": "Códigos de referido"
+  },
+  "referral.uses": {
+    "en": "uses",
+    "fa": "استفاده",
+    "tr": "kullanım",
+    "ar": "استخدام",
+    "ru": "исп.",
+    "zh": "次使用",
+    "ja": "回使用",
+    "es": "usos"
+  },
+  "referral.noCodes": {
+    "en": "No codes generated yet.",
+    "fa": "هنوز کدی تولید نشده.",
+    "tr": "Henüz kod oluşturulmadı.",
+    "ar": "لم تُنشأ رموز بعد.",
+    "ru": "Коды ещё не созданы.",
+    "zh": "尚未生成码。",
+    "ja": "まだコードは生成されていません。",
+    "es": "Aún no se han generado códigos."
+  },
+  "referral.recent": {
+    "en": "Recent Referrals",
+    "fa": "معرفی‌های اخیر",
+    "tr": "Son Referanslar",
+    "ar": "الإحالات الأخيرة",
+    "ru": "Последние рефералы",
+    "zh": "最近推荐",
+    "ja": "最近の紹介",
+    "es": "Referidos recientes"
+  },
+  "referral.rewarded": {
+    "en": "Rewarded",
+    "fa": "پاداش داده شد",
+    "tr": "Ödüllendirildi",
+    "ar": "تمت المكافأة",
+    "ru": "Награждён",
+    "zh": "已奖励",
+    "ja": "報酬済",
+    "es": "Recompensado"
+  },
+  "referral.pending": {
+    "en": "Pending",
+    "fa": "در انتظار",
+    "tr": "Beklemede",
+    "ar": "قيد الانتظار",
+    "ru": "Ожидание",
+    "zh": "待处理",
+    "ja": "保留",
+    "es": "Pendiente"
+  },
+  "referral.noEvents": {
+    "en": "No referrals yet.",
+    "fa": "هنوز معرفی‌ای ثبت نشده.",
+    "tr": "Henüz referans yok.",
+    "ar": "لا توجد إحالات بعد.",
+    "ru": "Рефералов пока нет.",
+    "zh": "暂无推荐。",
+    "ja": "まだ紹介はありません。",
+    "es": "Aún no hay referidos."
+  },
+  "userDetail.title": {
+    "en": "User Detail",
+    "fa": "جزئیات کاربر",
+    "tr": "Kullanıcı Detayı",
+    "ar": "تفاصيل المستخدم",
+    "ru": "Детали пользователя",
+    "zh": "用户详情",
+    "ja": "ユーザー詳細",
+    "es": "Detalle de usuario"
+  },
+  "userDetail.resetConfirm": {
+    "en": "Reset usage for",
+    "fa": "بازنشانی مصرف برای",
+    "tr": "Kullanımı sıfırla",
+    "ar": "إعادة تعيين الاستخدام لـ",
+    "ru": "Сбросить использование для",
+    "zh": "重置用量：",
+    "ja": "使用量をリセット",
+    "es": "Restablecer uso de"
+  },
+  "userDetail.reset": {
+    "en": "Reset",
+    "fa": "بازنشانی",
+    "tr": "Sıfırla",
+    "ar": "إعادة تعيين",
+    "ru": "Сброс",
+    "zh": "重置",
+    "ja": "リセット",
+    "es": "Restablecer"
+  },
+  "userDetail.revokeConfirm": {
+    "en": "Revoke subscription link?",
+    "fa": "ابطال لینک اشتراک؟",
+    "tr": "Abonelik bağlantısı iptal edilsin mi?",
+    "ar": "إلغاء رابط الاشتراك؟",
+    "ru": "Отозвать ссылку подписки?",
+    "zh": "撤销订阅链接？",
+    "ja": "サブスクリプションリンクを失効しますか？",
+    "es": "¿Revocar enlace de suscripción?"
+  },
+  "userDetail.revokeMessage": {
+    "en": "Old links stop working immediately.",
+    "fa": "لینک‌های قبلی فوراً غیرفعال می‌شوند.",
+    "tr": "Eski bağlantılar hemen çalışmayı durdurur.",
+    "ar": "تتوقف الروابط القديمة عن العمل فوراً.",
+    "ru": "Старые ссылки перестанут работать немедленно.",
+    "zh": "旧链接将立即失效。",
+    "ja": "古いリンクは直ちに無効になります。",
+    "es": "Los enlaces antiguos dejan de funcionar de inmediato."
+  },
+  "userDetail.revoke": {
+    "en": "Revoke",
+    "fa": "ابطال",
+    "tr": "İptal et",
+    "ar": "إلغاء",
+    "ru": "Отозвать",
+    "zh": "撤销",
+    "ja": "失効",
+    "es": "Revocar"
+  },
+  "userDetail.usageReset": {
+    "en": "Usage reset",
+    "fa": "مصرف بازنشانی شد",
+    "tr": "Kullanım sıfırlandı",
+    "ar": "تم إعادة تعيين الاستخدام",
+    "ru": "Использование сброшено",
+    "zh": "用量已重置",
+    "ja": "使用量をリセットしました",
+    "es": "Uso restablecido"
+  },
+  "userDetail.linkRevoked": {
+    "en": "Link revoked",
+    "fa": "لینک ابطال شد",
+    "tr": "Bağlantı iptal edildi",
+    "ar": "تم إلغاء الرابط",
+    "ru": "Ссылка отозвана",
+    "zh": "链接已撤销",
+    "ja": "リンクを失効しました",
+    "es": "Enlace revocado"
+  },
+  "userDetail.used": {
+    "en": "Used",
+    "fa": "مصرف‌شده",
+    "tr": "Kullanılan",
+    "ar": "المستخدم",
+    "ru": "Использовано",
+    "zh": "已用",
+    "ja": "使用",
+    "es": "Usado"
+  },
+  "userDetail.limit": {
+    "en": "Limit",
+    "fa": "سقف",
+    "tr": "Limit",
+    "ar": "الحد",
+    "ru": "Лимит",
+    "zh": "限额",
+    "ja": "上限",
+    "es": "Límite"
+  },
+  "userDetail.expires": {
+    "en": "Expires",
+    "fa": "انقضا",
+    "tr": "Bitiş",
+    "ar": "ينتهي",
+    "ru": "Истекает",
+    "zh": "到期",
+    "ja": "有効期限",
+    "es": "Expira"
+  },
+  "userDetail.devices": {
+    "en": "Devices",
+    "fa": "دستگاه‌ها",
+    "tr": "Cihazlar",
+    "ar": "الأجهزة",
+    "ru": "Устройства",
+    "zh": "设备",
+    "ja": "デバイス",
+    "es": "Dispositivos"
+  },
+  "userDetail.traffic7d": {
+    "en": "Traffic (7 days)",
+    "fa": "ترافیک (۷ روز)",
+    "tr": "Trafik (7 gün)",
+    "ar": "الحركة (7 أيام)",
+    "ru": "Трафик (7 дней)",
+    "zh": "流量 (7 天)",
+    "ja": "トラフィック (7日)",
+    "es": "Tráfico (7 días)"
+  },
+  "userDetail.onlineIPs": {
+    "en": "Online IPs",
+    "fa": "IPهای آنلاین",
+    "tr": "Çevrimiçi IP'ler",
+    "ar": "عناوين IP المتصلة",
+    "ru": "Онлайн IP",
+    "zh": "在线 IP",
+    "ja": "オンライン IP",
+    "es": "IPs en línea"
+  },
+  "userDetail.noConnections": {
+    "en": "No active connections",
+    "fa": "اتصال فعالی وجود ندارد",
+    "tr": "Aktif bağlantı yok",
+    "ar": "لا توجد اتصالات نشطة",
+    "ru": "Нет активных подключений",
+    "zh": "无活跃连接",
+    "ja": "アクティブな接続なし",
+    "es": "Sin conexiones activas"
+  },
+  "userDetail.routingPack": {
+    "en": "Routing pack",
+    "fa": "پک مسیریابی",
+    "tr": "Yönlendirme paketi",
+    "ar": "حزمة التوجيه",
+    "ru": "Пакет маршрутизации",
+    "zh": "路由包",
+    "ja": "ルーティングパック",
+    "es": "Paquete de enrutamiento"
+  },
+  "userDetail.routingPackHint": {
+    "en": "Embeds the selected pack's rules into this user's Clash/sing-box subscription. Overrides the global default.",
+    "fa": "قوانین پک انتخاب‌شده را در اشتراک Clash/sing-box این کاربر قرار می‌دهد. پیش‌فرض سراسری را لغو می‌کند.",
+    "tr": "Seçilen paketin kurallarını bu kullanıcının Clash/sing-box aboneliğine gömer. Genel varsayılanı geçersiz kılar.",
+    "ar": "يُضمّن قواعد الحزمة المحددة في اشتراك Clash/sing-box لهذا المستخدم. يلغي الافتراضي العام.",
+    "ru": "Встраивает правила выбранного пакета в подписку Clash/sing-box пользователя. Переопределяет глобальные настройки.",
+    "zh": "将所选包的规则嵌入该用户的 Clash/sing-box 订阅，覆盖全局默认。",
+    "ja": "選択したパックのルールをこのユーザーの Clash/sing-box 購読に埋め込みます。グローバル既定を上書きします。",
+    "es": "Incrusta las reglas del paquete seleccionado en la suscripción Clash/sing-box del usuario. Anula el valor global."
+  },
+  "userDetail.routingPackUpdated": {
+    "en": "Routing pack updated",
+    "fa": "پک مسیریابی به‌روز شد",
+    "tr": "Yönlendirme paketi güncellendi",
+    "ar": "تم تحديث حزمة التوجيه",
+    "ru": "Пакет маршрутизации обновлён",
+    "zh": "路由包已更新",
+    "ja": "ルーティングパックを更新しました",
+    "es": "Paquete de enrutamiento actualizado"
+  },
+  "userDetail.builtin": {
+    "en": "built-in",
+    "fa": "داخلی",
+    "tr": "dahili",
+    "ar": "مدمج",
+    "ru": "встроенный",
+    "zh": "内置",
+    "ja": "組み込み",
+    "es": "integrado"
+  },
+  "userDetail.subscription": {
+    "en": "Subscription",
+    "fa": "اشتراک",
+    "tr": "Abonelik",
+    "ar": "الاشتراك",
+    "ru": "Подписка",
+    "zh": "订阅",
+    "ja": "サブスクリプション",
+    "es": "Suscripción"
+  },
+  "userDetail.configs": {
+    "en": "Configs",
+    "fa": "کانفیگ‌ها",
+    "tr": "Yapılandırmalar",
+    "ar": "الإعدادات",
+    "ru": "Конфиги",
+    "zh": "配置",
+    "ja": "設定",
+    "es": "Configs"
+  },
+  "userDetail.live": {
+    "en": "live",
+    "fa": "زنده",
+    "tr": "canlı",
+    "ar": "مباشر",
+    "ru": "онлайн",
+    "zh": "在线",
+    "ja": "ライブ",
+    "es": "en vivo"
+  },
+  "cmdPalette.searchPlaceholder": {
+    "en": "Search pages, users, settings...",
+    "fa": "جستجوی صفحات، کاربران، تنظیمات...",
+    "tr": "Sayfa, kullanıcı, ayar ara...",
+    "ar": "بحث في الصفحات والمستخدمين والإعدادات...",
+    "ru": "Поиск страниц, пользователей, настроек...",
+    "zh": "搜索页面、用户、设置...",
+    "ja": "ページ、ユーザー、設定を検索...",
+    "es": "Buscar páginas, usuarios, ajustes..."
+  },
+  "cmdPalette.noResults": {
+    "en": "No results found",
+    "fa": "نتیجه‌ای یافت نشد",
+    "tr": "Sonuç bulunamadı",
+    "ar": "لم يتم العثور على نتائج",
+    "ru": "Ничего не найдено",
+    "zh": "未找到结果",
+    "ja": "結果が見つかりません",
+    "es": "Sin resultados"
+  },
+  "cmdPalette.navigate": {
+    "en": "↑↓ navigate",
+    "fa": "↑↓ پیمایش",
+    "tr": "↑↓ gezin",
+    "ar": "↑↓ تنقل",
+    "ru": "↑↓ навигация",
+    "zh": "↑↓ 导航",
+    "ja": "↑↓ 移動",
+    "es": "↑↓ navegar"
+  },
+  "cmdPalette.select": {
+    "en": "↵ select",
+    "fa": "↵ انتخاب",
+    "tr": "↵ seç",
+    "ar": "↵ اختيار",
+    "ru": "↵ выбор",
+    "zh": "↵ 选择",
+    "ja": "↵ 選択",
+    "es": "↵ seleccionar"
+  },
+  "cmdPalette.toggle": {
+    "en": "K to toggle",
+    "fa": "K برای باز/بسته",
+    "tr": "K ile aç/kapat",
+    "ar": "K للتبديل",
+    "ru": "K переключить",
+    "zh": "K 切换",
+    "ja": "K で切替",
+    "es": "K alternar"
+  },
+  "cmdPalette.searchTrigger": {
+    "en": "Search...",
+    "fa": "جستجو...",
+    "tr": "Ara...",
+    "ar": "بحث...",
+    "ru": "Поиск...",
+    "zh": "搜索...",
+    "ja": "検索...",
+    "es": "Buscar..."
+  }
+}

@@ -26,6 +26,8 @@ whitelabel/referral, real ACME (Cloudflare DNS-01), and federation sync worker.
 - Settings tabs (General, Security, Appearance, Notifications, Backup) read/write via API.
 - Portal Plans page fully i18n'd (8 languages).
 - Panel accent color applied from server settings after login.
+- Phase 4 i18n: Family Groups, Smart Quota, Deep Links, Quota Notifications, Referrals, User Detail, and Command Palette (8 languages).
+- Frontend unit tests (vitest) for `mergePanelSettings` and `hexToHslComponents`.
 
 ## [1.2.9] - 2026-07-04
 

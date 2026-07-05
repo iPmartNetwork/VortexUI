@@ -14,10 +14,12 @@ import { useToast } from "@/components/toast";
 import { useAuth } from "@/auth/auth";
 import { useTitle } from "@/lib/useTitle";
 import { formatBytes } from "@/lib/utils";
+import { useI18n } from "@/i18n/i18n";
 import { QRCodeSVG } from "qrcode.react";
 
 export function UserDetail() {
-  useTitle("User Detail");
+  const { t } = useI18n();
+  useTitle(t("userDetail.title"));
   const { can } = useAuth();
   const canWrite = can("user:write");
   const { id } = useParams<{ id: string }>();
@@ -39,28 +41,32 @@ export function UserDetail() {
   const revoke = useRevokeSub();
 
   if (isLoading || !user) {
-    return <div className="py-20 text-center text-fg-muted">Loading…</div>;
+    return <div className="py-20 text-center text-fg-muted">{t("common.loading")}</div>;
   }
 
   const on = online.data;
   const d = sub.data;
 
   async function doReset() {
-    if (await confirm({ title: `Reset usage for ${user!.username}?`, confirmLabel: "Reset" })) {
+    if (await confirm({ title: `${t("userDetail.resetConfirm")} ${user!.username}?`, confirmLabel: t("userDetail.reset") })) {
       await reset.mutateAsync(user!.id);
-      toast.success("Usage reset");
+      toast.success(t("userDetail.usageReset"));
     }
   }
   async function doRevoke() {
-    if (await confirm({ title: `Revoke subscription link?`, message: "Old links stop working immediately.", confirmLabel: "Revoke", destructive: true })) {
+    if (await confirm({
+      title: t("userDetail.revokeConfirm"),
+      message: t("userDetail.revokeMessage"),
+      confirmLabel: t("userDetail.revoke"),
+      destructive: true,
+    })) {
       await revoke.mutateAsync(user!.id);
-      toast.success("Link revoked");
+      toast.success(t("userDetail.linkRevoked"));
     }
   }
 
   return (
     <div className="space-y-6 animate-page-enter">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate("/users")} className="grid h-9 w-9 place-items-center rounded-xl text-fg-muted transition hover:bg-surface-2/60 hover:text-fg">
           <ArrowLeft size={18} />
@@ -72,39 +78,36 @@ export function UserDetail() {
             {on?.live_tracking && (
               <span className="flex items-center gap-1 text-xs text-fg-muted">
                 <Wifi size={12} className={on.live_connections > 0 ? "text-success" : "text-fg-subtle"} />
-                {on.live_connections} live
+                {on.live_connections} {t("userDetail.live")}
               </span>
             )}
           </div>
         </div>
         {canWrite && (
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={doReset}><RotateCcw size={14} /> Reset</Button>
-            <Button variant="outline" size="sm" className="text-danger" onClick={doRevoke}><KeyRound size={14} /> Revoke</Button>
+            <Button variant="outline" size="sm" onClick={doReset}><RotateCcw size={14} /> {t("userDetail.reset")}</Button>
+            <Button variant="outline" size="sm" className="text-danger" onClick={doRevoke}><KeyRound size={14} /> {t("userDetail.revoke")}</Button>
           </div>
         )}
       </div>
 
-      {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatsCard title="Used" value={formatBytes(user.used_traffic, false)} icon={<Database size={18} />} color="blue" />
-        <StatsCard title="Limit" value={formatBytes(user.data_limit)} icon={<Database size={18} />} color="purple" />
-        <StatsCard title="Expires" value={user.expire_at ? new Date(user.expire_at).toLocaleDateString() : "Never"} icon={<CalendarClock size={18} />} color="orange" />
-        <StatsCard title="Devices" value={`${on?.active_devices ?? 0} / ${user.device_limit || "∞"}`} icon={<Smartphone size={18} />} color="cyan" />
+        <StatsCard title={t("userDetail.used")} value={formatBytes(user.used_traffic, false)} icon={<Database size={18} />} color="blue" />
+        <StatsCard title={t("userDetail.limit")} value={formatBytes(user.data_limit)} icon={<Database size={18} />} color="purple" />
+        <StatsCard title={t("userDetail.expires")} value={user.expire_at ? new Date(user.expire_at).toLocaleDateString() : t("common.never")} icon={<CalendarClock size={18} />} color="orange" />
+        <StatsCard title={t("userDetail.devices")} value={`${on?.active_devices ?? 0} / ${user.device_limit || "∞"}`} icon={<Smartphone size={18} />} color="cyan" />
       </div>
 
-      {/* Chart */}
       <GlassCard hover={false} className="!p-5">
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Traffic (7 days)</h3>
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">{t("userDetail.traffic7d")}</h3>
         {usage.isLoading && <div className="h-40 animate-pulse rounded-lg bg-surface-2/50" />}
         {usage.data && <UsageChart points={usage.data.points} />}
       </GlassCard>
 
-      {/* Online IPs — account-sharing detection */}
       {onlineIPs.data?.tracking && (
         <GlassCard hover={false} className="!p-5">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Online IPs</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">{t("userDetail.onlineIPs")}</h3>
             {(() => {
               const count = onlineIPs.data.count;
               const limit = user.device_limit || 0;
@@ -118,7 +121,7 @@ export function UserDetail() {
             })()}
           </div>
           {onlineIPs.data.count === 0 ? (
-            <p className="py-4 text-center text-sm text-fg-muted">No active connections</p>
+            <p className="py-4 text-center text-sm text-fg-muted">{t("userDetail.noConnections")}</p>
           ) : (
             <div className="space-y-1.5">
               {onlineIPs.data.ips.map((e) => (
@@ -132,13 +135,11 @@ export function UserDetail() {
         </GlassCard>
       )}
 
-      {/* Routing pack — per-subscription override */}
       <RoutingPackSelector userId={id ?? null} />
 
-      {/* Subscription */}
       {d && (
         <GlassCard hover={false} className="!p-5 space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Subscription</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">{t("userDetail.subscription")}</h3>
           <div className="flex flex-col items-center gap-4 sm:flex-row">
             <div className="rounded-xl bg-white p-3">
               <QRCodeSVG value={d.subscription_url} size={120} />
@@ -154,7 +155,7 @@ export function UserDetail() {
           </div>
           {d.links.length > 0 && (
             <div>
-              <p className="mb-1.5 text-xs font-medium text-fg-muted">Configs ({d.links.length})</p>
+              <p className="mb-1.5 text-xs font-medium text-fg-muted">{t("userDetail.configs")} ({d.links.length})</p>
               <div className="max-h-32 space-y-1.5 overflow-auto">
                 {d.links.map((l, i) => <CopyField key={i} value={l} />)}
               </div>
@@ -166,11 +167,8 @@ export function UserDetail() {
   );
 }
 
-// RoutingPackSelector lets an admin pick a per-subscription routing pack for a
-// user (or "— none —" to fall back to the global default). The current value is
-// loaded from the API and updated optimistically via the query invalidation in
-// the mutation hook.
 function RoutingPackSelector({ userId }: { userId: string | null }) {
+  const { t } = useI18n();
   const packs = useRoutingPacks();
   const current = useUserRoutingPack(userId);
   const setPack = useSetUserRoutingPack(userId);
@@ -180,25 +178,23 @@ function RoutingPackSelector({ userId }: { userId: string | null }) {
 
   async function change(packId: string) {
     await setPack.mutateAsync(packId);
-    toast.success("Routing pack updated");
+    toast.success(t("userDetail.routingPackUpdated"));
   }
 
   return (
     <GlassCard hover={false} className="!p-5 space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">Routing pack</h3>
-      <p className="text-xs text-fg-muted">
-        Embeds the selected pack's rules into this user's Clash/sing-box subscription. Overrides the global default.
-      </p>
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">{t("userDetail.routingPack")}</h3>
+      <p className="text-xs text-fg-muted">{t("userDetail.routingPackHint")}</p>
       <Select
         className="w-full sm:w-72"
         value={value}
         disabled={current.isLoading || setPack.isPending}
         onChange={(e) => change(e.target.value)}
       >
-        <option value="">— none —</option>
+        <option value="">— {t("common.none")} —</option>
         {(packs.data?.packs ?? []).map((p) => (
           <option key={p.id} value={p.id}>
-            {p.name}{p.builtin ? " (built-in)" : ""}
+            {p.name}{p.builtin ? ` (${t("userDetail.builtin")})` : ""}
           </option>
         ))}
       </Select>
