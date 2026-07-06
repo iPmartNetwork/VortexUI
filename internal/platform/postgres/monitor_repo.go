@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -45,4 +46,17 @@ func (r *MonitorRepo) RecentActive(ctx context.Context, window time.Duration) ([
 		out = append(out, lu)
 	}
 	return out, rows.Err()
+}
+
+// CountRecentActive returns how many distinct users had traffic on a node within
+// the window. Used as a fallback live-connection signal when core online stats
+// are unavailable.
+func (r *MonitorRepo) CountRecentActive(ctx context.Context, nodeID uuid.UUID, window time.Duration) (int, error) {
+	since := time.Now().Add(-window)
+	var n int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(DISTINCT user_id) FROM traffic_points
+		 WHERE node_id = $1 AND time >= $2 AND (up > 0 OR down > 0)`,
+		nodeID, since).Scan(&n)
+	return n, err
 }

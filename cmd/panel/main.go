@@ -122,10 +122,12 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	}
 
 	h := hub.New(hub.Options{
-		Dialer: localAwareDialer(tlsFiles, localID, localDriver),
-		Nodes:  nodes,
-		Ingest: agg.Ingest,
-		Logger: log,
+		Dialer:              localAwareDialer(tlsFiles, localID, localDriver),
+		Nodes:               nodes,
+		Ingest:              agg.Ingest,
+		Logger:              log,
+		RecentTraffic:       store.Monitor(),
+		RecentTrafficWindow: 2 * time.Minute,
 		AutoRecoverCore:         cfg.AutoRecoverCore,
 		AutoRecoverCoreAfter:    cfg.AutoRecoverCoreAfter,
 		AutoRecoverCoreCooldown: cfg.AutoRecoverCoreCooldown,
