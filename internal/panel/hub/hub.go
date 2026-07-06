@@ -58,6 +58,12 @@ type AutoRecoverFunc func(ctx context.Context, node *domain.Node, action string)
 // config, so a restarted node is repopulated automatically.
 type ReadyFunc func(ctx context.Context, node *domain.Node)
 
+// RecentTrafficCounter counts users with recent traffic on one node. Used as a
+// fallback when the core's live online-stats API is empty or unavailable.
+type RecentTrafficCounter interface {
+	CountRecentActive(ctx context.Context, nodeID uuid.UUID, window time.Duration) (int, error)
+}
+
 // Options configures a Hub.
 type Options struct {
 	Dialer         Dialer
@@ -68,6 +74,10 @@ type Options struct {
 	OnDisconnectAlert DisconnectAlertFunc
 	OnAutoRecover  AutoRecoverFunc
 	HealthInterval time.Duration
+
+	// Fallback live-connection signal when OnlineStats is empty/unavailable.
+	RecentTraffic       RecentTrafficCounter
+	RecentTrafficWindow time.Duration
 
 	// Automatic recovery when nodes stay unhealthy without manual intervention.
 	AutoRecoverCore         bool
@@ -111,6 +121,9 @@ func New(opts Options) *Hub {
 	}
 	if opts.AutoRecoverHubCooldown == 0 {
 		opts.AutoRecoverHubCooldown = 10 * time.Minute
+	}
+	if opts.RecentTrafficWindow == 0 {
+		opts.RecentTrafficWindow = 2 * time.Minute
 	}
 	if opts.Ingest == nil {
 		opts.Ingest = func(domain.TrafficDelta) {}

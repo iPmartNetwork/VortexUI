@@ -156,19 +156,10 @@ func (m *managedNode) pollOnce(ctx context.Context) {
 		return
 	}
 
-	// Live connection totals come from OnlineStats, not Health alone: remote
-	// agents may run an older build whose Health omits the count, and even on
-	// current builds this keeps the panel authoritative via GetAllOnlineUsers.
-	if h.CoreRunning {
-		octx, ocancel := context.WithTimeout(ctx, 3*time.Second)
-		stats, oerr := conn.OnlineStats(octx)
-		ocancel()
-		if oerr != nil {
-			m.hub.log.Debug("online stats poll failed", "node", m.node.Name, "err", oerr)
-		} else {
-			h.Connections = sumOnlineStats(stats)
-		}
-	}
+	// Live connection totals: prefer the core online-stats API, then fall back to
+	// recent traffic samples when the API is empty or unavailable (older agents,
+	// statsUserOnline not yet applied, or sing-box nodes).
+	m.enrichConnections(ctx, conn, &h)
 
 	m.mu.Lock()
 	wasHealthy := m.status == domain.NodeConnected && m.health.CoreRunning
@@ -281,6 +272,35 @@ func sumOnlineStats(stats map[string]int) int {
 		total += n
 	}
 	return total
+}
+
+func (m *managedNode) enrichConnections(ctx context.Context, conn NodeConn, h *domain.NodeHealth) {
+	if !h.CoreRunning {
+		return
+	}
+	octx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	stats, err := conn.OnlineStats(octx)
+	cancel()
+	if err != nil {
+		m.hub.log.Warn("online stats poll failed", "node", m.node.Name, "err", err)
+	} else {
+		h.Connections = sumOnlineStats(stats)
+	}
+	if h.Connections > 0 {
+		return
+	}
+	rt := m.hub.opts.RecentTraffic
+	if rt == nil {
+		return
+	}
+	tctx, tcancel := context.WithTimeout(ctx, 2*time.Second)
+	n, err := rt.CountRecentActive(tctx, m.node.ID, m.hub.opts.RecentTrafficWindow)
+	tcancel()
+	if err != nil {
+		m.hub.log.Debug("traffic-active fallback failed", "node", m.node.Name, "err", err)
+		return
+	}
+	h.Connections = n
 }
 
 func (m *managedNode) snapshot() (domain.NodeStatus, domain.NodeHealth, domain.NodeDiagnostics) {

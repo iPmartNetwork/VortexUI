@@ -118,16 +118,21 @@ func parseUserStat(name string) (email, dir string, ok bool) {
 }
 
 // OnlineUsers reports how many live connections each user currently has, via
-// Xray's GetAllOnlineUsers. The response lists an entry per online user; we fold
-// occurrences so the value is the connection count (>=1 means online).
+// Xray's GetAllOnlineUsers plus GetStatsOnline for per-user IP counts.
 func (g *grpcAPI) OnlineUsers(ctx context.Context) (map[string]int, error) {
 	resp, err := g.stats.GetAllOnlineUsers(ctx, &scmd.GetAllOnlineUsersRequest{})
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[string]int)
+	out := make(map[string]int, len(resp.GetUsers()))
 	for _, email := range resp.GetUsers() {
-		out[email]++
+		n := 1
+		if r, serr := g.stats.GetStatsOnline(ctx, &scmd.GetStatsRequest{Name: onlineStatName(email)}); serr == nil {
+			if v := int(r.GetStat().GetValue()); v > 0 {
+				n = v
+			}
+		}
+		out[email] = n
 	}
 	return out, nil
 }

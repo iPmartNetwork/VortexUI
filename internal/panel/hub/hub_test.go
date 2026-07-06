@@ -226,6 +226,50 @@ func TestHub_HealthPollSumsOnlineStatsIntoConnections(t *testing.T) {
 	t.Fatalf("connections = %d, want 5 from online stats", hl.Connections)
 }
 
+func TestHub_HealthPollFallsBackToRecentTraffic(t *testing.T) {
+	conn := &fakeConn{
+		healthFn: func(int) (domain.NodeHealth, error) {
+			return domain.NodeHealth{CoreRunning: true}, nil
+		},
+		onlineStats: map[string]int{},
+	}
+	id := uuid.New()
+	traffic := &fakeRecentTraffic{counts: map[uuid.UUID]int{id: 4}}
+	repo := &nopNodeRepo{}
+	h := New(Options{
+		Dialer:         func(*domain.Node) (NodeConn, error) { return conn, nil },
+		HealthInterval: 5 * time.Millisecond,
+		Nodes:          repo,
+		RecentTraffic:  traffic,
+	})
+	defer h.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := h.Register(ctx, &domain.Node{ID: id, Name: "n1", Core: domain.CoreXray}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	deadline := time.Now().Add(1500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		_, hl, err := h.Status(id)
+		if err == nil && hl.Connections == 4 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	_, hl, _ := h.Status(id)
+	t.Fatalf("connections = %d, want 4 from traffic fallback", hl.Connections)
+}
+
+type fakeRecentTraffic struct {
+	counts map[uuid.UUID]int
+}
+
+func (f *fakeRecentTraffic) CountRecentActive(_ context.Context, nodeID uuid.UUID, _ time.Duration) (int, error) {
+	return f.counts[nodeID], nil
+}
+
 func TestHub_AutoRecoverCore(t *testing.T) {
 	restarted := make(chan string, 1)
 	conn := &fakeConn{healthFn: func(call int) (domain.NodeHealth, error) {
