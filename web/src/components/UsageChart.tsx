@@ -1,7 +1,13 @@
 import type { UsagePoint } from "@/api/hooks";
 import { formatBytes } from "@/lib/utils";
 
-// A dependency-free stacked bar chart (download on top of upload) per bucket.
+function fmtDay(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString([], { weekday: "short", day: "numeric" });
+}
+
+// Responsive stacked bar chart — bar width capped so full-width layouts stay proportional.
 export function UsageChart({
   points,
   labels,
@@ -15,44 +21,77 @@ export function UsageChart({
   const peakLabel = labels?.peak ?? "peak";
 
   if (points.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">{emptyText}</p>;
+    return <p className="py-8 text-center text-sm text-fg-muted">{emptyText}</p>;
   }
 
-  const w = 440;
-  const h = 160;
-  const pad = 8;
   const max = Math.max(1, ...points.map((p) => p.up + p.down));
-  const bw = (w - pad * 2) / points.length;
-  const scale = (v: number) => (v / max) * (h - 20);
 
   return (
-    <div className="space-y-2">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Traffic usage by day">
+    <div className="space-y-3">
+      <div
+        className="grid h-[128px] items-end gap-1.5 border-b border-border/50 pb-2 sm:gap-2"
+        style={{ gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))` }}
+      >
         {points.map((p, i) => {
-          const x = pad + i * bw + bw * 0.15;
-          const bar = bw * 0.7;
-          const upH = scale(p.up);
-          const downH = scale(p.down);
-          const base = h - 16;
+          const total = p.up + p.down;
+          const downPct = total > 0 ? Math.max((p.down / max) * 100, 0.5) : 0;
+          const upPct = total > 0 ? Math.max((p.up / max) * 100, 0.5) : 0;
           return (
-            <g key={i}>
-              <rect x={x} y={base - downH} width={bar} height={downH} rx={2} fill="#7F77DD" />
-              <rect x={x} y={base - downH - upH} width={bar} height={upH} rx={2} fill="#5DCAA5" />
-            </g>
+            <div key={p.time ?? i} className="flex h-full min-w-0 flex-col items-center justify-end">
+              <div
+                className="flex h-full w-full max-w-9 flex-col justify-end sm:max-w-10"
+                title={`${formatBytes(total)} (${upLabel} ${formatBytes(p.up)}, ${downLabel} ${formatBytes(p.down)})`}
+              >
+                {total > 0 ? (
+                  <>
+                    <div
+                      className="w-full bg-[#7F77DD]"
+                      style={{
+                        height: `${downPct}%`,
+                        minHeight: p.down > 0 ? 2 : 0,
+                        borderBottomLeftRadius: p.up > 0 ? 0 : 3,
+                        borderBottomRightRadius: p.up > 0 ? 0 : 3,
+                      }}
+                    />
+                    <div
+                      className="w-full rounded-t-[3px] bg-[#5DCAA5]"
+                      style={{ height: `${upPct}%`, minHeight: p.up > 0 ? 2 : 0 }}
+                    />
+                  </>
+                ) : (
+                  <div className="h-1 w-full rounded-full bg-surface-3/80" />
+                )}
+              </div>
+            </div>
           );
         })}
-        <line x1={pad} y1={h - 16} x2={w - pad} y2={h - 16} stroke="currentColor" strokeOpacity="0.15" />
-      </svg>
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      </div>
+
+      <div
+        className="grid gap-1.5 sm:gap-2"
+        style={{ gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))` }}
+      >
+        {points.map((p, i) => (
+          <div key={p.time ?? i} className="min-w-0 text-center">
+            <span className="block truncate text-[10px] font-medium text-fg-subtle sm:text-[11px]">
+              {fmtDay(p.time)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-fg-muted">
         <span className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-sm" style={{ background: "#5DCAA5" }} /> {upLabel}
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-sm bg-[#5DCAA5]" /> {upLabel}
           </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-sm" style={{ background: "#7F77DD" }} /> {downLabel}
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-sm bg-[#7F77DD]" /> {downLabel}
           </span>
         </span>
-        <span>{peakLabel} {formatBytes(max)}/day</span>
+        <span className="tabular-nums">
+          {peakLabel} {formatBytes(max)}/day
+        </span>
       </div>
     </div>
   );
