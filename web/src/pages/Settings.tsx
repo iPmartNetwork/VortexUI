@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { useConfirmTOTP, useDisableTOTP, useSetupTOTP } from "@/api/admin-hooks";
 import { useExportBackup, useRestoreBackup, useExportUserBackup, useAPITokens, useCreateAPIToken, useDeleteAPIToken } from "@/api/policy-hooks";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, Switch } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
@@ -102,23 +102,7 @@ function ToggleRow({
         <p className="text-sm font-medium text-fg">{label}</p>
         {description && <p className="text-xs text-fg-muted mt-0.5">{description}</p>}
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={cn(
-          "relative h-6 w-11 rounded-full transition-colors flex-shrink-0",
-          checked ? "bg-primary" : "bg-surface-3",
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-            checked ? "translate-x-5 rtl:-translate-x-5" : "translate-x-0.5",
-          )}
-        />
-      </button>
+      <Switch checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }

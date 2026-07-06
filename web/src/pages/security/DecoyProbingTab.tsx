@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, Globe, Shield } from "lucide-react";
 import { api } from "@/api/client";
-import { Button, Input, Select } from "@/components/ui";
+import { Button, Input, Select, Switch } from "@/components/ui";
 import { GlassCard, StatusBadge } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useAuth } from "@/auth/auth";
-import { cn } from "@/lib/utils";
 
 interface ProbingPolicy {
   enabled: boolean;
@@ -222,23 +221,7 @@ export function DecoyProbingTab() {
                 <p className="text-[11px] text-fg-subtle mt-0.5">{t("security.decoy.decoySubtitle")}</p>
               </div>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={decoyEnabled}
-              onClick={() => setDecoyEnabled((v) => !v)}
-              className={cn(
-                "relative h-6 w-11 rounded-full transition-colors flex-shrink-0",
-                decoyEnabled ? "bg-primary" : "bg-surface-3",
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                  decoyEnabled ? "translate-x-5" : "translate-x-0.5",
-                )}
-              />
-            </button>
+            <Switch checked={decoyEnabled} onCheckedChange={setDecoyEnabled} />
           </div>
 
           <p className="text-xs text-fg-muted leading-relaxed">{t("security.decoy.decoyDesc")}</p>
