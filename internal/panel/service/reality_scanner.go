@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"sort"
@@ -92,6 +93,21 @@ func (s *RealityScannerService) Scan(ctx context.Context, nodeID uuid.UUID, snis
 	return results, nil
 }
 
+// sniProbeTLSConfig builds a TLS client config for REALITY SNI probing: the
+// chain must verify against the system trust store and the cert must match the
+// SNI hostname — without InsecureSkipVerify, which would allow MITM.
+func sniProbeTLSConfig(serverName string) *tls.Config {
+	roots, err := x509.SystemCertPool()
+	if err != nil || roots == nil {
+		roots = x509.NewCertPool()
+	}
+	return &tls.Config{
+		ServerName: serverName,
+		RootCAs:    roots,
+		MinVersion: tls.VersionTLS12,
+	}
+}
+
 // GetCachedResults returns previously scanned results for a node.
 func (s *RealityScannerService) GetCachedResults(ctx context.Context, nodeID uuid.UUID) ([]domain.RealityScan, error) {
 	return s.repo.ListByNode(ctx, nodeID)
@@ -104,10 +120,7 @@ func probeSNI(host string, port int, sni string) ScanResult {
 	start := time.Now()
 
 	dialer := &net.Dialer{Timeout: 5 * time.Second}
-	conn, err := tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{
-		ServerName:         sni,
-		InsecureSkipVerify: true,
-	})
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, sniProbeTLSConfig(sni))
 	elapsed := time.Since(start)
 	latencyMS := int(elapsed.Milliseconds())
 
