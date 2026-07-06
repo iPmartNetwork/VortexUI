@@ -103,40 +103,11 @@ export function NodeInboundsModal({
   const udpNative = cap?.udp_native ?? UDP_PROTOCOLS;
   const isNoTransport = noTransport.includes(f.protocol);
   const securitiesFor = (proto: string) => cap?.protocol_securities?.[proto] ?? securities;
-
-  // When the capability matrix loads or the node's core changes, reconcile the
-  // form so it can never submit a protocol/network/security the core rejects.
-  useEffect(() => {
-    if (!cap) return;
-    setF((s) => {
-      let next = s;
-      if (!cap.protocols.includes(next.protocol)) {
-        next = { ...next, protocol: cap.protocols[0] ?? next.protocol };
-      }
-      const noTransportSet = new Set([...cap.udp_native, ...cap.no_transport]);
-      if (noTransportSet.has(next.protocol)) {
-        // No-transport protocols carry no stream transport; network is irrelevant.
-        if (next.network !== "") next = { ...next, network: "" };
-      } else if (!cap.transports.includes(next.network)) {
-        next = { ...next, network: cap.transports[0] ?? next.network };
-      }
-      const allowedSecurities = cap.protocol_securities?.[next.protocol] ?? cap.securities;
-      if (!allowedSecurities.includes(next.security)) {
-        next = { ...next, security: allowedSecurities[0] ?? next.security };
-      }
-      return next === s ? s : next;
-    });
-  }, [cap]);
-
-  if (!node) return null;
   const editing = f.editId !== "";
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((s) => {
       const val = e.target.value;
       if (k === "protocol") {
-        // Switching to a no-transport protocol clears the (irrelevant) network;
-        // switching back to a stream protocol restores a valid transport.
-        // Also reset security if the current one isn't allowed for the new protocol.
         const allowed = securitiesFor(val);
         const security = allowed.includes(s.security) ? s.security : (allowed[0] ?? s.security);
         if (noTransport.includes(val)) {
@@ -155,10 +126,35 @@ export function NodeInboundsModal({
     setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: udpNative.includes(ib.protocol) || noTransport.includes(ib.protocol) ? "" : ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", "), wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "", wgSubnet: typeof wg.subnet === "string" ? wg.subnet : "", wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "" });
   }
 
+  // When the capability matrix loads or the node's core changes, reconcile the
+  // form so it can never submit a protocol/network/security the core rejects.
+  useEffect(() => {
+    if (!cap) return;
+    setF((s) => {
+      let next = s;
+      if (!cap.protocols.includes(next.protocol)) {
+        next = { ...next, protocol: cap.protocols[0] ?? next.protocol };
+      }
+      const noTransportSet = new Set([...cap.udp_native, ...cap.no_transport]);
+      if (noTransportSet.has(next.protocol)) {
+        if (next.network !== "") next = { ...next, network: "" };
+      } else if (!cap.transports.includes(next.network)) {
+        next = { ...next, network: cap.transports[0] ?? next.network };
+      }
+      const allowedSecurities = cap.protocol_securities?.[next.protocol] ?? cap.securities;
+      if (!allowedSecurities.includes(next.security)) {
+        next = { ...next, security: allowedSecurities[0] ?? next.security };
+      }
+      return next === s ? s : next;
+    });
+  }, [cap]);
+
   useEffect(() => {
     if (!node || !initialEdit || initialEdit.node_id !== node.id) return;
     startEdit(initialEdit);
   }, [node?.id, initialEdit?.id]);
+
+  if (!node) return null;
 
   async function toggleEnable(ib: Inbound) {
     try {
