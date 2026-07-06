@@ -21,6 +21,8 @@ import (
 // claimsKey is the echo context key under which verified claims are stored.
 const claimsKey = "vortex.claims"
 
+const auditInsertTimeout = 5 * time.Second
+
 // Authenticator verifies bearer tokens. *auth.PanelAuth satisfies it.
 type Authenticator interface {
 	Verify(ctx context.Context, token string) (*auth.Claims, error)
@@ -153,7 +155,11 @@ func Audit(rec AuditRecorder) echo.MiddlewareFunc {
 				entry.AdminID = &id
 				entry.ImpersonatorID = claims.ImpersonatorID
 			}
-			go func() { _ = rec.Insert(context.Background(), entry) }()
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), auditInsertTimeout)
+				defer cancel()
+				_ = rec.Insert(ctx, entry)
+			}()
 			return err
 		}
 	}

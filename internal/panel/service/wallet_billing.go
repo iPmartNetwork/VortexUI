@@ -277,7 +277,7 @@ func (s *WalletBillingService) ReviewDeposit(ctx context.Context, reviewerID, de
 	if approve {
 		deposit.Status = domain.WalletDepositApproved
 		deposit.PaidAt = &now
-		reason := fmt.Sprintf("deposit %s approved", deposit.ID.String()[:8])
+		reason := fmt.Sprintf("deposit %s approved", shortDepositID(deposit.ID))
 		if deposit.PackageName != "" {
 			reason = deposit.PackageName + " (" + reason + ")"
 		}
@@ -338,7 +338,7 @@ func (s *WalletBillingService) CompleteOnlineDeposit(ctx context.Context, deposi
 	if err := s.repo.UpdateDeposit(ctx, deposit); err != nil {
 		return err
 	}
-	reason := fmt.Sprintf("online deposit %s", deposit.ID.String()[:8])
+	reason := fmt.Sprintf("online deposit %s", shortDepositID(deposit.ID))
 	if deposit.PackageName != "" {
 		reason = deposit.PackageName + " (" + reason + ")"
 	}
@@ -394,6 +394,15 @@ func normalizeMethods(methods []string) []string {
 		out = append(out, m)
 	}
 	return out
+}
+
+func shortDepositID(id uuid.UUID) string {
+	const n = 8
+	s := id.String()
+	if len(s) >= n {
+		return s[:n]
+	}
+	return s
 }
 
 func methodAllowed(methods []string, want string) bool {

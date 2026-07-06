@@ -216,3 +216,10 @@ func TestReviewDepositSkipsMainQuotaForSudoTarget(t *testing.T) {
 		t.Errorf("wallet credit calls = %d, want 1", repo.walletCalls)
 	}
 }
+
+func TestShortDepositID(t *testing.T) {
+	id := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+	if got := shortDepositID(id); got != "550e8400" {
+		t.Errorf("shortDepositID = %q, want 550e8400", got)
+	}
+}
