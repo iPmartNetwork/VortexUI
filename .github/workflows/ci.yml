@@ -94,8 +94,8 @@ jobs:
           target: ${{ matrix.target }}
           push: false
           tags: vortexui/${{ matrix.target }}:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }},ignore-error=true
 
   web-image:
     name: Build web image
@@ -110,5 +110,5 @@ jobs:
           file: deploy/web.Dockerfile
           push: false
           tags: vortexui/web:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web,ignore-error=true
