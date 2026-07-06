@@ -276,14 +276,22 @@ func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta,
 	return out, nil
 }
 
-func (d *Driver) Health(_ context.Context) (domain.NodeHealth, error) {
+func (d *Driver) Health(ctx context.Context) (domain.NodeHealth, error) {
 	m := hostmetrics.Read()
-	return domain.NodeHealth{
+	h := domain.NodeHealth{
 		CoreRunning: d.proc.Running(),
 		CPUPercent:  m.CPU,
 		MemPercent:  m.Mem,
 		DiskPercent: m.Disk,
-	}, nil
+	}
+	if h.CoreRunning {
+		if stats, err := d.OnlineStats(ctx); err == nil {
+			for _, n := range stats {
+				h.Connections += n
+			}
+		}
+	}
+	return h, nil
 }
 
 // OnlineStats reports live connection counts per user via the runtime API.

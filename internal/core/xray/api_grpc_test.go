@@ -83,3 +83,12 @@ func TestCipherType(t *testing.T) {
 		}
 	}
 }
+
+func TestOnlineStatName(t *testing.T) {
+	email := "550e8400-e29b-41d4-a716-446655440000"
+	got := onlineStatName(email)
+	want := "user>>>550e8400-e29b-41d4-a716-446655440000>>>online"
+	if got != want {
+		t.Errorf("onlineStatName = %q, want %q", got, want)
+	}
+}

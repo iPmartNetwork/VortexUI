@@ -813,8 +813,9 @@ func (h *Handlers) RevokeUserSub(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"user": u})
 }
 
-// GetUserOnline reports a user's live connection count (real, from the cores the
-// user is bound to) plus recently-active device count (from the Redis tracker).
+// GetUserOnline reports a user's live connection count plus the number of
+// distinct source IPs currently online (device count). Falls back to the Redis
+// subscription HWID tracker when live IP stats are unavailable (e.g. sing-box).
 func (h *Handlers) GetUserOnline(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -825,8 +826,16 @@ func (h *Handlers) GetUserOnline(c echo.Context) error {
 	}
 	resp := echo.Map{"window_seconds": int(deviceWindow.Seconds())}
 
-	// Recently-active devices (subscription-fetch activity).
-	if h.Online != nil {
+	// Live distinct source IPs from the cores — matches device-limit enforcement.
+	ips, ipTracked, err := h.Users.OnlineIPList(c.Request().Context(), id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "online ip lookup failed")
+	}
+	if ipTracked {
+		resp["active_devices"] = len(ips)
+		resp["device_tracking"] = true
+	} else if h.Online != nil {
+		// Fallback: subscription-fetch HWID activity when live IP tracking is unavailable.
 		n, err := h.Online.Online(c.Request().Context(), id.String(), deviceWindow)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "online lookup failed")
