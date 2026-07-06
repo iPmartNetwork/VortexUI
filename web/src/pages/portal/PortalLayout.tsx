@@ -32,7 +32,7 @@ export function PortalLayout() {
 
   return (
     <PortalProtected>
-      <div className="flex min-h-screen bg-bg text-fg">
+      <div className="flex min-h-screen bg-bg text-fg overflow-hidden">
         <aside
           className="hidden md:flex w-[236px] flex-col border-e border-border/40 flex-shrink-0"
           style={{ background: "var(--sidebar-bg)" }}
@@ -77,8 +77,8 @@ export function PortalLayout() {
             </button>
           </div>
         </aside>
-        <main className="flex-1 overflow-auto">
-          <div className="mx-auto max-w-5xl px-4 py-6 md:px-6 md:py-8 animate-page-enter">
+        <main className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="w-full px-4 py-5 md:px-6 md:py-6 lg:px-8 animate-page-enter">
             <Outlet />
           </div>
         </main>
