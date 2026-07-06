@@ -1227,9 +1227,9 @@ var _ port.TLSTricksRepository = (*TLSTricksRepo)(nil)
 
 func (r *TLSTricksRepo) Create(ctx context.Context, p *domain.TLSTrickProfile) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO tls_trick_profiles (id, name, description, fragment_enabled, fragment_length, fragment_interval, fingerprint, mux_enabled, mux_protocol, enabled, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		p.ID, p.Name, p.Description, p.FragmentEnabled, p.FragmentSize, p.FragmentInterval, p.UTLSFingerprint, p.MuxEnabled, "", p.Enabled, p.CreatedAt)
+		`INSERT INTO tls_trick_profiles (id, name, isp, description, fragment_enabled, fragment_length, fragment_interval, fingerprint, mux_enabled, mux_protocol, enabled, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+		p.ID, p.Name, string(p.ISP), p.Description, p.FragmentEnabled, p.FragmentSize, p.FragmentInterval, p.UTLSFingerprint, p.MuxEnabled, "", p.Enabled, p.CreatedAt)
 	return err
 }
 
@@ -1237,9 +1237,9 @@ func (r *TLSTricksRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.TLST
 	var p domain.TLSTrickProfile
 	var muxProto string
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, name, description, fragment_enabled, fragment_length, fragment_interval, fingerprint, mux_enabled, mux_protocol, enabled, created_at
+		`SELECT id, name, isp, description, fragment_enabled, fragment_length, fragment_interval, fingerprint, mux_enabled, mux_protocol, enabled, created_at
 		 FROM tls_trick_profiles WHERE id = $1`, id).
-		Scan(&p.ID, &p.Name, &p.Description, &p.FragmentEnabled, &p.FragmentSize, &p.FragmentInterval, &p.UTLSFingerprint, &p.MuxEnabled, &muxProto, &p.Enabled, &p.CreatedAt)
+		Scan(&p.ID, &p.Name, &p.ISP, &p.Description, &p.FragmentEnabled, &p.FragmentSize, &p.FragmentInterval, &p.UTLSFingerprint, &p.MuxEnabled, &muxProto, &p.Enabled, &p.CreatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -1251,9 +1251,9 @@ func (r *TLSTricksRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.TLST
 
 func (r *TLSTricksRepo) Update(ctx context.Context, p *domain.TLSTrickProfile) error {
 	_, err := r.pool.Exec(ctx,
-		`UPDATE tls_trick_profiles SET name = $2, description = $3, fragment_enabled = $4, fragment_length = $5, fragment_interval = $6, fingerprint = $7, mux_enabled = $8, mux_protocol = $9, enabled = $10
+		`UPDATE tls_trick_profiles SET name = $2, isp = $3, description = $4, fragment_enabled = $5, fragment_length = $6, fragment_interval = $7, fingerprint = $8, mux_enabled = $9, mux_protocol = $10, enabled = $11
 		 WHERE id = $1`,
-		p.ID, p.Name, p.Description, p.FragmentEnabled, p.FragmentSize, p.FragmentInterval, p.UTLSFingerprint, p.MuxEnabled, "", p.Enabled)
+		p.ID, p.Name, string(p.ISP), p.Description, p.FragmentEnabled, p.FragmentSize, p.FragmentInterval, p.UTLSFingerprint, p.MuxEnabled, "", p.Enabled)
 	return err
 }
 
@@ -1264,7 +1264,7 @@ func (r *TLSTricksRepo) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *TLSTricksRepo) List(ctx context.Context) ([]*domain.TLSTrickProfile, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT id, name, description, fragment_enabled, fragment_length, fragment_interval, fingerprint, mux_enabled, mux_protocol, enabled, created_at
+		`SELECT id, name, isp, description, fragment_enabled, fragment_length, fragment_interval, fingerprint, mux_enabled, mux_protocol, enabled, created_at
 		 FROM tls_trick_profiles ORDER BY created_at`)
 	if err != nil {
 		return nil, err
@@ -1275,7 +1275,7 @@ func (r *TLSTricksRepo) List(ctx context.Context) ([]*domain.TLSTrickProfile, er
 	for rows.Next() {
 		var p domain.TLSTrickProfile
 		var muxProto string
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.FragmentEnabled, &p.FragmentSize, &p.FragmentInterval, &p.UTLSFingerprint, &p.MuxEnabled, &muxProto, &p.Enabled, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.ISP, &p.Description, &p.FragmentEnabled, &p.FragmentSize, &p.FragmentInterval, &p.UTLSFingerprint, &p.MuxEnabled, &muxProto, &p.Enabled, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		results = append(results, &p)
