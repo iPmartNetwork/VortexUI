@@ -41,5 +41,5 @@ jobs:
           push: false
           tags: vortexui-${{ matrix.name }}:${{ steps.ver.outputs.version }}
           build-args: VERSION=${{ steps.ver.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }},ignore-error=true
