@@ -175,12 +175,16 @@ func (h *Handlers) GetAccountPaymentInfo(c echo.Context) error {
 	if h.WalletBilling == nil {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "billing unavailable")
 	}
-	s, err := h.WalletBilling.GetBillingSettings(c.Request().Context())
+	var adminID *uuid.UUID
+	if claims := claimsFrom(c); claims != nil {
+		adminID = &claims.AdminID
+	}
+	s, err := billingSettingsForReseller(c.Request().Context(), h.ResellerPayment, h.WalletBilling, adminID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "settings failed")
 	}
 	return c.JSON(http.StatusOK, echo.Map{
-		"settings": s,
+		"settings":         s,
 		"zarinpal_enabled": h.ZarinPal != nil,
 		"crypto_enabled":   h.NowPayments != nil,
 	})

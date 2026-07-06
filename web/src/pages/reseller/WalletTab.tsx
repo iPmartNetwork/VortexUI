@@ -10,6 +10,7 @@ import {
 } from "@/api/wallet-billing-hooks";
 import { Button, Input, Select } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
+import { CardToCardInfo } from "@/components/CardToCardInfo";
 import { CryptoAddressEditor } from "@/components/CryptoCurrencySelector";
 import { WalletRechargeSection } from "@/components/WalletRechargeSection";
 import { useToast } from "@/components/toast";
@@ -135,6 +136,9 @@ export function WalletTab() {
               <option value="crypto">Crypto</option>
             </Select>
           </div>
+          {method === "card_to_card" && paymentInfo.data?.settings && (
+            <CardToCardInfo settings={paymentInfo.data.settings} />
+          )}
           <Button className="w-full" onClick={proceedPayment} disabled={initDeposit.isPending || !matchedPkg}>
             {t("reseller.proceedPayment")}
           </Button>

@@ -14,9 +14,11 @@ import (
 
 // PortalHandlers serves end-user self-service endpoints.
 type PortalHandlers struct {
-	Portal *service.PortalService
-	Admins *service.AdminService
-	Issuer *auth.Issuer
+	Portal          *service.PortalService
+	Admins          *service.AdminService
+	Issuer          *auth.Issuer
+	ResellerPayment *service.ResellerPaymentService
+	WalletBilling   *service.WalletBillingService
 }
 
 // --- Portal Auth ---
@@ -91,6 +93,23 @@ func (h *PortalHandlers) PortalListPlans(c echo.Context) error {
 		}
 	}
 	return c.JSON(http.StatusOK, echo.Map{"plans": plans})
+}
+
+// PortalPaymentInfo returns card/crypto details for manual payment methods.
+func (h *PortalHandlers) PortalPaymentInfo(c echo.Context) error {
+	userID := portalUserID(c)
+	var adminID *uuid.UUID
+	if userID != uuid.Nil {
+		user, err := h.Portal.GetUsage(c.Request().Context(), userID)
+		if err == nil && user.AdminID != nil {
+			adminID = user.AdminID
+		}
+	}
+	s, err := billingSettingsForReseller(c.Request().Context(), h.ResellerPayment, h.WalletBilling, adminID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "payment info failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"settings": s})
 }
 
 // --- Portal Tickets ---
