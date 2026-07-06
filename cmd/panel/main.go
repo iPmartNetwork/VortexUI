@@ -436,7 +436,11 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Issuer:      issuer,
 		},
 		APITokens:   &api.APITokenHandlers{Svc: tokenSvc},
-		Portal:      &api.PortalHandlers{Portal: portalSvc, Issuer: issuer, Admins: adminSvc, ResellerPayment: resellerPaymentSvc, WalletBilling: walletBillingSvc},
+		Portal: &api.PortalHandlers{
+			Portal: portalSvc, Issuer: issuer, Admins: adminSvc,
+			ResellerPayment: resellerPaymentSvc, WalletBilling: walletBillingSvc,
+			Sub: subSvc, Traffic: traffic, Users: userSvc, Online: online, DeepLink: deepLinkSvc,
+		},
 		Reality:     &api.RealityHandlers{Scanner: realitySvc},
 		CleanIP:     &api.CleanIPHandlers{Scanner: cleanIPSvc},
 		SubHosts:    &api.SubHostHandlers{SubHosts: subHostSvc},

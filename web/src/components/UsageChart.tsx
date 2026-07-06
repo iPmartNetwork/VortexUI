@@ -2,9 +2,20 @@ import type { UsagePoint } from "@/api/hooks";
 import { formatBytes } from "@/lib/utils";
 
 // A dependency-free stacked bar chart (download on top of upload) per bucket.
-export function UsageChart({ points }: { points: UsagePoint[] }) {
+export function UsageChart({
+  points,
+  labels,
+}: {
+  points: UsagePoint[];
+  labels?: { empty?: string; up?: string; down?: string; peak?: string };
+}) {
+  const emptyText = labels?.empty ?? "No traffic recorded yet.";
+  const upLabel = labels?.up ?? "Up";
+  const downLabel = labels?.down ?? "Down";
+  const peakLabel = labels?.peak ?? "peak";
+
   if (points.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">No traffic recorded yet.</p>;
+    return <p className="py-8 text-center text-sm text-muted-foreground">{emptyText}</p>;
   }
 
   const w = 440;
@@ -35,13 +46,13 @@ export function UsageChart({ points }: { points: UsagePoint[] }) {
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span className="flex items-center gap-3">
           <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-sm" style={{ background: "#5DCAA5" }} /> Up
+            <span className="inline-block h-2 w-2 rounded-sm" style={{ background: "#5DCAA5" }} /> {upLabel}
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-sm" style={{ background: "#7F77DD" }} /> Down
+            <span className="inline-block h-2 w-2 rounded-sm" style={{ background: "#7F77DD" }} /> {downLabel}
           </span>
         </span>
-        <span>peak {formatBytes(max)}/day</span>
+        <span>{peakLabel} {formatBytes(max)}/day</span>
       </div>
     </div>
   );
