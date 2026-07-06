@@ -1,5 +1,42 @@
 import { cn } from "@/lib/utils";
 
+// --- Switch --- (toggle with correct LTR/RTL thumb position)
+export function Switch({
+  checked,
+  onCheckedChange,
+  className,
+  disabled,
+  ...props
+}: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> & {
+  checked: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onCheckedChange?.(!checked)}
+      className={cn(
+        "relative h-6 w-11 rounded-full transition-colors flex-shrink-0",
+        checked ? "bg-primary" : "bg-surface-3",
+        disabled && "pointer-events-none opacity-50",
+        className,
+      )}
+      {...props}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-0.5 start-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+          checked && "translate-x-5 rtl:-translate-x-5",
+        )}
+      />
+    </button>
+  );
+}
+
 // --- Button --- (gradient primary, soft ghost, bordered outline, danger)
 export function Button({
   className,

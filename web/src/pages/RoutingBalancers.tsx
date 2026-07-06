@@ -30,7 +30,7 @@ import {
 } from "@/api/hooks";
 import { balancerHooks, useUpdateGeo } from "@/api/policy-hooks";
 import type { BalancerFleetRow } from "@/api/types";
-import { Badge, Button, Input, Select } from "@/components/ui";
+import { Badge, Button, Input, Select, Switch } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { NodePicker } from "@/components/NodePicker";
 import { GlassCard, StatusBadge } from "@/components/veltrix";
@@ -268,23 +268,10 @@ function RoutingPacksTab() {
                   </div>
                 </div>
                 {canWrite && (
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isDefault}
-                    onClick={() => togglePack(p, !isDefault)}
-                    className={cn(
-                      "relative h-6 w-11 rounded-full transition-colors flex-shrink-0",
-                      isDefault ? "bg-primary" : "bg-surface-3",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                        isDefault ? "translate-x-5" : "translate-x-0.5",
-                      )}
-                    />
-                  </button>
+                  <Switch
+                    checked={isDefault}
+                    onCheckedChange={(v) => togglePack(p, v)}
+                  />
                 )}
               </div>
               {p.description && <p className="text-xs text-fg-muted leading-relaxed">{p.description}</p>}
