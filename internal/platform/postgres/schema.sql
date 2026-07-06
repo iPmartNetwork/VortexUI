@@ -589,6 +589,7 @@ CREATE INDEX idx_sni_routes_inbound ON sni_routes (inbound_id);
 CREATE TABLE tls_trick_profiles (
     id                 UUID PRIMARY KEY,
     name               TEXT NOT NULL,
+    isp                TEXT NOT NULL DEFAULT 'custom',
     description        TEXT NOT NULL DEFAULT '',
     fragment_enabled   BOOLEAN NOT NULL DEFAULT FALSE,
     fragment_length    TEXT NOT NULL DEFAULT '',

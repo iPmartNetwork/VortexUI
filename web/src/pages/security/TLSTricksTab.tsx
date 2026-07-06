@@ -22,6 +22,7 @@ interface TLSProfile {
   fragment_size: string;
   fragment_interval: string;
   utls_fingerprint: string;
+  mux_enabled?: boolean;
   ech_enabled: boolean;
   enabled: boolean;
 }
@@ -30,6 +31,18 @@ interface PresetRow {
   isp: string;
   name: string;
   defaults: TLSProfile;
+}
+
+interface ProfileFormState {
+  id?: string;
+  name: string;
+  isp: string;
+  fragment_enabled: boolean;
+  fragment_size: string;
+  fragment_interval: string;
+  utls_fingerprint: string;
+  mux_enabled: boolean;
+  enabled: boolean;
 }
 
 const PRESET_META: Record<string, { badge: string; target: string; descKey: TKey }> = {
@@ -46,6 +59,33 @@ function alpnFromProfile(p: TLSProfile): string {
   return "h2, http/1.1";
 }
 
+function profileToForm(p: TLSProfile): ProfileFormState {
+  return {
+    id: p.id,
+    name: p.name,
+    isp: p.isp || "custom",
+    fragment_enabled: p.fragment_enabled,
+    fragment_size: p.fragment_size,
+    fragment_interval: p.fragment_interval,
+    utls_fingerprint: p.utls_fingerprint,
+    mux_enabled: p.mux_enabled ?? true,
+    enabled: p.enabled,
+  };
+}
+
+function defaultsToForm(defaults: TLSProfile, isp: string): ProfileFormState {
+  return {
+    name: defaults.name,
+    isp,
+    fragment_enabled: defaults.fragment_enabled,
+    fragment_size: defaults.fragment_size,
+    fragment_interval: defaults.fragment_interval,
+    utls_fingerprint: defaults.utls_fingerprint,
+    mux_enabled: defaults.mux_enabled ?? true,
+    enabled: true,
+  };
+}
+
 export function TLSTricksTab() {
   const { t } = useI18n();
   const toast = useToast();
@@ -54,6 +94,7 @@ export function TLSTricksTab() {
   const { can } = useAuth();
   const canWrite = can("inbound:write");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editForm, setEditForm] = useState<ProfileFormState | null>(null);
 
   const { data } = useQuery({
     queryKey: ["tls-tricks"],
@@ -91,8 +132,15 @@ export function TLSTricksTab() {
     },
   });
 
-  function profileForISP(isp: string): TLSProfile | undefined {
-    return profiles.find((p) => p.isp === isp);
+  function profileForISP(isp: string, presetName?: string): TLSProfile | undefined {
+    return (
+      profiles.find((p) => p.isp === isp) ??
+      (presetName ? profiles.find((p) => p.name === presetName) : undefined)
+    );
+  }
+
+  function openEdit(existing: TLSProfile | undefined, defaults: TLSProfile, isp: string) {
+    setEditForm(existing ? profileToForm(existing) : defaultsToForm(defaults, isp));
   }
 
   return (
@@ -112,10 +160,10 @@ export function TLSTricksTab() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {presets.map((preset) => {
           const meta = PRESET_META[preset.isp] ?? { badge: "Preset", target: preset.isp, descKey: "security.tls.sectionDesc" as TKey };
-          const existing = profileForISP(preset.isp);
+          const existing = profileForISP(preset.isp, preset.name);
           const active = !!existing?.enabled;
           const applied = existing ? inboundCounts[existing.id] ?? 0 : 0;
-          const d = preset.defaults;
+          const d = existing ?? preset.defaults;
 
           return (
             <GlassCard key={preset.isp} hover={false} className="!p-5 space-y-3">
@@ -128,9 +176,18 @@ export function TLSTricksTab() {
                   <h3 className="text-sm font-bold text-fg mt-2">{preset.name}</h3>
                   <p className="text-[11px] text-fg-subtle">{meta.target}</p>
                 </div>
-                <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0", "text-primary bg-primary/10")}>
+                <button
+                  type="button"
+                  onClick={() => openEdit(existing, preset.defaults, preset.isp)}
+                  className={cn(
+                    "h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
+                    "text-primary bg-primary/10 hover:bg-primary/20",
+                  )}
+                  aria-label={t("security.tls.editProfile")}
+                  title={t("security.tls.editProfile")}
+                >
                   <SlidersHorizontal size={16} />
-                </div>
+                </button>
               </div>
 
               <p className="text-xs text-fg-muted leading-relaxed">
@@ -197,7 +254,17 @@ export function TLSTricksTab() {
                   <p className="text-sm font-bold text-fg">{p.name}</p>
                   <p className="text-xs text-fg-muted">Fragment: {p.fragment_enabled ? p.fragment_size : "off"}</p>
                 </div>
-                <StatusBadge status={p.enabled ? "active" : "inactive"} label={p.enabled ? "ACTIVE" : "OFF"} pulse={false} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={p.enabled ? "active" : "inactive"} label={p.enabled ? "ACTIVE" : "OFF"} pulse={false} />
+                  <button
+                    type="button"
+                    onClick={() => setEditForm(profileToForm(p))}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+                    aria-label={t("security.tls.editProfile")}
+                  >
+                    <SlidersHorizontal size={14} />
+                  </button>
+                </div>
               </GlassCard>
             ))}
           </div>
@@ -205,7 +272,148 @@ export function TLSTricksTab() {
       )}
 
       <CreateProfileModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      {editForm && (
+        <ProfileEditModal
+          key={editForm.id ?? editForm.isp}
+          open
+          initial={editForm}
+          readOnly={!canWrite}
+          onClose={() => setEditForm(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function ProfileEditModal({
+  open,
+  onClose,
+  initial,
+  readOnly,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initial: ProfileFormState;
+  readOnly?: boolean;
+}) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const { t } = useI18n();
+  const [f, setF] = useState(initial);
+
+  const save = useMutation({
+    mutationFn: async (body: ProfileFormState) => {
+      const payload = {
+        name: body.name,
+        isp: body.isp,
+        fragment_enabled: body.fragment_enabled,
+        fragment_size: body.fragment_size,
+        fragment_interval: body.fragment_interval,
+        utls_fingerprint: body.utls_fingerprint,
+        mux_enabled: body.mux_enabled,
+        enabled: body.enabled,
+      };
+      if (body.id) {
+        return api(`/api/tls-tricks/${body.id}`, { method: "PUT", body: payload });
+      }
+      return api("/api/tls-tricks", { method: "POST", body: payload });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tls-tricks"] });
+      onClose();
+      toast.success(t("security.tls.profileSaved"));
+    },
+  });
+
+  return (
+    <Modal open={open} onClose={onClose} title={t("security.tls.editProfile")} className="max-w-lg">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!readOnly) save.mutate(f);
+        }}
+        className="space-y-3"
+      >
+        <Input
+          placeholder={t("security.tls.profileName")}
+          value={f.name}
+          onChange={(e) => setF((s) => ({ ...s, name: e.target.value }))}
+          required
+          disabled={readOnly}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs text-fg-subtle">{t("security.tls.fragment")} size</label>
+            <Input
+              value={f.fragment_size}
+              onChange={(e) => setF((s) => ({ ...s, fragment_size: e.target.value }))}
+              placeholder="10-50"
+              disabled={readOnly || !f.fragment_enabled}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-fg-subtle">{t("security.tls.fragment")} interval (ms)</label>
+            <Input
+              value={f.fragment_interval}
+              onChange={(e) => setF((s) => ({ ...s, fragment_interval: e.target.value }))}
+              placeholder="10-20"
+              disabled={readOnly || !f.fragment_enabled}
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs text-fg-subtle">uTLS fingerprint</label>
+          <Select
+            value={f.utls_fingerprint}
+            onChange={(e) => setF((s) => ({ ...s, utls_fingerprint: e.target.value }))}
+            disabled={readOnly}
+          >
+            <option value="chrome">Chrome</option>
+            <option value="firefox">Firefox</option>
+            <option value="safari">Safari</option>
+            <option value="random">Random</option>
+          </Select>
+        </div>
+        <div className="space-y-2 rounded-lg border border-border/40 px-3 py-2">
+          <label className="flex items-center gap-2 text-sm text-fg">
+            <input
+              type="checkbox"
+              checked={f.fragment_enabled}
+              onChange={(e) => setF((s) => ({ ...s, fragment_enabled: e.target.checked }))}
+              disabled={readOnly}
+              className="rounded"
+            />
+            {t("security.tls.fragment")} enabled
+          </label>
+          <label className="flex items-center gap-2 text-sm text-fg">
+            <input
+              type="checkbox"
+              checked={f.mux_enabled}
+              onChange={(e) => setF((s) => ({ ...s, mux_enabled: e.target.checked }))}
+              disabled={readOnly}
+              className="rounded"
+            />
+            Multiplexing (mux)
+          </label>
+          <label className="flex items-center gap-2 text-sm text-fg">
+            <input
+              type="checkbox"
+              checked={f.enabled}
+              onChange={(e) => setF((s) => ({ ...s, enabled: e.target.checked }))}
+              disabled={readOnly}
+              className="rounded"
+            />
+            {t("common.enabled")}
+          </label>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose}>{readOnly ? t("common.close") : t("common.cancel")}</Button>
+          {!readOnly && (
+            <Button type="submit" disabled={save.isPending}>{t("common.save")}</Button>
+          )}
+        </div>
+      </form>
+    </Modal>
   );
 }
 
