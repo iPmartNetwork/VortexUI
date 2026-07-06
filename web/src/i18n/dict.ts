@@ -1142,6 +1142,13 @@ const en = {
   "cmdPalette.select": "↵ select",
   "cmdPalette.toggle": "K to toggle",
   "cmdPalette.searchTrigger": "Search...",
+  "errors.invalidData": "The submitted data is invalid.",
+  "errors.sessionExpired": "Your session has expired. Please sign in again.",
+  "errors.forbidden": "You do not have permission to perform this action.",
+  "errors.notFound": "The requested resource could not be found.",
+  "errors.conflict": "This change conflicts with an existing item.",
+  "errors.tooManyRequests": "Too many requests. Please wait a moment and try again.",
+  "settings.saveFailed": "We could not save your changes. Please try again.",
 
 } as const;
 
@@ -2262,6 +2269,13 @@ const fa: Record<string, string> = {
   "cmdPalette.select": "↵ انتخاب",
   "cmdPalette.toggle": "K برای باز/بسته",
   "cmdPalette.searchTrigger": "جستجو...",
+  "errors.invalidData": "داده‌های ارسالی نامعتبر است.",
+  "errors.sessionExpired": "نشست شما منقضی شده. دوباره وارد شوید.",
+  "errors.forbidden": "مجوز انجام این عمل را ندارید.",
+  "errors.notFound": "منبع درخواستی یافت نشد.",
+  "errors.conflict": "این تغییر با مورد موجود تداخل دارد.",
+  "errors.tooManyRequests": "درخواست زیاد است. کمی صبر کنید و دوباره تلاش کنید.",
+  "settings.saveFailed": "ذخیره تغییرات ممکن نشد. دوباره تلاش کنید.",
 
 };
 
@@ -3379,6 +3393,13 @@ const tr: Record<string, string> = {
   "cmdPalette.select": "↵ seç",
   "cmdPalette.toggle": "K ile aç/kapat",
   "cmdPalette.searchTrigger": "Ara...",
+  "errors.invalidData": "Gönderilen veri geçersiz.",
+  "errors.sessionExpired": "Oturumunuz sona erdi. Lütfen tekrar giriş yapın.",
+  "errors.forbidden": "Bu işlemi yapma izniniz yok.",
+  "errors.notFound": "İstenen kaynak bulunamadı.",
+  "errors.conflict": "Bu değişiklik mevcut bir öğeyle çakışıyor.",
+  "errors.tooManyRequests": "Çok fazla istek. Lütfen biraz bekleyip tekrar deneyin.",
+  "settings.saveFailed": "Değişiklikler kaydedilemedi. Lütfen tekrar deneyin.",
 
 };
 
@@ -4496,6 +4517,13 @@ const ar: Record<string, string> = {
   "cmdPalette.select": "↵ اختيار",
   "cmdPalette.toggle": "K للتبديل",
   "cmdPalette.searchTrigger": "بحث...",
+  "errors.invalidData": "البيانات المرسلة غير صالحة.",
+  "errors.sessionExpired": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
+  "errors.forbidden": "ليس لديك إذن لتنفيذ هذا الإجراء.",
+  "errors.notFound": "تعذر العثور على المورد المطلوب.",
+  "errors.conflict": "يتعارض هذا التغيير مع عنصر موجود.",
+  "errors.tooManyRequests": "طلبات كثيرة جداً. يرجى الانتظار والمحاولة مرة أخرى.",
+  "settings.saveFailed": "تعذر حفظ التغييرات. يرجى المحاولة مرة أخرى.",
 
 };
 
@@ -5613,6 +5641,13 @@ const ru: Record<string, string> = {
   "cmdPalette.select": "↵ выбор",
   "cmdPalette.toggle": "K переключить",
   "cmdPalette.searchTrigger": "Поиск...",
+  "errors.invalidData": "Отправленные данные недействительны.",
+  "errors.sessionExpired": "Сессия истекла. Войдите снова.",
+  "errors.forbidden": "У вас нет прав для этого действия.",
+  "errors.notFound": "Запрошенный ресурс не найден.",
+  "errors.conflict": "Изменение конфликтует с существующей записью.",
+  "errors.tooManyRequests": "Слишком много запросов. Подождите и повторите.",
+  "settings.saveFailed": "Не удалось сохранить изменения. Повторите попытку.",
 
 };
 
@@ -6730,6 +6765,13 @@ const zh: Record<string, string> = {
   "cmdPalette.select": "↵ 选择",
   "cmdPalette.toggle": "K 切换",
   "cmdPalette.searchTrigger": "搜索...",
+  "errors.invalidData": "提交的数据无效。",
+  "errors.sessionExpired": "会话已过期，请重新登录。",
+  "errors.forbidden": "您没有执行此操作的权限。",
+  "errors.notFound": "找不到请求的资源。",
+  "errors.conflict": "此更改与现有项冲突。",
+  "errors.tooManyRequests": "请求过多，请稍后再试。",
+  "settings.saveFailed": "无法保存更改，请重试。",
 
 };
 
@@ -7847,6 +7889,13 @@ const ja: Record<string, string> = {
   "cmdPalette.select": "↵ 選択",
   "cmdPalette.toggle": "K で切替",
   "cmdPalette.searchTrigger": "検索...",
+  "errors.invalidData": "送信されたデータが無効です。",
+  "errors.sessionExpired": "セッションの有効期限が切れました。再度サインインしてください。",
+  "errors.forbidden": "この操作を行う権限がありません。",
+  "errors.notFound": "要求されたリソースが見つかりません。",
+  "errors.conflict": "この変更は既存の項目と競合します。",
+  "errors.tooManyRequests": "リクエストが多すぎます。しばらく待ってから再試行してください。",
+  "settings.saveFailed": "変更を保存できませんでした。もう一度お試しください。",
 
 };
 
@@ -8964,6 +9013,13 @@ const es: Record<string, string> = {
   "cmdPalette.select": "↵ seleccionar",
   "cmdPalette.toggle": "K alternar",
   "cmdPalette.searchTrigger": "Buscar...",
+  "errors.invalidData": "Los datos enviados no son válidos.",
+  "errors.sessionExpired": "Tu sesión ha expirado. Inicia sesión de nuevo.",
+  "errors.forbidden": "No tienes permiso para realizar esta acción.",
+  "errors.notFound": "No se encontró el recurso solicitado.",
+  "errors.conflict": "Este cambio entra en conflicto con un elemento existente.",
+  "errors.tooManyRequests": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
+  "settings.saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
 
 };
 

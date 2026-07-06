@@ -20,7 +20,7 @@ import { buildCompactNavSections } from "@/navigation/nav-sections-compact";
 import { useOverview } from "@/api/policy-hooks";
 import type { Overview } from "@/api/types";
 
-const PANEL_VERSION = "1.3.0";
+const PANEL_VERSION = "1.3.1";
 
 function navBadgeCount(badges: Overview["widgets"]["nav_badges"] | undefined, key?: string): number {
   if (!badges || !key) return 0;
