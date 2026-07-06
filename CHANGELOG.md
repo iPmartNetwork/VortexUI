@@ -24,6 +24,9 @@ Patch release: settings validation, translated error messages, and API client fi
 
 ### Fixed
 - **API client** — read response body once (`text()` then parse) to avoid double-consumption bugs.
+- **TLS Tricks (ISP)** — settings icon opens configure modal; `isp` column persisted so preset profiles round-trip.
+- **Toggle switches** — off/on thumb position corrected (left/right) in Settings, Routing packs, and Decoy tab.
+- **CI Docker builds** — per-image GHA cache scopes; ignore transient cache export errors.
 
 ## [1.3.0] - 2026-07-06
 
