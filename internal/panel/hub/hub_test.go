@@ -23,6 +23,7 @@ type fakeConn struct {
 	healthIdx  int
 	healthFn   func(call int) (domain.NodeHealth, error) // overrides healthSeq when set
 	healthCall int
+	onlineStats map[string]int
 	consumeErr error
 	restartCoreFn func()
 }
@@ -31,7 +32,12 @@ func (f *fakeConn) Sync(context.Context, *core.GeneratedConfig, domain.CoreType)
 func (f *fakeConn) AddUser(context.Context, string, *domain.User) error                { return nil }
 func (f *fakeConn) RemoveUser(context.Context, string, uuid.UUID) error                { return nil }
 func (f *fakeConn) Close() error                                                       { return nil }
-func (f *fakeConn) OnlineStats(context.Context) (map[string]int, error)                { return nil, nil }
+func (f *fakeConn) OnlineStats(context.Context) (map[string]int, error) {
+	if f.onlineStats == nil {
+		return map[string]int{}, nil
+	}
+	return f.onlineStats, nil
+}
 func (f *fakeConn) OnlineIPs(context.Context, string) (map[string]int64, error)        { return nil, nil }
 func (f *fakeConn) UpdateGeo(context.Context, string, string) (int64, int64, error)    { return 0, 0, nil }
 func (f *fakeConn) Logs(context.Context, int) ([]string, error)                        { return nil, nil }
@@ -184,6 +190,40 @@ func TestHub_ResyncOnConnectAndReconnect(t *testing.T) {
 			t.Fatalf("expected resync #%d (connect/reconnect), timed out", i+1)
 		}
 	}
+}
+
+func TestHub_HealthPollSumsOnlineStatsIntoConnections(t *testing.T) {
+	conn := &fakeConn{
+		healthFn: func(int) (domain.NodeHealth, error) {
+			return domain.NodeHealth{CoreRunning: true}, nil
+		},
+		onlineStats: map[string]int{"u1": 2, "u2": 3},
+	}
+	repo := &nopNodeRepo{}
+	h := New(Options{
+		Dialer:         func(*domain.Node) (NodeConn, error) { return conn, nil },
+		HealthInterval: 5 * time.Millisecond,
+		Nodes:          repo,
+	})
+	defer h.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	id := uuid.New()
+	if err := h.Register(ctx, &domain.Node{ID: id, Name: "n1", Core: domain.CoreXray}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	deadline := time.Now().Add(1500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		_, hl, err := h.Status(id)
+		if err == nil && hl.Connections == 5 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	_, hl, _ := h.Status(id)
+	t.Fatalf("connections = %d, want 5 from online stats", hl.Connections)
 }
 
 func TestHub_AutoRecoverCore(t *testing.T) {

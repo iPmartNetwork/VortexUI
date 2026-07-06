@@ -304,6 +304,24 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			log.Error("migrate-back failed", "node", node.Name, "err", err)
 		}
 	})
+	// Push the latest xray policy (incl. statsUserOnline) to every node once at
+	// startup so live connection stats work without waiting for a disconnect edge.
+	go func() {
+		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		list, err := nodes.List(sctx)
+		if err != nil {
+			log.Warn("startup resync: list nodes failed", "err", err)
+			return
+		}
+		for _, n := range list {
+			if err := syncSvc.Resync(sctx, n.ID); err != nil {
+				log.Warn("startup resync failed", "node", n.Name, "err", err)
+			} else {
+				log.Info("startup resync ok", "node", n.Name)
+			}
+		}
+	}()
 	tokenSvc := service.NewAPITokenService(store.APITokens())
 
 	// Construct all feature services.
