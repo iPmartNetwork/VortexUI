@@ -3,6 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { portalApi } from "./portalApi";
 import { Button, Select } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
+import { CardToCardInfo } from "@/components/CardToCardInfo";
+import { CryptoPaySelector } from "@/components/CryptoCurrencySelector";
+import { configuredCryptoCoins } from "@/lib/crypto-currencies";
+import type { BillingSettings } from "@/api/wallet-billing-hooks";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { formatBytes } from "@/lib/utils";
@@ -51,12 +55,19 @@ export function PortalPlans() {
     queryFn: () => portalApi<DashboardData>("/api/portal/dashboard"),
   });
 
+  const { data: paymentData } = useQuery({
+    queryKey: ["portal-payment-info"],
+    queryFn: () => portalApi<{ settings: BillingSettings }>("/api/portal/payment-info"),
+  });
+  const paymentSettings = paymentData?.settings;
+
   // Reset state when selectedPlan or gateway changes
   useEffect(() => {
     setTxId("");
     setProofImage("");
-    setCryptoCoin("USDT");
-  }, [selectedPlan?.id, gateway]);
+    const coins = configuredCryptoCoins(paymentSettings?.crypto_addresses);
+    setCryptoCoin(coins[0]?.id ?? "USDT");
+  }, [selectedPlan?.id, gateway, paymentSettings?.crypto_addresses]);
 
   async function handleProofFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -179,8 +190,9 @@ export function PortalPlans() {
                 {/* Card-to-Card form */}
                 {gateway === "card_to_card" && (
                   <div className="space-y-2">
-                    <p className="text-[11px] text-fg-subtle">Transfer the amount to the card shown below, then upload your receipt.</p>
-                    <label className="block text-xs font-medium text-fg-muted">Upload receipt image (required)</label>
+                    <p className="text-[11px] text-fg-subtle">{t("portal.plans.cardTransferHint")}</p>
+                    {paymentSettings && <CardToCardInfo settings={paymentSettings} />}
+                    <label className="block text-xs font-medium text-fg-muted">{t("portal.plans.receiptRequired")}</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -202,25 +214,23 @@ export function PortalPlans() {
                 )}
 
                 {/* Crypto form */}
-                {gateway === "crypto" && (
+                {gateway === "crypto" && paymentSettings && (
                   <div className="space-y-2">
-                    <p className="text-[11px] text-fg-subtle">Send the exact amount to the address, then provide the transaction hash.</p>
-                    <label className="block text-xs font-medium text-fg-muted">Transaction Hash (TX ID) *</label>
+                    <p className="text-[11px] text-fg-subtle">{t("portal.plans.cryptoTransferHint")}</p>
+                    <CryptoPaySelector
+                      addresses={paymentSettings.crypto_addresses ?? {}}
+                      selected={cryptoCoin}
+                      onSelect={setCryptoCoin}
+                    />
+                    <label className="block text-xs font-medium text-fg-muted">{t("portal.plans.txHashRequired")}</label>
                     <input
                       type="text"
                       value={txId}
                       onChange={(e) => setTxId(e.target.value)}
-                      placeholder="Enter transaction hash"
+                      placeholder={t("portal.plans.txHashPlaceholder")}
                       className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-xs text-fg"
                     />
-                    <label className="block text-xs font-medium text-fg-muted">Coin</label>
-                    <Select value={cryptoCoin} onChange={(e) => setCryptoCoin(e.target.value)}>
-                      <option value="USDT">USDT</option>
-                      <option value="BTC">BTC</option>
-                      <option value="ETH">ETH</option>
-                      <option value="TRX">TRX</option>
-                    </Select>
-                    <label className="block text-xs font-medium text-fg-muted">Upload transfer screenshot (optional)</label>
+                    <label className="block text-xs font-medium text-fg-muted">{t("portal.plans.cryptoScreenshot")}</label>
                     <input
                       type="file"
                       accept="image/*"

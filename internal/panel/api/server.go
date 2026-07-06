@@ -280,6 +280,7 @@ func NewRouter(d Deps) *echo.Echo {
 	portal := e.Group("/api/portal", RequirePortalAuth(d.Issuer))
 	portal.GET("/dashboard", d.Portal.PortalDashboard)
 	portal.GET("/plans", d.Portal.PortalListPlans)
+	portal.GET("/payment-info", d.Portal.PortalPaymentInfo)
 	portal.GET("/tickets", d.Portal.PortalListTickets)
 	portal.POST("/tickets", d.Portal.PortalCreateTicket)
 	portal.GET("/tickets/:id", d.Portal.PortalGetTicket)

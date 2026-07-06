@@ -9,6 +9,7 @@ import {
 } from "@/api/wallet-billing-hooks";
 import { Badge, Button, Card, Input } from "@/components/ui";
 import { CryptoPaySelector } from "@/components/CryptoCurrencySelector";
+import { CardToCardInfo } from "@/components/CardToCardInfo";
 import { configuredCryptoCoins } from "@/lib/crypto-currencies";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
@@ -121,13 +122,7 @@ export function WalletRechargeSection() {
           </div>
 
           {method === "card_to_card" && settings && (
-            <div className="rounded-xl border bg-muted/40 p-4 text-sm space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">{t("billing.cardToCard")}</div>
-              <div>{settings.card_bank}</div>
-              <div className="font-mono text-base">{settings.card_number}</div>
-              <div>{settings.card_holder}</div>
-              {settings.manual_instructions && <p className="text-muted-foreground">{settings.manual_instructions}</p>}
-            </div>
+            <CardToCardInfo settings={settings} />
           )}
 
           {method === "crypto" && settings && (
