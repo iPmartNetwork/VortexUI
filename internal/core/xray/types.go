@@ -34,6 +34,7 @@ type policyConf struct {
 type policyLevel struct {
 	StatsUserUplink   bool  `json:"statsUserUplink"`
 	StatsUserDownlink bool  `json:"statsUserDownlink"`
+	StatsUserOnline   bool  `json:"statsUserOnline"` // required for live connections + online IP tracking
 	BufferSize        int32 `json:"bufferSize,omitempty"`        // KB; controls throughput
 	Uplinkonly        int32 `json:"uplinkOnly,omitempty"`        // seconds
 	Downlinkonly      int32 `json:"downlinkOnly,omitempty"`      // seconds

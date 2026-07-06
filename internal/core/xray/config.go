@@ -33,7 +33,7 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 		Stats: struct{}{},
 		Policy: policyConf{
 			Levels: map[string]policyLevel{
-				"0": {StatsUserUplink: true, StatsUserDownlink: true},
+				"0": {StatsUserUplink: true, StatsUserDownlink: true, StatsUserOnline: true},
 			},
 			System: systemPolicy{StatsInboundUplink: true, StatsInboundDownlink: true},
 		},

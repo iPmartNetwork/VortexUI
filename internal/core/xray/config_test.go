@@ -57,6 +57,9 @@ func TestBuilder_RendersValidXrayConfig(t *testing.T) {
 	if !parsed.Policy.Levels["0"].StatsUserUplink {
 		t.Error("per-user uplink stats must be enabled or traffic accounting breaks")
 	}
+	if !parsed.Policy.Levels["0"].StatsUserOnline {
+		t.Error("statsUserOnline must be enabled or live connections and device IPs are invisible")
+	}
 
 	// Expect the reserved api inbound + the user inbound.
 	var user *struct {
