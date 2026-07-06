@@ -27,6 +27,34 @@ interface RequestOptions {
   query?: Record<string, string | number | undefined>;
 }
 
+function parseErrorMessage(status: number, raw: string): string {
+  let message = `request failed (${status})`;
+  const text = raw.trim();
+  if (!text) return message;
+
+  try {
+    const detail = JSON.parse(text) as { message?: string };
+    if (typeof detail?.message === "string" && detail.message.trim()) {
+      return detail.message.trim();
+    }
+  } catch {
+    // plain-text body
+  }
+
+  return text;
+}
+
+function parseSuccessBody<T>(raw: string, contentType: string): T {
+  if (contentType.includes("application/json")) {
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return (raw || undefined) as T;
+    }
+  }
+  return (raw || undefined) as T;
+}
+
 export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const url = new URL(path, window.location.origin);
   if (opts.query) {
@@ -53,10 +81,14 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
     window.dispatchEvent(new Event("vortex:unauthorized"));
     throw new ApiError(401, "unauthorized");
   }
+
+  const raw = await res.text().catch(() => "");
+
   if (!res.ok) {
-    const detail = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, detail.message ?? `request failed (${res.status})`);
+    throw new ApiError(res.status, parseErrorMessage(res.status, raw));
   }
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+
+  const contentType = res.headers.get("content-type") ?? "";
+  return parseSuccessBody<T>(raw, contentType);
 }

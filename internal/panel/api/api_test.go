@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	"github.com/pquerna/otp/totp"
 
 	"github.com/vortexui/vortexui/internal/auth"
@@ -44,8 +45,8 @@ func (f *fakeAdminRepo) CreateRole(context.Context, *domain.Role) error { return
 func (f *fakeAdminRepo) ListRoles(context.Context) ([]*domain.Role, error) {
 	return []*domain.Role{}, nil
 }
-func (f *fakeAdminRepo) UpdateRole(context.Context, *domain.Role) error { return nil }
-func (f *fakeAdminRepo) DeleteRole(context.Context, uuid.UUID) error    { return nil }
+func (f *fakeAdminRepo) UpdateRole(context.Context, *domain.Role) error            { return nil }
+func (f *fakeAdminRepo) DeleteRole(context.Context, uuid.UUID) error               { return nil }
 func (f *fakeAdminRepo) SetInbounds(context.Context, uuid.UUID, []uuid.UUID) error { return nil }
 func (f *fakeAdminRepo) ListInboundIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
 	return nil, nil
@@ -66,6 +67,24 @@ func (f *fakeAdminRepo) ListNodeIDs(context.Context, uuid.UUID) ([]uuid.UUID, er
 }
 func (f *fakeAdminRepo) CountNodeAccess(context.Context, uuid.UUID, []uuid.UUID) (int64, error) {
 	return 0, nil
+}
+
+type memPanelSettingsRepo struct {
+	s *domain.PanelSettings
+}
+
+func (m *memPanelSettingsRepo) Get(context.Context) (*domain.PanelSettings, error) {
+	if m.s == nil {
+		return &domain.PanelSettings{}, nil
+	}
+	cp := *m.s
+	return &cp, nil
+}
+
+func (m *memPanelSettingsRepo) Save(_ context.Context, s *domain.PanelSettings) error {
+	cp := *s
+	m.s = &cp
+	return nil
 }
 
 type fakeUserRepo struct {
@@ -216,6 +235,46 @@ func (f *fakeLimiter) Allow(_ context.Context, key string, limit int, _ time.Dur
 		return false, time.Minute, nil
 	}
 	return true, 0, nil
+}
+
+func TestPanelSettingsHandlers_UpdateSettingsAcceptsValidBody(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPut, "/api/settings", strings.NewReader(`{"panel_name":"TestPanel"}`))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	h := &PanelSettingsHandlers{Svc: service.NewPanelSettingsService(&memPanelSettingsRepo{}, service.PanelSettingsHooks{})}
+	if err := h.UpdateSettings(c); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rec.Code)
+	}
+}
+
+func TestPanelSettingsHandlers_GetSettingsReturnsDefaults(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	h := &PanelSettingsHandlers{Svc: service.NewPanelSettingsService(&memPanelSettingsRepo{}, service.PanelSettingsHooks{})}
+	if err := h.GetSettings(c); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status: %d", rec.Code)
+	}
+	var out struct {
+		Settings domain.PanelSettings `json:"settings"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Settings.PanelName == "" {
+		t.Fatalf("expected a panel name in settings response, got empty value")
+	}
 }
 
 func TestLoginRateLimited(t *testing.T) {

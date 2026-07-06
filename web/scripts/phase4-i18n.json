@@ -1078,5 +1078,75 @@
     "zh": "搜索...",
     "ja": "検索...",
     "es": "Buscar..."
+  },
+  "errors.invalidData": {
+    "en": "The submitted data is invalid.",
+    "fa": "داده‌های ارسالی نامعتبر است.",
+    "tr": "Gönderilen veri geçersiz.",
+    "ar": "البيانات المرسلة غير صالحة.",
+    "ru": "Отправленные данные недействительны.",
+    "zh": "提交的数据无效。",
+    "ja": "送信されたデータが無効です。",
+    "es": "Los datos enviados no son válidos."
+  },
+  "errors.sessionExpired": {
+    "en": "Your session has expired. Please sign in again.",
+    "fa": "نشست شما منقضی شده. دوباره وارد شوید.",
+    "tr": "Oturumunuz sona erdi. Lütfen tekrar giriş yapın.",
+    "ar": "انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.",
+    "ru": "Сессия истекла. Войдите снова.",
+    "zh": "会话已过期，请重新登录。",
+    "ja": "セッションの有効期限が切れました。再度サインインしてください。",
+    "es": "Tu sesión ha expirado. Inicia sesión de nuevo."
+  },
+  "errors.forbidden": {
+    "en": "You do not have permission to perform this action.",
+    "fa": "مجوز انجام این عمل را ندارید.",
+    "tr": "Bu işlemi yapma izniniz yok.",
+    "ar": "ليس لديك إذن لتنفيذ هذا الإجراء.",
+    "ru": "У вас нет прав для этого действия.",
+    "zh": "您没有执行此操作的权限。",
+    "ja": "この操作を行う権限がありません。",
+    "es": "No tienes permiso para realizar esta acción."
+  },
+  "errors.notFound": {
+    "en": "The requested resource could not be found.",
+    "fa": "منبع درخواستی یافت نشد.",
+    "tr": "İstenen kaynak bulunamadı.",
+    "ar": "تعذر العثور على المورد المطلوب.",
+    "ru": "Запрошенный ресурс не найден.",
+    "zh": "找不到请求的资源。",
+    "ja": "要求されたリソースが見つかりません。",
+    "es": "No se encontró el recurso solicitado."
+  },
+  "errors.conflict": {
+    "en": "This change conflicts with an existing item.",
+    "fa": "این تغییر با مورد موجود تداخل دارد.",
+    "tr": "Bu değişiklik mevcut bir öğeyle çakışıyor.",
+    "ar": "يتعارض هذا التغيير مع عنصر موجود.",
+    "ru": "Изменение конфликтует с существующей записью.",
+    "zh": "此更改与现有项冲突。",
+    "ja": "この変更は既存の項目と競合します。",
+    "es": "Este cambio entra en conflicto con un elemento existente."
+  },
+  "errors.tooManyRequests": {
+    "en": "Too many requests. Please wait a moment and try again.",
+    "fa": "درخواست زیاد است. کمی صبر کنید و دوباره تلاش کنید.",
+    "tr": "Çok fazla istek. Lütfen biraz bekleyip tekrar deneyin.",
+    "ar": "طلبات كثيرة جداً. يرجى الانتظار والمحاولة مرة أخرى.",
+    "ru": "Слишком много запросов. Подождите и повторите.",
+    "zh": "请求过多，请稍后再试。",
+    "ja": "リクエストが多すぎます。しばらく待ってから再試行してください。",
+    "es": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo."
+  },
+  "settings.saveFailed": {
+    "en": "We could not save your changes. Please try again.",
+    "fa": "ذخیره تغییرات ممکن نشد. دوباره تلاش کنید.",
+    "tr": "Değişiklikler kaydedilemedi. Lütfen tekrar deneyin.",
+    "ar": "تعذر حفظ التغييرات. يرجى المحاولة مرة أخرى.",
+    "ru": "Не удалось сохранить изменения. Повторите попытку.",
+    "zh": "无法保存更改，请重试。",
+    "ja": "変更を保存できませんでした。もう一度お試しください。",
+    "es": "No se pudieron guardar los cambios. Inténtalo de nuevo."
   }
 }

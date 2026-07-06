@@ -58,3 +58,34 @@ func TestPanelSettingsService_AutoBackupSnapshot(t *testing.T) {
 		t.Fatalf("unexpected snapshot: %+v", snap)
 	}
 }
+
+func TestPanelSettingsService_UpdateNormalizesValues(t *testing.T) {
+	repo := &memPanelSettingsRepo{}
+	svc := NewPanelSettingsService(repo, PanelSettingsHooks{})
+
+	out, err := svc.Update(context.Background(), domain.PanelSettings{
+		PanelName:      "  Test Panel  ",
+		SubURLTemplate: "  https://{domain}/sub/{token}  ",
+		AccentColor:    "  #123456  ",
+		FooterText:     "   ",
+		AutoBackupIntervalHours: 200,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.PanelName != "Test Panel" {
+		t.Fatalf("unexpected panel name: %q", out.PanelName)
+	}
+	if out.SubURLTemplate != "https://{domain}/sub/{token}" {
+		t.Fatalf("unexpected sub URL template: %q", out.SubURLTemplate)
+	}
+	if out.AccentColor != "#123456" {
+		t.Fatalf("unexpected accent color: %q", out.AccentColor)
+	}
+	if out.FooterText != domain.DefaultPanelSettings().FooterText {
+		t.Fatalf("unexpected footer text: %q", out.FooterText)
+	}
+	if out.AutoBackupIntervalHours != 168 {
+		t.Fatalf("unexpected backup interval: %d", out.AutoBackupIntervalHours)
+	}
+}

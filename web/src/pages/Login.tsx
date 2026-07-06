@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getApiErrorMessage } from "@/lib/form-errors";
 import { motion } from "framer-motion";
 import {
   Lock,
@@ -45,7 +46,11 @@ export function Login() {
       navigate("/overview");
     } catch (err) {
       const status = (err as { status?: number })?.status;
-      setError(status === 429 ? t("login.tooMany") : t("login.invalid"));
+      setError(
+        status === 429
+          ? t("login.tooMany")
+          : getApiErrorMessage(err, t("login.invalid"), t),
+      );
     } finally {
       setBusy(false);
     }
@@ -226,7 +231,11 @@ export function Login() {
               </div>
             )}
 
-            {error && <p className="text-sm font-medium text-danger">{error}</p>}
+            {error && (
+              <div className="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2">
+                <p className="text-sm font-medium text-danger">{error}</p>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-success font-medium flex items-center gap-1">

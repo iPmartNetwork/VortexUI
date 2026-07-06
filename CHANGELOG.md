@@ -6,6 +6,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-07-06
+
+Patch release: settings validation, translated error messages, and API client fixes.
+
+### Added
+- **`getApiErrorMessage()`** — maps HTTP status codes to i18n keys across Login and Settings.
+- **Error i18n keys** — `errors.*` and `settings.saveFailed` in all 8 languages.
+- **Frontend tests** — vitest coverage for API client body parsing and form error helpers.
+- **Backend tests** — panel settings handler and normalization unit tests.
+
+### Changed
+- Settings tabs (General, Security, Notifications, Appearance, Backup) show translated save errors.
+- **Backup tab** — auto-backup save now catches API errors and shows an inline banner.
+- **Lazy routes** — loading fallback uses `common.loading` i18n string.
+- **Panel settings service** — normalizes trim/caps on update; merges partial payloads on get.
+
+### Fixed
+- **API client** — read response body once (`text()` then parse) to avoid double-consumption bugs.
+
 ## [1.3.0] - 2026-07-06
 
 Backend–frontend integration release: persisted panel settings, audit log UI, portal

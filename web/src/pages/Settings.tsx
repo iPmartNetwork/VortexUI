@@ -22,6 +22,7 @@ import { useAuth } from "@/auth/auth";
 import { mergeResellerSettings, type ResellerSettingKey } from "@/auth/permissions";
 import type { Lang, TKey } from "@/i18n/dict";
 import { useTitle } from "@/lib/useTitle";
+import { getApiErrorMessage } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
 import { AdminsTab } from "@/pages/Admins";
 
@@ -319,6 +320,7 @@ function GeneralTab({
   const [singboxDNS, setSingboxDNS] = useState('{"servers":[{"address":"https://dns.google/dns-query","tag":"google"}]}');
   const [hours, setHours] = useState("");
   const [checking, setChecking] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [updateResult, setUpdateResult] = useState<{ available: boolean; current: string; latest: string } | null>(null);
 
   const cfg = useQuery({
@@ -352,19 +354,24 @@ function GeneralTab({
   });
 
   const saveAll = useCallback(async () => {
-    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
-      panel_name: panelName,
-      panel_domain: panelDomain,
-      sub_url_template: subUrlTemplate,
-      auto_sync_nodes: autoSync,
-      debug_mode: debugMode,
-      clash_rules_extra: clashRules,
-      singbox_dns_extra: singboxDNS,
-    }));
-    if (show("sub_update")) {
-      await saveSub.mutateAsync(Number(hours) || 12);
+    setFormError(null);
+    try {
+      await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+        panel_name: panelName,
+        panel_domain: panelDomain,
+        sub_url_template: subUrlTemplate,
+        auto_sync_nodes: autoSync,
+        debug_mode: debugMode,
+        clash_rules_extra: clashRules,
+        singbox_dns_extra: singboxDNS,
+      }));
+      if (show("sub_update")) {
+        await saveSub.mutateAsync(Number(hours) || 12);
+      }
+      toast.success(t("common.save"));
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, t("settings.saveFailed"), t));
     }
-    toast.success(t("common.save"));
   }, [panelSettings, panelName, panelDomain, subUrlTemplate, autoSync, debugMode, clashRules, singboxDNS, hours, show, saveSub, saveSettings, toast, t]);
 
   useEffect(() => {
@@ -385,6 +392,12 @@ function GeneralTab({
 
   return (
     <div className="space-y-1">
+      {formError && (
+        <div className="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2">
+          <p className="text-sm font-medium text-danger">{formError}</p>
+        </div>
+      )}
+
       {show("branding") && (
         <>
           <div className="space-y-3 pb-5">
@@ -474,6 +487,7 @@ function SecurityTab({
   const saveSettings = useSavePanelSettings();
   const [require2FA, setRequire2FA] = useState(false);
   const [apiAccess, setApiAccess] = useState(true);
+  const [formError, setFormError] = useState<string | null>(null);
   const [cur, setCur] = useState("");
   const [nw, setNw] = useState("");
   const [whitelist, setWhitelist] = useState("");
@@ -492,18 +506,23 @@ function SecurityTab({
   });
 
   const saveAll = useCallback(async () => {
-    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
-      require_2fa: require2FA,
-      api_access_enabled: apiAccess,
-      ip_whitelist: whitelist,
-      ip_blacklist: blacklist,
-    }));
-    if (show("password") && cur && nw) {
-      await changePw.mutateAsync({ current: cur, new: nw });
-      setCur("");
-      setNw("");
+    setFormError(null);
+    try {
+      await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+        require_2fa: require2FA,
+        api_access_enabled: apiAccess,
+        ip_whitelist: whitelist,
+        ip_blacklist: blacklist,
+      }));
+      if (show("password") && cur && nw) {
+        await changePw.mutateAsync({ current: cur, new: nw });
+        setCur("");
+        setNw("");
+      }
+      toast.success(t("common.save"));
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, t("settings.saveFailed"), t));
     }
-    toast.success(t("common.save"));
   }, [panelSettings, require2FA, apiAccess, whitelist, blacklist, cur, nw, show, changePw, saveSettings, toast, t]);
 
   useEffect(() => {
@@ -512,6 +531,12 @@ function SecurityTab({
 
   return (
     <div className="space-y-1">
+      {formError && (
+        <div className="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2">
+          <p className="text-sm font-medium text-danger">{formError}</p>
+        </div>
+      )}
+
       {sudo && (
         <>
           <ToggleRow label={t("settings.require2FA")} description={t("settings.require2FADesc")} checked={require2FA} onChange={setRequire2FA} />
@@ -613,6 +638,7 @@ function NotificationsTab({
   const saveSettings = useSavePanelSettings();
   const [push, setPush] = useState(true);
   const [email, setEmail] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [tgToken, setTgToken] = useState("");
 
   useEffect(() => {
@@ -623,12 +649,17 @@ function NotificationsTab({
   }, [panelSettings]);
 
   const saveAll = useCallback(async () => {
-    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
-      push_notifications: push,
-      email_alerts: email,
-      notify_telegram_token: tgToken,
-    }));
-    toast.success(t("common.save"));
+    setFormError(null);
+    try {
+      await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+        push_notifications: push,
+        email_alerts: email,
+        notify_telegram_token: tgToken,
+      }));
+      toast.success(t("common.save"));
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, t("settings.saveFailed"), t));
+    }
   }, [panelSettings, push, email, tgToken, saveSettings, toast, t]);
 
   useEffect(() => {
@@ -637,6 +668,12 @@ function NotificationsTab({
 
   return (
     <div className="space-y-1">
+      {formError && (
+        <div className="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2">
+          <p className="text-sm font-medium text-danger">{formError}</p>
+        </div>
+      )}
+
       <ToggleRow label={t("settings.pushNotifications")} description={t("settings.pushNotificationsDesc")} checked={push} onChange={setPush} />
       <ToggleRow label={t("settings.emailAlerts")} description={t("settings.emailAlertsDesc")} checked={email} onChange={setEmail} />
       <PanelBlock title={t("settings.telegramBotToken")}>
@@ -660,6 +697,7 @@ function AppearanceTab({
   const saveSettings = useSavePanelSettings();
   const [accentColor, setAccentColor] = useState("#6366f1");
   const [logoURL, setLogoURL] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [footerText, setFooterText] = useState("© 2026 iPmart Network. All rights reserved.");
 
   const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -680,13 +718,18 @@ function AppearanceTab({
   );
 
   const saveAll = useCallback(async () => {
-    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
-      accent_color: accentColor,
-      logo_url: logoURL,
-      footer_text: footerText,
-    }));
-    applyAccentColor(accentColor, resolved);
-    toast.success(t("common.save"));
+    setFormError(null);
+    try {
+      await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+        accent_color: accentColor,
+        logo_url: logoURL,
+        footer_text: footerText,
+      }));
+      applyAccentColor(accentColor, resolved);
+      toast.success(t("common.save"));
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, t("settings.saveFailed"), t));
+    }
   }, [accentColor, logoURL, footerText, panelSettings, resolved, saveSettings, toast, t]);
 
   useEffect(() => {
@@ -699,6 +742,12 @@ function AppearanceTab({
 
   return (
     <div className="space-y-1">
+      {formError && (
+        <div className="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2">
+          <p className="text-sm font-medium text-danger">{formError}</p>
+        </div>
+      )}
+
       {show("appearance") && (
         <>
           <ToggleRow label={t("settings.darkMode")} description={t("settings.darkModeDesc")} checked={isDark} onChange={toggleDarkMode} />
@@ -855,6 +904,7 @@ function BackupTab({
   const [s3Bucket, setS3Bucket] = useState("");
   const [interval, setInterval] = useState("24");
   const [tgChat, setTgChat] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   const usersOnly = !sudo && allowUserBackup;
   const canRestore = sudo && show("backup");
@@ -869,14 +919,19 @@ function BackupTab({
   }, [panelSettings]);
 
   const saveAuto = useCallback(async () => {
-    await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
-      auto_backup_enabled: autoBackup,
-      auto_backup_s3_endpoint: s3Endpoint,
-      auto_backup_s3_bucket: s3Bucket,
-      auto_backup_interval_hours: Number(interval) || 24,
-      auto_backup_telegram_chat_id: tgChat,
-    }));
-    toast.success(t("common.save"));
+    setFormError(null);
+    try {
+      await saveSettings.mutateAsync(mergePanelSettings(panelSettings, {
+        auto_backup_enabled: autoBackup,
+        auto_backup_s3_endpoint: s3Endpoint,
+        auto_backup_s3_bucket: s3Bucket,
+        auto_backup_interval_hours: Number(interval) || 24,
+        auto_backup_telegram_chat_id: tgChat,
+      }));
+      toast.success(t("common.save"));
+    } catch (err) {
+      setFormError(getApiErrorMessage(err, t("settings.saveFailed"), t));
+    }
   }, [autoBackup, s3Endpoint, s3Bucket, interval, tgChat, panelSettings, saveSettings, toast, t]);
 
   useEffect(() => {
@@ -905,6 +960,12 @@ function BackupTab({
 
   return (
     <div className="space-y-1">
+      {formError && (
+        <div className="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2">
+          <p className="text-sm font-medium text-danger">{formError}</p>
+        </div>
+      )}
+
       {show("auto_backup") && sudo && (
         <>
           <ToggleRow label={t("settings.autoBackup")} description={t("settings.autoBackupDesc")} checked={autoBackup} onChange={setAutoBackup} />
