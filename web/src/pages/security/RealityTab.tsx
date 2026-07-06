@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Play, Sparkles } from "lucide-react";
 import { api } from "@/api/client";
-import { useInboundsFleet, useUpdateInbound, type InboundFleetRow } from "@/api/hooks";
+import { useInboundsFleet, useUpdateInbound, inboundToUpdateInput, type InboundFleetRow } from "@/api/hooks";
 import { Badge, Button, Input, Select } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
@@ -203,7 +203,15 @@ function ApplyToInboundCell({
   const { t } = useI18n();
   const toast = useToast();
   const update = useUpdateInbound();
-  const [targetId, setTargetId] = useState(inbounds[0]?.id ?? "");
+  const [targetId, setTargetId] = useState("");
+
+  useEffect(() => {
+    if (inbounds.length === 0) {
+      setTargetId("");
+      return;
+    }
+    setTargetId((cur) => (inbounds.some((ib) => ib.id === cur) ? cur : inbounds[0].id));
+  }, [inbounds]);
 
   if (inbounds.length === 0) {
     return (
@@ -214,27 +222,15 @@ function ApplyToInboundCell({
   }
 
   const target = inbounds.find((ib) => ib.id === targetId) ?? inbounds[0];
-  const alreadyApplied = !!target?.sni?.includes(sni);
+  const isPrimary = target?.sni?.[0] === sni;
 
   function apply() {
     if (!target) return;
-    const nextSni = target.sni?.includes(sni) ? target.sni : [sni, ...(target.sni ?? [])];
+    const sniList = [sni, ...(target.sni ?? []).filter((x) => x !== sni)];
     update.mutate(
       {
         id: target.id,
-        input: {
-          listen: target.listen,
-          port: target.port,
-          network: target.network,
-          security: target.security,
-          sni: nextSni,
-          path: target.path,
-          host: target.host,
-          flow: target.flow,
-          raw: target.raw,
-          enabled: target.enabled,
-          geo_policy: target.geo_policy,
-        },
+        input: inboundToUpdateInput(target, { sni: sniList }),
       },
       {
         onSuccess: () => toast.success(t("security.reality.applied").replace("{tag}", target.tag)),
@@ -247,7 +243,7 @@ function ApplyToInboundCell({
     <div className="flex items-center justify-end gap-1.5">
       {inbounds.length > 1 && (
         <select
-          value={targetId || inbounds[0]?.id}
+          value={targetId}
           onChange={(e) => setTargetId(e.target.value)}
           className="field !h-8 !py-0 text-xs w-28"
           dir="ltr"
@@ -259,8 +255,8 @@ function ApplyToInboundCell({
           ))}
         </select>
       )}
-      <Button size="sm" variant={alreadyApplied ? "ghost" : "outline"} onClick={apply} disabled={update.isPending || alreadyApplied}>
-        {alreadyApplied ? t("common.applied") : t("security.reality.applyInbound")}
+      <Button size="sm" variant={isPrimary ? "ghost" : "outline"} onClick={apply} disabled={update.isPending || isPrimary}>
+        {isPrimary ? t("common.applied") : t("security.reality.applyInbound")}
       </Button>
     </div>
   );

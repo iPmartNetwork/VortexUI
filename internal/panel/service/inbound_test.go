@@ -3,6 +3,7 @@ package service
 import (
 	"testing"
 
+	"github.com/vortexui/vortexui/internal/core/reality"
 	"github.com/vortexui/vortexui/internal/domain"
 )
 
@@ -83,5 +84,27 @@ func TestCoreSupportsRejectsOffMatrixCombos(t *testing.T) {
 				t.Fatalf("coreSupports(%v, %v, %q, %q) = %v, want nil", tc.core, tc.proto, tc.network, tc.security, err)
 			}
 		})
+	}
+}
+
+func TestProvisionSecuritySyncsRealitySNI(t *testing.T) {
+	in := &domain.Inbound{
+		Security: domain.SecurityReality,
+		SNI:      []string{"www.apple.com"},
+		Raw: map[string]any{
+			"reality": map[string]any{
+				"private_key":  "testpriv",
+				"server_names": []any{"www.microsoft.com"},
+				"dest":         "www.microsoft.com:443",
+			},
+		},
+	}
+	provisionSecurity(in)
+	p := reality.ParseParams(in.Raw["reality"])
+	if len(p.ServerNames) != 1 || p.ServerNames[0] != "www.apple.com" {
+		t.Fatalf("server_names = %v, want [www.apple.com]", p.ServerNames)
+	}
+	if p.Dest != "www.apple.com:443" {
+		t.Fatalf("dest = %q, want www.apple.com:443", p.Dest)
 	}
 }

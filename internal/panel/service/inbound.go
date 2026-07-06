@@ -58,6 +58,7 @@ func provisionSecurity(in *domain.Inbound) {
 	switch in.Security {
 	case domain.SecurityReality:
 		if reality.ParseParams(in.Raw["reality"]).PrivateKey != "" {
+			syncRealitySNI(in)
 			return
 		}
 		kp, err := reality.GenerateKeypair()
@@ -270,6 +271,32 @@ func (s *InboundService) ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*d
 // ListFleet returns every inbound with its node name (single query).
 func (s *InboundService) ListFleet(ctx context.Context) ([]domain.InboundListItem, error) {
 	return s.repo.ListFleet(ctx)
+}
+
+// syncRealitySNI keeps Raw["reality"].server_names and dest aligned with the
+// inbound SNI list when operators change SNI (e.g. via the REALITY scanner).
+// Without this, stale server_names in raw would override the updated SNI field.
+func syncRealitySNI(in *domain.Inbound) {
+	if len(in.SNI) == 0 {
+		return
+	}
+	rm, ok := in.Raw["reality"].(map[string]any)
+	if !ok {
+		rm = map[string]any{}
+	} else {
+		cp := make(map[string]any, len(rm))
+		for k, v := range rm {
+			cp[k] = v
+		}
+		rm = cp
+	}
+	names := make([]any, len(in.SNI))
+	for i, s := range in.SNI {
+		names[i] = s
+	}
+	rm["server_names"] = names
+	rm["dest"] = in.SNI[0] + ":443"
+	in.Raw["reality"] = rm
 }
 
 func orStr(v, def string) string {
