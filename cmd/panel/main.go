@@ -307,7 +307,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	// Push the latest xray policy (incl. statsUserOnline) to every node once at
 	// startup so live connection stats work without waiting for a disconnect edge.
 	go func() {
-		sctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		sctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
 		list, err := nodes.List(sctx)
 		if err != nil {
