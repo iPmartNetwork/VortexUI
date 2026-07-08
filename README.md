@@ -24,7 +24,7 @@
 
 <sub>
 
-[Features](#-features) · [What's New](#-whats-new-in-129) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Docs](#-documentation) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+[Features](#-features) · [What's New](#-whats-new-in-131) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Docs](#-documentation) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 
 </sub>
 
@@ -117,7 +117,41 @@
 
 ---
 
-## 🆕 What's New in 1.2.9
+## 🆕 What's New in 1.3.1
+
+> **Portal dashboard v2 · live stats · settings error i18n · UI fixes**
+
+| Feature | Description |
+|---------|-------------|
+| **Portal dashboard v2** | QR subscription, live devices/connections, 30-day usage chart, quota alerts, quick actions |
+| **Portal API** | `GET /api/portal/subscription`, `/usage`, `/online`, `/deeplink` for authenticated end-users |
+| **Live connections** | OnlineStats on every health tick; accurate device IPs and connection counts in admin + portal |
+| **Settings i18n** | Translated save errors across all Settings tabs (8 languages) |
+| **UI fixes** | TLS Tricks ISP modal, toggle thumb position, backup tab error banner, API body parsing |
+
+📖 Details: [CHANGELOG.md](CHANGELOG.md) · [Portal polish (v1.3.1)](docs/wiki/en/19-v131-portal-polish.md)
+
+---
+
+## 🆕 What's New in 1.3.0
+
+> **Persisted settings · audit log UI · portal referral · ACME · federation sync**
+
+| Feature | Description |
+|---------|-------------|
+| **Panel settings API** | `GET/PUT /api/settings` stores general, security, appearance, notifications, and backup options in PostgreSQL |
+| **Audit Log page** | `/audit` restored with live table from `GET /api/audit` |
+| **Portal referral** | `/portal/referral` for end-user codes and apply flow |
+| **Portal branding** | Whitelabel title/logo from `GET /api/portal/branding?slug=` |
+| **ACME Let's Encrypt** | DNS-01 via Cloudflare when credentials are configured |
+| **Federation sync** | Periodic peer health checks and user/node count sync events |
+
+📖 Details: [Backend integration (v1.3.0)](docs/wiki/en/18-v130-settings-integration.md)
+
+<details>
+<summary><strong>🔽 Previous Releases (1.2.9 → 1.2)</strong></summary>
+
+### 🆕 What's New in 1.2.9
 
 > **Command Tower UI · merged pages · Settings hub · reseller profiles · fleet telemetry**
 
@@ -131,9 +165,6 @@
 | **Inbounds page** | Dedicated `/inbounds` view separate from node fleet |
 | **Node telemetry** | Region, country code, ping ms (migration 0030) |
 | **Admin APIs** | `GET /api/admins/:id/quota` and `GET /api/admins/:id/wallet` |
-
-<details>
-<summary><strong>🔽 Previous Releases (1.2.8 → 1.2)</strong></summary>
 
 ### 🆕 What's New in 1.2.8
 
@@ -263,7 +294,7 @@ Collapsible sidebar · Command palette · Skeleton loading · Data tables · Pag
 
 ### How VortexUI stacks up against other panels
 
-|  | VortexUI 1.2.9 | 3x-ui | Marzban | Hiddify |
+|  | VortexUI 1.3.1 | 3x-ui | Marzban | Hiddify |
 |--|----------------|-------|---------|---------|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |
@@ -409,7 +440,7 @@ make run-panel          # start panel
 ## 🗺 Roadmap
 
 <details>
-<summary><strong>✅ Completed (v1.0 → v1.2.9)</strong></summary>
+<summary><strong>✅ Completed (v1.0 → v1.3.1)</strong></summary>
 
 - Core-agnostic engine (Xray + sing-box)
 - User-centric data model + push delta traffic
@@ -452,6 +483,10 @@ make run-panel          # start panel
 - Command palette + keyboard shortcuts
 - Dashboard widgets + onboarding tour
 - Mobile-first portal
+- Portal dashboard v2 + live stats API (v1.3.1)
+- Persisted panel settings + audit log UI (v1.3.0)
+- Portal referral + whitelabel branding (v1.3.0)
+- ACME DNS-01 + federation sync worker (v1.3.0)
 - Command Tower UI (v1.2.9)
 - Veltrix UI redesign (v1.2.8)
 - Complete 8-language i18n (v1.2.8)

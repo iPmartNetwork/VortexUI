@@ -1,156 +1,127 @@
-# مستندات VortexUI
+# 🌀 مستندات VortexUI
 
-<div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.4rem;">VortexUI نسخه ۱.۲.۹</strong><br/>
-  <em style="font-size: 1.1rem;">پنل مدیریت پروکسی نسل جدید — Command Tower UI، Veltrix، i18n کامل، مستقل از هسته، کاربرمحور، بلادرنگ</em>
-</div>
+<div align="center">
 
----
+**پنل مدیریت پروکسی نسل بعدی**
 
-<div class="grid cards" markdown>
+*کاربرمحور · مستقل از هسته · آماده سازمانی*
 
-- :material-palette: **Command Tower UI (نسخه ۱.۲.۹)**
-
-    ادغام صفحات، مرکز تنظیمات، پروفایل ریسلر، تله‌متری ناوگان و صفحه Inbounds.
-
-- :material-palette: **Veltrix UI (نسخه ۱.۲.۸)**
-
-    سیستم طراحی شیشه‌ای، سایدبار تاشو، command palette (Ctrl+K) و ترجمه کامل ۸ زبان در پنل ادمین و پورتال.
-
-- :material-account-group: **پورتال سلف‌سرویس و فروشگاه**
-
-    کاربران نهایی با توکن اشتراک خود وارد می‌شوند، مصرف را مشاهده کرده، پلن خریداری می‌کنند و تیکت پشتیبانی ارسال می‌کنند.
-
-- :material-cash-register: **پلن‌ها و پرداخت اختصاصی هر ریسلر**
-
-    هر ریسلر پلن‌ها، قیمت‌گذاری و روش‌های پرداخت خود را تعریف می‌کند — کارت‌به‌کارت، رمزارز یا درگاه زرین‌پال.
-
-- :material-shield-lock: **مجموعه ضد سانسور**
-
-    ترفندهای TLS، حفاظت در برابر پروب، اعتبارسنجی فینگرپرینت، وب‌سایت فریبنده، DoH، +WARP، پروفایل‌های دورزنی.
-
-- :material-server-network: **ناوگان هوشمند نودها**
-
-    ویزارد ثبت‌نام، مهاجرت خودکار، تشخیص سلامت، mTLS، مانیتورینگ زنده، اتوماسیون DNS کلادفلر.
-
-- :material-chart-areaspline: **تحلیل‌های پیشرفته**
-
-    تفکیک جغرافیایی، کاربران برتر، ساعات اوج، نقشه حرارتی جهان، خروجی CSV، نمودارهای بلادرنگ.
-
-- :material-sitemap: **پلتفرم نمایندگی**
-
-    کیف پول، زیرنمایندگی، برندسازی اختصاصی، وب‌هوک، محدودیت‌های سیاستی، تعلیق خودکار، لیست‌سفید محدوده‌ای.
+[![نسخه](https://img.shields.io/badge/نسخه-1.3.1-7c3aed?style=for-the-badge)](https://github.com/iPmartNetwork/VortexUI/releases)
+[![لایسنس](https://img.shields.io/badge/لایسنس-MIT-green?style=for-the-badge)](https://github.com/iPmartNetwork/VortexUI/blob/master/LICENSE)
+[![داکر](https://img.shields.io/badge/داکر-آماده-blue?style=for-the-badge)](https://hub.docker.com/r/ipmartnetwork/vortexui)
 
 </div>
 
 ---
 
-!!! tip "نصب سریع"
-    ```bash
-    bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
-    ```
-    یک دستور. نصب تعاملی. HTTPS شامل می‌شود.
+## 🚀 نصب سریع
 
----
-
-## نقشه مستندات
-
-| بخش | آنچه خواهید آموخت |
-|-----|-------------------|
-| [معرفی](01-introduction.md) | معماری، نمای کلی ویژگی‌ها، مقایسه، پروتکل‌های پشتیبانی‌شده |
-| [نصب](02-installation.md) | نصب تک‌خطی، داکر، بیلد بومی، راه‌اندازی ایجنت نود |
-| [شروع سریع](03-first-steps.md) | ورود، افزودن نود، ایجاد اینباند، افزودن کاربر، تأیید |
-| [داشبورد](04-dashboard.md) | ویجت‌ها، تحلیل‌ها، مانیتور، پالت دستور |
-| [کاربران](05-user-management.md) | عملیات CRUD، سهمیه‌ها، اشتراک‌ها، پورتال، فروشگاه، خانواده، رفرال |
-| [نودها](06-node-management.md) | ثبت‌نام، سلامت، مهاجرت خودکار، مانیتورینگ، اتوماسیون DNS |
-| [شبکه](07-network-policy.md) | اوتباندها، بسته‌های مسیریابی، زنجیره‌های CDN، بالانسرها، فدراسیون |
-| [امنیت](08-security-administration.md) | RBAC، پلتفرم نمایندگی، ترفندهای TLS، حفاظت پروب، محدودیت IP |
-| [پلن‌ها و پرداخت](09-plans-payments.md) | پلن‌های اختصاصی ریسلر، تنظیم پرداخت، فروشگاه، کیف پول، سفارشات |
-| [اعلان‌ها](10-notifications.md) | وب‌هوک، تلگرام، هشدار سهمیه، رویدادهای SSE |
-| [تنظیمات](11-settings-backup.md) | برندسازی، وایت‌لیبل، بکاپ، دیپ‌لینک، بروزرسانی |
-| [مرجع API](12-api-reference.md) | احراز هویت، اندپوینت‌ها، مشخصات OpenAPI |
-| [پروتکل‌ها](13-protocols-config.md) | ۱۴ پروتکل، ترنسپورت‌ها، لایه‌های امنیتی، ماتریس قابلیت |
-| [عملیات](14-operations-maintenance.md) | HTTPS، پرومتئوس، مقیاس‌پذیری، دیتابیس، عملکرد |
-| [عیب‌یابی](15-troubleshooting-faq.md) | مشکلات رایج، نکات دیباگ، سؤالات متداول |
-
----
-
-## معماری
-
-```mermaid
-flowchart TB
-    subgraph Clients["Clients"]
-        Browser["Browser / PWA"]
-        Portal["User Portal & Shop"]
-        ProxyApp["Clash / sing-box / v2rayNG"]
-    end
-    subgraph Web["Web Layer"]
-        Caddy["Caddy — HTTPS + SPA + DoH"]
-    end
-    subgraph Panel["Control Plane"]
-        API["Panel API — Go 1.26"]
-        SSE["SSE — Live Events"]
-        Scanner["Reality Scanner"]
-        Migration["Auto-Migration Engine"]
-        Reseller["Reseller Platform"]
-        DB[(PostgreSQL + TimescaleDB)]
-        Redis[(Redis — cache + sessions)]
-    end
-    subgraph Nodes["Node Fleet"]
-        Local["Local Node (in-process)"]
-        Remote1["Remote Node 1 — mTLS"]
-        Remote2["Remote Node 2 — mTLS"]
-        RemoteN["Remote Node N — mTLS"]
-    end
-    subgraph Federation["Federation"]
-        Peer1["Peer Panel 1"]
-        Peer2["Peer Panel 2"]
-    end
-    Browser --> Caddy
-    Portal --> Caddy
-    ProxyApp --> Caddy
-    Caddy --> API
-    API --> DB
-    API --> Redis
-    API --> Local
-    API --> Remote1
-    API --> Remote2
-    API --> RemoteN
-    API <--> Peer1
-    API <--> Peer2
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
 ```
 
----
-
-## پشته فنی
-
-| لایه | فناوری |
-|------|--------|
-| بکند | Go 1.26, Echo, gRPC, sqlc, pgx |
-| فرانتند | React 18, TypeScript 5.6, Tailwind CSS, TanStack Query |
-| دیتابیس | PostgreSQL 16 + TimescaleDB |
-| کش | Redis 7 |
-| هسته‌های پروکسی | Xray-core, sing-box |
-| وب‌سرور | Caddy (HTTPS خودکار) |
-| ارتباط | gRPC + mTLS (پنل ↔ نودها) |
-| اعلان‌ها | Webhook (HMAC-SHA256)، Telegram Bot API |
-| مانیتورینگ | Prometheus metrics + Grafana |
+یک دستور. تنظیم تعاملی. شامل HTTPS.
 
 ---
 
-## لینک‌های سریع
+## 🆕 تازه‌های نسخه ۱.۳.x
+
+> **آخرین: نسخه ۱.۳.۱** — اعتبارسنجی تنظیمات، پیام‌های خطای ترجمه‌شده، رفع باگ کلاینت API و سوییچ‌ها.
+
+| ویژگی | از نسخه | توضیحات |
+|-------|---------|---------|
+| 🔐 تنظیمات ماندگار پنل | 1.3.0 | ذخیره در PostgreSQL (جایگزین localStorage) |
+| 📜 لاگ حسابرسی | 1.3.0 | جدول زنده هر اقدام ادمین در `/audit` |
+| 🎨 وایت‌لیبل پورتال | 1.3.0 | برندسازی به ازای هر مستأجر |
+| 🎟 سیستم ارجاع | 1.3.0 | کدهای ارجاع کاربران با پاداش |
+| 🔒 ACME واقعی | 1.3.0 | Let's Encrypt از طریق Cloudflare DNS-01 |
+| 🌐 فدراسیون | 1.3.0 | همگام‌سازی چند پنل |
+| 💼 پلتفرم نمایندگی | 1.2.9 | کیف پول، سفارش‌ها، پلن‌ها، پروفایل‌ها |
+| 🖥 رابط Command Tower | 1.2.9 | صفحات ادغام‌شده، تله‌متری ناوگان |
+
+[تغییرات کامل ←](16-changelog.md)
+
+---
+
+## 📖 نقشه مستندات
+
+| بخش | توضیحات |
+|-----|---------|
+| [معرفی](01-introduction.md) | معماری، مرور ویژگی‌ها، مقایسه |
+| [نصب](02-installation.md) | نصب یک‌خطی، داکر، بیلد بومی |
+| [شروع سریع](03-first-steps.md) | ورود، افزودن نود، ایجاد اینباند، افزودن کاربر |
+| [داشبورد](04-dashboard.md) | ویجت‌ها، تحلیلات، مانیتور، پالت فرمان |
+| [کاربران](05-user-management.md) | مدیریت، سهمیه، اشتراک، پورتال، فروشگاه |
+| [نودها](06-node-management.md) | ثبت‌نام، سلامت، مهاجرت خودکار، مانیتورینگ |
+| [شبکه](07-network-policy.md) | خروجی‌ها، پک‌های روتینگ، زنجیره CDN، لودبالانسر |
+| [امنیت](08-security-administration.md) | RBAC، ترفندهای TLS، حفاظت probe، محدودیت IP |
+| [پلن‌ها و پرداخت](09-plans-payments.md) | پلن‌های ریسلر، تنظیم پرداخت، کیف پول |
+| [اعلان‌ها](10-notifications.md) | وبهوک، تلگرام، هشدار سهمیه، SSE |
+| [تنظیمات](11-settings-backup.md) | برندینگ، وایت‌لیبل، پشتیبان‌گیری، به‌روزرسانی |
+| [مرجع API](12-api-reference.md) | احراز هویت، اندپوینت‌ها، مشخصات OpenAPI |
+| [پروتکل‌ها](13-protocols-config.md) | ۱۴ پروتکل، ترانسپورت‌ها، لایه‌های امنیتی |
+| [عملیات](14-operations-maintenance.md) | HTTPS، پرومتئوس، مقیاس‌پذیری، عملکرد |
+| [عیب‌یابی](15-troubleshooting-faq.md) | مشکلات رایج، نکات دیباگ، سوالات متداول |
+| [راهنمای منوها و استفاده](17-menu-usage-guide.md) | توضیح کامل منوها، کارایی‌ها و گردش‌کار روزانه |
+
+---
+
+## ✨ ویژگی‌های کلیدی
+
+### 🔧 موتور و زیرساخت
+- **پشتیبانی دو هسته** — Xray-core و sing-box، انتخاب به ازای هر نود
+- **ترافیک دلتا** — مقاوم در برابر ری‌استارت، بدون از دست دادن داده
+- **ناوگان نود mTLS** — اتصالات رمزنگاری‌شده، failover خودکار
+- **مهاجرت خودکار** — انتقال کاربران از نودهای ناسالم
+- **فدراسیون** — همگام‌سازی کاربران/نودها بین چند پنل
+
+### 🛡 امنیت و ضد سانسور
+- **اسکنر Reality** — کشف SNI‌های بهینه با امتیازدهی تأخیر
+- **مدیر ترفندهای TLS** — پروفایل‌های ISP (fragment، mux، padding)
+- **حفاظت Probing** — تشخیص و مسدودسازی probe‌های GFW
+- **وبسایت فریبنده** — نمایش سایت جعلی به سانسورچی‌ها
+- **DNS-over-HTTPS** — DoH داخلی با مسدودسازی تبلیغات
+
+### 👥 مدیریت کاربر و تجارت
+- **پورتال سلف‌سرویس** — ورود با توکن، مشاهده مصرف، تیکت
+- **فروشگاه سلف‌سرویس** — پلن‌های ریسلر با چند روش پرداخت
+- **سهمیه هوشمند** — کاهش تدریجی سرعت (سطوح استفاده منصفانه)
+- **گروه‌های خانوادگی** — اشتراک‌گذاری ترافیک بین کاربران
+- **سیستم ارجاع** — کدهای دعوت با پاداش ترافیک/روز
+
+### 💼 پلتفرم نمایندگی
+- **کیف پول** — سیستم اعتبار با صف شارژ
+- **زیرنمایندگی** — ایجاد نمایندگان فرعی با محدوده ارثی
+- **وایت‌لیبل** — برندسازی سفارشی (لوگو، رنگ، عنوان)
+- **وبهوک** — رویدادهای خروجی برای اتوماسیون
+- **محدودیت‌های سیاست** — حداکثر ترافیک، حداکثر انقضا
+
+### 🎨 فرانت‌اند و UX
+- **رابط شیشه‌ای Veltrix** — سیستم طراحی مدرن Glass
+- **پالت فرمان** — جستجوی Ctrl+K در همه جا
+- **ویجت‌های داشبورد** — کشیدن، رها کردن، تغییر اندازه
+- **۸ زبان** — با پشتیبانی کامل RTL برای فارسی و عربی
+- **تم تاریک و روشن** — انتقال متحرک نرم
+
+---
+
+## 🔗 لینک‌های سریع
 
 | منبع | لینک |
 |------|------|
 | مخزن گیت‌هاب | [github.com/iPmartNetwork/VortexUI](https://github.com/iPmartNetwork/VortexUI) |
 | کانال تلگرام | [@vortex_ui](https://t.me/vortex_ui) |
 | مشخصات OpenAPI | [openapi.yaml](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) |
-| تاریخچه تغییرات | [CHANGELOG.md](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md) |
+| تغییرات | [CHANGELOG.md](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md) |
 | گزارش باگ | [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues) |
-| بحث و گفتگو | [GitHub Discussions](https://github.com/iPmartNetwork/VortexUI/discussions) |
 
 ---
 
-!!! info "زبان‌ها"
-    این مستندات به **English**، **فارسی**، **العربية** و **Türkçe** موجود است.
-    از انتخاب‌گر زبان در هدر برای تغییر استفاده کنید.
+## 🌍 زبان‌ها
+
+این مستندات در زبان‌های زیر موجود است:
+
+- 🇮🇷 **فارسی** (فعلی)
+- 🇬🇧 [English](../en/README.md)
+- 🇸🇦 [العربية](../ar/README.md)
+- 🇹🇷 [Türkçe](../tr/README.md)

@@ -1,225 +1,275 @@
-# Network Policy
+# Network & Policy
 
-!!! abstract "Routing & Outbounds"
-    Control how traffic exits your nodes — direct, blocked, chained through other proxies,
-    or sent through Cloudflare WARP. Build reusable routing packs and multi-hop relay chains.
+Configure how traffic flows through your infrastructure: outbounds, routing rules, CDN chains, and load balancers.
 
 ---
 
 ## Outbounds
 
-**Network → Outbounds**
+Outbounds define where traffic goes after reaching a node.
 
-An outbound defines where traffic goes after entering a node's inbound.
+**Network → Outbounds**
 
 | Type | Description |
 |------|-------------|
-| **Freedom** | Direct internet access (default) |
-| **Blackhole** | Drop traffic silently |
-| **DNS** | Resolve via specified DNS server |
-| **Proxy chain** | Forward to another proxy (SOCKS/HTTP/Trojan/VMess/VLESS) |
-| **WARP+** | Route through Cloudflare WARP for clean IP |
+| Freedom | Direct connection to the internet (default) |
+| Blackhole | Drop traffic (for blocking) |
+| Proxy Chain | Forward to another proxy server |
+| WARP+ | Route through Cloudflare WARP for clean IP |
+| SOCKS/HTTP | Forward to upstream SOCKS or HTTP proxy |
 
-### WARP+ Integration
+### Creating an Outbound
 
-1. Go to **Network → Outbounds → Add → WARP+**
-2. Enter your WARP license key (or use free tier)
-3. The panel configures WireGuard to Cloudflare's edge
-4. Assign this outbound to routing rules for specific domains/IPs
+1. Click **Add Outbound**
+2. Choose type
+3. Configure:
 
-!!! tip
-    WARP+ is useful when your node's IP is flagged by services like Google, ChatGPT, or streaming sites. Route those domains through WARP for a clean IP.
+**Freedom:**
+| Field | Description |
+|-------|-------------|
+| Domain strategy | AsIs, UseIP, UseIPv4, UseIPv6 |
+| Redirect | Optional local redirect |
 
----
-
-## Routing Rules
-
-**Network → Routing**
-
-Rules determine which outbound handles each connection based on matchers:
-
-| Matcher | Description |
-|---------|-------------|
-| Domain | Full domain, subdomain, keyword, or regex |
-| IP | CIDR range or GeoIP country |
-| Port | Destination port or range |
-| Protocol | HTTP, TLS, BitTorrent, etc. |
-| Inbound tag | Match specific inbound |
-| Source IP | Client source IP/CIDR |
-| User | Match specific username |
-
-Rules are evaluated in priority order. First match wins.
+**Proxy Chain:**
+| Field | Description |
+|-------|-------------|
+| Address | Upstream proxy address |
+| Port | Upstream port |
+| Protocol | VLESS, VMess, Trojan, SS |
+| Credentials | Auth for upstream |
 
 ---
 
-## Smart Routing Rule Packs
+## Routing Packs
 
-**Network → Routing Packs**
+Pre-built collections of routing rules you can enable with one click.
 
-A **routing pack** is a reusable, named collection of routing rules. Build once, apply anywhere.
-
-### Actions
-
-| Action | Description |
-|--------|-------------|
-| Create/edit | Build a pack from ordered routing rules |
-| Apply to node | Replace a node's routing with the pack and resync |
-| Set global default | One pack applies fleet-wide unless overridden |
-| Assign per user | Embed a specific pack in a user's subscription |
+**Network → Routing → Packs**
 
 ### Built-in Packs
 
-VortexUI ships with common packs:
+| Pack | Purpose |
+|------|---------|
+| Block Ads | Block known ad domains |
+| Block Malware | Block malware/phishing domains |
+| Iran Direct | Route Iranian domains directly (bypass proxy) |
+| China Direct | Route Chinese domains directly |
+| Cloudflare WARP | Route specific domains through WARP |
+| Block Torrents | Block BitTorrent traffic |
+| Block Porn | Block adult content |
 
-- **Block Ads** — block advertising domains
-- **Iran Direct** — route Iranian domains/IPs directly
-- **Streaming Direct** — bypass proxy for local streaming services
-- **Block Torrents** — block BitTorrent protocol
+### Custom Routing Pack
 
-### Creating a Custom Pack
+1. Click **New Pack**
+2. Name it
+3. Add rules:
 
-1. Click **New Pack** → enter a name
-2. Add rules in priority order (same fields as node routing)
-3. Save, then:
-    - **Apply** to a node to push live
-    - Mark as **Default** for the fleet
-    - **Assign** to a user from their detail page
+```json
+{
+  "rules": [
+    {
+      "type": "field",
+      "domain": ["geosite:category-ads-all"],
+      "outboundTag": "blackhole"
+    },
+    {
+      "type": "field",
+      "domain": ["geosite:ir"],
+      "outboundTag": "direct"
+    }
+  ]
+}
+```
 
-!!! note
-    Per-user assignment takes precedence over the global default. A user with no assignment falls back to the default pack.
+4. Save and assign to nodes
+
+### Rule Matching
+
+Rules are evaluated top-to-bottom. First match wins.
+
+| Match Type | Example |
+|------------|---------|
+| domain | `example.com`, `geosite:google` |
+| ip | `8.8.8.8`, `geoip:cn` |
+| port | `443`, `1000-2000` |
+| protocol | `bittorrent`, `http`, `tls` |
+| source | Client IP ranges |
 
 ---
 
-## CDN/Relay Chain Builder
+## CDN / Relay Chains
 
-**Network → CDN/Relay Chains**
+Multi-hop paths for extra resilience and censorship resistance.
 
-Hide your real server IP by routing traffic through intermediate hops.
+**Network → Chains**
 
-### Hop Types
+```
+Client → CDN (Cloudflare) → Relay Node → Exit Node → Internet
+```
 
-| Type | Description | Best for |
-|------|-------------|----------|
-| **CDN** | Traffic through Cloudflare/CDN | Free IP hiding, requires WS transport |
-| **Relay** | Traffic through a VPS relay | When CDN is blocked or need TCP |
-| **Worker** | Cloudflare Workers as relay | Serverless, cost-effective |
+### Chain Types
+
+| Hop | Purpose |
+|-----|---------|
+| CDN | Cloudflare/other CDN fronting |
+| Relay | Intermediate hop (hides exit node) |
+| Worker | Cloudflare Worker as proxy |
+| Exit | Final node to internet |
 
 ### Creating a Chain
 
 1. Click **New Chain**
-2. Name and select the target node
-3. Add hops in order (User → Hop 1 → Hop 2 → Node)
-4. Configure each hop:
-    - Type (CDN / Relay / Worker)
-    - Address and port
-    - Protocol (WebSocket / gRPC / TCP)
-    - SNI and path (for TLS transports)
+2. Add hops in order
+3. For each hop, configure address, port, protocol
+4. Assign chain to inbounds or users
 
-```mermaid
-graph LR
-    User[User] --> CDN[CDN Hop<br/>cdn.example.com]
-    CDN --> Relay[Relay Hop<br/>relay.example.com]
-    Relay --> Node[Target Node<br/>real-server.com]
-```
-
-!!! example "Cloudflare CDN Chain"
-    ```
-    Hop 1: CDN — cdn.example.com:443 — WebSocket — SNI: cdn.example.com — Path: /ws
-    Target: Your actual node
-    ```
-    Users connect to Cloudflare → Cloudflare forwards to your node. Real IP hidden.
+> **Tip:** CDN chains hide your exit node's real IP from clients, useful when the exit IP is precious.
 
 ---
 
 ## Load Balancers
 
-**Network → Load Balancers**
+Distribute users across multiple nodes for reliability and performance.
 
-Distribute traffic across multiple outbounds with health checking.
+**Network → Balancers**
 
 ### Strategies
 
-| Strategy | Behavior |
-|----------|----------|
-| **Round-robin** | Equal distribution across healthy targets |
-| **Random** | Random selection per connection |
-| **Least connections** | Route to the target with fewest active connections |
-| **Least latency** | Route to the target with lowest measured latency |
+| Strategy | Description | Best For |
+|----------|-------------|----------|
+| Round Robin | Rotate sequentially | Even distribution |
+| Weighted | Distribute by weight | Nodes with different capacity |
+| Least Connections | Fewest active connections | Long-lived connections |
+| Latency | Lowest latency node | Performance-critical |
+
+### Creating a Balancer
+
+1. Click **New Balancer**
+2. Choose strategy
+3. Add member nodes
+4. Set weights (for weighted strategy)
+5. Configure health probing:
+
+| Setting | Default |
+|---------|---------|
+| Probe interval | 30s |
+| Probe timeout | 5s |
+| Unhealthy threshold | 3 failures |
+| Healthy threshold | 2 successes |
+
+6. Assign to inbounds
 
 ### Health Probing
 
+The balancer continuously checks node health:
+
+```
+Node A: 🟢 Healthy   (latency: 45ms)
+Node B: 🟢 Healthy   (latency: 78ms)
+Node C: 🔴 Unhealthy (3 consecutive failures)
+```
+
+Unhealthy nodes are removed from rotation until they recover.
+
+---
+
+## Subscription Hosts
+
+Override addresses per-inbound for CDN fronting or custom domains.
+
+**Network → Subscription Hosts**
+
+| Field | Purpose |
+|-------|---------|
+| Address | Override server address (e.g., CDN domain) |
+| Port | Override port |
+| SNI | Override TLS server name |
+| Host | Override HTTP host header |
+| Path | Override transport path |
+
+### Template Variables
+
+Use variables that resolve per-user/per-node:
+
+| Variable | Resolves To |
+|----------|-------------|
+| `{node.address}` | Node IP address |
+| `{node.name}` | Node friendly name |
+| `{node.region}` | Node region code |
+| `{user.username}` | Username |
+| `{user.token}` | Subscription token |
+
+Example: `{user.username}.cdn.example.com`
+
+---
+
+## DNS Configuration
+
+**Network → DNS**
+
+Configure how nodes resolve domain names.
+
 | Setting | Description |
 |---------|-------------|
-| Interval | Seconds between health checks |
-| Timeout | Max wait for probe response |
-| Unhealthy after | Consecutive failures to mark as down |
-| Healthy after | Consecutive successes to mark as up |
+| Servers | DNS servers (1.1.1.1, 8.8.8.8) |
+| Strategy | prefer_ipv4, prefer_ipv6, ipv4_only |
+| Cache | Enable DNS caching |
+| Hosts | Static host mappings |
 
-Unhealthy targets are automatically removed from the rotation and restored when they recover.
+### DNS over HTTPS/TLS
 
----
+For encrypted DNS on nodes:
 
-## Multi-Domain SNI Routing + Auto SSL
-
-**Network → SNI Routing**
-
-Host multiple domains on a single port with automatic routing and SSL:
-
-1. **Add Domain** — enter domain and target inbound
-2. Enable **Auto-provision SSL** for automatic Let's Encrypt certificates
-3. Traffic is routed based on the TLS SNI field
-
-Features:
-
-- Wildcard certificates (`*.domain.com`)
-- Auto-renewal before expiry
-- Multiple domains per node
-- Mixed REALITY + TLS on the same port via SNI discrimination
+```
+https://cloudflare-dns.com/dns-query
+tls://1.1.1.1
+```
 
 ---
 
-## GeoIP/Geosite Updater
+## Federation
 
-**Network → GeoIP/Geosite**
+> **New in 1.3.0**
 
-Manage the geolocation databases used by routing rules:
-
-- **Auto-update** — check for new releases on a schedule
-- **Manual update** — download latest immediately
-- **Custom sources** — point to your own dat/db files
-- Supports both `geoip.dat`/`geosite.dat` (V2Ray) and `geoip.db`/`geosite.db` (sing-box)
-
----
-
-## Panel Federation
+Connect multiple VortexUI panels for cross-panel coordination.
 
 **Network → Federation**
 
-Connect multiple VortexUI panels for distributed management.
+### How It Works
+
+- Panels register each other as peers
+- Periodic health checks between peers
+- User/node count synchronization
+- Event broadcasting across panels
+
+### Setup
+
+1. On Panel A: **Federation → Add Peer**
+2. Enter Panel B's address and shared secret
+3. On Panel B: accept the peer request
+4. Peers now sync automatically
 
 ### Use Cases
 
-- Large deployments with panels in different regions
-- Reseller setups where each reseller has their own panel
-- High availability — if one panel goes down, others continue
+- **Geographic distribution**: Separate panels per region
+- **High availability**: Backup panel takes over if primary fails
+- **Load distribution**: Spread users across panel instances
 
-### Configuration
+---
 
-| Setting | Description |
-|---------|-------------|
-| Enabled | Activate federation |
-| Cluster name | Identifier for this cluster |
-| Sync interval | How often to sync (seconds) |
-| SSO | Enable single sign-on across panels |
+## Best Practices
 
-### Adding a Peer
+### For Anti-Censorship
+- Use CDN chains to hide exit node IPs
+- Enable routing packs for direct local traffic
+- Combine with TLS Tricks (see [Security](08-security-administration.md))
 
-1. Click **Add Peer**
-2. Enter peer panel URL
-3. Enter the API key (generated on the peer panel)
-4. Select sync scope: Users, Nodes, or both
-5. Test connection → Save
+### For Performance
+- Use latency-based load balancing
+- Place relay nodes close to users
+- Enable DNS caching on nodes
 
-### Sync Events
-
-View synchronization history between peers — timestamps, direction, items synced, and any conflicts.
+### For Reliability
+- Set up load balancers with health probing
+- Configure auto-migration for node failures
+- Use federation for multi-panel redundancy

@@ -5,14 +5,14 @@
 
 site_name: VortexUI Docs
 site_url: https://ipmartnetwork.github.io/VortexUI/
-site_description: "VortexUI v1.2.9 — proxy management panel with Command Tower UI, merged admin pages, reseller profiles, Veltrix design, and full i18n"
-site_author: iPmart Network
+site_description: "VortexUI v1.3.1 — proxy management panel with portal dashboard v2, persisted settings, Command Tower UI, Veltrix design, and full i18n"
+site_author: ali (zeus)
 
 repo_name: iPmartNetwork/VortexUI
 repo_url: https://github.com/iPmartNetwork/VortexUI
 edit_uri: edit/master/docs/wiki/en/
 
-copyright: Copyright &copy; 2026 iPmart Network — GPL-3.0
+copyright: Copyright &copy; 2026 ali (zeus) — GPL-3.0
 
 docs_dir: docs/wiki
 site_dir: site
@@ -138,9 +138,9 @@ plugins:
             Plans & payments: Plans & payments
             Notifications: Notifications
             Settings & backup: Settings & backup
-            Veltrix UI (v1.2.8): Veltrix UI (v1.2.8)
-            Command Tower (v1.2.9): Command Tower (v1.2.9)
+            Menu & usage guide: Menu & usage guide
             Technical reference: Technical reference
+            Changelog: Changelog
             API reference: API reference
             Protocols: Protocols & config
             Operations: Operations
@@ -166,9 +166,9 @@ plugins:
             Plans & payments: پلن‌ها و پرداخت
             Notifications: اعلان‌ها
             Settings & backup: تنظیمات و پشتیبان
-            Veltrix UI (v1.2.8): Veltrix UI (نسخه ۱.۲.۸)
-            Command Tower (v1.2.9): Command Tower (نسخه ۱.۲.۹)
+            Menu & usage guide: راهنمای منوها و استفاده
             Technical reference: مرجع فنی
+            Changelog: تغییرات نسخه‌ها
             API reference: مرجع API
             Protocols: پروتکل‌ها
             Operations: عملیات
@@ -194,9 +194,9 @@ plugins:
             Plans & payments: الخطط والمدفوعات
             Notifications: الإشعارات
             Settings & backup: الإعدادات والنسخ الاحتياطي
-            Veltrix UI (v1.2.8): Veltrix UI (1.2.8)
-            Command Tower (v1.2.9): Command Tower (1.2.9)
+            Menu & usage guide: دليل القوائم والاستخدام
             Technical reference: مرجع تقني
+            Changelog: سجل التغييرات
             API reference: مرجع API
             Protocols: البروتوكولات
             Operations: العمليات
@@ -222,9 +222,9 @@ plugins:
             Plans & payments: Planlar ve ödeme
             Notifications: Bildirimler
             Settings & backup: Ayarlar ve yedekleme
-            Veltrix UI (v1.2.8): Veltrix UI (v1.2.8)
-            Command Tower (v1.2.9): Command Tower (v1.2.9)
+            Menu & usage guide: Menü ve kullanım rehberi
             Technical reference: Teknik referans
+            Changelog: Değişiklik günlüğü
             API reference: API referansı
             Protocols: Protokoller
             Operations: Operasyonlar
@@ -245,12 +245,12 @@ nav:
       - Plans & payments: 09-plans-payments.md
       - Notifications: 10-notifications.md
       - Settings & backup: 11-settings-backup.md
-      - Veltrix UI (v1.2.8): 16-v128-ui-refresh.md
-      - Command Tower (v1.2.9): 17-v129-panel-redesign.md
+      - Menu & usage guide: 17-menu-usage-guide.md
   - Technical reference:
       - API reference: 12-api-reference.md
       - Protocols: 13-protocols-config.md
       - Operations: 14-operations-maintenance.md
       - Troubleshooting: 15-troubleshooting-faq.md
+      - Changelog: 16-changelog.md
 
 # _enhance_wiki.py is a maintenance script, not published

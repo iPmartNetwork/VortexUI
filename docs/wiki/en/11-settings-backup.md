@@ -1,192 +1,344 @@
 # Settings & Backup
 
-!!! tip "Command Tower UI (v1.2.9)"
-    **Settings** uses a left sidebar with tabs: General, Security, Notifications,
-    Appearance, API keys, Backup, and **Admins** (sudo). Reseller management includes
-    sub-tabs and per-reseller profile pages. See
-    [Command Tower (v1.2.9)](17-v129-panel-redesign.md).
+Configure panel identity, branding, backups, and system behavior.
+
+> **New in 1.3.0:** All panel settings are now **persisted in PostgreSQL** (previously browser localStorage). Settings survive browser changes and are shared across admin sessions.
 
 ---
 
-## Panel Settings
+## Settings Overview
 
-**Settings** page contains general panel configuration:
+**Sidebar → Settings**
 
-| Setting | Description |
-|---------|-------------|
-| Panel title | Displayed in browser tab and header |
-| Panel URL | Public URL (used for subscription links) |
-| Language | Default UI language |
-| Timezone | Panel timezone for display |
-| JWT TTL | Token expiration time |
-| Subscription update interval | How often clients should refresh |
+| Tab | Contents |
+|-----|----------|
+| General | Name, timezone, language, accent color |
+| Security | IP guard, 2FA, session TTL |
+| Notifications | Telegram, email, webhooks |
+| Appearance | Theme, logo, favicon |
+| Branding | Whitelabel (reseller) |
+| API | API keys, rate limits |
+| Backup | Auto-backup schedule & destinations |
+| ACME | TLS certificate management |
+| Admins | List, roles, access matrix |
+| System Info | Version, DB status, diagnostics |
 
 ---
 
-## Custom Branding
-
-**Settings → Branding**
-
-Customize the panel's appearance:
+## General Settings
 
 | Field | Description |
 |-------|-------------|
-| Title | Panel title (header + browser tab) |
-| Logo | Upload custom logo (SVG/PNG) |
-| Favicon | Custom browser favicon |
-| Accent color | Primary theme color (`#hex`) |
-| Footer text | Custom footer line |
-| Login background | Custom login page background |
+| Panel Name | Displayed in title and header |
+| Timezone | For timestamps and scheduling |
+| Default Language | For new admin accounts |
+| Accent Color | UI theme accent |
+| Date Format | How dates are displayed |
+
+> **Validation (1.3.1):** Settings are validated on save. Invalid values show translated error messages via `getApiErrorMessage()`.
 
 ---
 
-## Reseller Whitelabel
+## Appearance
 
-Each reseller can brand their own portal independently:
+### Theme
 
-**Reseller Account → Branding**
+- **Dark** — default glass design
+- **Light** — bright glass variant
+- **Auto** — follow system preference
+
+Theme transitions are smoothly animated.
+
+### Logo & Favicon
+
+| Asset | Recommended |
+|-------|-------------|
+| Logo | SVG or PNG, 200x50px |
+| Favicon | ICO or PNG, 32x32px |
+| Login background | JPG, 1920x1080px |
+
+---
+
+## Branding (Whitelabel)
+
+> **Portal whitelabel new in 1.3.0**
+
+Resellers can brand their users' portal experience.
+
+**Settings → Branding** (reseller view)
 
 | Field | Description |
 |-------|-------------|
-| Panel title | Reseller's panel/portal title |
-| Logo URL | Reseller's brand image |
-| Accent color | `#hex` theme accent for their users |
-| Portal slug | Optional custom URL slug |
-| Footer text | Portal footer line |
+| Brand Name | Shown in portal title |
+| Logo | Portal logo |
+| Accent Color | Portal theme color |
+| Footer Text | Custom footer |
+| Support Link | Contact URL |
+| Custom CSS | Advanced styling |
 
-Users accessing the portal see their reseller's branding, not the main panel's.
+### Per-Tenant Portals
+
+Each reseller's users see a fully branded portal:
+- Reseller's logo instead of VortexUI
+- Reseller's colors
+- Reseller's support contact
+- No mention of the underlying panel
 
 ---
 
-## Backup & Restore
+## Security Settings
+
+### IP Guard
+
+Restrict panel/API access by IP.
+
+| Mode | Behavior |
+|------|----------|
+| Off | No restriction |
+| Whitelist | Only listed IPs allowed |
+| Blacklist | Listed IPs blocked |
+
+- Supports CIDR ranges (e.g., `192.168.1.0/24`)
+- **Runtime hot-reload (1.3.0):** Rules apply immediately on save, no restart
+
+### Session Settings
+
+| Setting | Default |
+|---------|---------|
+| Session TTL | 24h |
+| Remember me | 30d |
+| Force 2FA | Off |
+| Max sessions | Unlimited |
+
+### Two-Factor Authentication
+
+See [Security](08-security-administration.md#enabling-2fa-totp) for TOTP setup.
+
+---
+
+## API Settings
+
+### API Keys (PAT)
+
+Create personal access tokens for automation.
+
+| Field | Description |
+|-------|-------------|
+| Name | Token identifier |
+| Scopes | Permissions (inherit from role) |
+| Expiry | Optional expiration date |
+
+### Rate Limiting
+
+| Setting | Default |
+|---------|---------|
+| Requests per minute | 60 |
+| Burst | 10 |
+| Per-IP limit | Yes |
+
+---
+
+## Backup
+
+> **Auto-backup new in 1.3.0**
 
 ### Manual Backup
 
-**Settings → Backup → Create Backup**
+```bash
+vortexui backup
+```
 
-Creates a full backup including:
+Or **Settings → Backup → Create Now**
 
-- Database dump (users, nodes, inbounds, plans, orders, settings)
-- Configuration files
-- TLS certificates
-- Uploaded assets (logos, payment proofs)
+Creates a full database export.
 
-### Automatic Backup
+### Auto-Backup
 
-| Setting | Description |
-|---------|-------------|
-| Schedule | Cron expression (e.g. `0 3 * * *` = daily at 3 AM) |
-| Retain | Number of backups to keep |
-| Telegram | Send backup file to admin chat |
-| S3 | Upload to S3-compatible storage |
+**Settings → Backup → Schedule**
+
+| Setting | Options |
+|---------|---------|
+| Schedule | Cron expression or preset (daily, weekly) |
+| Time | e.g., 03:00 |
+| Retention | Keep last N backups |
 
 ### Backup Destinations
 
-=== "Telegram"
+| Destination | Configuration |
+|-------------|---------------|
+| Local | File path on server |
+| Telegram | Bot sends backup file |
+| S3 | Bucket, keys, endpoint |
 
-    Backups are sent as a file to the configured admin chat ID.
-    Max file size: 50 MB (Telegram limit). Larger backups are split.
+#### S3 Configuration
 
-=== "S3"
+```env
+VORTEX_S3_ENDPOINT=https://s3.amazonaws.com
+VORTEX_S3_BUCKET=vortex-backups
+VORTEX_S3_ACCESS_KEY=AKIA...
+VORTEX_S3_SECRET_KEY=secret...
+```
 
-    Configure S3-compatible storage:
-    ```
-    VORTEX_BACKUP_S3_BUCKET=my-backups
-    VORTEX_BACKUP_S3_ENDPOINT=s3.amazonaws.com
-    VORTEX_BACKUP_S3_ACCESS_KEY=xxxx
-    VORTEX_BACKUP_S3_SECRET_KEY=xxxx
-    VORTEX_BACKUP_S3_REGION=us-east-1
-    ```
+#### Telegram Backup
 
-=== "Local"
+```env
+VORTEX_BACKUP_TELEGRAM=true
+VORTEX_TELEGRAM_TOKEN=123456:ABC...
+```
 
-    Backups stored in `/var/lib/vortexui/backups/` (default).
-    Configure retention to prevent disk fill.
+### What's Included
+
+- All users and their configs
+- All nodes and inbounds
+- Settings and branding
+- Plans and orders
+- Wallet ledgers
+- Audit log
 
 ### Restore
 
 ```bash
-vortexui restore /path/to/backup.tar.gz
+vortexui restore backup-2026-01-15.sql.gz
 ```
 
-Or via UI: **Settings → Backup → Restore → Upload backup file**.
-
-!!! warning
-    Restore overwrites the current database. Create a fresh backup before restoring.
+> **Warning:** Restore overwrites current data. Test on a staging instance first.
 
 ---
 
-## Deep Link Configuration
+## ACME / TLS Certificates
 
-**Settings → Deep Links**
+> **Real ACME new in 1.3.0**
 
-Configure subscription deep links for native app integration:
+Automatic Let's Encrypt certificates via Cloudflare DNS-01 challenge.
 
-| Setting | Description |
+**Settings → ACME**
+
+### Setup
+
+1. Create a Cloudflare API token with DNS edit permissions
+2. Configure:
+
+```env
+VORTEX_ACME_EMAIL=admin@example.com
+CLOUDFLARE_API_TOKEN=cf_token_here
+```
+
+3. Add domains to manage
+4. Certificates issue automatically
+
+### Features
+
+| Feature | Description |
 |---------|-------------|
-| Base URL | Panel's public URL |
-| App scheme | URL scheme (e.g. `vortex://`, `clash://`) |
-| Include server name | Add server identifier to links |
-| QR logo | Custom logo rendered in QR code center |
+| Auto-issue | Certificate on domain add |
+| Auto-renew | Renews at T-30 days |
+| Multi-domain | SAN certificates |
+| Wildcard | `*.example.com` support |
+| DNS-01 | No port 80 needed |
+
+### Certificate Status
+
+| Status | Meaning |
+|--------|---------|
+| 🟢 Valid | Certificate active |
+| 🟡 Renewing | Renewal in progress |
+| 🔴 Expired | Needs attention |
+| ⚪ Pending | Being issued |
+
+ACME events are logged in the [Audit Log](08-security-administration.md#audit-log).
 
 ---
 
-## Update Checker
+## Admin Management
 
-**Settings → Updates**
+**Settings → Admins**
 
-- Check for new VortexUI releases
-- View changelog for available updates
-- One-click update (calls `vortexui update` internally)
-- Configure auto-check interval
+### Admin List
 
----
+| Column | Description |
+|--------|-------------|
+| Username | Admin identifier |
+| Role | Sudo, Admin, Reseller |
+| Status | Active, Suspended |
+| Users | Owned user count |
+| Last Login | Recent activity |
 
-## Config Templates
+### Adding an Admin
 
-**Settings → Config Templates**
+1. Click **Add Admin**
+2. Set username, password, role
+3. For resellers: set quotas, policy limits
+4. Configure access matrix
 
-Customize the Clash/sing-box configuration output for subscriptions:
+### Access Matrix
 
-### Clash Template
+Fine-grained permissions per admin:
 
-Override default Clash YAML structure:
-
-- Custom proxy groups (url-test, fallback, load-balance)
-- Custom rules (block ads, direct local traffic)
-- DNS configuration
-- Custom routing rules
-
-### sing-box Template
-
-Override default sing-box JSON structure:
-
-- Custom outbound groups
-- Route rules
-- DNS settings
-- Experimental features
-
-Templates support variables:
-
-| Variable | Expands to |
-|----------|-----------|
-| `{PROXIES}` | List of proxy configs from user's inbounds |
-| `{USERNAME}` | The user's username |
-| `{SUB_URL}` | The subscription URL |
+| Permission | Options |
+|------------|---------|
+| users.* | read, write, delete |
+| nodes.* | read, write |
+| plans.* | read, manage |
+| settings.* | read, write |
 
 ---
 
-## Internationalization
+## System Info
 
-The panel supports **8 languages** with full RTL support:
+**Settings → System Info**
 
-- English (EN)
-- فارسی (FA)
-- Türkçe (TR)
-- العربية (AR)
-- Русский (RU)
-- 中文 (ZH)
-- 日本語 (JA)
-- Español (ES)
+| Item | Shows |
+|------|-------|
+| Version | Current VortexUI version |
+| Uptime | Panel uptime |
+| Database | PostgreSQL connection & size |
+| Redis | Cache connection |
+| Nodes | Total/online count |
+| Users | Total/active count |
+| Disk | Available space |
 
-Switch language from the header dropdown. Each admin's preference is saved independently.
+### Diagnostics
+
+Run `vortexui doctor` or click **Run Diagnostics** to check:
+
+- Database connectivity
+- Redis connectivity
+- Node reachability
+- Port availability
+- Certificate validity
+- Disk space
+
+---
+
+## Updates
+
+### Check for Updates
+
+**Settings → System Info → Check Updates**
+
+Shows current version vs latest release.
+
+### Update
+
+```bash
+vortexui update
+```
+
+Or see [Installation → Updating](02-installation.md#updating).
+
+---
+
+## Settings Best Practices
+
+### Initial Setup
+1. Set panel name and timezone
+2. Enable 2FA for sudo
+3. Configure IP whitelist
+4. Set up auto-backup
+5. Configure ACME for HTTPS
+
+### Ongoing
+- Review audit log regularly
+- Test backups periodically
+- Rotate API tokens
+- Monitor certificate expiry

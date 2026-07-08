@@ -1,154 +1,213 @@
 # Operations & Maintenance
 
+Running VortexUI in production: HTTPS, monitoring, scaling, database maintenance, and performance tuning.
+
 ---
 
-## HTTPS with Caddy
+## HTTPS Setup
 
-VortexUI uses Caddy as its web server for automatic HTTPS:
+### Option 1: Built-in ACME (Recommended)
 
-- **Automatic Let's Encrypt** — certificates issued and renewed with zero config
-- **HTTP → HTTPS redirect** — all traffic forced to HTTPS
-- **SPA routing** — React frontend served correctly
-- **Reverse proxy** — API requests forwarded to the Go backend
-- **DoH endpoint** — `/dns-query` served if DoH is enabled
+> **New in 1.3.0**
 
-### Caddyfile Structure
+Automatic Let's Encrypt via Cloudflare DNS-01:
+
+```env
+VORTEX_ACME_EMAIL=admin@example.com
+CLOUDFLARE_API_TOKEN=cf_token_with_dns_edit
+VORTEX_DOMAIN=panel.example.com
+```
+
+Certificates issue and renew automatically. No port 80 needed.
+
+### Option 2: Caddy (Auto HTTPS)
+
+The default Docker setup includes Caddy, which handles HTTPS automatically:
 
 ```
-{$VORTEX_DOMAIN} {
-    encode gzip
-    handle /api/* {
-        reverse_proxy localhost:8080
-    }
-    handle /sub/* {
-        reverse_proxy localhost:8080
-    }
-    handle /dns-query {
-        reverse_proxy localhost:8053
-    }
-    handle {
-        root * /opt/vortexui/web/dist
-        try_files {path} /index.html
-        file_server
-    }
+panel.example.com {
+    reverse_proxy api:8080
 }
 ```
 
-!!! tip
-    If you need custom TLS settings (e.g. client certificate, specific cipher suites), edit `deploy/Caddyfile`.
+### Option 3: Manual Certificate
+
+```bash
+sudo certbot certonly --standalone -d panel.example.com
+```
+
+Then configure in Nginx (see [Manual Install](02-installation.md#native-build)).
 
 ---
 
-## Prometheus Metrics
+## Monitoring with Prometheus
 
-**Enable:** Set `VORTEX_METRICS_ENABLED=true` and `VORTEX_METRICS_LISTEN=:9090`.
+### Enable Metrics
+
+```env
+VORTEX_METRICS_ENABLED=true
+VORTEX_METRICS_LISTEN=:9090
+```
 
 ### Available Metrics
 
-| Metric | Type | Description |
-|--------|------|-------------|
-| `vortex_users_total` | Gauge | Total user count by status |
-| `vortex_traffic_bytes` | Counter | Traffic bytes (upload/download) |
-| `vortex_connections_active` | Gauge | Current active connections |
-| `vortex_nodes_status` | Gauge | Node status (1=online, 0=offline) |
-| `vortex_node_cpu_percent` | Gauge | Node CPU utilization |
-| `vortex_node_memory_percent` | Gauge | Node memory utilization |
-| `vortex_orders_total` | Counter | Orders by status |
-| `vortex_api_requests_total` | Counter | API requests by endpoint/status |
-| `vortex_api_latency_seconds` | Histogram | API response latency |
+| Metric | Description |
+|--------|-------------|
+| vortex_users_total | Total users by status |
+| vortex_nodes_online | Online node count |
+| vortex_traffic_bytes | Traffic counters |
+| vortex_connections_active | Active connections |
+| vortex_api_requests_total | API request count |
+| vortex_api_duration_seconds | Request latency |
+| vortex_node_cpu | Per-node CPU |
+| vortex_node_ram | Per-node RAM |
+
+### Prometheus Config
+
+```yaml
+scrape_configs:
+  - job_name: vortexui
+    static_configs:
+      - targets: ['panel.example.com:9090']
+    metrics_path: /metrics
+```
 
 ### Grafana Dashboard
 
-Import the ready-made dashboard from `deploy/grafana/vortexui-dashboard.json`:
+Import the ready-made dashboard:
 
-1. Open Grafana → Dashboards → Import
-2. Upload the JSON file or paste its contents
-3. Select your Prometheus data source
-4. Dashboard shows: traffic trends, node health, user activity, API performance
+1. Grafana → Import
+2. Use dashboard ID or paste JSON from `docs/grafana-dashboard.json`
+3. Select Prometheus data source
 
----
-
-## Scaling & High Availability
-
-### Horizontal Scaling
-
-For large deployments:
-
-| Component | Scaling Strategy |
-|-----------|-----------------|
-| Panel API | Run multiple instances behind a load balancer |
-| Database | PostgreSQL with read replicas |
-| Redis | Redis Cluster or Sentinel |
-| Nodes | Add as many as needed (auto-managed) |
-| Federation | Connect multiple panels for regional distribution |
-
-### Cluster Mode
-
-Run multiple panel instances:
-
-1. All instances share the same PostgreSQL and Redis
-2. Use a load balancer (Caddy, nginx, HAProxy) in front
-3. SSE connections are sticky (session affinity recommended)
-4. Background jobs use Redis-based distributed locks
-
-### Database Considerations
-
-| Concern | Solution |
-|---------|----------|
-| Connection pooling | pgBouncer in front of PostgreSQL |
-| Read scaling | Read replicas for analytics queries |
-| Write throughput | TimescaleDB hypertables for traffic data |
-| Backup | pg_dump + WAL archiving for point-in-time recovery |
+Includes panels for:
+- User growth
+- Traffic trends
+- Node health
+- API performance
 
 ---
 
 ## Database Maintenance
 
-### TimescaleDB Tips
+### PostgreSQL + TimescaleDB
 
-Traffic data is stored in TimescaleDB hypertables for efficient time-series queries:
+VortexUI uses TimescaleDB for time-series traffic data.
+
+### Backup
+
+```bash
+# Manual
+vortexui backup
+
+# Or direct pg_dump
+pg_dump -U vortex vortexui | gzip > backup.sql.gz
+```
+
+### Vacuum & Analyze
+
+TimescaleDB auto-vacuums, but for manual optimization:
 
 ```sql
--- Check chunk sizes
-SELECT show_chunks('traffic_data');
-
--- Set retention policy (keep 90 days)
-SELECT add_retention_policy('traffic_data', INTERVAL '90 days');
-
--- Compress old chunks
-SELECT add_compression_policy('traffic_data', INTERVAL '7 days');
+VACUUM ANALYZE;
 ```
 
-### Routine Maintenance
+### Data Retention
 
-```bash
-# Vacuum and analyze
-psql -U vortex -d vortex -c "VACUUM ANALYZE;"
+Configure how long to keep detailed traffic data:
 
-# Check database size
-psql -U vortex -d vortex -c "SELECT pg_size_pretty(pg_database_size('vortex'));"
-
-# List largest tables
-psql -U vortex -d vortex -c "
-  SELECT relname, pg_size_pretty(pg_relation_size(oid))
-  FROM pg_class
-  ORDER BY pg_relation_size(oid) DESC
-  LIMIT 10;
-"
+```sql
+SELECT add_retention_policy('traffic_stats', INTERVAL '90 days');
 ```
 
-### Migrations
+Older data is automatically dropped, keeping the database lean.
 
-Migrations run automatically on panel startup. To run manually:
+### Continuous Aggregates
 
-```bash
-vortexui migrate
+TimescaleDB pre-computes hourly/daily rollups for fast analytics:
+
+```sql
+-- Hourly traffic aggregate (auto-maintained)
+SELECT * FROM traffic_hourly WHERE time > now() - INTERVAL '24 hours';
 ```
 
-Check migration status:
+---
+
+## Scaling
+
+### Vertical Scaling
+
+For most deployments, add resources to the panel host:
+
+| Users | RAM | CPU |
+|-------|-----|-----|
+| < 1,000 | 2 GB | 2 vCPU |
+| 1,000-5,000 | 4 GB | 4 vCPU |
+| 5,000-20,000 | 8 GB | 8 vCPU |
+| 20,000+ | 16 GB+ | 8+ vCPU |
+
+### Horizontal Scaling (Nodes)
+
+Add more nodes to handle traffic:
+- Each node handles its own proxy traffic
+- Panel only manages coordination
+- Use load balancers to distribute users
+
+### Federation for Scale
+
+> **New in 1.3.0**
+
+Split load across multiple panels:
+- One panel per region
+- Peers sync counts
+- Reduces single-panel load
+
+### Database Scaling
+
+For very large deployments:
+- Move PostgreSQL to dedicated host
+- Use connection pooling (PgBouncer)
+- Consider read replicas for analytics
+
+---
+
+## Performance Tuning
+
+### Panel Performance
+
+```env
+# Increase DB connection pool
+VORTEX_DB_MAX_CONNS=50
+
+# Redis for session caching
+VORTEX_REDIS_URL=redis://localhost:6379/0
+
+# Worker concurrency
+VORTEX_WORKERS=4
+```
+
+### Node Performance
+
+Enable BBR congestion control on nodes:
 
 ```bash
-vortexui migrate status
+echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+sysctl -p
+```
+
+Increase file descriptor limits:
+
+```bash
+echo "* soft nofile 1000000" >> /etc/security/limits.conf
+echo "* hard nofile 1000000" >> /etc/security/limits.conf
+```
+
+### Redis Optimization
+
+```
+maxmemory 512mb
+maxmemory-policy allkeys-lru
 ```
 
 ---
@@ -158,146 +217,173 @@ vortexui migrate status
 ### Panel Logs
 
 ```bash
-# Live logs
+# Systemd
 journalctl -u vortexui -f
 
-# Last 100 lines
-journalctl -u vortexui -n 100
-
-# Filter by level
-journalctl -u vortexui | grep ERROR
-```
-
-### Node Agent Logs
-
-```bash
-journalctl -u vortex-node -f
+# Docker
+docker compose logs -f api
 ```
 
 ### Log Levels
 
-Configure via environment:
-
+```env
+VORTEX_LOG_LEVEL=info  # debug, info, warn, error
 ```
-VORTEX_LOG_LEVEL=info   # debug, info, warn, error
-VORTEX_LOG_FORMAT=json  # json or text
+
+### Structured Logging
+
+Logs are JSON-formatted for parsing:
+
+```json
+{
+  "level": "info",
+  "time": "2026-01-15T14:32:05Z",
+  "msg": "user created",
+  "user_id": "abc123",
+  "actor": "admin"
+}
 ```
 
 ### Log Rotation
 
-Systemd journal handles rotation by default. Configure limits:
+For file logs, configure logrotate:
 
-```ini
-# /etc/systemd/journald.conf
-SystemMaxUse=500M
-MaxRetentionSec=30d
+```
+/var/log/vortexui/*.log {
+    daily
+    rotate 14
+    compress
+    missingok
+}
 ```
 
 ---
 
-## Performance Tuning
+## Health Checks
 
-### System Limits
-
-```bash
-# Increase file descriptor limit
-echo "* soft nofile 65535" >> /etc/security/limits.conf
-echo "* hard nofile 65535" >> /etc/security/limits.conf
-
-# Increase for systemd service
-# In /etc/systemd/system/vortexui.service
-[Service]
-LimitNOFILE=65535
-```
-
-### Network Tuning
+### Endpoint Monitoring
 
 ```bash
-# /etc/sysctl.conf
-net.core.somaxconn = 65535
-net.ipv4.tcp_max_syn_backlog = 65535
-net.ipv4.ip_local_port_range = 1024 65535
-net.ipv4.tcp_tw_reuse = 1
-net.core.rmem_max = 16777216
-net.core.wmem_max = 16777216
+curl https://panel.example.com/api/health
 ```
 
-Apply: `sysctl -p`
+Set up external monitoring:
+- UptimeRobot
+- Prometheus Blackbox Exporter
+- Healthchecks.io
 
-### Redis Tuning
+### Diagnostics
 
+```bash
+vortexui doctor
 ```
-# /etc/redis/redis.conf
-maxmemory 256mb
-maxmemory-policy allkeys-lru
+
+Checks:
+- ✅ Database connection
+- ✅ Redis connection
+- ✅ Node reachability
+- ✅ Port availability
+- ✅ Certificate validity
+- ✅ Disk space
+
+---
+
+## Upgrade Procedures
+
+### Standard Upgrade
+
+```bash
+vortexui update
 ```
 
-### PostgreSQL Tuning
+### Zero-Downtime (Advanced)
 
-Key settings for VortexUI workloads:
+For critical deployments:
+1. Deploy new version to staging
+2. Run migrations on replica
+3. Switch traffic via load balancer
+4. Verify, then decommission old
 
-```
-# postgresql.conf
-shared_buffers = 512MB          # 25% of RAM
-effective_cache_size = 1536MB   # 75% of RAM
-work_mem = 16MB
-maintenance_work_mem = 128MB
-random_page_cost = 1.1          # SSD
+### Rollback
+
+```bash
+# Restore from backup
+vortexui restore backup-before-upgrade.sql.gz
+
+# Or pin to previous version
+git checkout v1.3.0
+go build -o vortexui ./cmd/panel
 ```
 
 ---
 
-## Systemd Services
+## Security Maintenance
 
-### Panel Service
+### Regular Tasks
 
-```ini
-# /etc/systemd/system/vortexui.service
-[Unit]
-Description=VortexUI Panel
-After=postgresql.service redis.service
+| Task | Frequency |
+|------|-----------|
+| Review audit log | Weekly |
+| Rotate API tokens | Quarterly |
+| Update dependencies | Monthly |
+| Test backups | Monthly |
+| Check certificate expiry | Automated |
+| Review admin access | Quarterly |
 
-[Service]
-Type=simple
-User=vortex
-WorkingDirectory=/opt/vortexui
-ExecStart=/opt/vortexui/vortexui serve
-Restart=always
-RestartSec=5
-LimitNOFILE=65535
-EnvironmentFile=/opt/vortexui/.env
+### Certificate Renewal
 
-[Install]
-WantedBy=multi-user.target
-```
-
-### Node Agent Service
-
-```ini
-# /etc/systemd/system/vortex-node.service
-[Unit]
-Description=VortexUI Node Agent
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/vortex-node
-ExecStart=/opt/vortex-node/vortex-node
-Restart=always
-RestartSec=5
-LimitNOFILE=65535
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Common Commands
+With built-in ACME, renewal is automatic at T-30 days. Verify:
 
 ```bash
-sudo systemctl start vortexui
-sudo systemctl stop vortexui
-sudo systemctl restart vortexui
-sudo systemctl status vortexui
-sudo systemctl enable vortexui   # start on boot
+vortexui doctor  # checks cert validity
 ```
+
+---
+
+## Disaster Recovery
+
+### Backup Strategy (3-2-1)
+
+- **3** copies of data
+- **2** different media types
+- **1** off-site (S3, Telegram)
+
+### Recovery Steps
+
+1. Provision new host
+2. Install VortexUI
+3. Restore database:
+   ```bash
+   vortexui restore latest-backup.sql.gz
+   ```
+4. Verify nodes reconnect
+5. Test user connectivity
+
+### RTO/RPO Targets
+
+| Metric | Target |
+|--------|--------|
+| RPO (data loss) | ≤ 24h (with daily backup) |
+| RTO (recovery time) | ≤ 1h |
+
+---
+
+## Capacity Planning
+
+### Monitoring Growth
+
+Track these metrics over time:
+- User count growth rate
+- Traffic per user
+- Peak concurrent connections
+- Database size growth
+
+### When to Scale
+
+| Signal | Action |
+|--------|--------|
+| CPU > 80% sustained | Add vCPU |
+| RAM > 90% | Add RAM |
+| DB > 50% disk | Add disk / retention policy |
+| Node CPU > 80% | Add nodes |
+| Panel slow | Consider federation |

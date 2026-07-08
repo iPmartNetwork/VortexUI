@@ -1,148 +1,107 @@
-# توثيق VortexUI
+# 🌀 توثيق VortexUI
 
-<div style="text-align: center; margin: 2rem 0;">
-  <strong style="font-size: 1.4rem;">VortexUI الإصدار 1.2.9</strong><br/>
-  <em style="font-size: 1.1rem;">لوحة إدارة بروكسي من الجيل التالي — مستقلة عن النواة، محورها المستخدم، تعمل بالوقت الفعلي، مضادة للرقابة</em>
-</div>
+<div align="center">
 
----
+**لوحة إدارة البروكسي من الجيل التالي**
 
-<div class="grid cards" markdown>
+*محورها المستخدم · مستقلة عن النواة · جاهزة للمؤسسات*
 
-- :material-account-group: **بوابة الخدمة الذاتية والمتجر**
-
-    يسجّل المستخدمون الدخول بتوكن الاشتراك، ويعرضون استهلاكهم، ويشترون الخطط من متجر الموزّع الخاص بهم، ويفتحون تذاكر الدعم.
-
-- :material-cash-register: **خطط ومدفوعات لكل موزّع**
-
-    يحدّد كل موزّع خططه الخاصة وأسعاره وطرق الدفع — تحويل بطاقة، عملات رقمية، أو بوابة ZarinPal.
-
-- :material-shield-lock: **حزمة مكافحة الرقابة**
-
-    حيل TLS، حماية من الاستكشاف النشط، التحقق من البصمة، مواقع خادعة، DoH، WARP+، ملفات التمويه.
-
-- :material-server-network: **أسطول عقد ذكي**
-
-    معالج تسجيل العقد، الترحيل التلقائي، تشخيصات السلامة، mTLS، المراقبة الحية، أتمتة DNS عبر Cloudflare.
-
-- :material-chart-areaspline: **تحليلات متقدمة**
-
-    تحليل جغرافي (Geo-IP)، أعلى المستخدمين، ساعات الذروة، خريطة حرارية عالمية، تصدير CSV، مقاييس آنية.
-
-- :material-sitemap: **منصة الموزّعين**
-
-    فوترة عبر المحفظة، موزّعون فرعيون، علامة تجارية خاصة (Whitelabel)، ويب هوكس، حدود سياسات، تعليق تلقائي، قوائم سماح مخصصة.
+[![الإصدار](https://img.shields.io/badge/الإصدار-1.3.1-7c3aed?style=for-the-badge)](https://github.com/iPmartNetwork/VortexUI/releases)
+[![الرخصة](https://img.shields.io/badge/الرخصة-MIT-green?style=for-the-badge)](https://github.com/iPmartNetwork/VortexUI/blob/master/LICENSE)
+[![Docker](https://img.shields.io/badge/docker-جاهز-blue?style=for-the-badge)](https://hub.docker.com/r/ipmartnetwork/vortexui)
 
 </div>
 
 ---
 
-!!! tip "تثبيت سريع"
-    ```bash
-    bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
-    ```
-    أمر واحد. إعداد تفاعلي. HTTPS مضمّن.
+## 🚀 التثبيت السريع
 
----
-
-## خريطة التوثيق
-
-| القسم | ماذا ستتعلم |
-|-------|-------------|
-| [المقدمة](01-introduction.md) | البنية المعمارية، نظرة عامة على الميزات، المقارنة، البروتوكولات المدعومة |
-| [التثبيت](02-installation.md) | تثبيت بأمر واحد، Docker، بناء محلي، إعداد عميل العقدة |
-| [الخطوات الأولى](03-first-steps.md) | تسجيل الدخول، إضافة عقدة، إنشاء اتصال وارد، إضافة مستخدم، التحقق |
-| [لوحة المعلومات](04-dashboard.md) | الأدوات المصغرة، التحليلات، المراقبة، لوحة الأوامر |
-| [المستخدمون](05-user-management.md) | العمليات الأساسية، الحصص، الاشتراكات، البوابة، المتجر، المجموعات العائلية، الإحالات |
-| [العقد](06-node-management.md) | تسجيل العقد، السلامة، الترحيل التلقائي، المراقبة، أتمتة DNS |
-| [الشبكة](07-network-policy.md) | الاتصالات الصادرة، حزم التوجيه، سلاسل CDN، موازنات الحمل، الاتحاد |
-| [الأمان](08-security-administration.md) | RBAC، منصة الموزّعين، حيل TLS، حماية الاستكشاف، حدّ IP |
-| [الخطط والمدفوعات](09-plans-payments.md) | خطط لكل موزّع، إعداد الدفع، المتجر، فوترة المحفظة، الطلبات |
-| [الإشعارات](10-notifications.md) | ويب هوكس، تيليجرام، تنبيهات الحصة، أحداث SSE |
-| [الإعدادات](11-settings-backup.md) | العلامة التجارية، Whitelabel، النسخ الاحتياطي، الروابط العميقة، التحديثات |
-| [مرجع الـ API](12-api-reference.md) | المصادقة، نقاط النهاية، مواصفات OpenAPI |
-| [البروتوكولات](13-protocols-config.md) | 14 بروتوكولاً، أنماط النقل، طبقات الأمان، مصفوفة القدرات |
-| [العمليات](14-operations-maintenance.md) | HTTPS، Prometheus، التوسّع، قاعدة البيانات، الأداء |
-| [استكشاف الأخطاء](15-troubleshooting-faq.md) | مشاكل شائعة، نصائح التصحيح، الأسئلة المتكررة |
-
----
-
-## البنية المعمارية
-
-```mermaid
-flowchart TB
-    subgraph Clients["Clients"]
-        Browser["Browser / PWA"]
-        Portal["User Portal & Shop"]
-        ProxyApp["Clash / sing-box / v2rayNG"]
-    end
-    subgraph Web["Web Layer"]
-        Caddy["Caddy — HTTPS + SPA + DoH"]
-    end
-    subgraph Panel["Control Plane"]
-        API["Panel API — Go 1.26"]
-        SSE["SSE — Live Events"]
-        Scanner["Reality Scanner"]
-        Migration["Auto-Migration Engine"]
-        Reseller["Reseller Platform"]
-        DB[(PostgreSQL + TimescaleDB)]
-        Redis[(Redis — cache + sessions)]
-    end
-    subgraph Nodes["Node Fleet"]
-        Local["Local Node (in-process)"]
-        Remote1["Remote Node 1 — mTLS"]
-        Remote2["Remote Node 2 — mTLS"]
-        RemoteN["Remote Node N — mTLS"]
-    end
-    subgraph Federation["Federation"]
-        Peer1["Peer Panel 1"]
-        Peer2["Peer Panel 2"]
-    end
-    Browser --> Caddy
-    Portal --> Caddy
-    ProxyApp --> Caddy
-    Caddy --> API
-    API --> DB
-    API --> Redis
-    API --> Local
-    API --> Remote1
-    API --> Remote2
-    API --> RemoteN
-    API <--> Peer1
-    API <--> Peer2
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
 ```
 
----
-
-## المكدّس التقني
-
-| الطبقة | التقنية |
-|--------|---------|
-| الخلفية (Backend) | Go 1.26, Echo, gRPC, sqlc, pgx |
-| الواجهة (Frontend) | React 18, TypeScript 5.6, Tailwind CSS, TanStack Query |
-| قاعدة البيانات | PostgreSQL 16 + TimescaleDB |
-| التخزين المؤقت | Redis 7 |
-| نوى البروكسي | Xray-core, sing-box |
-| خادم الويب | Caddy (HTTPS تلقائي) |
-| النقل | gRPC + mTLS (لوحة التحكم ↔ العقد) |
-| الإشعارات | Webhook (HMAC-SHA256), Telegram Bot API |
-| المراقبة | Prometheus metrics + Grafana |
+أمر واحد. إعداد تفاعلي. يتضمن HTTPS.
 
 ---
 
-## روابط سريعة
+## 📖 خريطة التوثيق
+
+| القسم | الوصف |
+|-------|-------|
+| [المقدمة](01-introduction.md) | البنية، نظرة عامة على الميزات، المقارنة |
+| [التثبيت](02-installation.md) | التثبيت بسطر واحد، Docker، البناء الأصلي |
+| [الخطوات الأولى](03-first-steps.md) | تسجيل الدخول، إضافة عقدة، إنشاء inbound، إضافة مستخدم |
+| [لوحة التحكم](04-dashboard.md) | الأدوات، التحليلات، المراقبة، لوحة الأوامر |
+| [المستخدمون](05-user-management.md) | الإدارة، الحصص، الاشتراكات، البوابة، المتجر |
+| [العقد](06-node-management.md) | التسجيل، الصحة، الترحيل التلقائي، المراقبة |
+| [الشبكة](07-network-policy.md) | المخرجات، حزم التوجيه، سلاسل CDN، موازن التحميل |
+| [الأمان](08-security-administration.md) | RBAC، حيل TLS، حماية الفحص، حد IP |
+| [الخطط والمدفوعات](09-plans-payments.md) | خطط الموزعين، إعداد الدفع، المحفظة |
+| [الإشعارات](10-notifications.md) | Webhooks، Telegram، تنبيهات الحصة، SSE |
+| [الإعدادات](11-settings-backup.md) | العلامة التجارية، التسمية البيضاء، النسخ الاحتياطي |
+| [مرجع API](12-api-reference.md) | المصادقة، نقاط النهاية، مواصفات OpenAPI |
+| [البروتوكولات](13-protocols-config.md) | 14 بروتوكول، النقل، طبقات الأمان |
+| [العمليات](14-operations-maintenance.md) | HTTPS، Prometheus، التوسع، الأداء |
+| [استكشاف الأخطاء](15-troubleshooting-faq.md) | المشاكل الشائعة، نصائح التصحيح، الأسئلة الشائعة |
+
+---
+
+## ✨ الميزات الرئيسية
+
+### 🔧 المحرك والبنية التحتية
+- **دعم النواة المزدوجة** — Xray-core و sing-box، اختر لكل عقدة
+- **حركة دلتا** — مقاومة لإعادة التشغيل، بدون فقدان البيانات
+- **أسطول عقد mTLS** — اتصالات مشفرة، تجاوز الفشل التلقائي
+- **الترحيل التلقائي** — نقل المستخدمين من العقد غير الصحية
+- **الاتحاد** — مزامنة المستخدمين/العقد عبر لوحات متعددة
+
+### 🛡 الأمان ومكافحة الرقابة
+- **ماسح Reality** — اكتشاف SNI المثالية مع تسجيل التأخير
+- **مدير حيل TLS** — ملفات تعريف ISP (التجزئة، mux، الحشو)
+- **حماية الفحص** — اكتشاف وحظر فحوصات GFW
+- **موقع وهمي** — عرض موقع مزيف للمراقبين
+- **DNS-over-HTTPS** — DoH مدمج مع حظر الإعلانات
+
+### 👥 إدارة المستخدمين والتجارة
+- **بوابة الخدمة الذاتية** — تسجيل الدخول بالرمز، عرض الاستخدام، التذاكر
+- **متجر الخدمة الذاتية** — خطط الموزعين مع طرق دفع متعددة
+- **الحصة الذكية** — تقليل السرعة التدريجي
+- **مجموعات عائلية** — مجموعات بيانات مشتركة
+- **نظام الإحالة** — رموز الدعوة مع مكافآت
+
+### 💼 منصة الموزعين
+- **محفظة** — نظام ائتمان مع طابور الشحن
+- **موزعين فرعيين** — إنشاء موزعين أبناء
+- **التسمية البيضاء** — علامة تجارية مخصصة
+- **Webhooks** — أحداث صادرة للأتمتة
+- **حدود السياسة** — الحد الأقصى للبيانات، الحد الأقصى لانتهاء الصلاحية
+
+### 🎨 الواجهة الأمامية و UX
+- **واجهة Veltrix الزجاجية** — نظام تصميم Glass حديث
+- **لوحة الأوامر** — بحث Ctrl+K في كل مكان
+- **أدوات لوحة التحكم** — سحب وإفلات وتغيير الحجم
+- **8 لغات** — مع دعم RTL كامل للعربية والفارسية
+- **السمة الداكنة والفاتحة** — انتقال متحرك سلس
+
+---
+
+## 🔗 روابط سريعة
 
 | المورد | الرابط |
 |--------|--------|
 | مستودع GitHub | [github.com/iPmartNetwork/VortexUI](https://github.com/iPmartNetwork/VortexUI) |
-| قناة تيليجرام | [@vortex_ui](https://t.me/vortex_ui) |
+| قناة Telegram | [@vortex_ui](https://t.me/vortex_ui) |
 | مواصفات OpenAPI | [openapi.yaml](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) |
 | سجل التغييرات | [CHANGELOG.md](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md) |
-| الإبلاغ عن خلل | [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues) |
-| النقاشات | [GitHub Discussions](https://github.com/iPmartNetwork/VortexUI/discussions) |
+| الإبلاغ عن الأخطاء | [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues) |
 
 ---
 
-!!! info "اللغات"
-    هذا التوثيق متوفر بـ **English**، **فارسی**، **العربية**، و **Türkçe**.
-    استخدم محدّد اللغة في الرأس للتبديل.
+## 🌍 اللغات
+
+هذا التوثيق متاح بـ:
+
+- 🇸🇦 **العربية** (الحالية)
+- 🇬🇧 [English](../en/README.md)
+- 🇮🇷 [فارسی](../fa/README.md)
+- 🇹🇷 [Türkçe](../tr/README.md)

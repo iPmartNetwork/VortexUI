@@ -1,25 +1,12 @@
 # Dashboard
 
-!!! info "Real-Time"
-    All dashboard data updates via Server-Sent Events (SSE) — no manual refresh needed.
-
-!!! tip "Command Tower UI (v1.2.9)"
-    The **Overview** page includes live Command Tower widgets — traffic range tabs,
-    top users with protocol badges, and node geo/ping. See
-    [Command Tower (v1.2.9)](17-v129-panel-redesign.md).
-
-!!! tip "Veltrix UI (v1.2.8)"
-    The **Overview** page uses the new Veltrix design — live stat cards, node fleet
-    health, and top traffic users. See [Veltrix UI (v1.2.8)](16-v128-ui-refresh.md)
-    for navigation, command palette, and language switcher details.
-
----
-
-## Overview Widgets
+> **Real-Time:** All dashboard data updates via Server-Sent Events (SSE) — no manual refresh needed.
 
 The main dashboard is a **customizable widget grid**. Drag, drop, and resize widgets to build your preferred layout.
 
-### Available Widgets
+---
+
+## Available Widgets
 
 | Widget | Content |
 |--------|---------|
@@ -32,7 +19,9 @@ The main dashboard is a **customizable widget grid**. Drag, drop, and resize wid
 | Quick actions | Create user, add node, run scan shortcuts |
 | Reseller pool | Your account/traffic quota remaining (reseller view) |
 
-### Customization
+---
+
+## Customization
 
 1. Click the **grid icon** (top-right of dashboard)
 2. Drag widgets to rearrange
@@ -76,8 +65,7 @@ A heatmap showing where your users connect from, based on GeoIP data from node a
 - Click for detailed breakdown (top cities, top users from that country)
 - Color intensity reflects traffic volume
 
-!!! note
-    Geo data requires node agents to report connection metadata. If the map is empty, verify your nodes are running the latest agent version.
+> **Note:** Geo data requires node agents to report connection metadata. If the map is empty, verify your nodes are running the latest agent version.
 
 ---
 
@@ -95,7 +83,6 @@ A heatmap showing where your users connect from, based on GeoIP data from node a
 | Traffic | Upload/download for this session |
 
 Features:
-
 - Auto-refreshes every 3 seconds
 - Filter by node, protocol, or user
 - Sort by any column
@@ -124,14 +111,13 @@ Select **Last 24h**, **Last 7 days**, **Last 30 days**, or a custom date range.
 
 Click **Export CSV** to download geo + user data as a spreadsheet for the selected time range.
 
-!!! tip
-    Use analytics to identify your busiest hours and plan node capacity accordingly.
+> **Tip:** Use analytics to identify your busiest hours and plan node capacity accordingly.
 
 ---
 
 ## Command Palette
 
-Press ++ctrl+k++ (or ++cmd+k++ on macOS) to open the command palette — a fuzzy search across the entire panel.
+Press `Ctrl+K` (or `Cmd+K` on macOS) to open the command palette — a fuzzy search across the entire panel.
 
 ### What you can search
 
@@ -145,11 +131,70 @@ Press ++ctrl+k++ (or ++cmd+k++ on macOS) to open the command palette — a fuzzy
 
 | Shortcut | Action |
 |----------|--------|
-| ++ctrl+k++ | Open command palette |
-| ++ctrl+shift+n++ | New user |
-| ++ctrl+shift+d++ | Toggle dark/light mode |
-| ++ctrl+period++ | Open notifications |
-| ++escape++ | Close modal/palette |
-| ++g++ then ++d++ | Go to dashboard |
-| ++g++ then ++u++ | Go to users |
-| ++g++ then ++n++ | Go to nodes |
+| Ctrl+K | Open command palette |
+| Ctrl+Shift+N | New user |
+| Ctrl+Shift+D | Toggle dark/light mode |
+| Ctrl+. | Open notifications |
+| Esc | Close modal/palette |
+| G then D | Go to dashboard |
+| G then U | Go to users |
+| G then N | Go to nodes |
+
+---
+
+## Veltrix UI Features
+
+### Collapsible Sidebar
+
+- Click the hamburger icon to collapse/expand
+- Collapsed mode shows only icons
+- State persists across sessions
+
+### Theme Switcher
+
+- Click the sun/moon icon in the header
+- Smooth animated transition between dark and light
+- Preference saved to your profile
+
+### Language Selector
+
+- 8 languages available: EN, FA, TR, AR, RU, ZH, JA, ES
+- Full RTL support for Farsi and Arabic
+- Language saved per-admin
+
+### Notification Bell
+
+- Real-time notifications for important events
+- Mark as read, clear all
+- Click to navigate to related item
+
+---
+
+## Mobile Dashboard
+
+On mobile devices, the dashboard adapts:
+
+- Single-column widget layout
+- Bottom navigation bar
+- Pull-to-refresh for manual update
+- Bottom sheets for quick actions
+- Swipe gestures for navigation
+
+---
+
+## Dashboard Tips
+
+### For Operators
+- Pin the "Quick Actions" widget at the top for fast access
+- Use the world map to identify geographic traffic patterns
+- Set up analytics exports for billing reports
+
+### For Resellers
+- The "Reseller Pool" widget shows your quota usage at a glance
+- Monitor "Recent Events" for user activity
+- Use "Top Users" to identify heavy consumers
+
+### For Monitoring
+- Keep the Monitor page open for live connection tracking
+- Set up browser notifications for offline node alerts
+- Export analytics weekly for trend analysis
