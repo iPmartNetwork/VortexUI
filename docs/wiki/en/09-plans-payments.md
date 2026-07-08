@@ -1,248 +1,294 @@
 # Plans & Payments
 
-!!! abstract "Per-Reseller Commerce"
-    Each admin/reseller creates their own plans, configures their own payment methods,
-    and manages their own orders. End-users purchase through a self-service shop unique
-    to their reseller.
+VortexUI includes a complete commerce system: plans, multiple payment gateways, reseller wallets, and order management.
 
 ---
 
-## Plan System
+## Overview
 
-Plans are **owned by the admin who creates them**. Each reseller manages their own catalog independently.
+```
+User → Shop → Select Plan → Pay → Order → Auto-Provision
+                                     ↓
+                          Reseller Wallet (debited)
+```
+
+---
+
+## Plans
+
+Plans define what a user gets: traffic, duration, device limits, and price.
+
+**Plans & Payments → Plans**
 
 ### Creating a Plan
 
-**Plans → New Plan**
+1. Click **Add Plan**
+2. Configure:
 
 | Field | Description |
 |-------|-------------|
-| Name | Display name (e.g. "Monthly 50GB") |
-| Data limit | Traffic cap in bytes |
-| Duration (days) | Subscription period |
-| Device limit | Max concurrent devices |
-| Reset strategy | `none` / `daily` / `weekly` / `monthly` |
-| Price (Toman) | IRR price for ZarinPal/card payments |
-| Price (USD) | Dollar price for crypto payments |
-| Max users | Sales cap (`0` = unlimited) |
-| Enabled | Active/inactive toggle |
+| Name | Display name (e.g., "Premium 100GB") |
+| Data Limit | Traffic in GB (0 = unlimited) |
+| Duration | Days until expiry |
+| Device Limit | Max concurrent connections |
+| Price (Toman) | Price for ZarinPal/card |
+| Price (USD) | Price for crypto |
+| Inbounds | Which inbounds this plan grants |
 
 ### Plan Visibility
 
-| Admin Type | Sees |
-|-----------|------|
-| Sudo admin | All plans from all admins |
-| Reseller | Only their own plans |
-| End user (in shop) | Only their reseller's enabled plans |
+| Type | Who Sees It |
+|------|-------------|
+| Admin plans | All users (created by sudo) |
+| Reseller plans | Only that reseller's users |
 
-### Plan Ownership
-
-- **Sudo admin** creates global plans (visible to all users without a reseller)
-- **Reseller** creates plans for their own users only
-- A user visiting the shop sees plans from whichever admin manages their account
+> **Per-reseller plans:** Each reseller creates their own plans with their own pricing. These appear only in that reseller's shop at `/sub/{token}/shop`.
 
 ---
 
-## Payment Configuration
+## Payment Gateways
 
-Each admin/reseller configures their own payment methods independently.
+VortexUI supports three payment methods, configurable per reseller.
 
-**Settings → Payment Configuration** (or **Reseller Account → Payment**)
+### ZarinPal (Online — Iran)
 
-### Available Methods
+**Plans & Payments → Payment Methods → ZarinPal**
 
-| Method | Type | Configuration |
-|--------|------|--------------|
-| **ZarinPal** | Online gateway | Merchant ID |
-| **Card-to-Card** | Manual proof | Card number + holder name |
-| **Crypto** | Manual proof | Wallet addresses (BTC, USDT, ETH, etc.) |
+| Field | Description |
+|-------|-------------|
+| Merchant ID | Your ZarinPal merchant ID |
+| Enabled | Toggle on/off |
+| Sandbox | Test mode |
 
-### Per-Reseller Payment Config
+Flow:
+1. User selects plan → clicks Pay
+2. Redirected to ZarinPal
+3. Completes payment
+4. Redirected back → order auto-approved
+5. Plan applied instantly
 
-Each reseller sets up their own payment details:
+### Card-to-Card (Manual)
 
-```
-Reseller A → ZarinPal merchant: xxxx + Card: 6219-xxxx-xxxx-1234
-Reseller B → Crypto only: USDT TRC20 address
-Reseller C → Card-to-card: 6037-xxxx-xxxx-5678
-```
+**Plans & Payments → Payment Methods → Card-to-Card**
 
-Users in each reseller's shop see only that reseller's configured payment options.
+| Field | Description |
+|-------|-------------|
+| Card Number | Destination card |
+| Holder Name | Card holder name |
+| Enabled | Toggle on/off |
+
+Flow:
+1. User selects plan → sees card details
+2. Transfers money manually
+3. Uploads payment proof (screenshot)
+4. Admin/reseller reviews → approves
+5. Plan applied on approval
+
+### Crypto (NowPayments)
+
+**Plans & Payments → Payment Methods → Crypto**
+
+| Field | Description |
+|-------|-------------|
+| API Key | NowPayments API key |
+| IPN Secret | HMAC secret for webhooks |
+| Wallet addresses | BTC, USDT, etc. |
+
+Flow:
+1. User selects plan → chooses crypto
+2. Sends payment to wallet
+3. Submits TX hash
+4. IPN webhook confirms → order approved
+5. Plan applied automatically
 
 ---
 
-## Payment Methods
+## Orders
 
-### ZarinPal (Online Gateway)
+**Plans & Payments → Orders**
 
-Automated flow — no admin intervention needed:
+Track all purchases and their status.
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Panel
-    participant ZarinPal
-    User->>Panel: Select plan → Choose ZarinPal
-    Panel->>ZarinPal: Create payment request
-    ZarinPal->>User: Redirect to gateway page
-    User->>ZarinPal: Complete payment
-    ZarinPal->>Panel: Callback with verification
-    Panel->>Panel: Verify → Fulfill order
-    Panel->>User: Subscription activated
+| Status | Meaning |
+|--------|---------|
+| Pending | Awaiting payment |
+| Review | Proof uploaded, awaiting approval |
+| Approved | Payment confirmed, plan applied |
+| Rejected | Payment rejected |
+| Expired | Order timed out |
+
+### Order Actions
+
+- **Approve**: Confirm payment, apply plan
+- **Reject**: Decline with reason
+- **View Proof**: See uploaded screenshot
+- **Export PDF**: Generate invoice
+
+---
+
+## Reseller Wallet
+
+> **Reseller Platform (1.2.9+)**
+
+Resellers operate on a credit system managed by their wallet.
+
+**Plans & Payments → Wallet** (reseller view)
+
+### Credit Types
+
+| Credit Type | Consumed When |
+|-------------|---------------|
+| Traffic credits | Users consume data (consumed mode) or assigned limits (allocated mode) |
+| User credits | Creating new users |
+
+### Wallet Operations
+
+| Operation | Description |
+|-----------|-------------|
+| Top-up request | Reseller requests credits; sudo approves |
+| Auto-deduct | System deducts as users consume/created |
+| Ledger | Full history of all credit changes |
+| Balance | Current available credits |
+
+### Traffic Quota Modes
+
+| Mode | Counts Against Pool When... |
+|------|------------------------------|
+| **Allocated** | Reseller assigns data limits (sum of limits) |
+| **Consumed** | Users actually consume traffic |
+
+---
+
+## Reseller Wallet Ledger
+
+Every credit change is recorded:
+
+| Field | Content |
+|-------|---------|
+| Timestamp | When the change occurred |
+| Type | Top-up, deduct, adjust |
+| Amount | Credit delta (+/-) |
+| Balance | Balance after change |
+| Reason | Description (e.g., "User alice created") |
+| Actor | Who made the change |
+
+---
+
+## Top-Up Workflow
+
+```
+Reseller requests top-up
+         ↓
+Sudo admin reviews queue
+         ↓
+   Approve / Reject
+         ↓
+Credits added to wallet
+         ↓
+Ledger entry created
 ```
 
-Configuration: set `VORTEX_ZARINPAL_MERCHANT` (or per-reseller merchant ID in payment config).
+### For Resellers: Request Top-Up
 
-### Card-to-Card (Receipt Upload)
+1. **Wallet → Request Top-Up**
+2. Enter amount and note
+3. Submit → status "Pending"
+4. Wait for sudo approval
 
-Manual verification flow:
+### For Sudo: Approve Top-Ups
 
-1. User selects plan → chooses "Card-to-Card"
-2. Panel shows the reseller's card number and holder name
-3. User transfers money via their banking app
-4. User uploads **receipt image** + optional **reference number**
-5. Order status: `pending`
-6. Admin/reseller reviews the proof image → **Approve** or **Reject**
-7. On approval → subscription activated
+1. **Plans & Payments → Top-Up Queue**
+2. Review pending requests
+3. Approve or reject
+4. Credits applied instantly
 
-!!! info
-    Receipt images are stored securely and accessible only to the managing admin.
+### Quick Quota Adjust
 
-### Crypto (TX Hash + Screenshot)
+Sudo admins can quickly adjust reseller quotas:
 
-Manual verification flow:
-
-1. User selects plan → chooses "Crypto"
-2. Panel shows the reseller's wallet address(es)
-3. User sends crypto and provides:
-    - **Transaction hash** (required)
-    - **Screenshot** of transaction (optional)
-4. Order status: `pending`
-5. Admin/reseller verifies the TX hash on-chain → **Approve** or **Reject**
-6. On approval → subscription activated
+- **+50 accounts** button
+- **+10 GB** button
+- **+50 GB** button
 
 ---
 
 ## Self-Service Shop
 
-**URL:** `/sub/{token}/shop`
+The shop lets users purchase plans directly from their portal.
 
-The shop is part of the user portal, accessible via the subscription token.
+### Shop URL
 
-### User Experience
-
-1. User logs into portal with their sub token
-2. Navigates to **Plans** tab
-3. Sees plans created by their managing admin/reseller
-4. Selects a plan → chooses payment method
-5. Completes payment (or uploads proof)
-6. Waits for fulfillment
-
-### React Portal Purchase Flow (PortalPlans)
-
-The portal renders:
-
-- Plan cards with name, data limit, duration, price
-- Payment method selector (only methods the reseller configured)
-- Upload form (for card-to-card / crypto proof)
-- Order status tracker
-
----
-
-## Order Lifecycle
-
-```mermaid
-stateDiagram-v2
-    [*] --> Pending: User initiates purchase
-    Pending --> Paid: Payment verified
-    Pending --> Cancelled: Admin rejects or user cancels
-    Pending --> Expired: Timeout (configurable)
-    Paid --> [*]: Subscription fulfilled
-    Cancelled --> [*]
-    Expired --> [*]
+```
+https://your-domain.com/sub/{token}/shop
 ```
 
-| Status | Meaning |
-|--------|---------|
-| `pending` | Awaiting payment or proof review |
-| `paid` | Payment confirmed — subscription activated |
-| `cancelled` | Rejected by admin or cancelled by user |
-| `expired` | Payment timeout exceeded |
+### Shop Features
+
+- Browse available plans (filtered by reseller)
+- See only their reseller's payment methods
+- Purchase renewals or upgrades
+- View order history
+- Download invoices
+
+### Enabling the Shop
+
+1. Create at least one plan
+2. Configure at least one payment method
+3. Shop auto-appears in user portal
 
 ---
 
-## Pending Order Review
+## Referral Program
 
-**Orders → Pending** (admin/reseller view)
+> **New in 1.3.0**
 
-For card-to-card and crypto orders:
+Users earn rewards for inviting others.
 
-1. View the order details: user, plan, amount, timestamp
-2. View uploaded **proof image** (receipt/screenshot)
-3. View **reference number** or **TX hash**
-4. Actions:
-    - **Approve** → fulfills the order, activates subscription
-    - **Reject** → cancels the order, notifies user with reason
+**Settings → Features → Referrals**
 
-!!! tip
-    Enable Telegram notifications for new pending orders so you don't miss proof uploads.
+| Setting | Description |
+|---------|-------------|
+| Enabled | Turn referrals on/off |
+| Reward (data) | GB added per referral |
+| Reward (days) | Days added per referral |
+| Referrer bonus | Reward for the inviter |
+| Referee bonus | Reward for the new user |
 
----
+### User Flow
 
-## Reseller Wallet Billing
-
-For resellers who don't sell directly to users but instead pay the admin for capacity.
-
-### How It Works
-
-| Credit Type | Deducted When |
-|-------------|---------------|
-| Traffic credits (GB) | Users consume data (consumed mode) or reseller assigns limits (allocated mode) |
-| User credits (count) | Reseller creates new users |
-
-### Wallet Operations
-
-| Action | Who | Description |
-|--------|-----|-------------|
-| View balance | Reseller | See remaining traffic + user credits |
-| View ledger | Reseller | Full history of all changes |
-| Request top-up | Reseller | Submit top-up request to sudo admin |
-| Approve top-up | Sudo | Review and approve deposit |
-| Quick adjust | Sudo | +50 accounts / +10 GB / +50 GB buttons |
-
-### Wallet Deposit Approval Queue
-
-**Admins → Wallet Deposits** (sudo view)
-
-1. Reseller submits a top-up request (amount + payment proof)
-2. Request appears in the approval queue
-3. Sudo admin reviews → **Approve** (credits added) or **Reject**
+1. User finds their referral link in portal: `/invite/{code}`
+2. Shares with friends
+3. New user signs up through link
+4. Both receive configured bonus
 
 ---
 
-## Fulfillment Logic
+## Pricing Strategy Tips
 
-When an order is marked as `paid`:
+### For Resellers
+- Set competitive plan prices
+- Offer volume discounts (larger plans, better GB/price ratio)
+- Use referral rewards to grow user base
 
-1. **If user exists** — extend subscription:
-    - Traffic: current remaining + plan's data limit (additive)
-    - Duration: current expiry + plan's duration days (additive)
-    - Device limit: updated to plan's value
-    - No traffic reset — existing remaining data is preserved
-
-2. **If user is new** — create account with plan parameters
-
-!!! info "Additive Stacking"
-    Multiple purchases stack additively. Buying a 50GB plan twice gives 100GB total.
-    Duration also stacks — buying two 30-day plans extends by 60 days from current expiry.
+### For Sudo Admins
+- Set reasonable reseller quotas
+- Monitor wallet balances to prevent service interruption
+- Use "consumed" mode for pay-as-you-go resellers
+- Use "allocated" mode for prepaid resellers
 
 ---
 
-## Quota Mode Summary
+## Financial Reporting
 
-| Mode | Pool decreases when | Best for |
-|------|-------------------|----------|
-| **Allocated** | Reseller assigns data limits to users | Pre-sold fixed packages |
-| **Consumed** | Users actually use traffic | Pay-per-use billing |
+### Export Options
 
-Configure per reseller at **Admins → Edit admin → Traffic quota mode**.
+- **Orders CSV**: All transactions in date range
+- **Invoice PDF**: Per-order invoices
+- **Wallet Ledger CSV**: Credit history
+
+### Analytics
+
+- Total revenue by period
+- Revenue by reseller
+- Popular plans
+- Payment method breakdown

@@ -1,12 +1,5 @@
 # Introduction
 
-!!! abstract "TL;DR"
-    VortexUI is a **user-centric**, **core-agnostic** proxy management panel supporting
-    Xray-core and sing-box. It manages users, nodes, traffic, subscriptions, payments,
-    resellers, and anti-censorship tools from a single modern interface.
-
----
-
 ## What is VortexUI?
 
 **VortexUI** is a next-generation proxy management panel built for operators who need:
@@ -18,8 +11,22 @@
 - **Revenue** — per-reseller plans, multiple payment gateways, wallet billing, referral program
 - **Delegation** — full reseller platform with sub-resellers, whitelabel, policy limits
 
-Unlike inbound-centric panels (3x-ui), VortexUI uses a **user-centric model**: one user
-identity provides access to all assigned protocols across all nodes simultaneously.
+Unlike inbound-centric panels (3x-ui), VortexUI uses a **user-centric model**: one user identity provides access to all assigned protocols across all nodes simultaneously.
+
+> **Current version: 1.3.1** — Now with persisted settings, audit logging, real ACME certificates, federation, and a full reseller platform.
+
+---
+
+## Design Principles
+
+| Principle | Description |
+|-----------|-------------|
+| **API-first** | Every UI action is backed by a documented REST endpoint |
+| **Multi-tenant** | Resellers see only their scope; RBAC enforced |
+| **Observable** | Audit log, Prometheus metrics, structured JSON logs |
+| **Portable** | Docker Compose, Kubernetes, or bare metal |
+| **Secure by default** | 2FA, IP guard, per-token scopes, mTLS |
+| **Localized** | 8 languages, full RTL support (FA, AR) |
 
 ---
 
@@ -28,7 +35,7 @@ identity provides access to all assigned protocols across all nodes simultaneous
 ### Engine & Infrastructure
 
 | Capability | Details |
-|-----------|---------|
+|------------|---------|
 | Dual-core support | Xray-core and sing-box — choose per node |
 | Push delta traffic | Restart-safe, no double-counting, never loses data |
 | mTLS node fleet | Encrypted connections, auto-failover, migrate-back |
@@ -43,7 +50,7 @@ identity provides access to all assigned protocols across all nodes simultaneous
 ### Security & Anti-Censorship
 
 | Capability | Details |
-|-----------|---------|
+|------------|---------|
 | Reality Scanner | Discover optimal SNIs with latency scoring |
 | TLS Tricks Manager | ISP-specific profiles (fragment, mux, padding) |
 | Probing protection | Detect and block active GFW probes |
@@ -60,7 +67,7 @@ identity provides access to all assigned protocols across all nodes simultaneous
 ### User Management & Commerce
 
 | Capability | Details |
-|-----------|---------|
+|------------|---------|
 | Self-service portal | Login with sub token, view usage, tickets |
 | Self-service shop | Per-reseller plans with card/crypto/ZarinPal payment |
 | Smart Quota | Progressive speed reduction (fair use tiers) |
@@ -77,7 +84,7 @@ identity provides access to all assigned protocols across all nodes simultaneous
 ### Administration & Reseller Platform
 
 | Capability | Details |
-|-----------|---------|
+|------------|---------|
 | RBAC + roles | Granular permissions per admin |
 | Full reseller platform | Wallet, sub-resellers, whitelabel, webhooks, policy limits |
 | Scoped allowlists | Per-reseller plan/node/inbound restrictions |
@@ -87,10 +94,23 @@ identity provides access to all assigned protocols across all nodes simultaneous
 | Auto-backup | Scheduled exports to Telegram or S3 |
 | Grafana metrics | Prometheus endpoint + ready dashboard |
 
+### New in 1.3.x
+
+| Capability | Since | Details |
+|------------|-------|---------|
+| Persisted settings | 1.3.0 | All panel config stored in PostgreSQL, not browser |
+| Audit log | 1.3.0 | Live table of every admin mutation with diff view |
+| Real ACME | 1.3.0 | Let's Encrypt certificates via Cloudflare DNS-01 |
+| Federation | 1.3.0 | Multi-panel peer coordination and count sync |
+| Portal referral | 1.3.0 | End-users share invite links from the portal |
+| Portal whitelabel | 1.3.0 | Per-tenant branding on the self-service portal |
+| Command Tower UI | 1.2.9 | Merged pages, fleet telemetry, geo pin map |
+| Reseller platform | 1.2.9 | Wallet, orders, plans, sub-admin profiles |
+
 ### Frontend & UX
 
 | Capability | Details |
-|-----------|---------|
+|------------|---------|
 | Command palette | Ctrl+K fuzzy search across everything |
 | Dashboard widgets | Drag & drop, resize, customize layout |
 | World map | Geographic traffic visualization |
@@ -127,71 +147,28 @@ identity provides access to all assigned protocols across all nodes simultaneous
 └──────────────────────────────────────────────────────────────┘
 ```
 
-```mermaid
-erDiagram
-    ADMIN ||--o{ USER : manages
-    ADMIN ||--o{ PLAN : owns
-    USER ||--o{ USER_INBOUND : access
-    USER ||--o{ ORDER : purchases
-    USER ||--o{ FAMILY_GROUP : member_of
-    NODE ||--o{ INBOUND : hosts
-    INBOUND ||--o{ USER_INBOUND : links
-    PLAN ||--o{ ORDER : purchased_as
-    ADMIN {
-        uuid id
-        string username
-        enum role
-        int64 traffic_quota
-        int user_quota
-        json wallet
-        json branding
-    }
-    USER {
-        uuid id
-        string username
-        int64 data_limit
-        int64 used_traffic
-        int device_limit
-        datetime expire_at
-        string sub_token
-    }
-    NODE {
-        uuid id
-        string name
-        string address
-        enum core
-        enum status
-    }
-    INBOUND {
-        uuid id
-        enum protocol
-        int port
-        json config
-    }
-    PLAN {
-        uuid id
-        string name
-        int64 data_limit
-        int duration_days
-        int price_toman
-        float price_usd
-        uuid owner_admin_id
-    }
-    ORDER {
-        uuid id
-        enum status
-        string payment_method
-        string proof_image
-        datetime created_at
-    }
-```
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | Go 1.26, Echo, gRPC, sqlc, pgx |
+| Frontend | React 18, TypeScript 5.6, Tailwind CSS, TanStack Query |
+| Database | PostgreSQL 16 + TimescaleDB |
+| Cache | Redis 7 |
+| Proxy Cores | Xray-core, sing-box |
+| Web Server | Caddy (auto HTTPS) |
+| Transport | gRPC + mTLS (panel ↔ nodes) |
+| Notifications | Webhook (HMAC-SHA256), Telegram Bot API |
+| Monitoring | Prometheus metrics + Grafana |
 
 ---
 
 ## Comparison with Other Panels
 
-| Feature | VortexUI 1.2.9 | 3x-ui | Marzban | Hiddify |
-|---------|:--:|:--:|:--:|:--:|
+| Feature | VortexUI 1.3.1 | 3x-ui | Marzban | Hiddify |
+|---------|----------------|-------|---------|---------|
 | Dual core (Xray + sing-box) | ✅ | ❌ | ❌ | ✅ |
 | User-centric model | ✅ | ❌ | ✅ | ✅ |
 | Push delta traffic | ✅ | polling | polling | polling |
@@ -200,23 +177,11 @@ erDiagram
 | Reality Scanner | ✅ | ❌ | ❌ | ❌ |
 | TLS Tricks (ISP profiles) | ✅ | ❌ | ❌ | partial |
 | Probing protection | ✅ | ❌ | ❌ | ❌ |
-| Client fingerprint (JA3) | ✅ | ❌ | ❌ | ❌ |
-| Decoy website | ✅ | ❌ | ❌ | ❌ |
-| DNS-over-HTTPS | ✅ | ❌ | ❌ | ❌ |
 | Self-service portal | ✅ | ❌ | ❌ | ✅ |
 | Per-reseller shop | ✅ | ❌ | ❌ | ❌ |
-| Payment gateways (multi-method) | ✅ | ❌ | ❌ | partial |
-| Per-reseller plans & pricing | ✅ | ❌ | ❌ | ❌ |
-| Subscription hosts (overrides) | ✅ | ❌ | ✅ | ❌ |
-| Family groups | ✅ | ❌ | ❌ | ❌ |
-| Referral system | ✅ | ❌ | ❌ | ❌ |
 | Federation | ✅ | ❌ | ❌ | ❌ |
-| Smart Quota | ✅ | ❌ | ❌ | ❌ |
-| CDN/Relay chains | ✅ | ❌ | ❌ | ❌ |
-| Reseller wallet billing | ✅ | ❌ | ❌ | ❌ |
-| Deep links | ✅ | ❌ | ❌ | ✅ |
-| Analytics (geo + export) | ✅ | ❌ | ❌ | ❌ |
-| Dashboard widgets (drag & drop) | ✅ | ❌ | ❌ | ❌ |
+| Audit log | ✅ | ❌ | ❌ | ❌ |
+| Real ACME (DNS-01) | ✅ | ❌ | partial | ✅ |
 | Command palette (Ctrl+K) | ✅ | ❌ | ❌ | ❌ |
 | Backend | Go | Go | Python | Python |
 | Database | PG + TimescaleDB | SQLite | SQLite | SQLite |
@@ -226,7 +191,7 @@ erDiagram
 ## Supported Protocols
 
 | Protocol | Core | Inbound | Outbound | Transport | Security |
-|----------|------|:-------:|:--------:|-----------|----------|
+|----------|------|---------|----------|-----------|----------|
 | VLESS | Both | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, xHTTP, mKCP | None, TLS, REALITY |
 | VMess | Both | ✅ | ✅ | TCP, WS, gRPC, HTTPUpgrade, mKCP | None, TLS |
 | Trojan | Both | ✅ | ✅ | TCP, WS, gRPC, mKCP | TLS, REALITY |
@@ -242,9 +207,6 @@ erDiagram
 | HTTP | Both | ✅ | ✅ | TCP (no transport) | plaintext |
 | Dokodemo | Xray | ✅ | — | — | plaintext |
 
-**Subscription output formats:** `base64`, `clash`, `singbox`, `xray`, `outline`, `links`
-(auto-detected from client User-Agent, or forced with `?format=`).
-
 ---
 
 ## Key Terminology
@@ -256,17 +218,12 @@ erDiagram
 | **Local Node** | In-process core on the same machine as the panel |
 | **Inbound** | Client-facing entry point (protocol + port + config) |
 | **Outbound** | Egress path (freedom, proxy chain, WARP, blackhole) |
-| **Subscription** | `/sub/{token}` — auto-detected config for any client app |
-| **Subscription Host** | Per-inbound address/SNI overrides for CDN fronting |
+| **Subscription** | /sub/{token} — auto-detected config for any client app |
 | **Portal** | End-user self-service web interface |
-| **Shop** | Per-reseller plan purchase page (`/sub/{token}/shop`) |
+| **Shop** | Per-reseller plan purchase page (/sub/{token}/shop) |
 | **Hub** | Internal component managing all node connections |
 | **Federation** | Multiple panels connected for user/node sync |
-| **Relay Chain** | Multi-hop path: Client → CDN → Relay → Node |
 | **Smart Quota** | Fair-use policy with progressive speed tiers |
-| **Routing Pack** | Reusable named collection of routing rules |
-| **Evasion Profile** | Anti-DPI preset (fragment + fingerprint + mux) |
-| **SSE** | Server-Sent Events — push-based live UI updates |
 | **Reseller** | Admin with scoped access, wallet, own plans/users |
 | **Whitelabel** | Per-reseller branding (logo, colors, title) |
 

@@ -1,203 +1,196 @@
 # نصب
 
-!!! success "پیشنهادی"
-    از **نصب‌کننده تک‌خطی** برای سریع‌ترین مسیر به یک پنل کارا استفاده کنید. این اسکریپت
-    وابستگی‌ها، دیتابیس، HTTPS و سرویس‌های systemd را به‌صورت خودکار مدیریت می‌کند.
+> **توصیه:** از **نصب‌کننده یک‌خطی** برای سریع‌ترین راه به یک پنل کارا استفاده کنید. این نصب‌کننده وابستگی‌ها، تنظیم دیتابیس، HTTPS و سرویس‌های systemd را به صورت خودکار مدیریت می‌کند.
 
 ---
 
 ## پیش‌نیازها
 
-| نیازمندی | حداقل | پیشنهادی |
-|----------|-------|----------|
+| نیازمندی | حداقل | توصیه‌شده |
+|----------|-------|-----------|
 | سیستم‌عامل | Ubuntu 20.04 / Debian 11 | Ubuntu 22.04+ / Debian 12 |
-| RAM | ۱ گیگابایت | ۲+ گیگابایت |
-| دیسک | ۱۰ گیگابایت | ۲۰+ گیگابایت (TimescaleDB با داده ترافیک رشد می‌کند) |
-| CPU | ۱ vCPU | ۲+ vCPU |
-| Go (فقط بیلد بومی) | 1.26 | 1.26 |
+| RAM | 1 GB | 2 GB+ |
+| دیسک | 10 GB | 20 GB+ (TimescaleDB با داده ترافیک رشد می‌کند) |
+| CPU | 1 vCPU | 2+ vCPU |
+| Go (فقط برای بیلد بومی) | 1.26 | 1.26 |
 | Docker (نصب کانتینری) | 24.0+ | آخرین نسخه پایدار |
-| دامنه | اختیاری | پیشنهادی (برای HTTPS + سابسکریپشن‌ها) |
+| دامنه | اختیاری | توصیه‌شده (برای HTTPS + اشتراک‌ها) |
 
 ---
 
-## نصب تک‌خطی
+## نصب یک‌خطی
 
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
 ```
 
-نصب‌کننده این کارها را انجام می‌دهد:
+نصب‌کننده:
 
-1. شناسایی سیستم‌عامل و معماری
-2. نصب وابستگی‌ها (PostgreSQL, Redis, Caddy)
-3. دانلود و بیلد VortexUI
-4. اجرای مهاجرت‌های دیتابیس
-5. ایجاد اکانت ادمین sudo (پرامپت تعاملی)
-6. پیکربندی سرویس‌های systemd
-7. راه‌اندازی HTTPS از طریق Caddy (در صورت ارائه دامنه)
+1. سیستم‌عامل و معماری شما را تشخیص می‌دهد
+2. وابستگی‌ها را نصب می‌کند (PostgreSQL, Redis, Caddy)
+3. VortexUI را دانلود و بیلد می‌کند
+4. migration‌های دیتابیس را اجرا می‌کند
+5. یک اکانت ادمین sudo ایجاد می‌کند (prompt تعاملی)
+6. سرویس‌های systemd را پیکربندی می‌کند
+7. HTTPS را از طریق Caddy تنظیم می‌کند (اگر دامنه ارائه شود)
 
-پس از اتمام، از طریق `https://your-domain.com` یا `http://server-ip:8080` به پنل دسترسی پیدا کنید.
+پس از تکمیل، به پنل در `https://your-domain.com` یا `http://server-ip:8080` دسترسی پیدا کنید.
 
 ---
 
-## Docker Compose
+## داکر کامپوز
 
-=== "شروع سریع"
+### شروع سریع
 
-    ```bash
-    git clone https://github.com/iPmartNetwork/VortexUI.git
-    cd VortexUI/deploy
-    cp ../.env.example .env
-    # فایل .env را با تنظیمات خود ویرایش کنید
-    docker compose up -d
-    ```
+```bash
+git clone https://github.com/iPmartNetwork/VortexUI.git
+cd VortexUI/deploy
+cp ../.env.example .env
+# فایل .env را با تنظیمات خود ویرایش کنید
+docker compose up -d
+```
 
-=== "پروداکشن (با HTTPS توسط Caddy)"
+### پروداکشن (با Caddy HTTPS)
 
-    ```bash
-    git clone https://github.com/iPmartNetwork/VortexUI.git
-    cd VortexUI/deploy
-    cp ../.env.example .env
-    ```
+```bash
+git clone https://github.com/iPmartNetwork/VortexUI.git
+cd VortexUI/deploy
+cp ../.env.example .env
+```
 
-    فایل `.env` را ویرایش کنید:
-    ```env
-    VORTEX_DOMAIN=panel.example.com
-    VORTEX_ADMIN_USER=admin
-    VORTEX_ADMIN_PASS=your-secure-password
-    VORTEX_JWT_SECRET=random-32-byte-string
-    VORTEX_DB_URL=postgres://vortex:pass@db:5432/vortex?sslmode=disable
-    VORTEX_REDIS_URL=redis://redis:6379/0
-    ```
+فایل `.env` را ویرایش کنید:
 
-    سپس:
-    ```bash
-    docker compose up -d
-    ```
+```env
+VORTEX_DOMAIN=panel.example.com
+VORTEX_ADMIN_USER=admin
+VORTEX_ADMIN_PASS=your-secure-password
+VORTEX_JWT_SECRET=random-32-byte-string
+VORTEX_DB_URL=postgres://vortex:pass@db:5432/vortex?sslmode=disable
+VORTEX_REDIS_URL=redis://redis:6379/0
+```
 
-فایل `deploy/compose.yml` شامل: پنل، فرانتند وب، PostgreSQL + TimescaleDB، Redis و Caddy است.
+سپس:
+
+```bash
+docker compose up -d
+```
+
+فایل `deploy/compose.yml` شامل: پنل، فرانت‌اند وب، PostgreSQL + TimescaleDB، Redis و Caddy است.
 
 ---
 
 ## بیلد بومی
 
-=== "Ubuntu/Debian"
+### اوبونتو/دبیان
 
-    ```bash
-    # نصب Go 1.26
-    sudo snap install go --classic
-    go version  # باید go1.26.x نمایش دهد
+```bash
+# نصب Go 1.26
+sudo snap install go --classic
+go version  # باید go1.26.x را نشان دهد
 
-    # نصب وابستگی‌ها
-    sudo apt update && sudo apt install -y postgresql redis-server
+# نصب وابستگی‌ها
+sudo apt update && sudo apt install -y postgresql redis-server
 
-    # کلون و بیلد
-    git clone https://github.com/iPmartNetwork/VortexUI.git
-    cd VortexUI
-    go build -o vortexui ./cmd/panel
+# کلون و بیلد
+git clone https://github.com/iPmartNetwork/VortexUI.git
+cd VortexUI
+go build -o vortexui ./cmd/panel
 
-    # اجرای مهاجرت‌ها
-    ./vortexui migrate
+# اجرای migration‌ها
+./vortexui migrate
 
-    # ایجاد ادمین
-    ./vortexui admin create --username admin --password your-password --sudo
+# ایجاد ادمین
+./vortexui admin create --username admin --password your-password --sudo
 
-    # اجرا
-    ./vortexui serve
-    ```
+# شروع
+./vortexui serve
+```
 
-=== "سایر توزیع‌های لینوکس"
+### سایر لینوکس‌ها
 
-    ```bash
-    # نصب Go 1.26 از تاربال رسمی
-    wget https://go.dev/dl/go1.26.linux-amd64.tar.gz
-    sudo tar -C /usr/local -xzf go1.26.linux-amd64.tar.gz
-    export PATH=$PATH:/usr/local/go/bin
+```bash
+# نصب Go 1.26 از tarball رسمی
+wget https://go.dev/dl/go1.26.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.26.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
 
-    # سپس همان مراحل کلون/بیلد اوبونتو را دنبال کنید
-    ```
+# سپس همان مراحل کلون/بیلد اوبونتو را دنبال کنید
+```
 
-!!! warning "نسخه Go"
-    VortexUI به **Go 1.26** یا بالاتر نیاز دارد. نسخه‌های قدیمی‌تر قادر به کامپایل نخواهند بود.
+> **توجه:** VortexUI به **Go 1.26** یا بالاتر نیاز دارد. نسخه‌های قبلی کامپایل نخواهند شد.
 
 ---
 
-## راه‌اندازی ایجنت نود
+## راه‌اندازی Node Agent
 
-ایجنت نود روی سرورهای ریموت اجرا شده و از طریق gRPC + mTLS با پنل ارتباط برقرار می‌کند.
+Node agent روی سرورهای ریموت اجرا می‌شود و از طریق gRPC + mTLS با پنل ارتباط برقرار می‌کند.
 
-=== "ویزارد ثبت‌نام (پیشنهادی)"
+### ویزارد ثبت‌نام (توصیه‌شده)
 
-    1. در رابط پنل، به **نودها → افزودن نود** بروید
-    2. ویزارد ثبت‌نام یک دستور نصب تک‌خطی تولید می‌کند
-    3. به سرور ریموت SSH کرده و دستور را paste کنید
-    4. ایجنت به‌صورت خودکار ثبت‌نام می‌شود، گواهی‌ها را تبادل کرده و شروع به گزارش‌دهی می‌کند
+1. در رابط پنل، به **Nodes → Add Node** بروید
+2. ویزارد ثبت‌نام یک دستور نصب یک‌خطی تولید می‌کند
+3. SSH به سرور ریموت خود زده و دستور را paste کنید
+4. Agent به صورت خودکار ثبت‌نام می‌شود، گواهی‌ها را تبادل می‌کند و شروع به گزارش می‌کند
 
-=== "نصب دستی"
+### نصب دستی
 
-    ```bash
-    # روی سرور ریموت
-    bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install-node.sh)
-    ```
+```bash
+# روی سرور ریموت
+bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install-node.sh)
+```
 
-    از شما پرسیده می‌شود:
-    - آدرس پنل (مثلاً `https://panel.example.com`)
-    - توکن ثبت‌نام نود (تولید شده در UI پنل)
+از شما خواسته می‌شود:
+- آدرس پنل (مثلاً `https://panel.example.com`)
+- توکن ثبت‌نام نود (در رابط پنل تولید می‌شود)
 
-=== "نود داکر"
+### Docker Node
 
-    ```bash
-    docker run -d --name vortex-node \
-      -e PANEL_ADDR=https://panel.example.com \
-      -e NODE_TOKEN=your-enrollment-token \
-      --network host \
-      ghcr.io/ipmartnetwork/vortexui-node:latest
-    ```
+```bash
+docker run -d --name vortex-node \
+  -e PANEL_ADDR=https://panel.example.com \
+  -e NODE_TOKEN=your-enrollment-token \
+  --network host \
+  ghcr.io/ipmartnetwork/vortexui-node:latest
+```
 
 ---
 
 ## نود محلی (تک سرور)
 
-اگر فقط به یک سرور نیاز دارید، از **نود محلی** استفاده کنید — هسته پروکسی درون‌پروسسی در کنار پنل اجرا می‌شود. نیازی به ایجنت جداگانه نیست.
+اگر فقط به یک سرور نیاز دارید، از **نود محلی** استفاده کنید — هسته پروکسی در پروسه کنار پنل اجرا می‌شود. نیازی به agent جداگانه نیست.
 
-1. در حین نصب، هنگام سؤال درباره نود محلی "بله" را انتخاب کنید
-2. یا بعداً: **نودها → افزودن نود → محلی**
+1. در حین نصب، وقتی درباره نود محلی سوال شد "Yes" را انتخاب کنید
+2. یا بعداً: **Nodes → Add Node → Local**
 3. هسته را انتخاب کنید (Xray یا sing-box)
-4. پنل پروسس هسته را مستقیماً مدیریت می‌کند
+4. پنل مستقیماً پروسه هسته را مدیریت می‌کند
 
-!!! tip
-    نود محلی برای راه‌اندازی‌های تک‌سرور ایده‌آل است. برای استقرارهای چندسرور، از نودهای ریموت با ویزارد ثبت‌نام استفاده کنید.
+> **نکته:** نود محلی برای تنظیمات تک‌سرور عالی است. برای استقرارهای چندسرور، از نودهای ریموت با ویزارد ثبت‌نام استفاده کنید.
 
 ---
 
 ## متغیرهای محیطی
 
-| متغیر | توضیحات | مقدار پیش‌فرض |
-|--------|---------|---------------|
-| `VORTEX_DOMAIN` | دامنه پنل (برای HTTPS) | — |
-| `VORTEX_LISTEN` | آدرس شنود API | `:8080` |
-| `VORTEX_DB_URL` | رشته اتصال PostgreSQL | `postgres://localhost/vortex` |
-| `VORTEX_REDIS_URL` | رشته اتصال Redis | `redis://localhost:6379/0` |
-| `VORTEX_JWT_SECRET` | کلید امضای JWT (حداقل ۳۲ بایت) | — (ضروری) |
-| `VORTEX_ADMIN_USER` | نام کاربری ادمین اولیه | — |
-| `VORTEX_ADMIN_PASS` | رمز عبور ادمین اولیه | — |
-| `VORTEX_TELEGRAM_TOKEN` | توکن بات تلگرام | — |
-| `VORTEX_TELEGRAM_ADMIN` | شناسه چت ادمین برای اعلان‌ها | — |
-| `VORTEX_ZARINPAL_MERCHANT` | شناسه مرچنت زرین‌پال | — |
-| `VORTEX_NOWPAYMENTS_KEY` | کلید API نودپیمنتس | — |
-| `VORTEX_NOWPAYMENTS_IPN_SECRET` | رمز HMAC IPN نودپیمنتس | — |
-| `VORTEX_BACKUP_CRON` | زمان‌بندی بکاپ (عبارت cron) | — |
-| `VORTEX_BACKUP_TELEGRAM` | ارسال بکاپ به تلگرام | `false` |
-| `VORTEX_BACKUP_S3_BUCKET` | باکت S3 برای بکاپ‌ها | — |
-| `VORTEX_METRICS_ENABLED` | فعال‌سازی متریک‌های Prometheus | `false` |
-| `VORTEX_METRICS_LISTEN` | آدرس اندپوینت متریک‌ها | `:9090` |
-| `VORTEX_SHARE_AUTOLIMIT` | محدودسازی خودکار در تشخیص اشتراک‌گذاری | `false` |
+| متغیر | توضیحات | پیش‌فرض |
+|-------|---------|---------|
+| VORTEX_DOMAIN | دامنه پنل (برای HTTPS) | — |
+| VORTEX_LISTEN | آدرس شنود API | :8080 |
+| VORTEX_DB_URL | رشته اتصال PostgreSQL | postgres://localhost/vortex |
+| VORTEX_REDIS_URL | رشته اتصال Redis | redis://localhost:6379/0 |
+| VORTEX_JWT_SECRET | کلید امضای JWT (≥32 بایت) | — (الزامی) |
+| VORTEX_ADMIN_USER | نام‌کاربری ادمین اولیه | — |
+| VORTEX_ADMIN_PASS | رمزعبور ادمین اولیه | — |
+| VORTEX_TELEGRAM_TOKEN | توکن ربات تلگرام | — |
+| VORTEX_TELEGRAM_ADMIN | شناسه چت ادمین برای اعلان‌ها | — |
+| VORTEX_ZARINPAL_MERCHANT | شناسه مرچنت زرین‌پال | — |
+| VORTEX_BACKUP_CRON | زمان‌بندی پشتیبان‌گیری (cron expression) | — |
+| VORTEX_BACKUP_TELEGRAM | ارسال پشتیبان به تلگرام | false |
+| VORTEX_METRICS_ENABLED | فعال‌سازی متریک‌های Prometheus | false |
 
 ---
 
-## مدیریت از طریق CLI
+## مدیریت CLI
 
-باینری `vortexui` یک منوی تعاملی ارائه می‌دهد:
+باینری `vortexui` یک منوی تعاملی فراهم می‌کند:
 
 ```bash
 vortexui
@@ -205,83 +198,74 @@ vortexui
 
 ```
 ╔══════════════════════════════════════╗
-║          VortexUI Management         ║
+║          مدیریت VortexUI             ║
 ╠══════════════════════════════════════╣
-║  1) Start panel                      ║
-║  2) Stop panel                       ║
-║  3) Restart panel                    ║
-║  4) Status                           ║
-║  5) Logs (live)                      ║
-║  6) Update                           ║
-║  7) Admin management                 ║
-║  8) Backup                           ║
-║  9) Doctor (diagnostics)             ║
-║  0) Exit                             ║
+║  1) شروع پنل                         ║
+║  2) توقف پنل                         ║
+║  3) ری‌استارت پنل                     ║
+║  4) وضعیت                            ║
+║  5) لاگ‌ها (زنده)                     ║
+║  6) به‌روزرسانی                       ║
+║  7) مدیریت ادمین                     ║
+║  8) پشتیبان‌گیری                      ║
+║  9) دکتر (تشخیص)                     ║
+║  0) خروج                             ║
 ╚══════════════════════════════════════╝
 ```
 
 دستورات کلیدی:
 
 | دستور | عملکرد |
-|--------|--------|
-| `vortexui update` | دریافت آخرین نسخه و ریستارت |
-| `vortexui admin create` | ایجاد ادمین جدید |
-| `vortexui admin reset-password` | بازنشانی رمز عبور ادمین |
-| `vortexui backup` | ایجاد فوری بکاپ |
-| `vortexui doctor` | اجرای تشخیص (دیتابیس، Redis، نودها، پورت‌ها) |
-| `vortexui migrate` | اجرای مهاجرت‌های معلق دیتابیس |
+|-------|--------|
+| vortexui update | دریافت آخرین نسخه و ری‌استارت |
+| vortexui admin create | ایجاد ادمین جدید |
+| vortexui admin reset-password | بازنشانی رمزعبور ادمین |
+| vortexui backup | ایجاد پشتیبان فوری |
+| vortexui doctor | اجرای تشخیص (DB, Redis, nodes, ports) |
+| vortexui migrate | اجرای migration‌های معلق دیتابیس |
 
 ---
 
-## بروزرسانی
+## به‌روزرسانی
 
-=== "بروزرسانی خودکار (پیشنهادی)"
+### به‌روزرسانی خودکار (توصیه‌شده)
 
-    ```bash
-    vortexui update
-    ```
+```bash
+vortexui update
+```
 
-    آخرین نسخه را دریافت، بیلد، مهاجرت و ریستارت می‌کند.
+این آخرین نسخه را دریافت، بازسازی، migration‌ها را اجرا و ری‌استارت می‌کند.
 
-=== "بروزرسانی دستی (سرور پنل)"
+### به‌روزرسانی دستی (سرور پنل)
 
-    ```bash
-    cd /opt/VortexUI  # یا هر مسیری که clone کرده‌اید
-    git pull origin master
-    go build -o vortexui ./cmd/panel
-    ./vortexui migrate
-    sudo systemctl restart vortexui
-    ```
+```bash
+cd /opt/VortexUI  # یا هرجا که کلون کردید
+git pull origin master
+go build -o vortexui ./cmd/panel
+./vortexui migrate
+sudo systemctl restart vortexui
+```
 
-=== "بروزرسانی دستی (سرورهای نود)"
+### به‌روزرسانی داکر
 
-    ```bash
-    cd /opt/VortexUI-node
-    git pull origin master
-    go build -o vortex-node ./cmd/node
-    sudo systemctl restart vortex-node
-    ```
-
-=== "بروزرسانی داکر"
-
-    ```bash
-    cd /opt/VortexUI/deploy
-    docker compose pull
-    docker compose up -d
-    ```
+```bash
+cd /opt/VortexUI/deploy
+docker compose pull
+docker compose up -d
+```
 
 ---
 
 ## تأیید پس از نصب
 
-پس از نصب، صحت عملکرد را بررسی کنید:
+پس از نصب، تأیید کنید که همه چیز کار می‌کند:
 
-1. **دسترسی به پنل** — آدرس `https://your-domain.com` را در مرورگر باز کنید
-2. **ورود** — با اعتبارنامه ادمین وارد شوید
-3. **اتصال دیتابیس** — تنظیمات → اطلاعات سیستم را بررسی کنید
-4. **نود آنلاین** — اگر نود محلی استفاده می‌کنید، وضعیت "آنلاین" را در صفحه نودها تأیید کنید
-5. **اجرای تشخیص** — دستور `vortexui doctor` تمام اجزا را بررسی می‌کند
+1. **دسترسی به پنل** — `https://your-domain.com` را در مرورگر باز کنید
+2. **ورود کار می‌کند** — با اعتبارنامه ادمین خود وارد شوید
+3. **دیتابیس متصل** — Settings → System Info را بررسی کنید
+4. **نود آنلاین** — اگر از نود محلی استفاده می‌کنید، تأیید کنید که در صفحه Nodes "Online" نشان می‌دهد
+5. **اجرای تشخیص** — `vortexui doctor` تمام اجزا را بررسی می‌کند
 
-!!! tip "اندپوینت سلامت"
-    پنل اندپوینت `GET /api/health` را ارائه می‌دهد — با `200 OK` و وضعیت اجزا پاسخ می‌دهد.
-    از آن برای مانیتورینگ خارجی استفاده کنید (UptimeRobot، Prometheus blackbox و غیره).
+### اندپوینت سلامت
+
+پنل `GET /api/health` را ارائه می‌دهد — با `200 OK` و وضعیت اجزا پاسخ می‌دهد. از این برای مانیتورینگ خارجی (UptimeRobot, Prometheus blackbox و غیره) استفاده کنید.

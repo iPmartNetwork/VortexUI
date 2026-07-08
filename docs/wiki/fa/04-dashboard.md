@@ -5,11 +5,11 @@
 
 !!! tip "Command Tower UI (نسخه ۱.۲.۹)"
     ویجت‌های Command Tower — بازه ترافیک، کاربران پرمصرف با پروتکل، geo/ping نودها.
-    [Command Tower (۱.۲.۹)](17-v129-panel-redesign.md).
+    [Command Tower (۱.۲.۹)](16-changelog.md).
 
 !!! tip "Veltrix UI (نسخه ۱.۲.۸)"
     صفحه **Overview** با طراحی Veltrix — کارت آمار زنده، وضعیت نودها و پرمصرف‌ترین
-    کاربران. جزئیات ناوبری و command palette: [Veltrix UI](16-v128-ui-refresh.md).
+    کاربران. جزئیات ناوبری و command palette: [تغییرات نسخه‌ها](16-changelog.md).
 
 ---
 

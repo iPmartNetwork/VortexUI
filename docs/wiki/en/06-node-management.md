@@ -1,221 +1,307 @@
 # Node Management
 
-!!! abstract "Node Fleet"
-    VortexUI manages a fleet of proxy nodes via gRPC + mTLS. Each node runs either
-    Xray-core or sing-box and reports health, traffic, and connection data to the panel.
+Nodes are servers running proxy cores (Xray-core or sing-box) that handle user traffic.
 
 ---
 
-## Node Fleet Overview
+## Node Types
 
-**Nodes** page shows all nodes with:
+### Local Node
+
+- Runs **in-process** with the panel
+- No separate agent needed
+- Perfect for single-server setups
+- Limited to one per panel
+
+### Remote Node
+
+- Runs on a **separate server**
+- Communicates via gRPC + mTLS
+- Supports fleet of many nodes
+- Health monitoring + auto-migration
+
+---
+
+## Node List
+
+**Sidebar → Nodes**
 
 | Column | Description |
 |--------|-------------|
-| Name | Node display name |
-| Address | IP or domain |
-| Core | Xray-core or sing-box |
-| Status | Online / Offline / Unhealthy |
-| Users | Active user count on this node |
-| CPU / RAM / Disk | Live resource utilization |
-| Uptime | Time since last restart |
+| Name | Node identifier |
+| Address | IP or hostname |
+| Core | Xray or sing-box |
+| Status | Online 🟢, Offline 🔴, Migrating 🟡 |
+| Users | Connected user count |
+| Traffic | Current bandwidth |
+| Health | CPU, RAM, latency |
+
+### Status Indicators
+
+- 🟢 **Online**: Node is healthy and serving traffic
+- 🟡 **Migrating**: Users being moved to/from this node
+- 🔴 **Offline**: Node unreachable
+- ⚠️ **Degraded**: High latency or resource usage
 
 ---
 
-## Enrollment Wizard
+## Adding a Remote Node
 
-The recommended way to add remote nodes. A four-step UI flow:
+### Step 1: Create in Panel
 
-### Step 1: Node Details
+**Nodes → Add Node → Remote**
 
-- Name, address, port
-- Select core (Xray or sing-box)
-- Optional: custom endpoint for tunnel/CDN access
+| Field | Description |
+|-------|-------------|
+| Name | Friendly name (e.g., "Frankfurt-01") |
+| Address | Server IP or hostname |
+| API Port | Agent API port (default: 62050) |
+| Core | Xray or sing-box |
+| Region | Geographic region (for routing) |
+| Tags | Custom tags for filtering |
 
-### Step 2: Generate Command
+### Step 2: Install Agent
 
-The panel generates a one-line install command containing:
+After creating, copy the install command and run on the node server:
 
-- Node enrollment token (one-time use)
-- Panel address for callback
-- Core download URL
+```bash
+bash <(curl -Ls https://panel.example.com/node-install.sh) --token=xyz123
+```
 
-### Step 3: Execute on Remote Server
+Or manually:
 
-SSH into the remote server and paste the command. The agent:
+```bash
+# Download agent
+curl -Lo vortex-node https://github.com/iPmartNetwork/VortexUI/releases/latest/download/vortex-node-linux-amd64
+chmod +x vortex-node
 
-1. Downloads and installs the node binary
-2. Exchanges mTLS certificates with the panel
-3. Downloads and starts the chosen proxy core
-4. Registers as a systemd service
+# Configure
+cat > /etc/vortex-node/config.yaml <<EOF
+panel:
+  address: https://panel.example.com
+  token: xyz123
+core:
+  type: xray
+  path: /usr/local/bin/xray
+listen:
+  grpc: 0.0.0.0:62050
+EOF
 
-### Step 4: Verify Connection
+# Start
+./vortex-node serve
+```
 
-The panel confirms the node is online and shows initial health data.
+### Step 3: Verify Connection
 
-!!! tip
-    The enrollment token expires after 10 minutes. If it times out, generate a new one from the wizard.
+Back in the panel, the node should show 🟢 Online within 30 seconds.
 
 ---
 
-## Node Health Diagnostics
+## Node Enrollment Wizard
 
-Each node is continuously monitored. The panel detects three failure states:
+For easier setup, use the 4-step wizard:
 
-| State | Meaning | Auto-action |
-|-------|---------|-------------|
-| **mTLS failure** | Certificate error or network unreachable | Alert + retry |
-| **Unreachable** | No gRPC response within timeout | Alert → auto-migrate if enabled |
-| **Core down** | Agent running but proxy core crashed | Auto-restart core |
+1. **Basic Info**: Name, region, expected load
+2. **Connection**: Address, ports, firewall check
+3. **Certificate Exchange**: Automatic mTLS setup
+4. **Verify**: Test connection and create
 
-View diagnostics: **Nodes → click node → Health** tab.
+The wizard handles certificate generation and validates connectivity before finalizing.
 
 ---
 
-## mTLS Connections
+## Inbound Management
 
-All panel-to-node communication uses mutual TLS:
+Each node has its own set of inbounds (protocol listeners).
 
-- Certificates are auto-generated during enrollment
-- Rotated on a configurable schedule
-- No manual certificate management needed
-- If a certificate expires, the panel alerts and can auto-reissue
+**Nodes → [Node Name] → Inbounds**
+
+### Adding an Inbound
+
+| Field | Options |
+|-------|---------|
+| Protocol | VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, etc. |
+| Port | Listen port (or range: 10000-10100) |
+| Transport | TCP, WS, gRPC, HTTPUpgrade, QUIC |
+| Security | None, TLS, Reality |
+
+### Protocol-Specific Settings
+
+**VLESS + Reality:**
+- Dest (target server)
+- Server Names (SNI list)
+- Private Key (auto-generated)
+- Short IDs (client auth)
+- Flow (xtls-rprx-vision for TCP)
+
+**VMess + WebSocket:**
+- Path (/ws)
+- Host header
+- Early data size
+
+**Hysteria2:**
+- Up/Down bandwidth
+- Obfs type + password
+
+---
+
+## Health Monitoring
+
+Each node reports health metrics every 10 seconds:
+
+| Metric | Description |
+|--------|-------------|
+| CPU | Current utilization % |
+| RAM | Used / Total |
+| Disk | Used / Total |
+| Network | Bytes in/out per second |
+| Connections | Active tunnel count |
+| Latency | Panel ↔ Node round-trip time |
+
+### Health Alerts
+
+Configure thresholds at **Settings → Notifications**:
+
+- CPU > 90% for 5 minutes
+- RAM > 95%
+- Node offline for 30 seconds
+- Latency > 500ms
 
 ---
 
 ## Auto-Migration
 
-Automatically move users from unhealthy nodes to healthy ones.
+When a node becomes unhealthy, users are automatically moved to healthy nodes.
 
-### Policy Settings
+### Enable Auto-Migration
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| Enabled | Turn auto-migration on/off | Off |
-| Health check interval | Seconds between checks | 30 |
-| Unhealthy threshold | Consecutive failures before trigger | 3 |
-| CPU threshold | Migrate if CPU exceeds % | 90 |
-| Memory threshold | Migrate if RAM exceeds % | 90 |
-| Packet loss max | Migrate if loss exceeds % | 10 |
-| Migrate back | Return users when original recovers | Yes |
+**Settings → Nodes → Auto-Migration**
 
-### How It Works
+| Setting | Description |
+|---------|-------------|
+| Enable | Turn on auto-migration |
+| Threshold | Offline time before migration (e.g., 60s) |
+| Target Selection | Least loaded, same region, random |
+| Migrate Back | Return users when node recovers |
 
-```mermaid
-graph LR
-    A[Node unhealthy] --> B[Threshold exceeded]
-    B --> C[Select healthiest target]
-    C --> D[Move user inbounds]
-    D --> E[Provision on target]
-    E --> F{Original recovers?}
-    F -->|Yes + migrate_back| G[Move users back]
-    F -->|No| H[Users stay on target]
-```
+### Migration Process
 
-### Migration Events
-
-View history at **Nodes → Auto-Migration → Events**: timestamp, reason, source/target nodes, status (completed/failed).
-
----
-
-## Live Monitoring
-
-**Nodes → click node → Monitor** tab:
-
-- **CPU** — real-time utilization graph
-- **RAM** — used/total with trend line
-- **Disk** — usage and growth rate
-- **Bandwidth** — current throughput per direction
-- **Connections** — active tunnel count over time
-
-Data is pushed via gRPC every 3 seconds from the node agent.
-
----
-
-## Remote Restart/Stop
-
-From the node detail page:
-
-| Action | Description |
-|--------|-------------|
-| **Restart Core** | Restart the proxy core (Xray/sing-box) without touching the agent |
-| **Restart Agent** | Full agent restart (brief connectivity loss) |
-| **Stop Core** | Halt the proxy core — no new connections |
-| **Update Core** | Pull latest core binary and restart |
-
-!!! warning
-    Stopping a core disconnects all active users on that node. Use auto-migration first if you want zero downtime.
-
----
-
-## Custom Endpoint (Tunnel/CDN/Relay)
-
-Override the address advertised in subscriptions for this node:
-
-| Field | Description |
-|-------|-------------|
-| Endpoint address | Domain/IP users connect to |
-| Endpoint port | Port users connect to |
-| Notes | Description (e.g. "Behind Cloudflare CDN") |
-
-Use this when the node is behind a tunnel, CDN, or relay — the real node IP differs from the user-facing address.
+1. Node goes offline
+2. Wait for threshold (e.g., 60 seconds)
+3. Select target nodes based on strategy
+4. Push new configs to target nodes
+5. Update subscription endpoints
+6. Notify affected users (optional)
+7. When original node recovers, migrate back (if enabled)
 
 ---
 
 ## Cloudflare DNS Automation
 
-Automatically manage DNS records for your nodes in Cloudflare:
+Automatically manage DNS records for your nodes.
 
-1. **Settings → Cloudflare** — add your API token and zone ID
-2. **Nodes → node → DNS** — enable DNS automation
-3. The panel creates/updates A/AAAA records when node IPs change
-4. Optionally proxy through Cloudflare (orange cloud)
+### Setup
 
-Useful for dynamic IP nodes or when you rotate server addresses.
+1. **Settings → Integrations → Cloudflare**
+2. Add API token with DNS edit permissions
+3. Select zone (domain)
 
----
+### Usage
 
-## Per-Node Logs Streaming
-
-**Nodes → node → Logs** tab:
-
-- Live log stream from the node agent and proxy core
-- Filter by level: debug, info, warn, error
-- Search within logs
-- Download log file for a time range
+1. When adding a node, enable "Auto DNS"
+2. Enter subdomain (e.g., "node1")
+3. Panel creates A record pointing to node IP
+4. On node IP change, record updates automatically
 
 ---
 
-## Node Speed Limit & Geo-Blocking
+## Node Configuration
 
-Per-node settings:
+### Xray-core Settings
 
 | Setting | Description |
 |---------|-------------|
-| Speed limit | Per-user download cap in bytes/sec (`0` = unlimited) |
-| Geo-blocking | Comma-separated country codes (ISO 3166-1 alpha-2) |
+| Log Level | Debug, info, warning, error |
+| DNS | DNS servers for outbound resolution |
+| Routing | Custom routing rules |
+| Policy | Timeout, buffer size settings |
 
-Geo-blocking restricts which countries can connect to this specific node. Empty = all allowed.
+### sing-box Settings
+
+| Setting | Description |
+|---------|-------------|
+| Log Level | trace, debug, info, warn, error |
+| DNS | DNS server configuration |
+| Route | Route rules (similar to Xray routing) |
+| Experimental | Clash API, cache settings |
 
 ---
 
-## `vortexui doctor` CLI
+## Load Balancing
 
-Run diagnostics from the command line:
+Distribute users across multiple nodes.
 
-```bash
-vortexui doctor
-```
+**Network → Balancers → Add Balancer**
 
-Checks:
+### Strategies
 
-- ✅ PostgreSQL connection and migrations
-- ✅ Redis connection and latency
-- ✅ Each node's gRPC connectivity
-- ✅ Certificate validity and expiration
-- ✅ Port availability
-- ✅ DNS resolution
-- ✅ Disk space
-- ✅ Core binary versions
+| Strategy | Description |
+|----------|-------------|
+| Round Robin | Rotate through nodes sequentially |
+| Weighted | Distribute based on assigned weights |
+| Least Connections | Send to node with fewest active connections |
+| Latency | Send to node with lowest latency |
 
-Output includes status, latency, and actionable suggestions for any failures.
+### Health Probing
+
+Balancer continuously probes nodes:
+- Interval: 30 seconds
+- Timeout: 5 seconds
+- Unhealthy after: 3 failures
+- Healthy after: 2 successes
+
+---
+
+## Node Fleet Operations
+
+### Bulk Actions
+
+Select multiple nodes, then:
+- **Restart Core**: Restart proxy cores
+- **Push Config**: Force config sync
+- **Enable/Disable**: Toggle node availability
+- **Delete**: Remove nodes from panel
+
+### Config Sync
+
+When you change inbound settings:
+1. Panel generates new core config
+2. Pushes to node via gRPC
+3. Node hot-reloads (no restart needed for most changes)
+4. Restart triggered only for port changes
+
+---
+
+## Troubleshooting
+
+### Node Shows Offline
+
+1. Check network connectivity: `ping node-ip`
+2. Verify agent is running: `systemctl status vortex-node`
+3. Check agent logs: `journalctl -u vortex-node -f`
+4. Verify firewall allows port 62050
+5. Check mTLS certificates haven't expired
+
+### Config Push Fails
+
+1. Check agent logs for errors
+2. Verify core binary is installed
+3. Check disk space for config files
+4. Restart agent: `systemctl restart vortex-node`
+
+### High Latency
+
+1. Check network route: `traceroute panel-ip`
+2. Verify no bandwidth throttling
+3. Check for DDoS or high traffic
+4. Consider node location relative to panel

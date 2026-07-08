@@ -1,277 +1,544 @@
 # API Reference
 
-!!! info "OpenAPI Spec"
-    Full OpenAPI 3.0 specification available at
-    [`docs/openapi.yaml`](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml).
+VortexUI exposes a complete REST API. Every UI action is backed by a documented endpoint.
 
 ---
 
+## Base URL
+
+```
+https://your-domain.com/api
+```
+
 ## Authentication
 
-### JWT Login
+All API requests require authentication via JWT or Personal Access Token (PAT).
+
+### Using JWT (Login)
 
 ```bash
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "username": "admin",
-  "password": "your-password",
-  "totp_code": "123456"  // optional, if 2FA enabled
-}
+curl -X POST https://panel.example.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"your-password"}'
 ```
 
 Response:
 
 ```json
 {
-  "access_token": "eyJhbG...",
-  "token_type": "Bearer",
-  "expires_in": 3600
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "expires_at": "2026-01-16T14:32:05Z",
+  "admin": {
+    "id": "abc123",
+    "username": "admin",
+    "role": "sudo"
+  }
 }
 ```
 
-Use the token in subsequent requests:
+### Using PAT (Recommended for Automation)
 
-```
-Authorization: Bearer <access_token>
-```
-
-### API Tokens (PAT)
-
-For automation, create a Personal Access Token:
-
-1. **Settings → API Tokens → Create**
-2. Use like a JWT: `Authorization: Bearer <PAT>`
-
-PATs don't expire unless configured to, and can be revoked individually.
-
----
-
-## Base URL & Versioning
-
-```
-https://panel.example.com/api/
-```
-
-All endpoints are under `/api/`. No version prefix — the API is forward-compatible.
-
----
-
-## Key Endpoints
-
-### Auth
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login` | Login, get JWT |
-| POST | `/api/auth/refresh` | Refresh token |
-| GET | `/api/auth/me` | Current admin info |
-
-### Users
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users` | List users (pagination, filters) |
-| POST | `/api/users` | Create user |
-| GET | `/api/users/:id` | Get user detail |
-| PUT | `/api/users/:id` | Update user |
-| DELETE | `/api/users/:id` | Delete user |
-| POST | `/api/users/:id/reset-traffic` | Reset traffic counter |
-| POST | `/api/users/:id/revoke-sub` | Revoke subscription token |
-| GET | `/api/users/:id/usage` | Usage history |
-
-### Nodes
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/nodes` | List nodes |
-| POST | `/api/nodes` | Create node |
-| GET | `/api/nodes/:id` | Get node detail |
-| PUT | `/api/nodes/:id` | Update node |
-| DELETE | `/api/nodes/:id` | Delete node |
-| POST | `/api/nodes/:id/restart` | Restart node core |
-| GET | `/api/nodes/:id/health` | Health status |
-| GET | `/api/nodes/:id/stats` | Live statistics |
-
-### Inbounds
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/inbounds` | List inbounds |
-| POST | `/api/inbounds` | Create inbound |
-| PUT | `/api/inbounds/:id` | Update inbound |
-| DELETE | `/api/inbounds/:id` | Delete inbound |
-| GET | `/api/capabilities` | Per-protocol capability matrix |
-
-### Plans
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/plans` | List plans (scoped to admin) |
-| POST | `/api/plans` | Create plan |
-| PUT | `/api/plans/:id` | Update plan |
-| DELETE | `/api/plans/:id` | Delete plan |
-
-### Orders
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/orders` | List orders |
-| GET | `/api/orders/:id` | Get order detail |
-| POST | `/api/orders/:id/approve` | Approve pending order |
-| POST | `/api/orders/:id/reject` | Reject pending order |
-
-### Payment Configuration
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/payment-config` | Get payment config |
-| PUT | `/api/payment-config` | Update payment config |
-
-### Admins & Reseller
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/admins` | List admins |
-| POST | `/api/admins` | Create admin |
-| PUT | `/api/admins/:id` | Update admin |
-| POST | `/api/admins/:id/quota-adjust` | Adjust reseller quota |
-| POST | `/api/admins/:id/unsuspend` | Clear suspension |
-| POST | `/api/admins/:id/impersonate` | Issue reseller token |
-
-### Reseller Account
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/account/dashboard` | Reseller dashboard stats |
-| GET | `/api/account/export/users` | CSV export of owned users |
-| GET | `/api/account/wallet` | Wallet + ledger |
-| GET/PUT | `/api/account/branding` | Whitelabel settings |
-| GET/PUT | `/api/account/webhook` | Outbound webhook config |
-| GET/POST | `/api/account/sub-admins` | Sub-reseller management |
-
-### System
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| GET | `/api/stats` | System statistics |
-| GET | `/api/audit` | Audit log |
-| POST | `/api/backup` | Trigger backup |
-| GET | `/api/settings` | Panel settings |
-| PUT | `/api/settings` | Update settings |
-
-### Subscriptions (Public)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/sub/{token}` | User subscription (auto-format) |
-| GET | `/sub/{token}?format=clash` | Clash YAML |
-| GET | `/sub/{token}?format=singbox` | sing-box JSON |
-| GET | `/sub/{token}?format=xray` | Xray JSON |
-| GET | `/sub/{token}?format=outline` | Outline links |
-| GET | `/sub/{token}?format=links` | Plain share links |
-| GET | `/sub/info/{token}` | User info HTML page |
-| GET | `/sub/{token}/shop` | Self-service shop |
-
----
-
-## Example Requests
-
-### Login
+Create a token at **Settings → API Tokens**, then:
 
 ```bash
-curl -X POST https://panel.example.com/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"secret"}'
-```
-
-### Create User
-
-```bash
-curl -X POST https://panel.example.com/api/users \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "newuser",
-    "data_limit": 53687091200,
-    "expire_at": "2025-03-01T00:00:00Z",
-    "device_limit": 3,
-    "inbound_ids": ["uuid-1", "uuid-2"]
-  }'
-```
-
-### List Plans
-
-```bash
-curl https://panel.example.com/api/plans \
-  -H "Authorization: Bearer <token>"
-```
-
-### Purchase (Portal)
-
-```bash
-curl -X POST https://panel.example.com/api/portal/purchase \
-  -H "Authorization: Bearer <sub_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "plan_id": "uuid",
-    "payment_method": "card",
-    "proof_image": "base64_encoded_image",
-    "reference_number": "123456789"
-  }'
+curl -H "Authorization: Bearer <PAT>" \
+  https://panel.example.com/api/users
 ```
 
 ---
 
-## Pagination
+## Response Format
 
-List endpoints support pagination:
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `page` | Page number (1-indexed) | 1 |
-| `per_page` | Items per page | 20 |
-| `sort` | Sort field | `created_at` |
-| `order` | `asc` or `desc` | `desc` |
-
-Response includes pagination metadata:
+### Success
 
 ```json
 {
-  "data": [...],
-  "total": 150,
-  "page": 1,
-  "per_page": 20,
-  "total_pages": 8
+  "data": { ... },
+  "meta": {
+    "page": 1,
+    "per_page": 20,
+    "total": 150
+  }
 }
 ```
 
----
-
-## Error Responses
-
-All errors follow a consistent format:
+### Error
 
 ```json
 {
   "error": {
-    "code": "USER_NOT_FOUND",
-    "message": "User with the specified ID does not exist",
+    "code": "user_not_found",
+    "message": "User does not exist",
     "status": 404
   }
 }
 ```
 
-Common HTTP status codes:
+> **Translated errors (1.3.1):** The frontend maps error codes to localized messages via `getApiErrorMessage()`.
 
-| Code | Meaning |
-|------|---------|
-| 400 | Bad request (validation error) |
-| 401 | Unauthorized (invalid/expired token) |
-| 403 | Forbidden (insufficient permissions) |
-| 404 | Resource not found |
-| 409 | Conflict (duplicate username, etc.) |
-| 429 | Rate limited |
-| 500 | Internal server error |
+---
+
+## Users API
+
+### List Users
+
+```http
+GET /api/users
+```
+
+Query parameters:
+
+| Param | Description |
+|-------|-------------|
+| page | Page number |
+| per_page | Items per page |
+| search | Filter by username |
+| status | active, limited, expired |
+| sort | Field to sort by |
+
+### Get User
+
+```http
+GET /api/users/{id}
+```
+
+### Create User
+
+```http
+POST /api/users
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "data_limit": 107374182400,
+  "expire_at": "2026-02-15T00:00:00Z",
+  "device_limit": 2,
+  "inbound_ids": ["inb1", "inb2"]
+}
+```
+
+### Update User
+
+```http
+PATCH /api/users/{id}
+Content-Type: application/json
+
+{
+  "data_limit": 214748364800
+}
+```
+
+### Delete User
+
+```http
+DELETE /api/users/{id}
+```
+
+### Reset User Traffic
+
+```http
+POST /api/users/{id}/reset-traffic
+```
+
+### Get User Subscription
+
+```http
+GET /api/users/{id}/subscription
+```
+
+---
+
+## Nodes API
+
+### List Nodes
+
+```http
+GET /api/nodes
+```
+
+### Create Node
+
+```http
+POST /api/nodes
+Content-Type: application/json
+
+{
+  "name": "Frankfurt-01",
+  "address": "1.2.3.4",
+  "api_port": 62050,
+  "core": "xray",
+  "region": "EU"
+}
+```
+
+### Get Node Health
+
+```http
+GET /api/nodes/{id}/health
+```
+
+Response:
+
+```json
+{
+  "status": "online",
+  "cpu": 42.5,
+  "ram": {"used": 512, "total": 2048},
+  "connections": 145,
+  "latency_ms": 23
+}
+```
+
+### Restart Node Core
+
+```http
+POST /api/nodes/{id}/restart
+```
+
+---
+
+## Inbounds API
+
+### List Inbounds
+
+```http
+GET /api/inbounds
+```
+
+### Create Inbound
+
+```http
+POST /api/inbounds
+Content-Type: application/json
+
+{
+  "node_id": "n1",
+  "protocol": "vless",
+  "port": 443,
+  "transport": "tcp",
+  "security": "reality",
+  "settings": {
+    "dest": "www.google.com:443",
+    "server_names": ["www.google.com"]
+  }
+}
+```
+
+---
+
+## Capabilities API
+
+Get the live per-protocol capability matrix:
+
+```http
+GET /api/capabilities
+```
+
+Response:
+
+```json
+{
+  "xray": {
+    "protocols": ["vless", "vmess", "trojan", ...],
+    "transports": ["tcp", "ws", "grpc", ...],
+    "security": ["none", "tls", "reality"]
+  },
+  "sing-box": {
+    "protocols": ["vless", "hysteria2", "tuic", ...],
+    ...
+  }
+}
+```
+
+---
+
+## Plans & Orders API
+
+### List Plans
+
+```http
+GET /api/plans
+```
+
+### Create Plan
+
+```http
+POST /api/plans
+Content-Type: application/json
+
+{
+  "name": "Premium 100GB",
+  "data_limit": 107374182400,
+  "duration_days": 30,
+  "price_toman": 150000,
+  "price_usd": 5.0
+}
+```
+
+### List Orders
+
+```http
+GET /api/orders
+```
+
+### Approve Order
+
+```http
+POST /api/orders/{id}/approve
+```
+
+---
+
+## Wallet API
+
+### Get Wallet Balance
+
+```http
+GET /api/wallet
+```
+
+### Get Wallet Ledger
+
+```http
+GET /api/wallet/ledger
+```
+
+### Request Top-Up (Reseller)
+
+```http
+POST /api/wallet/topup
+Content-Type: application/json
+
+{
+  "amount": 100,
+  "note": "Monthly top-up"
+}
+```
+
+---
+
+## Audit Log API
+
+> **New in 1.3.0**
+
+### List Audit Events
+
+```http
+GET /api/audit
+```
+
+Query parameters:
+
+| Param | Description |
+|-------|-------------|
+| actor | Filter by admin |
+| action | Filter by action type |
+| from | Start date |
+| to | End date |
+
+Response:
+
+```json
+{
+  "data": [
+    {
+      "actor": "admin",
+      "action": "user.create",
+      "target": "alice",
+      "timestamp": "2026-01-15T14:32:05Z",
+      "diff": {"before": null, "after": {...}}
+    }
+  ]
+}
+```
+
+---
+
+## Settings API
+
+> **Persisted since 1.3.0**
+
+### Get Settings
+
+```http
+GET /api/settings
+```
+
+### Update Settings
+
+```http
+PATCH /api/settings
+Content-Type: application/json
+
+{
+  "panel_name": "My VPN Panel",
+  "timezone": "Asia/Tehran"
+}
+```
+
+---
+
+## Federation API
+
+> **New in 1.3.0**
+
+### List Peers
+
+```http
+GET /api/federation/peers
+```
+
+### Add Peer
+
+```http
+POST /api/federation/peers
+Content-Type: application/json
+
+{
+  "address": "https://panel-b.example.com",
+  "secret": "shared-secret"
+}
+```
+
+---
+
+## Statistics API
+
+### Dashboard Stats
+
+```http
+GET /api/stats/overview
+```
+
+### Traffic Analytics
+
+```http
+GET /api/stats/traffic?range=7d
+```
+
+### Top Users
+
+```http
+GET /api/stats/top-users?limit=10
+```
+
+---
+
+## Health Endpoint
+
+Public endpoint for monitoring (no auth):
+
+```http
+GET /api/health
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "version": "1.3.1",
+  "components": {
+    "database": "ok",
+    "redis": "ok",
+    "nodes": {"online": 18, "total": 20}
+  }
+}
+```
+
+---
+
+## Rate Limiting
+
+API requests are rate-limited:
+
+| Header | Description |
+|--------|-------------|
+| X-RateLimit-Limit | Max requests per window |
+| X-RateLimit-Remaining | Remaining requests |
+| X-RateLimit-Reset | Window reset time |
+
+When exceeded: `429 Too Many Requests`.
+
+---
+
+## Webhooks
+
+See [Notifications → Webhooks](10-notifications.md#webhooks) for outbound webhook events.
+
+---
+
+## OpenAPI Spec
+
+The complete machine-readable specification:
+
+```
+https://panel.example.com/api/openapi.yaml
+```
+
+Or view interactive docs at:
+
+```
+https://panel.example.com/api/docs
+```
+
+Import into Postman, Insomnia, or generate client SDKs.
+
+---
+
+## CLI Alternative
+
+For scripting without HTTP, use `vortexctl`:
+
+```bash
+vortexctl user create --username alice --traffic 100GB --days 30
+vortexctl node list
+vortexctl backup create
+```
+
+See [Installation → CLI](02-installation.md#cli-management).
+
+---
+
+## SDK Examples
+
+### Python
+
+```python
+import requests
+
+class VortexClient:
+    def __init__(self, base_url, token):
+        self.base = base_url
+        self.headers = {"Authorization": f"Bearer {token}"}
+
+    def create_user(self, username, data_limit, days):
+        return requests.post(
+            f"{self.base}/api/users",
+            headers=self.headers,
+            json={
+                "username": username,
+                "data_limit": data_limit,
+                "expire_at": days
+            }
+        ).json()
+
+client = VortexClient("https://panel.example.com", "your-pat")
+client.create_user("alice", 107374182400, "2026-02-15T00:00:00Z")
+```
+
+### JavaScript
+
+```javascript
+const createUser = async (username, dataLimit) => {
+  const res = await fetch('https://panel.example.com/api/users', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ username, data_limit: dataLimit })
+  });
+  return res.json();
+};
+```

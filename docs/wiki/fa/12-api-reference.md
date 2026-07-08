@@ -175,6 +175,23 @@ https://panel.example.com/api/
 | GET | `/sub/info/{token}` | صفحه HTML اطلاعات کاربر |
 | GET | `/sub/{token}/shop` | فروشگاه سلف‌سرویس |
 
+### پورتال (JWT کاربر نهایی)
+
+| متد | اندپوینت | توضیحات |
+|-----|----------|---------|
+| POST | `/api/portal/login` | ورود با توکن اشتراک → JWT پورتال |
+| GET | `/api/portal/branding` | whitelabel عمومی (اختیاری `?slug=`) |
+| GET | `/api/portal/dashboard` | مصرف، وضعیت، سهمیه، انقضا |
+| GET | `/api/portal/subscription` | URL اشتراک، فرمت‌ها، لینک‌های share |
+| GET | `/api/portal/usage` | سری زمانی ترافیک (`from`, `to`, `bucket`) |
+| GET | `/api/portal/online` | اتصالات زنده و دستگاه‌های فعال |
+| GET | `/api/portal/deeplink` | URL deep link کلاینت |
+| GET | `/api/portal/plans` | پلن‌های محدود به ریسلر |
+| GET | `/api/portal/payment-info` | جزئیات کارت/رمزارز برای checkout |
+| GET/POST | `/api/portal/tickets` | لیست / ایجاد تیکت پشتیبانی |
+| GET | `/api/portal/referral/code` | کد رفرال کاربر |
+| POST | `/api/portal/referral/apply` | اعمال کد رفرال |
+
 ---
 
 ## نمونه درخواست‌ها

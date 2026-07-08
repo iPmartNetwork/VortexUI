@@ -6,26 +6,35 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-07-06
+## [1.3.1] - 2026-07-08
 
-Patch release: settings validation, translated error messages, and API client fixes.
+Patch release: persisted settings polish, portal dashboard v2, live connection stats, and UI fixes.
 
 ### Added
+- **Portal dashboard v2** — subscription QR/copy, live connections & devices, quota alerts, quick actions (renew/tickets), 30-day daily usage chart, full-width portal layout aligned with admin panel.
+- **Portal API endpoints** — `GET /api/portal/subscription`, `/usage`, `/online`, `/deeplink` for authenticated end-users.
 - **`getApiErrorMessage()`** — maps HTTP status codes to i18n keys across Login and Settings.
 - **Error i18n keys** — `errors.*` and `settings.saveFailed` in all 8 languages.
 - **Frontend tests** — vitest coverage for API client body parsing and form error helpers.
 - **Backend tests** — panel settings handler and normalization unit tests.
 
 ### Changed
+- **Portal layout** — full-width content area; subscription and usage cards share equal height; proportional usage chart.
 - Settings tabs (General, Security, Notifications, Appearance, Backup) show translated save errors.
 - **Backup tab** — auto-backup save now catches API errors and shows an inline banner.
 - **Lazy routes** — loading fallback uses `common.loading` i18n string.
 - **Panel settings service** — normalizes trim/caps on update; merges partial payloads on get.
+- **Node health poll** — `OnlineStats` queried on every health tick for live connection counts on Xray nodes.
 
 ### Fixed
 - **API client** — read response body once (`text()` then parse) to avoid double-consumption bugs.
 - **TLS Tricks (ISP)** — settings icon opens configure modal; `isp` column persisted so preset profiles round-trip.
 - **Toggle switches** — off/on thumb position corrected (left/right) in Settings, Routing packs, and Decoy tab.
+- **Live connections** — report active device IPs and connection counts; fallback from recent traffic when Xray online stats empty.
+- **Startup resync** — all nodes re-provisioned on panel boot; brief unhealthy during restart triggers failover instead of stuck state.
+- **Reality SNI** — allow changing applied SNI and sync `raw.reality`.
+- **Card-to-card payments** — show card number in portal checkout.
+- **Inbounds modal** — hooks run before early return in `NodeInboundsModal`.
 - **CI Docker builds** — per-image GHA cache scopes; ignore transient cache export errors.
 
 ## [1.3.0] - 2026-07-06

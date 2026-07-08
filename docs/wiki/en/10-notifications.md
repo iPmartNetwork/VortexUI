@@ -1,170 +1,261 @@
 # Notifications
 
-!!! info "Multi-Channel"
-    VortexUI supports webhooks, Telegram, and in-app notifications. All channels
-    can be configured independently and receive different event subsets.
+Stay informed about important events via Telegram, webhooks, email, and real-time SSE.
 
 ---
 
-## Webhook (HMAC-SHA256)
+## Notification Channels
 
-**Settings → Notifications → Webhook**
+| Channel | Use Case |
+|---------|----------|
+| Telegram | Instant admin alerts |
+| Webhooks | Automation & integrations |
+| Email | Formal notifications |
+| SSE | Real-time UI updates |
+| In-app | Notification bell |
 
-Receive structured JSON payloads for panel events at your endpoint.
+---
 
-### Configuration
+## Telegram Notifications
 
-| Setting | Description |
-|---------|-------------|
-| URL | Your webhook endpoint |
+**Settings → Notifications → Telegram**
+
+### Setup
+
+1. Create a bot via [@BotFather](https://t.me/BotFather)
+2. Copy the bot token
+3. Paste in `VORTEX_TELEGRAM_TOKEN` or panel settings
+4. Get your chat ID (message [@userinfobot](https://t.me/userinfobot))
+5. Set `VORTEX_TELEGRAM_ADMIN` to your chat ID
+6. Click **Test** to verify
+
+### Configurable Events
+
+| Event | Description |
+|-------|-------------|
+| User created | New user added |
+| User expired | User reached expiry |
+| Quota 80% | User approaching limit |
+| Quota 100% | User reached limit |
+| Node offline | A node went down |
+| Node online | A node recovered |
+| Probe detected | Active probing attempt |
+| IP limit exceeded | Account sharing detected |
+| Backup complete | Backup finished |
+| Order received | New purchase |
+| Top-up request | Reseller wants credits |
+
+### Message Format
+
+```
+🔴 Node Offline
+Node: Frankfurt-01
+Address: 1.2.3.4
+Offline since: 14:32:05
+Affected users: 45
+```
+
+---
+
+## Webhooks
+
+**Settings → Notifications → Webhooks**
+
+Send HTTP POST requests to your endpoint on events.
+
+### Setup
+
+1. Click **Add Webhook**
+2. Configure:
+
+| Field | Description |
+|-------|-------------|
+| URL | Your endpoint |
 | Secret | HMAC-SHA256 signing key |
-| Events | Select which events to send |
-| Enabled | Toggle on/off |
+| Events | Which events to send |
+| Active | Enable/disable |
 
-### Verification
-
-Every request includes an `X-Signature-256` header:
-
-```
-X-Signature-256: sha256=<hex_hmac>
-```
-
-Verify by computing `HMAC-SHA256(request_body, secret)` and comparing.
-
-### Event Payload Structure
+### Payload Format
 
 ```json
 {
-  "event": "user.limited",
-  "timestamp": "2025-01-15T10:30:00Z",
+  "event": "user.created",
+  "timestamp": "2026-01-15T14:32:05Z",
   "data": {
-    "user_id": "uuid",
-    "username": "testuser",
-    "data_limit": 53687091200,
-    "used_traffic": 53687091200
+    "user_id": "abc123",
+    "username": "alice",
+    "data_limit": 107374182400,
+    "expire_at": "2026-02-15T00:00:00Z"
   }
 }
 ```
+
+### HMAC Verification
+
+Verify the signature to ensure authenticity:
+
+```python
+import hmac, hashlib
+
+def verify(payload_bytes, signature, secret):
+    expected = hmac.new(
+        secret.encode(),
+        payload_bytes,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+The signature is sent in the `X-Vortex-Signature` header.
 
 ### Available Events
 
 | Event | Trigger |
 |-------|---------|
-| `user.created` | New user created |
-| `user.deleted` | User deleted |
-| `user.limited` | User hit data limit |
-| `user.expired` | User subscription expired |
-| `user.expiry_warning` | 3 days before expiry |
-| `user.enabled` | User re-enabled |
-| `user.disabled` | User manually disabled |
-| `node.offline` | Node lost connection |
-| `node.online` | Node reconnected |
-| `node.unhealthy` | Node health check failed |
-| `order.created` | New purchase order |
-| `order.paid` | Order payment confirmed |
-| `backup.completed` | Backup finished |
-| `admin.login` | Admin login event |
+| user.created | User added |
+| user.updated | User modified |
+| user.deleted | User removed |
+| user.expired | User expired |
+| user.limited | User hit quota |
+| user.ip_limit | Sharing detected |
+| node.online | Node came up |
+| node.offline | Node went down |
+| order.created | New order |
+| order.approved | Order confirmed |
+| backup.complete | Backup done |
+| acme.renewed | Certificate renewed |
 
 ---
 
-## Telegram Bot
+## Email Notifications
 
-**Settings → Notifications → Telegram**
+**Settings → Notifications → Email**
 
-### Admin Bot
+### SMTP Configuration
 
-Sends notifications to the admin's Telegram chat:
+| Field | Example |
+|-------|---------|
+| SMTP Host | smtp.gmail.com |
+| SMTP Port | 587 |
+| Username | panel@example.com |
+| Password | App password |
+| From Address | noreply@example.com |
+| TLS | Enabled |
 
-| Setting | Description |
-|---------|-------------|
-| Bot token | From [@BotFather](https://t.me/BotFather) |
-| Admin chat ID | Your personal or group chat ID |
-| Events | Select notification events |
+### Email Events
 
-### User-Facing Bot
+- User welcome (on creation)
+- Expiry warning (3 days before)
+- Quota warning (80%, 100%)
+- Password reset
 
-Users can interact with the bot using their subscription token:
+---
 
-| Command | Action |
-|---------|--------|
-| `/start` | Link account with sub token |
-| `/usage` | View current data usage |
-| `/renew` | Get renewal link |
-| `/status` | Check account status |
-| `/help` | List available commands |
+## Quota Alerts
 
-### Notification Templates
+Configure thresholds for user quota notifications.
 
-Customize message format with template variables:
+**Settings → Notifications → Quota Thresholds**
+
+| Threshold | Default | Action |
+|-----------|---------|--------|
+| Warning | 80% | Notify user + admin |
+| Critical | 95% | Notify user + admin |
+| Exceeded | 100% | Limit user + notify |
+
+### Reseller Quota Alerts
+
+Notify resellers when their pool runs low:
+
+| Threshold | Notify |
+|-----------|--------|
+| 80% pool used | Reseller |
+| 90% pool used | Reseller + sudo |
+| 100% pool used | Reseller + sudo + auto-suspend |
+
+---
+
+## SSE (Server-Sent Events)
+
+Real-time push updates to the panel UI. No configuration needed — works automatically.
+
+### What Uses SSE
+
+- Dashboard gauges (CPU, RAM, bandwidth)
+- Live connection count
+- Node status changes
+- Traffic updates
+- Recent events feed
+- Notification bell
+
+### Connection
+
+The panel maintains an SSE connection to `/api/events`:
 
 ```
-🔔 User Limited
-Username: {username}
-Used: {used_traffic}
-Limit: {data_limit}
+event: node.status
+data: {"node_id":"n1","status":"offline"}
+
+event: traffic.update
+data: {"user_id":"u1","used":1073741824}
 ```
 
 ---
 
-## Quota Notifications
+## In-App Notifications
 
-**Settings → Notifications → Quota Alerts**
+The notification bell (top-right) shows recent events.
 
-Alert users when they approach their data limit:
+### Features
 
-| Setting | Description |
-|---------|-------------|
-| Enabled | Activate quota notifications |
-| Thresholds | Percentages to trigger (e.g. 80%, 90%, 100%) |
-| Telegram | Send via bot |
-| Webhook | Send to webhook URL |
-| Cooldown | Minutes between repeated alerts |
+- Real-time updates via SSE
+- Mark as read
+- Clear all
+- Click to navigate to related item
+- Filter by type
 
----
+### Keyboard Shortcut
 
-## Reseller Quota Alerts
-
-**Sidebar → Reseller Quota Alerts** (sudo admin only)
-
-Monitor when resellers approach their traffic/user pool limits:
-
-| Setting | Description |
-|---------|-------------|
-| Enabled | Global toggle |
-| Telegram | Send to panel bot |
-| Webhook URL | Optional external endpoint |
-| Thresholds | Percentages (e.g. 80, 90, 100) |
-| Cooldown | Minutes between alerts |
-| Recent alerts | Table of triggered alerts |
+Press `Ctrl+.` to open notifications.
 
 ---
 
-## Notification Center (Bell Dropdown)
+## Notification Best Practices
 
-The bell icon in the panel header shows recent notifications:
+### For Small Deployments
+- Enable Telegram for instant alerts
+- Set quota warnings at 80%
+- Monitor node offline events
 
-- Unread count badge
-- Click to expand dropdown
-- Each notification shows: event type, description, timestamp
-- Click to navigate to the relevant resource
-- Mark as read / mark all as read
+### For Large Deployments
+- Use webhooks for automation
+- Integrate with incident management (PagerDuty, Opsgenie)
+- Set up email for formal user communications
+- Use SSE for real-time dashboards
 
-Persisted per admin account.
+### For Resellers
+- Enable quota alerts to avoid service interruption
+- Get notified on new orders
+- Monitor top-up approvals
 
 ---
 
-## SSE Live Events
+## Troubleshooting
 
-The panel uses Server-Sent Events for real-time UI updates:
+### Telegram not working
+1. Verify bot token is correct
+2. Ensure you've started a chat with the bot
+3. Check chat ID is correct
+4. Click Test button
 
-| Stream | Content |
-|--------|---------|
-| `/api/sse/events` | System events (node status, user limits, etc.) |
-| `/api/sse/stats` | Live statistics (connections, traffic counters) |
-| `/api/sse/monitor` | Active connection updates |
+### Webhooks not received
+1. Verify endpoint URL is reachable
+2. Check firewall allows outbound HTTPS
+3. Verify HMAC secret matches
+4. Check webhook logs in panel
 
-Frontend components subscribe automatically. No configuration needed — SSE is always active.
-
-!!! tip
-    SSE events power the real-time dashboard gauges, monitor page, and notification bell.
-    If your reverse proxy buffers responses, ensure SSE streaming is allowed (Caddy handles this by default).
+### Emails not sending
+1. Verify SMTP credentials
+2. Check port (587 for TLS, 465 for SSL)
+3. For Gmail, use app password (not account password)
+4. Check spam folder
