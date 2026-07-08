@@ -57,6 +57,12 @@ func ack(ok bool, msg string) *genv1.Ack { return &genv1.Ack{Ok: ok, Message: ms
 // Sync rebuilds the engine-neutral config from the request and (re)starts the
 // core. Start is idempotent, so this doubles as a hot reload.
 func (s *NodeServer) Sync(ctx context.Context, req *genv1.SyncRequest) (*genv1.Ack, error) {
+	if reqCore := coreTypeFromProto(req.GetCore()); reqCore != "" && reqCore != s.driver.Type() {
+		return ack(false, fmt.Sprintf(
+			"core mismatch: panel expects %s but agent runs %s — set VORTEX_CORE=%s on the node and restart vortexui-node",
+			reqCore, s.driver.Type(), reqCore,
+		)), nil
+	}
 	cfg := &core.GeneratedConfig{
 		LogLevel:       req.GetLogLevel(),
 		UsersByInbound: make(map[string][]*domain.User, len(req.GetUsersByInbound())),

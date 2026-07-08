@@ -213,11 +213,16 @@ c_switch_core() {
   read -r -p "  choose [1/2]: " c
   local newcore cbin
   case "$c" in
-    2) newcore=singbox; cbin=/usr/local/bin/sing-box ;;
-    *) newcore=xray;    cbin=/usr/local/bin/xray ;;
+    2) newcore=singbox; cbin=/usr/local/bin/sing-box; v2ray=false ;;
+    *) newcore=xray;    cbin=/usr/local/bin/xray;    v2ray=true ;;
   esac
   [ -x "$cbin" ] || { echo "${r}$cbin is not installed${n}"; return 1; }
-  sed -i "s|^VORTEX_CORE=.*|VORTEX_CORE=$newcore|; s|^VORTEX_CORE_BIN=.*|VORTEX_CORE_BIN=$cbin|" "$PANEL_ENV"
+  if grep -q '^VORTEX_SINGBOX_V2RAY_API=' "$PANEL_ENV" 2>/dev/null; then
+    sed -i "s|^VORTEX_CORE=.*|VORTEX_CORE=$newcore|; s|^VORTEX_CORE_BIN=.*|VORTEX_CORE_BIN=$cbin|; s|^VORTEX_SINGBOX_V2RAY_API=.*|VORTEX_SINGBOX_V2RAY_API=$v2ray|" "$PANEL_ENV"
+  else
+    sed -i "s|^VORTEX_CORE=.*|VORTEX_CORE=$newcore|; s|^VORTEX_CORE_BIN=.*|VORTEX_CORE_BIN=$cbin|" "$PANEL_ENV"
+    echo "VORTEX_SINGBOX_V2RAY_API=$v2ray" >> "$PANEL_ENV"
+  fi
   systemctl restart vortexui-panel
   echo "${g}✓ local node now runs $newcore — give it a few seconds to start.${n}"
 }
@@ -265,8 +270,15 @@ c_doctor() {
       core="$(grep '^VORTEX_CORE=' /etc/vortexui/node.env 2>/dev/null | cut -d= -f2-)"
       core="${core:-xray}"
       cbin="$(grep '^VORTEX_CORE_BIN=' /etc/vortexui/node.env 2>/dev/null | cut -d= -f2-)"
-      cbin="${cbin:-/usr/local/bin/$core}"
+      case "$core" in
+        singbox) cbin="${cbin:-/usr/local/bin/sing-box}" ;;
+        *)       cbin="${cbin:-/usr/local/bin/xray}" ;;
+      esac
       [ -x "$cbin" ] && pass "core binary ($core)" || fail_msg "core binary missing: $cbin"
+      v2api="$(grep '^VORTEX_SINGBOX_V2RAY_API=' /etc/vortexui/node.env 2>/dev/null | cut -d= -f2-)"
+      if [ "$core" = singbox ] && [ "$v2api" = true ]; then
+        warn_msg "VORTEX_SINGBOX_V2RAY_API=true — stock sing-box rejects v2ray_api (set false)"
+      fi
       ;;
     native)
       [ -f "$PANEL_ENV" ] && pass "panel.env present" || fail_msg "missing $PANEL_ENV"
@@ -294,6 +306,18 @@ c_doctor() {
         warn_msg "DB has extra migration records (db=$mig_db, embedded=$mig_files) — usually harmless"
       else
         warn_msg "could not verify DB migrations"
+      fi
+      core="$(grep '^VORTEX_CORE=' "$PANEL_ENV" 2>/dev/null | cut -d= -f2-)"
+      core="${core:-xray}"
+      cbin="$(grep '^VORTEX_CORE_BIN=' "$PANEL_ENV" 2>/dev/null | cut -d= -f2-)"
+      case "$core" in
+        singbox) cbin="${cbin:-/usr/local/bin/sing-box}" ;;
+        *)       cbin="${cbin:-/usr/local/bin/xray}" ;;
+      esac
+      [ -x "$cbin" ] && pass "local core binary ($core)" || fail_msg "local core binary missing: $cbin"
+      v2api="$(grep '^VORTEX_SINGBOX_V2RAY_API=' "$PANEL_ENV" 2>/dev/null | cut -d= -f2-)"
+      if [ "$core" = singbox ] && [ "$v2api" = true ]; then
+        warn_msg "VORTEX_SINGBOX_V2RAY_API=true — stock sing-box rejects v2ray_api (set false)"
       fi
       ;;
     *)

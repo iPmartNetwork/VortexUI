@@ -146,6 +146,20 @@ func TestNodeContract_UnaryRPCs(t *testing.T) {
 	}
 }
 
+func TestNodeContract_SyncRejectsCoreMismatch(t *testing.T) {
+	drv := &fakeDriver{}
+	c := newTestLink(t, drv, uuid.New())
+	ctx := context.Background()
+
+	err := c.Sync(ctx, &core.GeneratedConfig{LogLevel: "warn"}, domain.CoreSingbox)
+	if err == nil {
+		t.Fatal("expected core mismatch error")
+	}
+	if err.Error() == "" || len(err.Error()) < 10 {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestNodeContract_OnlineStatsAndLogs(t *testing.T) {
 	uid := uuid.New()
 	drv := &fakeDriver{

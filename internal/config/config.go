@@ -11,6 +11,29 @@ import (
 	"time"
 )
 
+// DefaultCoreBin returns the conventional install path for a core engine name.
+func DefaultCoreBin(core string) string {
+	switch core {
+	case "singbox":
+		return "/usr/local/bin/sing-box"
+	case "xray":
+		return "/usr/local/bin/xray"
+	default:
+		return core
+	}
+}
+
+func defaultSingboxV2RayAPI(core string) bool {
+	return core != "singbox"
+}
+
+func singboxV2RayAPIFromEnv(core string) bool {
+	if v, ok := envBoolUnset("VORTEX_SINGBOX_V2RAY_API"); ok {
+		return v
+	}
+	return defaultSingboxV2RayAPI(core)
+}
+
 // Panel holds control-plane configuration.
 type Panel struct {
 	HTTPAddr    string
@@ -45,8 +68,9 @@ type Panel struct {
 	CoreConfig    string // where the rendered core config is written
 	CoreAPIPort   int    // loopback port for the core's stats/control API
 	// SingboxV2RayAPI controls whether the sing-box config emits the
-	// experimental.v2ray_api block (per-user stats). Default true; set false for
-	// sing-box binaries built without the with_v2ray_api tag, which reject it.
+	// experimental.v2ray_api block (per-user stats). When VORTEX_SINGBOX_V2RAY_API
+	// is unset, defaults to false for singbox and true for xray. Set false for
+	// stock sing-box binaries (built without the with_v2ray_api tag).
 	SingboxV2RayAPI bool
 	// ShareAutoLimit, when true, makes the account-sharing guard actually limit
 	// (deprovision) users caught online from more IPs than their device limit.
@@ -84,8 +108,9 @@ type Node struct {
 	APIPort    int    // loopback port for the core's stats/control API
 
 	// SingboxV2RayAPI controls whether the sing-box config emits the
-	// experimental.v2ray_api block (per-user stats). Default true; set false for
-	// sing-box binaries built without the with_v2ray_api tag, which reject it.
+	// experimental.v2ray_api block (per-user stats). When VORTEX_SINGBOX_V2RAY_API
+	// is unset, defaults to false for singbox and true for xray. Set false for
+	// stock sing-box binaries (built without the with_v2ray_api tag).
 	SingboxV2RayAPI bool
 
 	TLSCert string
@@ -99,10 +124,10 @@ func LoadNode() (*Node, error) {
 	c := &Node{
 		ListenAddr:      env("VORTEX_NODE_LISTEN", ":50051"),
 		Core:            core,
-		CoreBin:         env("VORTEX_CORE_BIN", core),
+		CoreBin:         env("VORTEX_CORE_BIN", DefaultCoreBin(core)),
 		CoreConfig:      env("VORTEX_CORE_CONFIG", "/etc/vortex/core.json"),
 		APIPort:         envInt("VORTEX_CORE_API_PORT", 10085),
-		SingboxV2RayAPI: envBool("VORTEX_SINGBOX_V2RAY_API", true),
+		SingboxV2RayAPI: singboxV2RayAPIFromEnv(core),
 		TLSCert:         os.Getenv("VORTEX_TLS_CERT"),
 		TLSKey:          os.Getenv("VORTEX_TLS_KEY"),
 		TLSCA:           os.Getenv("VORTEX_TLS_CA"),
@@ -116,6 +141,7 @@ func LoadNode() (*Node, error) {
 
 // LoadPanel reads panel config from the environment, validating required keys.
 func LoadPanel() (*Panel, error) {
+	core := env("VORTEX_CORE", "xray")
 	c := &Panel{
 		HTTPAddr:         env("VORTEX_HTTP_ADDR", ":8080"),
 		GRPCAddr:         env("VORTEX_GRPC_ADDR", ":50051"),
@@ -135,11 +161,11 @@ func LoadPanel() (*Panel, error) {
 		LocalNode:        envBool("VORTEX_LOCAL_NODE", false),
 		LocalNodeName:    env("VORTEX_LOCAL_NODE_NAME", "local"),
 		LocalNodeHost:    env("VORTEX_LOCAL_NODE_HOST", "127.0.0.1"),
-		Core:             env("VORTEX_CORE", "xray"),
+		Core:             core,
 		CoreBin:          os.Getenv("VORTEX_CORE_BIN"),
 		CoreConfig:       env("VORTEX_CORE_CONFIG", "/etc/vortex/local-core.json"),
 		CoreAPIPort:      envInt("VORTEX_CORE_API_PORT", 10085),
-		SingboxV2RayAPI:  envBool("VORTEX_SINGBOX_V2RAY_API", true),
+		SingboxV2RayAPI:  singboxV2RayAPIFromEnv(core),
 		ShareAutoLimit:   envBool("VORTEX_SHARE_AUTOLIMIT", false),
 		GeoIPDB:          env("VORTEX_GEOIP_DB", ""),
 		ZarinPalMerchantID:   os.Getenv("VORTEX_ZARINPAL_MERCHANT_ID"),
@@ -153,7 +179,7 @@ func LoadPanel() (*Panel, error) {
 		AutoRecoverHubCooldown:  envDur("VORTEX_AUTO_RECOVER_HUB_COOLDOWN", 10*time.Minute),
 	}
 	if c.CoreBin == "" {
-		c.CoreBin = c.Core // resolve from PATH by core name
+		c.CoreBin = DefaultCoreBin(c.Core)
 	}
 	var errs []error
 	if c.DatabaseURL == "" {
@@ -197,6 +223,15 @@ func envBool(k string, def bool) bool {
 		}
 	}
 	return def
+}
+
+func envBoolUnset(k string) (bool, bool) {
+	v := os.Getenv(k)
+	if v == "" {
+		return false, false
+	}
+	b, err := strconv.ParseBool(v)
+	return b, err == nil
 }
 
 // String renders a redacted summary safe for logs.

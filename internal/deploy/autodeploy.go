@@ -65,7 +65,26 @@ type DeployResult struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// Deploy connects to the target server and installs the VortexUI node agent.
+// coreBinPath returns the conventional binary path for a deploy core name.
+func coreBinPath(core string) string {
+	switch core {
+	case "singbox":
+		return "/usr/local/bin/sing-box"
+	default:
+		return "/usr/local/bin/xray"
+	}
+}
+
+func singboxV2RayAPIValue(core string) string {
+	if core == "singbox" {
+		return "false"
+	}
+	return "true"
+}
+
+// singboxInstallCmd downloads the latest sing-box release (>=1.12 fallback).
+const singboxInstallCmd = `sbver=$(curl -fsSL https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep -oE '"tag_name": *"v[0-9.]+"' | head -1 | grep -oE 'v[0-9.]+'); sbver=${sbver:-v1.12.12}; curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${sbver}/sing-box-${sbver#v}-linux-amd64.tar.gz" && tar -xzf /tmp/sb.tgz -C /tmp && install -m 755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box || true`
+
 func (d *Deployer) Deploy(ctx context.Context, input NodeDeployInput) *DeployResult {
 	if input.Port == 0 {
 		input.Port = 22
@@ -97,7 +116,7 @@ func (d *Deployer) Deploy(ctx context.Context, input NodeDeployInput) *DeployRes
 	}{
 		{"update packages", "apt-get update -y && apt-get install -y curl git unzip tar"},
 		{"install xray", "curl -fsSL -o /tmp/xray.zip https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip && unzip -o /tmp/xray.zip -d /tmp/xray && install -m 755 /tmp/xray/xray /usr/local/bin/xray"},
-		{"install sing-box", "curl -fsSL https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep -oE 'v[0-9.]+' | head -1 | xargs -I{} curl -fsSL -o /tmp/sb.tgz https://github.com/SagerNet/sing-box/releases/download/{}/sing-box-{}-linux-amd64.tar.gz && tar -xzf /tmp/sb.tgz -C /tmp && install -m 755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box || true"},
+		{"install sing-box", singboxInstallCmd},
 		{"clone vortexui", fmt.Sprintf("git clone --depth 1 %s /opt/vortexui 2>/dev/null || (cd /opt/vortexui && git fetch origin master && git reset --hard origin/master)", d.repoURL)},
 		{"build node agent", "cd /opt/vortexui && go build -o /usr/local/bin/vortex-node ./cmd/node 2>/dev/null || curl -fsSL -o /usr/local/bin/vortex-node https://github.com/iPmartNetwork/VortexUI/releases/latest/download/vortexui-node-linux-amd64.tar.gz && chmod +x /usr/local/bin/vortex-node"},
 		{"setup certs dir", "mkdir -p /etc/vortex/certs /etc/vortex/assets"},
@@ -117,13 +136,14 @@ mkdir -p /etc/vortexui
 cat > /etc/vortexui/node.env << 'EOF'
 VORTEX_NODE_LISTEN=:%d
 VORTEX_CORE=%s
-VORTEX_CORE_BIN=/usr/local/bin/%s
+VORTEX_CORE_BIN=%s
 VORTEX_CORE_CONFIG=/etc/vortex/node-core.json
+VORTEX_SINGBOX_V2RAY_API=%s
 VORTEX_TLS_CERT=/etc/vortex/certs/node.crt
 VORTEX_TLS_KEY=/etc/vortex/certs/node.key
 VORTEX_TLS_CA=/etc/vortex/certs/ca.crt
 XRAY_LOCATION_ASSET=/etc/vortex/assets
-EOF`, input.AgentPort, input.Core, input.Core)},
+EOF`, input.AgentPort, input.Core, coreBinPath(input.Core), singboxV2RayAPIValue(input.Core))},
 		{"open firewall", fmt.Sprintf("ufw allow %d/tcp 2>/dev/null || iptables -I INPUT -p tcp --dport %d -j ACCEPT 2>/dev/null || true", input.AgentPort, input.AgentPort)},
 		{"enable service", "systemctl daemon-reload && systemctl enable vortexui-node"},
 	}
