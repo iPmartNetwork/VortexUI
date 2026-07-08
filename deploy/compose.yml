@@ -61,9 +61,13 @@ services:
       VORTEX_LOCAL_NODE_NAME: local
       VORTEX_LOCAL_NODE_HOST: ${LOCAL_NODE_HOST:-127.0.0.1}
       VORTEX_CORE: ${CORE:-xray}
-      VORTEX_CORE_BIN: /usr/local/bin/${CORE:-xray}
+      # sing-box: set CORE=singbox and SINGBOX_V2RAY_API=false (stock binary).
+      # Omit VORTEX_CORE_BIN — panel resolves singbox → /usr/local/bin/sing-box via DefaultCoreBin().
       VORTEX_CORE_CONFIG: /etc/vortex/local-core.json
       VORTEX_CORE_API_PORT: "10085"
+      # Omit when unset — panel defaults: false for singbox, true for xray.
+      # Set SINGBOX_V2RAY_API=true only with a sing-box binary built with -tags with_v2ray_api.
+      VORTEX_SINGBOX_V2RAY_API: ${SINGBOX_V2RAY_API:-}
     volumes:
       - ./certs:/certs:ro
     restart: unless-stopped

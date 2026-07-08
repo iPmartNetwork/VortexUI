@@ -89,6 +89,8 @@ DB_PASSWORD=$DB_PASSWORD
 WEB_PORT=$WEB_PORT
 SITE_ADDRESS=$SITE_ADDRESS
 ACME_EMAIL=$ACME_EMAIL
+# CORE=xray
+# SINGBOX_V2RAY_API=false
 EOF
     chmod 600 "$ENV_FILE"; ok "wrote $ENV_FILE."
   else
@@ -205,8 +207,8 @@ install_cores() {
 
   if [ ! -x /usr/local/bin/sing-box ]; then
     info "installing sing-box…"
-    local ver; ver="$(curl -fsSL https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep -oE '"tag_name": *"v[0-9.]+"' | head -1 | grep -oE 'v[0-9.]+')"
-    ver="${ver:-v1.9.3}"
+    # Keep in sync with deploy/Dockerfile SINGBOX_VERSION.
+    local ver="v1.12.12"
     curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${ver}/sing-box-${ver#v}-linux-${sarch}.tar.gz"
     tar -xzf /tmp/sb.tgz -C /tmp
     install -m 0755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box
@@ -267,6 +269,8 @@ VORTEX_CORE=xray
 VORTEX_CORE_BIN=/usr/local/bin/xray
 VORTEX_CORE_CONFIG=/etc/vortex/local-core.json
 VORTEX_CORE_API_PORT=10085
+# Omit VORTEX_SINGBOX_V2RAY_API — panel defaults: false for singbox, true for xray.
+# Set VORTEX_SINGBOX_V2RAY_API=true only with a sing-box binary built with -tags with_v2ray_api.
 XRAY_LOCATION_ASSET=/etc/vortex/assets
 VORTEX_GEOIP_DB=/etc/vortex/GeoLite2-Country.mmdb
 EOF

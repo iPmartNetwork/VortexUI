@@ -30,7 +30,7 @@ RUN apk add --no-cache curl unzip && \
 
 # ---- sing-box fetch (for the node image) ----
 FROM alpine:3.20 AS singbox
-ARG SINGBOX_VERSION=1.9.3
+ARG SINGBOX_VERSION=1.12.12
 ARG TARGETARCH
 RUN apk add --no-cache curl tar && \
     SB_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") && \
@@ -69,10 +69,11 @@ COPY --from=singbox /usr/local/bin/sing-box /usr/local/bin/sing-box
 COPY --from=xray /xray/*.dat /etc/vortex/assets/
 RUN chown -R vortex:vortex /etc/vortex
 # Defaults to xray; set VORTEX_CORE=singbox + VORTEX_CORE_BIN=/usr/local/bin/sing-box
-# on a node to run sing-box instead.
+# on a node to run sing-box instead. Keep VORTEX_SINGBOX_V2RAY_API=false for stock sing-box.
 ENV VORTEX_CORE=xray \
     VORTEX_CORE_BIN=/usr/local/bin/xray \
     VORTEX_CORE_CONFIG=/etc/vortex/core.json \
+    VORTEX_SINGBOX_V2RAY_API=false \
     XRAY_LOCATION_ASSET=/etc/vortex/assets
 EXPOSE 50051
 USER vortex

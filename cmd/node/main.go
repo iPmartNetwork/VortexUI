@@ -1,6 +1,6 @@
 // Command node is the VortexUI agent that runs on every proxy server. It serves
 // the NodeService gRPC API over mTLS; the panel dials in to push config/users
-// and to stream traffic. The agent drives a local Xray-core via the xray driver.
+// and to stream traffic. The agent drives xray-core or sing-box via VORTEX_CORE.
 package main
 
 import (
