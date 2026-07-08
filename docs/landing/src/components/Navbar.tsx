@@ -135,8 +135,7 @@ export default function Navbar() {
               </button>
 
               <a
-                href="https://ipmartnetwork.github.io/VortexUI/"
-                target="_blank"
+                href="01-introduction/"
                 rel="noopener noreferrer"
                 className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
                   isDark ? 'text-white/70 hover:text-white' : 'text-gray-500 hover:text-gray-900'
@@ -231,7 +230,7 @@ export default function Navbar() {
                   ))}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <a href="https://ipmartnetwork.github.io/VortexUI/" target="_blank" rel="noopener noreferrer"
+                  <a href="01-introduction/" rel="noopener noreferrer"
                     className={`flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white/70' : 'text-gray-600'}`}
                     onClick={() => setMobileOpen(false)}>
                     <BookOpen className="w-5 h-5" /> {t('nav.documentation')}

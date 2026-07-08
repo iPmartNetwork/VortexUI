@@ -9,21 +9,21 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLang } from '../contexts/LangContext';
 
 const docSections = [
-  { icon: <BookOpen className="w-5 h-5" />, title: 'Introduction', color: 'text-blue-500', href: 'https://ipmartnetwork.github.io/VortexUI/01-introduction/' },
-  { icon: <Terminal className="w-5 h-5" />, title: 'Installation', color: 'text-green-500', href: 'https://ipmartnetwork.github.io/VortexUI/02-installation/' },
-  { icon: <Cpu className="w-5 h-5" />, title: 'First Steps', color: 'text-cyan-500', href: 'https://ipmartnetwork.github.io/VortexUI/03-first-steps/' },
-  { icon: <Activity className="w-5 h-5" />, title: 'Dashboard', color: 'text-vortex-500', href: 'https://ipmartnetwork.github.io/VortexUI/04-dashboard/' },
-  { icon: <Users className="w-5 h-5" />, title: 'Users', color: 'text-amber-500', href: 'https://ipmartnetwork.github.io/VortexUI/05-user-management/' },
-  { icon: <Server className="w-5 h-5" />, title: 'Nodes', color: 'text-red-500', href: 'https://ipmartnetwork.github.io/VortexUI/06-node-management/' },
-  { icon: <Globe className="w-5 h-5" />, title: 'Network', color: 'text-teal-500', href: 'https://ipmartnetwork.github.io/VortexUI/07-network-policy/' },
-  { icon: <Shield className="w-5 h-5" />, title: 'Security', color: 'text-rose-500', href: 'https://ipmartnetwork.github.io/VortexUI/08-security-administration/' },
-  { icon: <CreditCard className="w-5 h-5" />, title: 'Plans & Payments', color: 'text-emerald-500', href: 'https://ipmartnetwork.github.io/VortexUI/09-plans-payments/' },
-  { icon: <Bell className="w-5 h-5" />, title: 'Notifications', color: 'text-yellow-500', href: 'https://ipmartnetwork.github.io/VortexUI/10-notifications/' },
-  { icon: <Settings className="w-5 h-5" />, title: 'Settings', color: 'text-purple-500', href: 'https://ipmartnetwork.github.io/VortexUI/11-settings-backup/' },
-  { icon: <FileCode className="w-5 h-5" />, title: 'API Reference', color: 'text-indigo-500', href: 'https://ipmartnetwork.github.io/VortexUI/12-api-reference/' },
-  { icon: <Layers className="w-5 h-5" />, title: 'Protocols', color: 'text-sky-500', href: 'https://ipmartnetwork.github.io/VortexUI/13-protocols-config/' },
-  { icon: <Database className="w-5 h-5" />, title: 'Operations', color: 'text-orange-500', href: 'https://ipmartnetwork.github.io/VortexUI/14-operations-maintenance/' },
-  { icon: <HelpCircle className="w-5 h-5" />, title: 'Troubleshooting', color: 'text-pink-500', href: 'https://ipmartnetwork.github.io/VortexUI/15-troubleshooting-faq/' },
+  { icon: <BookOpen className="w-5 h-5" />, title: 'Introduction', color: 'text-blue-500', href: '01-introduction/' },
+  { icon: <Terminal className="w-5 h-5" />, title: 'Installation', color: 'text-green-500', href: '02-installation/' },
+  { icon: <Cpu className="w-5 h-5" />, title: 'First Steps', color: 'text-cyan-500', href: '03-first-steps/' },
+  { icon: <Activity className="w-5 h-5" />, title: 'Dashboard', color: 'text-vortex-500', href: '04-dashboard/' },
+  { icon: <Users className="w-5 h-5" />, title: 'Users', color: 'text-amber-500', href: '05-user-management/' },
+  { icon: <Server className="w-5 h-5" />, title: 'Nodes', color: 'text-red-500', href: '06-node-management/' },
+  { icon: <Globe className="w-5 h-5" />, title: 'Network', color: 'text-teal-500', href: '07-network-policy/' },
+  { icon: <Shield className="w-5 h-5" />, title: 'Security', color: 'text-rose-500', href: '08-security-administration/' },
+  { icon: <CreditCard className="w-5 h-5" />, title: 'Plans & Payments', color: 'text-emerald-500', href: '09-plans-payments/' },
+  { icon: <Bell className="w-5 h-5" />, title: 'Notifications', color: 'text-yellow-500', href: '10-notifications/' },
+  { icon: <Settings className="w-5 h-5" />, title: 'Settings', color: 'text-purple-500', href: '11-settings-backup/' },
+  { icon: <FileCode className="w-5 h-5" />, title: 'API Reference', color: 'text-indigo-500', href: '12-api-reference/' },
+  { icon: <Layers className="w-5 h-5" />, title: 'Protocols', color: 'text-sky-500', href: '13-protocols-config/' },
+  { icon: <Database className="w-5 h-5" />, title: 'Operations', color: 'text-orange-500', href: '14-operations-maintenance/' },
+  { icon: <HelpCircle className="w-5 h-5" />, title: 'Troubleshooting', color: 'text-pink-500', href: '15-troubleshooting-faq/' },
 ];
 
 export default function DocumentationSection() {
@@ -49,7 +49,7 @@ export default function DocumentationSection() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
           {docSections.map((section, i) => (
-            <motion.a key={section.title} href={section.href} target="_blank" rel="noopener noreferrer"
+            <motion.a key={section.title} href={section.href} rel="noopener noreferrer"
               initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.3, delay: i * 0.04 }}
               className="glass rounded-xl p-4 card-hover group block">
               <div className={`${section.color} mb-3`}>{section.icon}</div>
@@ -62,7 +62,7 @@ export default function DocumentationSection() {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.5, delay: 0.6 }} className="mt-12 text-center">
-          <a href="https://ipmartnetwork.github.io/VortexUI/" target="_blank" rel="noopener noreferrer"
+          <a href="01-introduction/" rel="noopener noreferrer"
             className={`inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold glass border transition-all group ${
               isDark ? 'text-white border-vortex-500/20 hover:border-vortex-500/40 hover:bg-vortex-500/5' : 'text-gray-800 border-vortex-200 hover:border-vortex-400 hover:bg-vortex-50'
             }`}>
