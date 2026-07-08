@@ -21,8 +21,8 @@ export default function Footer() {
     {
       title: t('footer.resources'),
       items: [
-        { name: t('nav.documentation'), href: 'https://ipmartnetwork.github.io/VortexUI/', external: true },
-        { name: 'API Reference', href: 'https://ipmartnetwork.github.io/VortexUI/12-api-reference/', external: true },
+        { name: t('nav.documentation'), href: '01-introduction/' },
+        { name: 'API Reference', href: '12-api-reference/' },
         { name: 'OpenAPI Spec', href: 'https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml', external: true },
         { name: 'Changelog', href: 'https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md', external: true },
       ],
