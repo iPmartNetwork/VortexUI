@@ -204,14 +204,34 @@ c_set_domain() {
 
 # Switch the local node's proxy engine between xray and sing-box.
 c_switch_core() {
-  if [ "$MODE" != native ]; then
-    echo "${y}core switch is available on native installs (edit VORTEX_CORE in compose for Docker).${n}"; return
+  local cur newcore cbin v2ray
+  if [ "$MODE" = docker ]; then
+    cur="$(env_get CORE)"; cur="${cur:-xray}"
+    echo "  current local-node core: ${g}${cur}${n}"
+    echo "   ${b}1)${n} xray      ${b}2)${n} sing-box"
+    read -r -p "  choose [1/2]: " c
+    case "$c" in
+      2) newcore=singbox; cbin=/usr/local/bin/sing-box; v2ray=false ;;
+      *) newcore=xray;    cbin=/usr/local/bin/xray;    v2ray=true ;;
+    esac
+    env_set CORE "$newcore"
+    if [ "$newcore" = singbox ]; then
+      env_set SINGBOX_V2RAY_API false
+    else
+      sed -i '/^SINGBOX_V2RAY_API=/d' "$ENV_FILE" 2>/dev/null || true
+    fi
+    echo "  ${b}rebuilding panel with $newcore…${n}"
+    $COMPOSE up -d --build panel
+    echo "${g}✓ docker local node now runs $newcore — give it a few seconds to start.${n}"
+    return
   fi
-  local cur; cur="$(grep '^VORTEX_CORE=' "$PANEL_ENV" 2>/dev/null | cut -d= -f2-)"
+  if [ "$MODE" != native ]; then
+    echo "${y}core switch is available on panel installs (native or docker).${n}"; return
+  fi
+  cur="$(grep '^VORTEX_CORE=' "$PANEL_ENV" 2>/dev/null | cut -d= -f2-)"
   echo "  current local-node core: ${g}${cur:-xray}${n}"
   echo "   ${b}1)${n} xray      ${b}2)${n} sing-box"
   read -r -p "  choose [1/2]: " c
-  local newcore cbin
   case "$c" in
     2) newcore=singbox; cbin=/usr/local/bin/sing-box; v2ray=false ;;
     *) newcore=xray;    cbin=/usr/local/bin/xray;    v2ray=true ;;
