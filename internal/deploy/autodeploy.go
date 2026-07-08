@@ -82,8 +82,8 @@ func singboxV2RayAPIValue(core string) string {
 	return "true"
 }
 
-// singboxInstallCmd downloads the latest sing-box release (>=1.12 fallback).
-const singboxInstallCmd = `sbver=$(curl -fsSL https://api.github.com/repos/SagerNet/sing-box/releases/latest | grep -oE '"tag_name": *"v[0-9.]+"' | head -1 | grep -oE 'v[0-9.]+'); sbver=${sbver:-v1.12.12}; curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${sbver}/sing-box-${sbver#v}-linux-amd64.tar.gz" && tar -xzf /tmp/sb.tgz -C /tmp && install -m 755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box || true`
+// singboxInstallCmd installs sing-box 1.12.12 (arch-aware).
+const singboxInstallCmd = `sarch=$(uname -m); case "$sarch" in aarch64|arm64) sarch=arm64 ;; *) sarch=amd64 ;; esac; sbver=v1.12.12; curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${sbver}/sing-box-${sbver#v}-linux-${sarch}.tar.gz" && tar -xzf /tmp/sb.tgz -C /tmp && install -m 755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box || true`
 
 func (d *Deployer) Deploy(ctx context.Context, input NodeDeployInput) *DeployResult {
 	if input.Port == 0 {

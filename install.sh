@@ -15,6 +15,7 @@ set -euo pipefail
 
 REPO_URL="${VORTEXUI_REPO:-https://github.com/iPmartNetwork/VortexUI}"
 BRANCH="${VORTEXUI_BRANCH:-master}"
+VORTEXUI_VERSION="${VORTEXUI_VERSION:-1.3.1}"
 INSTALL_DIR="${VORTEXUI_DIR:-/opt/vortexui}"
 WEB_PORT="${VORTEXUI_WEB_PORT:-80}"
 METHOD="${VORTEXUI_METHOD:-}"   # docker | native (prompted if empty)
@@ -76,6 +77,35 @@ ask_access() {
   fi
 }
 
+# Sets LOCAL_CORE / LOCAL_CORE_BIN / LOCAL_V2RAY_API for the in-process panel node.
+# Override with VORTEXUI_CORE=xray|singbox in non-interactive installs.
+ask_local_core() {
+  LOCAL_CORE="${VORTEXUI_CORE:-xray}"
+  LOCAL_CORE_BIN="/usr/local/bin/xray"
+  LOCAL_V2RAY_API="true"
+  case "$LOCAL_CORE" in
+    singbox) LOCAL_CORE_BIN="/usr/local/bin/sing-box"; LOCAL_V2RAY_API="false" ;;
+  esac
+  [ -n "${VORTEXUI_NONINTERACTIVE:-}" ] && return
+  echo
+  echo "  ${b}Local proxy engine${n} ${d}(runs on this panel server)${n}"
+  echo "   ${b}1)${n} xray      ${d}— default; per-user traffic stats${n}"
+  echo "   ${b}2)${n} sing-box  ${d}— hysteria/tuic/wireguard; stock binary (no v2ray_api)${n}"
+  read -r -p "  choose [1/2] [1]: " cc
+  case "$cc" in
+    2)
+      LOCAL_CORE=singbox
+      LOCAL_CORE_BIN=/usr/local/bin/sing-box
+      LOCAL_V2RAY_API=false
+      ;;
+    *)
+      LOCAL_CORE=xray
+      LOCAL_CORE_BIN=/usr/local/bin/xray
+      LOCAL_V2RAY_API=true
+      ;;
+  esac
+}
+
 # Writes deploy/.env, preserving JWT/DB secrets across re-runs.
 write_env() {
   ENV_FILE="deploy/.env"
@@ -123,10 +153,15 @@ access_url() {
 
 # ---------------------------------------------------------------- Docker method
 deploy_docker() {
-  ensure_docker; ensure_git; checkout; ask_access; write_env; gen_certs docker
+  ensure_docker; ensure_git; checkout; ask_access; write_env; ask_local_core; gen_certs docker
   # Host advertised to clients in subscriptions (domain if set, else public IP).
   case "$SITE_ADDRESS" in :*|"") NODE_HOST="$PUBLIC_HOST" ;; *) NODE_HOST="$SITE_ADDRESS" ;; esac
-  sed -i '/^LOCAL_NODE_HOST=/d' deploy/.env; echo "LOCAL_NODE_HOST=$NODE_HOST" >> deploy/.env
+  sed -i '/^LOCAL_NODE_HOST=/d;/^CORE=/d;/^SINGBOX_V2RAY_API=/d' deploy/.env
+  {
+    echo "LOCAL_NODE_HOST=$NODE_HOST"
+    echo "CORE=$LOCAL_CORE"
+    [ "$LOCAL_CORE" = singbox ] && echo "SINGBOX_V2RAY_API=false"
+  } >> deploy/.env
   COMPOSE="docker compose --env-file deploy/.env -f deploy/compose.yml"
   info "building and starting the stack…"
   $COMPOSE up -d --build
@@ -214,7 +249,21 @@ install_cores() {
     install -m 0755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box
     rm -rf /tmp/sing-box-* /tmp/sb.tgz
     ok "sing-box installed."
-  else warn "sing-box already present — skipping."; fi
+  else
+    local target="1.12.12" cur
+    cur="$(/usr/local/bin/sing-box version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+    if [ -n "$cur" ] && [ "$(printf '%s\n' "$target" "$cur" | sort -V | tail -1)" = "$cur" ]; then
+      warn "sing-box $cur already present — skipping."
+    else
+      info "upgrading sing-box${cur:+ (was $cur)} to $target…"
+      local ver="v$target"
+      curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${ver}/sing-box-${target}-linux-${sarch}.tar.gz"
+      tar -xzf /tmp/sb.tgz -C /tmp
+      install -m 0755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box
+      rm -rf /tmp/sing-box-* /tmp/sb.tgz
+      ok "sing-box upgraded to $target."
+    fi
+  fi
 
   # GeoIP country database for the "Traffic by Country" analytics. Best-effort:
   # a download failure must not abort the install — the feature simply stays
@@ -232,7 +281,7 @@ install_cores() {
 }
 
 deploy_native() {
-  ensure_docker; ensure_git; checkout; ask_access; write_env; ensure_go; gen_certs go
+  ensure_docker; ensure_git; checkout; ask_access; write_env; ask_local_core; ensure_go; gen_certs go
   info "bringing up PostgreSQL + Redis (Docker)…"
   docker compose -f docker-compose.yml up -d
 
@@ -265,12 +314,13 @@ VORTEX_TLS_CA=$INSTALL_DIR/deploy/certs/ca.crt
 VORTEX_LOCAL_NODE=true
 VORTEX_LOCAL_NODE_NAME=local
 VORTEX_LOCAL_NODE_HOST=$NODE_HOST
-VORTEX_CORE=xray
-VORTEX_CORE_BIN=/usr/local/bin/xray
+VORTEX_CORE=$LOCAL_CORE
+VORTEX_CORE_BIN=$LOCAL_CORE_BIN
 VORTEX_CORE_CONFIG=/etc/vortex/local-core.json
 VORTEX_CORE_API_PORT=10085
-# Omit VORTEX_SINGBOX_V2RAY_API — panel defaults: false for singbox, true for xray.
-# Set VORTEX_SINGBOX_V2RAY_API=true only with a sing-box binary built with -tags with_v2ray_api.
+VORTEX_SINGBOX_V2RAY_API=$LOCAL_V2RAY_API
+# Stock sing-box needs VORTEX_SINGBOX_V2RAY_API=false (set above when singbox is chosen).
+# Set true only with a sing-box binary built with -tags with_v2ray_api.
 XRAY_LOCATION_ASSET=/etc/vortex/assets
 VORTEX_GEOIP_DB=/etc/vortex/GeoLite2-Country.mmdb
 EOF
@@ -477,7 +527,7 @@ bootstrap_admin() { # $1 = command prefix
 ROLE="${VORTEXUI_ROLE:-}"
 if [ -z "$ROLE" ] && [ -z "${VORTEXUI_NONINTERACTIVE:-}" ]; then
   echo
-  echo "  ${g}VortexUI installer${n}"
+  echo "  ${g}VortexUI installer${n} ${d}(v${VORTEXUI_VERSION})${n}"
   echo "  ${d}─────────────────────${n}"
   echo "  What are you installing on this server?"
   echo "   ${b}1)${n} Panel  ${d}— full control plane; build inbounds here (single-server ready)${n}"
