@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"time"
 
@@ -282,8 +280,4 @@ func (r *SessionRepoPgx) DeleteExpiredSessions(ctx context.Context) (int64, erro
 	return result.RowsAffected(), nil
 }
 
-// hashToken creates a SHA256 hash of a token
-func hashTokenPgx(token string) string {
-	hash := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(hash[:])
-}
+

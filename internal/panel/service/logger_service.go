@@ -87,11 +87,9 @@ func (s *StructuredLoggerService) LogError(ctx context.Context, err error, messa
 		Context: make(map[string]string),
 	}
 
-	if attrs != nil {
-		for k, v := range attrs {
-			if sv, ok := v.(string); ok {
-				errorInfo.Context[k] = sv
-			}
+	for k, v := range attrs {
+		if sv, ok := v.(string); ok {
+			errorInfo.Context[k] = sv
 		}
 	}
 
