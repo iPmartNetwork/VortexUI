@@ -33,7 +33,7 @@ func (m *MFAMiddleware) ValidateMFARequired() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			// Check if this route requires MFA
 			requireMFA := c.Get("require_mfa")
-			if requireMFA == nil || requireMFA.(bool) == false {
+			if requireMFA == nil || !requireMFA.(bool) {
 				return next(c)
 			}
 

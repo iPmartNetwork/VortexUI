@@ -42,18 +42,19 @@ func (t *TraceManagerService) StartSpan(ctx context.Context, spanName string, at
 		traceID = generateID()
 	}
 
+	type contextKey string
 	// Get parent span ID if exists
 	parentID := ""
-	if parent := ctx.Value("span_id"); parent != nil {
+	if parent := ctx.Value(contextKey("span_id")); parent != nil {
 		if str, ok := parent.(string); ok {
 			parentID = str
 		}
 	}
 
 	// Create new context with span
-	newCtx := context.WithValue(ctx, "trace_id", traceID)
-	newCtx = context.WithValue(newCtx, "span_id", spanID)
-	newCtx = context.WithValue(newCtx, "parent_span_id", parentID)
+	newCtx := context.WithValue(ctx, contextKey("trace_id"), traceID)
+	newCtx = context.WithValue(newCtx, contextKey("span_id"), spanID)
+	newCtx = context.WithValue(newCtx, contextKey("parent_span_id"), parentID)
 
 	startTime := time.Now()
 

@@ -67,7 +67,7 @@ func (h *PasswordHandlers) ChangePassword(c echo.Context) error {
 	}
 
 	// Validate new password
-	valid, errors, err := h.passwordService.ValidatePassword(req.NewPassword, policy)
+	valid, errors, _ := h.passwordService.ValidatePassword(req.NewPassword, policy)
 	if !valid {
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"error":  "password does not meet policy requirements",

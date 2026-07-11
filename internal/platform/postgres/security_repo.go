@@ -66,7 +66,7 @@ func (r *SecurityThreatRepositoryImpl) GetThreat(ctx context.Context, threatID u
 	}
 
 	if len(metadataStr) > 0 {
-		json.Unmarshal([]byte(metadataStr), &threat.Metadata)
+		_ = json.Unmarshal([]byte(metadataStr), &threat.Metadata)
 	}
 
 	return threat, nil
@@ -112,7 +112,7 @@ func (r *SecurityThreatRepositoryImpl) ListThreats(ctx context.Context, threatTy
 		}
 
 		if len(metadataStr) > 0 {
-			json.Unmarshal([]byte(metadataStr), &threat.Metadata)
+			_ = json.Unmarshal([]byte(metadataStr), &threat.Metadata)
 		}
 
 		threats = append(threats, threat)
@@ -152,7 +152,7 @@ func (r *SecurityThreatRepositoryImpl) GetBlockedThreats(ctx context.Context, li
 		}
 
 		if len(metadataStr) > 0 {
-			json.Unmarshal([]byte(metadataStr), &threat.Metadata)
+			_ = json.Unmarshal([]byte(metadataStr), &threat.Metadata)
 		}
 
 		threats = append(threats, threat)

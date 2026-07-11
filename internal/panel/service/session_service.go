@@ -95,13 +95,13 @@ func (s *SessionService) ValidateSession(ctx context.Context, token string) (*do
 	}
 
 	// Update last activity asynchronously
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	go func(gCtx context.Context) {
+		ctx, cancel := context.WithTimeout(gCtx, 5*time.Second)
 		defer cancel()
 		if err := s.repo.UpdateSession(ctx, session); err != nil {
 			s.log.Debug("failed to update session activity", "err", err)
 		}
-	}()
+	}(context.WithoutCancel(context.Background()))
 
 	return session, nil
 }
