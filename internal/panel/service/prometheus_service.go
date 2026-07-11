@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -38,7 +39,7 @@ func (p *PrometheusExporter) Export() string {
 	buf.WriteString("# TYPE vortex_http_request_duration histogram\n")
 
 	// Get all metrics
-	metrics, err := p.metricsService.GetMetrics(nil, nil)
+	metrics, err := p.metricsService.GetMetrics(context.TODO(), nil)
 	if err != nil {
 		p.log.Error("failed to get metrics for prometheus export", "error", err)
 		return buf.String()
@@ -64,7 +65,7 @@ func (p *PrometheusExporter) Export() string {
 	if len(counters) > 0 {
 		buf.WriteString("\n# Counters\n")
 		for name, value := range counters {
-			buf.WriteString(fmt.Sprintf("vortex_%s %f\n", name, value))
+			fmt.Fprintf(&buf, "vortex_%s %f\n", name, value)
 		}
 	}
 
@@ -72,7 +73,7 @@ func (p *PrometheusExporter) Export() string {
 	if len(gauges) > 0 {
 		buf.WriteString("\n# Gauges\n")
 		for name, value := range gauges {
-			buf.WriteString(fmt.Sprintf("vortex_%s %f\n", name, value))
+			fmt.Fprintf(&buf, "vortex_%s %f\n", name, value)
 		}
 	}
 
@@ -92,13 +93,13 @@ func (p *PrometheusExporter) Export() string {
 						count++
 					}
 				}
-				buf.WriteString(fmt.Sprintf("vortex_%s_bucket{le=\"%f\"} %d\n", name, bucket, count))
+				fmt.Fprintf(&buf, "vortex_%s_bucket{le=\"%f\"} %d\n", name, bucket, count)
 			}
-			buf.WriteString(fmt.Sprintf("vortex_%s_bucket{le=\"+Inf\"} %d\n", name, len(values)))
-			buf.WriteString(fmt.Sprintf("vortex_%s_sum %f\n", name, sum))
-			buf.WriteString(fmt.Sprintf("vortex_%s_count %d\n", name, len(values)))
-			buf.WriteString(fmt.Sprintf("vortex_%s_min %f\n", name, min))
-			buf.WriteString(fmt.Sprintf("vortex_%s_max %f\n", name, max))
+			fmt.Fprintf(&buf, "vortex_%s_bucket{le=\"+Inf\"} %d\n", name, len(values))
+			fmt.Fprintf(&buf, "vortex_%s_sum %f\n", name, sum)
+			fmt.Fprintf(&buf, "vortex_%s_count %d\n", name, len(values))
+			fmt.Fprintf(&buf, "vortex_%s_min %f\n", name, min)
+			fmt.Fprintf(&buf, "vortex_%s_max %f\n", name, max)
 		}
 	}
 
@@ -154,7 +155,7 @@ func (r *RequestMetricsAggregator) AggregateMetrics() map[string]interface{} {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	metrics, err := r.metricsService.GetMetrics(nil, nil)
+	metrics, err := r.metricsService.GetMetrics(context.TODO(), nil)
 	if err != nil {
 		r.log.Error("failed to aggregate metrics", "error", err)
 		return make(map[string]interface{})

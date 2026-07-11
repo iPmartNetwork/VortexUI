@@ -5,7 +5,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"time"
 
@@ -90,9 +89,10 @@ func TraceMiddleware(traceService *service.TraceManagerService, log *slog.Logger
 			}
 
 			// Inject trace into context using context.WithValue
-			newCtx := context.WithValue(c.Request().Context(), "trace_id", traceCtx.TraceID)
-			newCtx = context.WithValue(newCtx, "span_id", traceCtx.SpanID)
-			newCtx = context.WithValue(newCtx, "parent_span_id", traceCtx.ParentID)
+			type contextKey string
+			newCtx := context.WithValue(c.Request().Context(), contextKey("trace_id"), traceCtx.TraceID)
+			newCtx = context.WithValue(newCtx, contextKey("span_id"), traceCtx.SpanID)
+			newCtx = context.WithValue(newCtx, contextKey("parent_span_id"), traceCtx.ParentID)
 			c.SetRequest(c.Request().WithContext(newCtx))
 
 			// Inject into response headers
@@ -129,17 +129,4 @@ func headerMap(h http.Header) map[string]string {
 	return result
 }
 
-// getClientIP extracts client IP from request
-func getClientIP(req *http.Request) string {
-	if xForwardedFor := req.Header.Get("X-Forwarded-For"); xForwardedFor != "" {
-		return xForwardedFor
-	}
-	if xRealIP := req.Header.Get("X-Real-IP"); xRealIP != "" {
-		return xRealIP
-	}
-	ip, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err != nil {
-		return req.RemoteAddr
-	}
-	return ip
-}
+
