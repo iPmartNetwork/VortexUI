@@ -37,6 +37,10 @@ const LazyDeepLinks = lazy(() => import("@/pages/DeepLinks").then((m) => ({ defa
 const LazyQuotaNotifications = lazy(() => import("@/pages/QuotaNotifications").then((m) => ({ default: m.QuotaNotifications })));
 const LazyIPLimit = lazy(() => import("@/pages/IPLimit").then((m) => ({ default: m.IPLimit })));
 const LazyResellerPaymentSettings = lazy(() => import("@/pages/ResellerPaymentSettings").then((m) => ({ default: m.ResellerPaymentSettings })));
+// PHASE 3 Components
+const LazyPerformance = lazy(() => import("@/pages/Performance").then((m) => ({ default: m.Performance })));
+const LazySecurityHardening = lazy(() => import("@/pages/SecurityHardening").then((m) => ({ default: m.SecurityHardening })));
+const LazyCompliance = lazy(() => import("@/pages/Compliance").then((m) => ({ default: m.Compliance })));
 const LazyResellerDetail = lazy(() => import("@/pages/admins/ResellerDetail").then((m) => ({ default: m.ResellerDetail })));
 const LazyPortalLogin = lazy(() => import("@/pages/portal/PortalLogin").then((m) => ({ default: m.PortalLogin })));
 const LazyPortalLayout = lazy(() => import("@/pages/portal/PortalLayout").then((m) => ({ default: m.PortalLayout })));
@@ -116,6 +120,10 @@ export function App() {
         <Route path="/logs" element={<LazyRoute component={LazyLogs} />} />
         <Route path="/settings" element={<LazyRoute component={LazySettings} />} />
         <Route path="/settings/admins/:id" element={<LazyRoute component={LazyResellerDetail} />} />
+        {/* PHASE 3 Routes */}
+        <Route path="/performance" element={<LazyRoute component={LazyPerformance} />} />
+        <Route path="/security" element={<LazyRoute component={LazySecurityHardening} />} />
+        <Route path="/compliance" element={<LazyRoute component={LazyCompliance} />} />
       </Route>
       <Route path="*" element={<NotFound />} />
       {/* Portal (end-user self-service) */}

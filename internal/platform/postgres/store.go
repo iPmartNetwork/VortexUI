@@ -68,6 +68,9 @@ func (s *Store) Admins() *AdminRepo { return &AdminRepo{q: s.q, pool: s.pool} }
 // Audit returns the audit-log repository.
 func (s *Store) Audit() *AuditRepo { return &AuditRepo{q: s.q} }
 
+// Sessions returns the session repository (pgx version).
+func (s *Store) Sessions() *SessionRepoPgx { return &SessionRepoPgx{pool: s.pool} }
+
 // Migration returns the migration-event repository.
 func (s *Store) Migration() *MigrationRepo { return &MigrationRepo{pool: s.pool} }
 
@@ -112,6 +115,9 @@ func (s *Store) RoutingPacks() *RoutingPackRepo { return &RoutingPackRepo{pool: 
 
 // IPLimits returns the IP-limit enforcement policy/events repository.
 func (s *Store) IPLimits() *IPLimitRepo { return &IPLimitRepo{pool: s.pool} }
+
+// Pool returns the underlying pgx connection pool.
+func (s *Store) Pool() *pgxpool.Pool { return s.pool }
 
 // Probing returns the probing repository.
 func (s *Store) Probing() *ProbingRepo { return &ProbingRepo{pool: s.pool} }

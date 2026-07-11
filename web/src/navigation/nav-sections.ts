@@ -24,6 +24,9 @@ import {
   Ban,
   Wallet,
   ClipboardList,
+  Activity,
+  ShieldAlert,
+  CheckCircle,
 } from "lucide-react";
 import type { TKey } from "@/i18n/dict";
 
@@ -46,14 +49,14 @@ export function buildNavSections(sudo: boolean): NavSection[] {
   const resellerSection: NavSection | null = sudo
     ? null
     : {
-        label: "nav.section.reseller",
-        id: "reseller",
-        items: [
-          { to: "/reseller-dashboard", key: "nav.resellerDashboard", icon: Gauge },
-          { to: "/reseller-account", key: "nav.resellerAccount", icon: Wallet },
-          { to: "/pending-orders", key: "nav.pendingOrders", icon: ClipboardList, badgeKey: "pending_orders" },
-        ],
-      };
+      label: "nav.section.reseller",
+      id: "reseller",
+      items: [
+        { to: "/reseller-dashboard", key: "nav.resellerDashboard", icon: Gauge },
+        { to: "/reseller-account", key: "nav.resellerAccount", icon: Wallet },
+        { to: "/pending-orders", key: "nav.pendingOrders", icon: ClipboardList, badgeKey: "pending_orders" },
+      ],
+    };
 
   const sections: NavSection[] = [
     {
@@ -112,6 +115,15 @@ export function buildNavSections(sudo: boolean): NavSection[] {
         { to: "/audit", key: "nav.audit", icon: History },
         { to: "/logs", key: "nav.logs", icon: ScrollText },
         { to: "/settings", key: "nav.settings", icon: SettingsIcon },
+      ],
+    },
+    {
+      label: "nav.section.monitoring",
+      id: "monitoring",
+      items: [
+        { to: "/performance", key: "nav.performance", icon: Activity },
+        { to: "/security", key: "nav.security", icon: ShieldAlert },
+        { to: "/compliance", key: "nav.compliance", icon: CheckCircle },
       ],
     },
   ];

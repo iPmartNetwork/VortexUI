@@ -6,6 +6,7 @@ package stats
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,10 +64,14 @@ func (a *Aggregator) Run(ctx context.Context) error {
 				byUser[k.UserID] = total
 				delete(pending, k)
 			}
-			_ = a.users.AddUsedTrafficBatch(ctx, byUser)
+			if err := a.users.AddUsedTrafficBatch(ctx, byUser); err != nil {
+				slog.Default().Error("failed to update user traffic", "err", err)
+			}
 		}
 		if len(points) > 0 {
-			_ = a.traffic.WriteBatch(ctx, points)
+			if err := a.traffic.WriteBatch(ctx, points); err != nil {
+				slog.Default().Error("failed to write traffic points", "err", err)
+			}
 			points = points[:0]
 		}
 	}

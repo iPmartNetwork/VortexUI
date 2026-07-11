@@ -231,6 +231,10 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	go resetter.Run(ctx)
 
 	authSvc := service.NewAuthService(admins, issuer)
+	// Note: AuditService requires full port.AuditRepository implementation
+	// which extends the existing AuditRepo with additional methods.
+	// This will be completed in Phase 1.2
+	// auditSvc := service.NewAuditService(store.Audit(), log)
 	userSvc := service.NewUserService(users, h)
 	userSvc.SetPublisher(bus)
 	userSvc.SetOnlineQuerier(h)
@@ -412,6 +416,90 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	autoBackup.DefaultTelegramToken = cfg.TelegramToken
 	go autoBackup.Run(ctx)
 
+	// Initialize observability services (metrics, health checks, structured logging, tracing)
+	obsCfg := config.DefaultObservabilityConfig()
+	metricsService, healthService, loggerService, traceService, prometheusExporter := config.InitializeObservability(obsCfg, log)
+
+	// Register default health checks
+	if healthService != nil {
+		defaultChecks := service.NewDefaultHealthChecks(healthService, log)
+		if err := defaultChecks.RegisterAll(); err != nil {
+			log.Error("failed to register default health checks", "err", err)
+		}
+		
+		// Start background health check poller (30 second interval)
+		poller := service.NewHealthCheckPoller(healthService, 30*time.Second, log)
+		poller.Start(ctx)
+	}
+
+	// Initialize PHASE 3A - Authentication & Hardening services
+	totpRepo := postgres.NewTOTPRepository(store.Pool(), log)
+	mfaRepo := postgres.NewMFARepository(store.Pool(), log)
+	passwordPolicyRepo := postgres.NewPasswordPolicyRepository(store.Pool(), log)
+	ipAccessRuleRepo := postgres.NewIPAccessRuleRepository(store.Pool(), log)
+	loginAttemptRepo := postgres.NewLoginAttemptRepository(store.Pool(), log)
+
+	// Start background cleanup worker for login attempts (deletes attempts > 24h old)
+	go loginAttemptRepo.StartCleanupWorker(ctx, 1*time.Hour)
+
+	// Initialize security services
+	totpService := service.NewTOTPService(log)
+	passwordPolicyService := service.NewPasswordPolicyService(log)
+	ipValidatorService := service.NewIPValidatorService(log)
+
+	// Initialize security handlers
+	mfaHandlers := api.NewMFAHandlers(totpService, mfaRepo, log)
+	passwordHandlers := api.NewPasswordHandlers(passwordPolicyService, passwordPolicyRepo, log)
+	ipControlHandlers := api.NewIPControlHandlers(ipAccessRuleRepo, ipValidatorService, log)
+
+	// Initialize security middleware
+	mfaMiddleware := api.NewMFAMiddleware(mfaRepo, log)
+	ipValidationMiddleware := api.NewIPValidationMiddleware(ipAccessRuleRepo, ipValidatorService, log)
+
+	// Initialize PHASE 3C - Audit & Compliance services
+	auditEventRepo := postgres.NewAuditEventRepository(store.Pool(), log)
+	complianceEventRepo := postgres.NewComplianceEventRepository(store.Pool(), log)
+	auditReportRepo := postgres.NewAuditReportRepository(store.Pool(), log)
+	auditPolicyRepo := postgres.NewAuditPolicyRepository(store.Pool(), log)
+	auditArchiveRepo := postgres.NewAuditArchiveRepository(store.Pool(), log)
+
+	// Initialize audit and compliance services
+	reportGeneratorService := service.NewReportGeneratorService(auditEventRepo, auditReportRepo, log)
+	complianceCheckerService := service.NewComplianceCheckerService(complianceEventRepo, auditPolicyRepo, log)
+
+	// Initialize audit and compliance handlers
+	auditEventHandlers := api.NewAuditEventHandlers(auditEventRepo, log)
+	complianceHandlers := api.NewComplianceHandlers(complianceEventRepo, complianceCheckerService, log)
+	reportHandlers := api.NewReportHandlers(auditReportRepo, reportGeneratorService, log)
+
+	// Initialize PHASE 3B - Performance Optimization services
+	queryMetricsRepo := postgres.NewQueryMetricsRepository(store.Pool(), log)
+	rateLimitRepo := postgres.NewRateLimitRepository(store.Pool(), log)
+	performanceAlertRepo := postgres.NewPerformanceAlertRepository(store.Pool(), log)
+
+	// Initialize cache service
+	cacheService := service.NewInMemoryCacheService(104857600) // 100MB
+
+	// Initialize performance monitor
+	performanceMonitor := service.NewPerformanceMonitorService(queryMetricsRepo, performanceAlertRepo, cacheService, log)
+
+	// Initialize rate limiter
+	rateLimiterService := service.NewInMemoryRateLimiter(rateLimitRepo, log)
+
+	// Initialize performance handlers
+	performanceHandlers := api.NewPerformanceHandlers(queryMetricsRepo, performanceAlertRepo, rateLimitRepo, performanceMonitor, log)
+
+	// Initialize PHASE 3D - Security Hardening & Defense services
+	threatRepo := postgres.NewSecurityThreatRepository(store.Pool(), log)
+	ipRepRepo := postgres.NewIPReputationRepository(store.Pool(), log)
+	policyRepo := postgres.NewSecurityPolicyRepository(store.Pool(), log)
+
+	threatDetector := service.NewThreatDetectionService(threatRepo, ipRepRepo, log)
+	anomalyDetector := service.NewAnomalyDetectionService(log)
+
+	// Initialize security handlers
+	securityHandlers := api.NewSecurityHandlers(threatRepo, policyRepo, threatDetector, anomalyDetector, log)
+
 	router := api.NewRouter(api.Deps{
 		Version: version,
 		Handlers: &api.Handlers{
@@ -473,6 +561,50 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Audit:       store.Audit(),
 		IPGuard:     ipGuard,
 		PanelSettings: &api.PanelSettingsHandlers{Svc: panelSettingsSvc},
+		AuditService: nil, // Disabled pending port implementation
+		SessionService: nil, // Disabled pending pgxpool integration
+		MetricsService: metricsService,
+		HealthService: healthService,
+		LoggerService: loggerService,
+		TraceService: traceService,
+		PrometheusExporter: prometheusExporter,
+		// PHASE 3A - Security components
+		TOTPRepository: totpRepo,
+		MFARepository: mfaRepo,
+		PasswordPolicyRepository: passwordPolicyRepo,
+		IPAccessRuleRepository: ipAccessRuleRepo,
+		LoginAttemptRepository: loginAttemptRepo,
+		TOTPService: totpService,
+		PasswordPolicyService: passwordPolicyService,
+		IPValidatorService: ipValidatorService,
+		MFAHandlers: mfaHandlers,
+		PasswordHandlers: passwordHandlers,
+		IPControlHandlers: ipControlHandlers,
+		MFAMiddleware: mfaMiddleware,
+		IPValidationMiddleware: ipValidationMiddleware,
+		// PHASE 3C - Audit & Compliance components
+		AuditEventRepository: auditEventRepo,
+		ComplianceEventRepository: complianceEventRepo,
+		AuditReportRepository: auditReportRepo,
+		AuditPolicyRepository: auditPolicyRepo,
+		AuditArchiveRepository: auditArchiveRepo,
+		ReportGeneratorService: reportGeneratorService,
+		ComplianceCheckerService: complianceCheckerService,
+		AuditEventHandlers: auditEventHandlers,
+		ComplianceHandlers: complianceHandlers,
+		ReportHandlers: reportHandlers,
+		// PHASE 3B - Performance Optimization components
+		QueryMetricsRepository: queryMetricsRepo,
+		RateLimitRepository: rateLimitRepo,
+		PerformanceAlertRepository: performanceAlertRepo,
+		CacheService: cacheService,
+		PerformanceMonitor: performanceMonitor,
+		RateLimiterService: rateLimiterService,
+		PerformanceHandlers: performanceHandlers,
+		// PHASE 3D - Security Hardening & Defense components
+		ThreatDetector: threatDetector,
+		AnomalyDetector: anomalyDetector,
+		SecurityHardeningHandlers: securityHandlers,
 	})
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: router, ReadHeaderTimeout: 10 * time.Second}

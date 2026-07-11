@@ -107,10 +107,12 @@ func (e *Enforcer) publishStatus(u *domain.User) {
 func (e *Enforcer) deprovision(ctx context.Context, u *domain.User) {
 	inbounds, err := e.repo.InboundsFor(ctx, u.ID)
 	if err != nil {
-		e.log.Warn("enforce: inbounds lookup failed", "user", u.ID, "err", err)
+		e.log.Error("enforce: inbounds lookup failed during deprovision", "user", u.ID, "err", err)
 		return
 	}
 	for _, in := range inbounds {
-		_ = e.nodes.RemoveUser(ctx, in.NodeID, in.Tag, u.ID)
+		if err := e.nodes.RemoveUser(ctx, in.NodeID, in.Tag, u.ID); err != nil {
+			e.log.Error("enforce: failed to remove user from node", "user", u.ID, "node", in.NodeID, "err", err)
+		}
 	}
 }

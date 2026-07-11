@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -8,47 +9,107 @@ import (
 
 	"github.com/vortexui/vortexui/internal/auth"
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/panel/port"
 	"github.com/vortexui/vortexui/internal/panel/service"
+	"github.com/vortexui/vortexui/internal/platform/postgres"
 )
 
 // Deps are the dependencies needed to build the HTTP API.
 type Deps struct {
-	Version    string // panel build version, threaded to Handlers for GET /api/version
-	Handlers   *Handlers
-	APITokens  *APITokenHandlers
-	Portal     *PortalHandlers
-	Reality    *RealityHandlers
-	CleanIP    *CleanIPHandlers
-	SubHosts   *SubHostHandlers
-	RoutingPacks *RoutingPackHandlers
-	Quota      *QuotaHandlers
-	Relay      *RelayHandlers
-	Decoy      *DecoyHandlers
-	Analytics  *AnalyticsHandlers
-	Migration  *MigrationHandlers
-	Probing    *ProbingHandlers
-	Family     *FamilyHandlers
-	Referral   *ReferralHandlers
-	DoH        *DoHHandlers
-	SNI        *SNIHandlers
-	TLSTricks  *TLSTricksHandlers
-	Fingerprint *FingerprintHandlers
-	Federation *FederationHandlers
-	DeepLink   *DeepLinkHandlers
-	QuotaNotify *QuotaNotifyHandlers
-	AdminQuotaNotify *AdminQuotaNotifyHandlers
-	IPLimit    *IPLimitHandlers
-	SubSettings *SubSettingsHandlers
-	Monitor    *MonitorHandlers
-	WalletBilling *WalletBillingHandlers
-	PaymentConfig *PaymentConfigHandlers
-	Issuer     *auth.Issuer
-	PanelAuth  Authenticator
-	Auth       *service.AuthService
-	Limiter    RateLimiter   // nil disables login rate limiting
-	Audit      AuditRecorder // nil disables audit logging
-	IPGuard    *IPGuard      // nil disables IP access control
-	PanelSettings *PanelSettingsHandlers
+	Version            string // panel build version, threaded to Handlers for GET /api/version
+	Handlers           *Handlers
+	APITokens          *APITokenHandlers
+	Portal             *PortalHandlers
+	Reality            *RealityHandlers
+	CleanIP            *CleanIPHandlers
+	SubHosts           *SubHostHandlers
+	RoutingPacks       *RoutingPackHandlers
+	Quota              *QuotaHandlers
+	Relay              *RelayHandlers
+	Decoy              *DecoyHandlers
+	Analytics          *AnalyticsHandlers
+	Migration          *MigrationHandlers
+	Probing            *ProbingHandlers
+	Family             *FamilyHandlers
+	Referral           *ReferralHandlers
+	DoH                *DoHHandlers
+	SNI                *SNIHandlers
+	TLSTricks          *TLSTricksHandlers
+	Fingerprint        *FingerprintHandlers
+	Federation         *FederationHandlers
+	DeepLink           *DeepLinkHandlers
+	QuotaNotify        *QuotaNotifyHandlers
+	AdminQuotaNotify   *AdminQuotaNotifyHandlers
+	IPLimit            *IPLimitHandlers
+	SubSettings        *SubSettingsHandlers
+	Monitor            *MonitorHandlers
+	WalletBilling      *WalletBillingHandlers
+	PaymentConfig      *PaymentConfigHandlers
+	Issuer             *auth.Issuer
+	PanelAuth          Authenticator
+	Auth               *service.AuthService
+	Limiter            RateLimiter   // nil disables login rate limiting
+	Audit              AuditRecorder // nil disables audit logging
+	IPGuard            *IPGuard      // nil disables IP access control
+	PanelSettings      *PanelSettingsHandlers
+	AuditService       *service.AuditService            // for advanced audit operations
+	SessionService     *service.SessionService          // for session management
+	MetricsService     *service.MetricsCollectorService // for metrics collection
+	HealthService      *service.HealthCheckService      // for health checks
+	LoggerService      *service.StructuredLoggerService // for structured logging
+	TraceService       *service.TraceManagerService     // for distributed tracing
+	PrometheusExporter *service.PrometheusExporter      // for Prometheus export
+
+	// PHASE 3A - Authentication & Hardening (Security)
+	TOTPRepository           *postgres.TOTPRepository
+	MFARepository            *postgres.MFARepository
+	PasswordPolicyRepository *postgres.PasswordPolicyRepository
+	IPAccessRuleRepository   *postgres.IPAccessRuleRepository
+	LoginAttemptRepository   *postgres.LoginAttemptRepository
+
+	TOTPService           *service.TOTPService
+	PasswordPolicyService *service.PasswordPolicyService
+	IPValidatorService    *service.IPValidatorService
+
+	MFAHandlers       *MFAHandlers
+	PasswordHandlers  *PasswordHandlers
+	IPControlHandlers *IPControlHandlers
+
+	MFAMiddleware          *MFAMiddleware
+	IPValidationMiddleware *IPValidationMiddleware
+
+	// PHASE 3C - Audit & Compliance
+	AuditEventRepository      *postgres.AuditEventRepository
+	ComplianceEventRepository *postgres.ComplianceEventRepository
+	AuditReportRepository     *postgres.AuditReportRepository
+	AuditPolicyRepository     *postgres.AuditPolicyRepository
+	AuditArchiveRepository    *postgres.AuditArchiveRepository
+
+	ReportGeneratorService   port.ReportGenerator
+	ComplianceCheckerService port.ComplianceChecker
+
+	AuditEventHandlers *AuditEventHandlers
+	ComplianceHandlers *ComplianceHandlers
+	ReportHandlers     *ReportHandlers
+
+	// PHASE 3B - Performance Optimization
+	QueryMetricsRepository     port.QueryMetricsRepository
+	RateLimitRepository        port.RateLimitRepository
+	PerformanceAlertRepository port.PerformanceAlertRepository
+
+	CacheService       port.CacheService
+	PerformanceMonitor port.PerformanceMonitor
+	RateLimiterService port.RateLimiter
+
+	PerformanceHandlers *PerformanceHandlers
+
+	// PHASE 3D - Security Hardening & Defense
+	SecurityThreatRepository port.SecurityThreatRepository
+	SecurityPolicyRepository port.SecurityPolicyRepository
+	ThreatDetector           port.ThreatDetector
+	AnomalyDetector          port.AnomalyDetector
+
+	SecurityHardeningHandlers *SecurityHandlers
 }
 
 // NewRouter builds the Echo instance with all routes and middleware mounted.
@@ -70,7 +131,15 @@ func NewRouter(d Deps) *echo.Echo {
 	}
 
 	api := e.Group("/api")
-	api.GET("/health", func(c echo.Context) error { return c.JSON(200, echo.Map{"status": "ok"}) }) // Throttle login by client IP to blunt credential brute-forcing.
+	api.GET("/health", func(c echo.Context) error { return c.JSON(200, echo.Map{"status": "ok"}) })
+	api.GET("/version", d.Handlers.GetVersion) // Panel build version (public, no auth needed)
+
+	// Prometheus metrics endpoint (unauthenticated for scraper access)
+	if d.PrometheusExporter != nil {
+		prometheusHandlers := NewPrometheusHandlers(d.PrometheusExporter)
+		api.GET("/metrics", prometheusHandlers.GetMetrics)
+		e.GET("/metrics", prometheusHandlers.GetMetrics) // Also available at root for compatibility
+	}
 	api.POST("/login", d.Handlers.Login, RateLimit(d.Limiter, 10, time.Minute, func(c echo.Context) string {
 		return "login:" + c.RealIP()
 	}))
@@ -85,6 +154,26 @@ func NewRouter(d Deps) *echo.Echo {
 	// Authenticated subtree. The audit middleware records every mutating request.
 	authed := api.Group("", RequireAuth(d.PanelAuth), RequireActiveAdmin(d.Handlers.Admins), Audit(d.Audit))
 
+	// Wire advanced audit middleware if available
+	if d.AuditService != nil {
+		authed.Use(AuditMiddleware(d.AuditService, slog.Default()))
+	}
+
+	// Wire session management middleware if available
+	if d.SessionService != nil {
+		authed.Use(SessionMiddleware(d.SessionService))
+	}
+
+	// Wire metrics collection middleware if available
+	if d.MetricsService != nil {
+		authed.Use(MetricsMiddleware(d.MetricsService))
+	}
+
+	// Wire trace middleware if available
+	if d.TraceService != nil {
+		authed.Use(TraceMiddleware(d.TraceService, slog.Default()))
+	}
+
 	// Dashboard overview: user aggregates + node fleet health.
 	authed.GET("/overview", d.Handlers.GetOverview, RequirePermission(d.Auth, domain.PermSystemRead))
 	authed.GET("/traffic/series", d.Handlers.GetTrafficSeries, RequirePermission(d.Auth, domain.PermSystemRead))
@@ -95,8 +184,6 @@ func NewRouter(d Deps) *echo.Echo {
 	authed.GET("/logs", d.Handlers.GetLogs, RequirePermission(d.Auth, domain.PermSystemRead))
 	// Live system info (process/memory).
 	authed.GET("/system", d.Handlers.GetSystem, RequirePermission(d.Auth, domain.PermSystemRead))
-	// Panel build version (for the UI footer).
-	authed.GET("/version", d.Handlers.GetVersion, RequirePermission(d.Auth, domain.PermSystemRead))
 
 	// Panel-wide settings (persisted in DB).
 	if d.PanelSettings != nil {
@@ -237,6 +324,33 @@ func NewRouter(d Deps) *echo.Echo {
 	tokens.GET("", d.APITokens.ListAPITokens)
 	tokens.POST("", d.APITokens.CreateAPIToken)
 	tokens.DELETE("/:id", d.APITokens.DeleteAPIToken)
+
+	// PHASE 3A - Security & Authentication Routes (MFA, Password, IP Access Control)
+	if d.MFAHandlers != nil && d.MFAMiddleware != nil {
+		mfa := authed.Group("/mfa", d.MFAMiddleware.ValidateMFAIfEnabled())
+		mfa.POST("/setup", d.MFAHandlers.SetupTOTP)
+		mfa.POST("/verify", d.MFAHandlers.VerifyTOTP)
+		mfa.POST("/backup-codes", d.MFAHandlers.GenerateBackupCodes)
+		mfa.POST("/disable", d.MFAHandlers.DisableMFA)
+		mfa.GET("/status", d.MFAHandlers.GetMFAStatus)
+	}
+
+	if d.PasswordHandlers != nil {
+		pwd := authed.Group("/account/password")
+		pwd.POST("/change", d.PasswordHandlers.ChangePassword)
+		pwd.GET("/policy", d.PasswordHandlers.GetPasswordPolicy)
+		pwd.PUT("/policy", d.PasswordHandlers.UpdatePasswordPolicy, RequirePermission(d.Auth, domain.PermAdminManage))
+		pwd.GET("/status", d.PasswordHandlers.GetPasswordStatus)
+	}
+
+	if d.IPControlHandlers != nil {
+		ipRules := authed.Group("/ip-rules", d.IPValidationMiddleware.ValidateClientIP())
+		ipRules.POST("", d.IPControlHandlers.CreateRule)
+		ipRules.GET("", d.IPControlHandlers.ListRules)
+		ipRules.PUT("/:id", d.IPControlHandlers.UpdateRule)
+		ipRules.DELETE("/:id", d.IPControlHandlers.DeleteRule)
+		ipRules.GET("/global", d.IPControlHandlers.GetGlobalRules, RequirePermission(d.Auth, domain.PermAdminManage))
+	}
 
 	// Plans + Orders (admin)
 	plans := authed.Group("/plans")
@@ -467,6 +581,90 @@ func NewRouter(d Deps) *echo.Echo {
 	iplimit.GET("/policy", d.IPLimit.GetPolicy)
 	iplimit.PUT("/policy", d.IPLimit.UpdatePolicy)
 	iplimit.GET("/events", d.IPLimit.ListEvents)
+
+	// --- Observability & Monitoring (PHASE 2) ---
+	if d.MetricsService != nil {
+		metricsHandlers := NewMetricsHandlers(d.MetricsService)
+		authed.GET("/observability/metrics", metricsHandlers.GetMetrics, RequirePermission(d.Auth, domain.PermSystemRead))
+	}
+
+	if d.HealthService != nil {
+		healthHandlers := NewHealthHandlers(d.HealthService)
+		authed.GET("/health/check", healthHandlers.GetHealth, RequirePermission(d.Auth, domain.PermSystemRead))
+		authed.GET("/health/component/:component", healthHandlers.GetHealthComponent, RequirePermission(d.Auth, domain.PermSystemRead))
+		// Allow unauthenticated liveness check for Kubernetes probes
+		api.GET("/health/live", healthHandlers.GetHealth)
+		api.GET("/health/ready", healthHandlers.GetHealth)
+	}
+
+	if d.LoggerService != nil {
+		logHandlers := NewLogHandlers(d.LoggerService)
+		authed.GET("/observability/logs", logHandlers.GetLogs, RequirePermission(d.Auth, domain.PermSystemRead))
+	}
+
+	if d.TraceService != nil {
+		traceHandlers := NewTraceHandlers(d.TraceService)
+		authed.GET("/observability/trace", traceHandlers.GetTraceContext, RequirePermission(d.Auth, domain.PermSystemRead))
+	}
+
+	// --- PHASE 3C: Audit & Compliance ---
+	if d.AuditEventHandlers != nil {
+		auditEvents := authed.Group("/audit/events", RequirePermission(d.Auth, domain.PermSystemRead))
+		auditEvents.GET("", d.AuditEventHandlers.ListEvents)
+		auditEvents.GET("/:id", d.AuditEventHandlers.GetEvent)
+		auditEvents.GET("/admin/:admin_id", d.AuditEventHandlers.GetEventsByAdmin)
+		auditEvents.GET("/search", d.AuditEventHandlers.SearchEvents)
+		auditEvents.GET("/count", d.AuditEventHandlers.GetEventCount)
+		auditEvents.DELETE("/old", d.AuditEventHandlers.DeleteOldEvents, RequirePermission(d.Auth, domain.PermAdminManage))
+	}
+
+	if d.ComplianceHandlers != nil {
+		compliance := authed.Group("/compliance", RequirePermission(d.Auth, domain.PermSystemRead))
+		compliance.GET("/status", d.ComplianceHandlers.GetComplianceStatus)
+		compliance.GET("/framework/:framework", d.ComplianceHandlers.CheckFramework)
+		compliance.GET("/events", d.ComplianceHandlers.ListComplianceEvents)
+		compliance.GET("/events/:id", d.ComplianceHandlers.GetComplianceEvent)
+		compliance.GET("/non-compliant", d.ComplianceHandlers.GetNonCompliantItems)
+		compliance.PUT("/events/:id/verify", d.ComplianceHandlers.VerifyComplianceEvent, RequirePermission(d.Auth, domain.PermAdminManage))
+		compliance.GET("/certificate/:framework", d.ComplianceHandlers.GenerateComplianceCertificate)
+	}
+
+	if d.ReportHandlers != nil {
+		reports := authed.Group("/reports", RequirePermission(d.Auth, domain.PermSystemRead))
+		reports.POST("/daily", d.ReportHandlers.GenerateDailyReport)
+		reports.POST("/custom", d.ReportHandlers.GenerateCustomReport)
+		reports.POST("/compliance", d.ReportHandlers.GenerateComplianceReport)
+		reports.GET("", d.ReportHandlers.ListReports)
+		reports.GET("/:id", d.ReportHandlers.GetReport)
+		reports.PUT("/:id/approve", d.ReportHandlers.ApproveReport, RequirePermission(d.Auth, domain.PermAdminManage))
+		reports.GET("/:id/export", d.ReportHandlers.ExportReport)
+		reports.DELETE("/:id", d.ReportHandlers.DeleteReport, RequirePermission(d.Auth, domain.PermAdminManage))
+	}
+
+	// Routes for PHASE 3B: Performance Optimization
+	if d.PerformanceHandlers != nil {
+		perf := api.Group("/performance", RequirePermission(d.Auth, domain.PermSystemRead))
+		perf.GET("/health", d.PerformanceHandlers.GetHealthStatus)
+		perf.GET("/queries/slow", d.PerformanceHandlers.GetSlowQueries)
+		perf.GET("/queries/stats", d.PerformanceHandlers.GetQueryStats)
+		perf.GET("/alerts", d.PerformanceHandlers.GetPerformanceAlerts)
+		perf.PUT("/alerts/:id/resolve", d.PerformanceHandlers.ResolveAlert, RequirePermission(d.Auth, domain.PermAdminManage))
+		perf.GET("/report", d.PerformanceHandlers.GetPerformanceReport)
+		perf.GET("/rate-limits/rules", d.PerformanceHandlers.ListRateLimitRules)
+		perf.GET("/rate-limits/violations", d.PerformanceHandlers.GetRateLimitViolations)
+	}
+
+	// Routes for PHASE 3D: Security Hardening & Defense
+	if d.SecurityHardeningHandlers != nil {
+		sec := api.Group("/security", RequirePermission(d.Auth, domain.PermSystemRead))
+		sec.GET("/threats", d.SecurityHardeningHandlers.GetSecurityThreats)
+		sec.GET("/threats/blocked", d.SecurityHardeningHandlers.GetBlockedThreats)
+		sec.GET("/threats/count", d.SecurityHardeningHandlers.GetThreatCount)
+		sec.GET("/policy", d.SecurityHardeningHandlers.GetSecurityPolicy)
+		sec.PUT("/policy", d.SecurityHardeningHandlers.UpdateSecurityPolicy, RequirePermission(d.Auth, domain.PermAdminManage))
+		sec.GET("/score", d.SecurityHardeningHandlers.GetSecurityScore)
+		sec.GET("/compliance/validate", d.SecurityHardeningHandlers.ValidateCompliance)
+	}
 
 	return e
 }
