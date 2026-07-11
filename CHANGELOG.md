@@ -6,6 +6,43 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-07-11
+
+PHASE 3 Frontend release: Performance monitoring, Security hardening, Compliance dashboard, and Overview UI enhancements.
+
+### Added
+- **Performance Monitoring Dashboard** — `/performance` with real-time cache stats, query metrics, slow query tracking, and performance alerts.
+- **Security Hardening Dashboard** — `/security` with security threat monitoring, compliance status, active security policies, and threat statistics.
+- **Compliance Dashboard** — `/compliance` with system compliance checklist, compliance status tracking, security policy enforcement, and recommendations.
+- **Enhanced Inbounds Management** — `/inbounds` improved with search/filter, statistics cards (total/active/protocols), protocol distribution visualization, and expanded details with copy-to-clipboard.
+- **Monitoring & Compliance navigation** — new section in sidebar with Performance, Security, and Compliance pages; i18n support for 8 languages.
+- **Performance health hooks** — React Query integration with `/api/performance/health`, `/api/performance/queries/slow`, `/api/performance/queries/stats` endpoints.
+- **Security threat hooks** — endpoints for threat monitoring, blocked threats, security scores, compliance validation, and IP reputation.
+
+### Changed
+- **Overview page** — professional UI enhancements with gradient backgrounds, better charts, improved node fleet telemetry cards, and user pool display.
+- **Traffic Series Chart** — gradient styling, enhanced header, and summary stats cards (Upload/Download/Peak metrics).
+- **Protocol Donut Chart** — better visual hierarchy and professional appearance.
+- **Node Fleet cards** — gradient backgrounds, icon badges, enhanced load bars with color coding (green/amber/red), CPU/RAM breakdown display.
+- **User Pool cards** — gradient avatars, usage progress bars with conditional coloring, usage percentage indicators, smooth hover animations.
+- **Frontend routing** — lazy-loaded PHASE 3 pages with `/performance`, `/security`, `/compliance` routes.
+- **API hooks structure** — security-hooks.ts with 15+ React Query hooks for Performance Optimization (3B) and Security Hardening (3D) endpoints.
+
+### Fixed
+- **TypeScript compilation** — resolved 18+ type mismatches in new pages matching actual API response types from security-hooks exports.
+- **InboundsEnhanced** — proper type handling for InboundFleetRow properties with enabled status tracking.
+- **Performance page** — corrected property names: `cache_hit_rate`→`cache.hit_rate`, `active_connections`→`connections_active`, `slow_queries_1h`→`slow_queries_last_hour`.
+- **SecurityHardening page** — resolved undefined icon and component references; integrated useComplianceValidation hook.
+- **Compliance page** — type conversion corrections and integration with useComplianceValidation hook.
+
+### Technical Details
+- **PHASE 3 backend** — fully compiled with exit code 0 (Authentication, Performance Optimization, Audit & Compliance, Security Hardening).
+- **Frontend build** — 2157 modules transformed, production bundle generated without errors.
+- **Lines added** — ~1,170 lines of React/TypeScript across 4 new pages + routing/navigation integration.
+- **Deployment** — master branch, all TypeScript checks pass, npm run build successful.
+
+**Release by ali**
+
 ## [1.3.1] - 2026-07-08
 
 Patch release: persisted settings polish, portal dashboard v2, live connection stats, and UI fixes.
