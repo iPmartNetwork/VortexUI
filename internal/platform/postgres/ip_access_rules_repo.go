@@ -94,14 +94,15 @@ func (r *IPAccessRuleRepository) ListRules(ctx context.Context, adminID *uuid.UU
 	if adminID != nil {
 		query += fmt.Sprintf(" AND admin_id = $%d", argIdx)
 		args = append(args, *adminID)
-		argIdx++
+		argIdx++ //nolint:ineffassign
 	}
 
 	if ruleType != nil {
 		query += fmt.Sprintf(" AND rule_type = $%d", argIdx)
 		args = append(args, *ruleType)
-		argIdx++
+		argIdx++ //nolint:ineffassign
 	}
+	_ = argIdx
 
 	query += " ORDER BY created_at DESC"
 

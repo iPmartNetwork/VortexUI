@@ -197,7 +197,7 @@ func (r *LoginAttemptRepository) StartCleanupWorker(ctx context.Context, interva
 				r.log.Info("login attempt cleanup worker stopped")
 				return
 			case <-ticker.C:
-				deleted, err := r.ClearAttempts(context.Background(), 24)
+				deleted, err := r.ClearAttempts(ctx, 24)
 				if err != nil {
 					r.log.Error("cleanup worker error", "error", err)
 				} else {

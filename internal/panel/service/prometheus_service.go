@@ -104,7 +104,7 @@ func (p *PrometheusExporter) Export() string {
 	}
 
 	// Write timestamp
-	buf.WriteString(fmt.Sprintf("\n# Exported at %s\n", time.Now().UTC().Format(time.RFC3339)))
+	fmt.Fprintf(&buf, "\n# Exported at %s\n", time.Now().UTC().Format(time.RFC3339))
 
 	return buf.String()
 }
