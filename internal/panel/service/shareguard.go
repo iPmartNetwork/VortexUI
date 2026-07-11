@@ -172,10 +172,17 @@ func (g *ShareGuard) handleViolation(ctx context.Context, u *domain.User, ipCoun
 // runs whenever IP-limit enforcement is disabled, so detection-only behavior is
 // preserved with no regression.
 func (g *ShareGuard) handleViolationLegacy(ctx context.Context, u *domain.User, ipCount int, now time.Time) {
-	if last, ok := g.alerted[u.ID]; ok && now.Sub(last) < g.cooldown {
+	g.mu.Lock()
+	last, ok := g.alerted[u.ID]
+	g.mu.Unlock()
+	
+	if ok && now.Sub(last) < g.cooldown {
 		return
 	}
+	
+	g.mu.Lock()
 	g.alerted[u.ID] = now
+	g.mu.Unlock()
 	g.log.Info("account sharing detected", "user", u.Username, "online_ips", ipCount, "device_limit", u.DeviceLimit, "auto_limit", g.autoLimit)
 	g.pub.Publish(events.Event{
 		Type:     events.UserIPLimit,
@@ -211,10 +218,18 @@ func (g *ShareGuard) handleViolationEnforced(ctx context.Context, u *domain.User
 	if pol.AlertCooldown > 0 {
 		cooldown = time.Duration(pol.AlertCooldown) * time.Second
 	}
-	if last, ok := g.alerted[u.ID]; ok && now.Sub(last) < cooldown {
+	
+	g.mu.Lock()
+	last, ok := g.alerted[u.ID]
+	g.mu.Unlock()
+	
+	if ok && now.Sub(last) < cooldown {
 		return
 	}
+	
+	g.mu.Lock()
 	g.alerted[u.ID] = now
+	g.mu.Unlock()
 
 	effective := string(pol.Action)
 	switch pol.Action {

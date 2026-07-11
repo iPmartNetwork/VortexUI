@@ -109,6 +109,9 @@ const en = {
   "nav.doh": "DNS-over-HTTPS",
   "nav.deepLinks": "Deep Links",
   "nav.familyGroups": "Family Groups",
+  "nav.performance": "Performance",
+  "nav.security": "Security Threats",
+  "nav.compliance": "Compliance",
 
   "nav.section.reseller": "Reseller",
   "reseller.dashboard.title": "Reseller dashboard",
@@ -456,6 +459,7 @@ const en = {
   "nav.section.network": "Network & Nodes",
   "nav.section.security": "Security",
   "nav.section.system": "System",
+  "nav.section.monitoring": "Monitoring & Compliance",
 
   "monitor.title": "Live Monitor",
   "monitor.subtitle": "Real-time view of every active proxy connection across your fleet, refreshing every few seconds.",

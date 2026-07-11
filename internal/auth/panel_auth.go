@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
@@ -33,7 +34,10 @@ func (a *PanelAuth) Verify(ctx context.Context, token string) (*Claims, error) {
 		if err != nil {
 			return nil, ErrInvalidToken
 		}
-		_ = a.Tokens.Touch(ctx, tokenID)
+		if err := a.Tokens.Touch(ctx, tokenID); err != nil {
+			// Log but don't fail auth - token is still valid, just update failed
+			slog.Default().Debug("failed to update token timestamp", "err", err)
+		}
 		return &Claims{AdminID: adminID, Sudo: sudo, RoleID: roleID}, nil
 	}
 	return a.JWT.Verify(token)

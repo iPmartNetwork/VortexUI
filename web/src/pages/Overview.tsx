@@ -295,32 +295,33 @@ export function Overview() {
       {/* ── Traffic chart + Protocol donut ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Traffic chart — 2/3 width */}
-        <GlassCard className="xl:col-span-2 space-y-2.5 !p-3.5">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">
-            <div>
-              <h3 className="text-[13px] font-bold text-fg flex items-center gap-1.5">
+        <GlassCard className="xl:col-span-2 space-y-3 !p-4 border border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-transparent">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-3">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-fg flex items-center gap-2">
+                <TrendingUp size={16} className="text-primary" />
                 {t("overview.liveTrafficStream")}
-                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-success">
+                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-green-500/20 to-green-600/20 px-2 py-0.5 text-[7px] font-black uppercase tracking-wider text-green-400 border border-green-500/30">
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
                   </span>
-                  Live
+                  LIVE
                 </span>
               </h3>
-              <p className="text-[9px] text-fg-subtle mt-0.5">{t("overview.trafficDeltaHint")}</p>
+              <p className="text-[10px] text-fg-muted/70">{t("overview.trafficDeltaHint")}</p>
             </div>
-            <div className="flex items-center gap-0.5 rounded-lg bg-surface-2/60 p-0.5">
+            <div className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-surface-2/80 to-surface-3/50 p-1 border border-border/40">
               {(["24h", "7d", "30d"] as TrafficRange[]).map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setTrafficRange(r)}
                   className={cn(
-                    "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase transition-all",
+                    "px-2.5 py-1 rounded-md text-[9px] font-bold uppercase transition-all duration-300",
                     trafficRange === r
-                      ? "bg-bg-elevated text-primary shadow-sm"
-                      : "text-fg-muted hover:text-fg",
+                      ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/40 scale-105"
+                      : "text-fg-muted hover:text-fg hover:bg-surface-2/60",
                   )}
                 >
                   {r}
@@ -329,24 +330,42 @@ export function Overview() {
             </div>
           </div>
           {trafficSeries.isLoading ? (
-            <div className="h-44 animate-pulse rounded-xl bg-surface-2/50" />
+            <div className="h-48 animate-pulse rounded-xl bg-gradient-to-br from-surface-2/50 to-surface-3/30" />
           ) : (
-            <TrafficSeriesChart points={trafficSeries.data?.points ?? []} />
+            <div className="relative">
+              <TrafficSeriesChart points={trafficSeries.data?.points ?? []} />
+              <div className="absolute inset-0 pointer-events-none rounded-lg bg-gradient-to-t from-primary/[0.02] to-transparent opacity-0 hover:opacity-100 transition-opacity" />
+            </div>
+          )}
+          {/* Summary stats */}
+          {trafficPoints.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/30">
+              <div className="p-2.5 rounded-lg bg-blue-500/8 border border-blue-500/20">
+                <p className="text-[9px] text-fg-muted/70 font-semibold uppercase">Upload</p>
+                <p className="text-sm font-bold text-blue-400 mt-0.5">{formatBytes(trafficPoints.reduce((s, p) => s + p.up, 0), false)}</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-cyan-500/8 border border-cyan-500/20">
+                <p className="text-[9px] text-fg-muted/70 font-semibold uppercase">Download</p>
+                <p className="text-sm font-bold text-cyan-400 mt-0.5">{formatBytes(trafficPoints.reduce((s, p) => s + p.down, 0), false)}</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-purple-500/8 border border-purple-500/20">
+                <p className="text-[9px] text-fg-muted/70 font-semibold uppercase">Peak/min</p>
+                <p className="text-sm font-bold text-purple-400 mt-0.5">{formatBytes(peakBucket, false)}</p>
+              </div>
+            </div>
           )}
         </GlassCard>
 
-        {/* Protocol breakdown — 1/3 width. Matches the traffic card's full
-            height (grid stretch); content is vertically centered so it
-            doesn't look glued to the top with dead space pooling below. */}
-        <GlassCard className="flex flex-col !p-4">
-          <div className="border-b border-border/60 pb-2.5">
-            <h3 className="text-[13px] font-bold text-fg flex items-center gap-1.5">
-              <Shield size={13} className="text-primary" />
+        {/* Protocol breakdown — 1/3 width */}
+        <GlassCard className="flex flex-col !p-5 border border-accent/20 bg-gradient-to-br from-accent/5 via-transparent to-transparent">
+          <div className="border-b border-border/40 pb-3 mb-3">
+            <h3 className="text-sm font-bold text-fg flex items-center gap-2">
+              <Shield size={16} className="text-accent" />
               {t("overview.protocolBreakdown")}
             </h3>
-            <p className="text-[9px] text-fg-subtle mt-0.5">Active connections by transport type</p>
+            <p className="text-[10px] text-fg-muted/70 mt-1">Active connections by transport</p>
           </div>
-          <div className="flex-1 flex pt-2.5">
+          <div className="flex-1 flex pt-2">
             <ProtocolDonutChart
               slices={protocolSlices}
               centerValue={totalConnections || byStatus.active || 0}
@@ -360,69 +379,79 @@ export function Overview() {
       {/* ── Node Fleet + Active Users ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Node Fleet Telemetry */}
-        <GlassCard className="space-y-4">
-          <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        <GlassCard className="space-y-4 border border-success/20 bg-gradient-to-br from-success/5 via-transparent to-transparent">
+          <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div>
               <h3 className="text-base font-bold text-fg flex items-center gap-2">
-                <Server size={17} className="text-success" />
+                <div className="p-2 rounded-lg bg-success/15 border border-success/30">
+                  <Server size={16} className="text-success" />
+                </div>
                 {t("overview.nodeFleetTelemetry")}
               </h3>
-              <p className="text-[11px] text-fg-subtle mt-0.5">Live health monitoring &amp; load ratios</p>
+              <p className="text-[11px] text-fg-muted/70 mt-1">Real-time health · CPU / RAM · connections</p>
             </div>
-            <Link to="/nodes" className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
-              View Fleet <ArrowUpRight size={13} />
+            <Link to="/nodes" className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition hover:gap-2">
+              View <ArrowUpRight size={13} />
             </Link>
           </div>
 
           {overviewLoading ? (
-            <div className="h-36 animate-pulse rounded-xl bg-surface-2/50" />
+            <div className="h-40 animate-pulse rounded-xl bg-gradient-to-br from-surface-2/50 to-surface-3/30" />
           ) : nodeFleet.length === 0 ? (
             <p className="text-sm text-fg-muted py-8 text-center">{t("overview.noNodesEnrolled")}</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {nodeFleet.map((node) => {
                 const load = Math.max(node.cpu_percent ?? 0, node.mem_percent ?? 0);
-                const loadColor = load > 75 ? "bg-danger" : load > 50 ? "bg-warning" : "bg-success";
-                const loadText = load > 75 ? "text-danger" : load > 50 ? "text-warning" : "text-success";
+                const loadColor = load > 75 ? "bg-red-500" : load > 50 ? "bg-amber-400" : "bg-green-500";
+                const loadBgColor = load > 75 ? "bg-red-500/20" : load > 50 ? "bg-amber-400/20" : "bg-green-500/20";
+                const loadText = load > 75 ? "text-red-400" : load > 50 ? "text-amber-300" : "text-green-400";
                 return (
                   <div
                     key={node.id}
-                    className="p-4 rounded-2xl bg-surface-2/50 border border-border/70 hover:border-primary/30 transition-all"
+                    className={cn(
+                      "p-4 rounded-2xl border transition-all duration-300 hover:shadow-lg group",
+                      "bg-gradient-to-r from-surface-2/40 to-surface-3/30",
+                      "border-border/40 hover:border-primary/50"
+                    )}
                   >
                     <div className="flex items-center justify-between gap-3 mb-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-fg truncate">
-                          {node.name}{" "}
-                          <span className="text-fg-subtle font-normal text-xs">
-                            ({node.core === "singbox" ? "sing-box" : "Xray-Core"})
-                          </span>
-                        </p>
-                        <p className="text-[11px] text-fg-subtle mt-0.5 truncate">
-                          {node.location}
-                          {node.ping_ms > 0 && (
-                            <span className="text-fg-muted"> · <span className="text-primary font-semibold">{node.ping_ms}ms</span></span>
-                          )}
-                        </p>
+                      <div className="min-w-0 flex items-center gap-2">
+                        <div className="h-9 w-9 rounded-lg bg-success/20 border border-success/40 flex items-center justify-center flex-shrink-0">
+                          <Wifi size={14} className="text-success" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-fg truncate group-hover:text-primary transition">
+                            {node.name}
+                          </p>
+                          <p className="text-[10px] text-fg-muted truncate">
+                            {node.core === "singbox" ? "sing-box" : "Xray"} · {node.location} {node.ping_ms > 0 && `· ${node.ping_ms}ms`}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-2.5 flex-shrink-0">
                         {node.users_count > 0 && (
-                          <span className="text-[10px] font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                          <span className="text-[9px] font-bold bg-primary/20 text-primary px-2.5 py-1 rounded-full border border-primary/40">
                             {node.users_count} users
                           </span>
                         )}
                         <StatusBadge status={node.status} label={node.status} pulse={node.status === "active"} />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[11px]">
-                        <span className="text-fg-subtle">CPU / RAM</span>
-                        <span className={cn("font-bold", loadText)}>{load.toFixed(0)}%</span>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold text-fg-muted uppercase">CPU / RAM</span>
+                        <span className={cn("text-sm font-bold tabular-nums", loadText)}>{load.toFixed(0)}%</span>
                       </div>
-                      <div className="w-full bg-surface-3 h-1.5 rounded-full overflow-hidden">
+                      <div className="w-full bg-surface-3/40 h-2 rounded-full overflow-hidden border border-border/30">
                         <div
-                          className={cn("h-full rounded-full transition-all duration-700", loadColor)}
+                          className={cn("h-full rounded-full transition-all duration-700 shadow-lg", loadColor, loadBgColor, "shadow-lg")}
                           style={{ width: `${Math.min(100, load)}%` }}
                         />
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[9px] text-fg-muted/60">Load</span>
+                        <span className="text-[9px] font-mono text-fg-muted/70">{node.cpu_percent?.toFixed(0)}% CPU · {node.mem_percent?.toFixed(0)}% RAM</span>
                       </div>
                     </div>
                   </div>
@@ -433,26 +462,28 @@ export function Overview() {
         </GlassCard>
 
         {/* Active Users Pool */}
-        <GlassCard className="space-y-4">
-          <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        <GlassCard className="space-y-4 border border-accent/20 bg-gradient-to-br from-accent/5 via-transparent to-transparent">
+          <div className="flex items-center justify-between border-b border-border/40 pb-3">
             <div>
               <h3 className="text-base font-bold text-fg flex items-center gap-2">
-                <Users size={17} className="text-accent" />
+                <div className="p-2 rounded-lg bg-accent/15 border border-accent/30">
+                  <Users size={16} className="text-accent" />
+                </div>
                 {t("overview.activeUsersPool")}
               </h3>
-              <p className="text-[11px] text-fg-subtle mt-0.5">Real-time data accounting &amp; subscriptions</p>
+              <p className="text-[11px] text-fg-muted/70 mt-1">Real-time usage accounting · subscriptions</p>
             </div>
-            <Link to="/users" className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
-              All Users <ArrowUpRight size={13} />
+            <Link to="/users" className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition hover:gap-2">
+              All <ArrowUpRight size={13} />
             </Link>
           </div>
 
           {overviewLoading ? (
-            <div className="h-36 animate-pulse rounded-xl bg-surface-2/50" />
+            <div className="h-40 animate-pulse rounded-xl bg-gradient-to-br from-surface-2/50 to-surface-3/30" />
           ) : topUsers.length === 0 ? (
             <p className="text-sm text-fg-muted py-8 text-center">{t("overview.noUsersYet")}</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {topUsers.map((user) => {
                 const usedPct =
                   user.data_limit > 0
@@ -461,41 +492,48 @@ export function Overview() {
                 return (
                   <div
                     key={user.id}
-                    className="p-4 rounded-2xl bg-surface-2/50 border border-border/70 hover:border-border-strong transition-all flex items-center justify-between gap-3"
+                    className="p-4 rounded-2xl bg-gradient-to-r from-surface-2/40 to-surface-3/30 border border-border/40 hover:border-accent/50 transition-all duration-300 group cursor-pointer hover:shadow-lg"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-xs flex-shrink-0">
-                        {user.username.slice(0, 2).toUpperCase()}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/30 to-accent/20 flex items-center justify-center text-primary font-black text-xs flex-shrink-0 border border-primary/30 shadow-lg">
+                          {user.username.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-fg truncate group-hover:text-primary transition">{user.username}</p>
+                          <p className="text-[10px] text-fg-muted truncate">
+                            {user.protocol_label || "—"} · Expires in {daysUntil(user.expire_at ?? null)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-fg truncate">{user.username}</p>
-                        <p className="text-[11px] text-fg-muted truncate">
-                          {user.protocol_label || "—"} · exp: {daysUntil(user.expire_at ?? null)}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <div className="text-end">
-                        <p className="text-sm font-bold text-fg tabular-nums">
-                          {formatBytes(user.used_traffic, false)}
-                        </p>
-                        {user.data_limit > 0 && (
-                          <>
-                            <p className="text-[10px] text-fg-subtle tabular-nums">
-                              / {formatBytes(user.data_limit, false)}
-                            </p>
-                            <div className="w-20 bg-surface-3 h-1 rounded-full overflow-hidden mt-1 ms-auto">
-                              <div
-                                className={cn("h-full rounded-full", usedPct > 80 ? "bg-warning" : "bg-primary")}
-                                style={{ width: `${usedPct}%` }}
-                              />
-                            </div>
-                          </>
-                        )}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="text-end">
+                          <p className="text-sm font-bold text-fg tabular-nums">{formatBytes(user.used_traffic, false)}</p>
+                          {user.data_limit > 0 && (
+                            <>
+                              <p className="text-[9px] text-fg-muted/70 tabular-nums">/ {formatBytes(user.data_limit, false)}</p>
+                              <div className="w-20 bg-surface-3/50 h-1.5 rounded-full overflow-hidden mt-1.5 border border-border/40">
+                                <div
+                                  className={cn(
+                                    "h-full rounded-full transition-all duration-500 shadow-sm",
+                                    usedPct > 80 ? "bg-gradient-to-r from-orange-500 to-red-500" : "bg-gradient-to-r from-primary to-accent"
+                                  )}
+                                  style={{ width: `${usedPct}%` }}
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <StatusBadge status={user.status} label={user.status} pulse={user.status === "active"} />
                       </div>
-                      <StatusBadge status={user.status} label={user.status} pulse={user.status === "active"} />
                     </div>
+                    {user.data_limit > 0 && usedPct > 60 && (
+                      <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between">
+                        <span className="text-[9px] font-semibold text-fg-muted/70">Usage</span>
+                        <span className={cn("text-[9px] font-bold", usedPct > 80 ? "text-orange-400" : "text-primary")}>{usedPct.toFixed(0)}% used</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}

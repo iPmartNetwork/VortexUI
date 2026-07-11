@@ -154,8 +154,14 @@ func (s *CleanIPScannerService) Scan(ctx context.Context, ips []string, scanPort
 		return results[i].LatencyMS < results[j].LatencyMS
 	})
 
-	_ = s.repo.DeleteAll(ctx)
-	_ = s.repo.SaveBatch(ctx, results)
+	if err := s.repo.DeleteAll(ctx); err != nil {
+		logger := slog.Default()
+		logger.Error("failed to delete clean IP scan results", "err", err)
+	}
+	if err := s.repo.SaveBatch(ctx, results); err != nil {
+		logger := slog.Default()
+		logger.Error("failed to save clean IP scan results", "err", err)
+	}
 
 	return results, nil
 }

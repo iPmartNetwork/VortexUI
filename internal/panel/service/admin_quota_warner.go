@@ -153,14 +153,16 @@ func (w *AdminQuotaWarner) checkMetric(ctx context.Context, cfg *domain.AdminQuo
 				"telegram":   cfg.NotifyTelegram,
 			},
 		})
-		_ = w.notify.SaveEvent(ctx, &domain.AdminQuotaNotifyEvent{
+		if err := w.notify.SaveEvent(ctx, &domain.AdminQuotaNotifyEvent{
 			ID:        uuid.New(),
 			AdminID:   a.ID,
 			Threshold: th,
 			Metric:    metric,
 			UsagePct:  pct,
 			CreatedAt: now,
-		})
+		}); err != nil {
+			w.log.Error("failed to save quota alert event", "admin", a.Username, "metric", metric, "err", err)
+		}
 		w.log.Info("reseller quota alert", "admin", a.Username, "metric", metric, "pct", pct, "threshold", th)
 	}
 }
