@@ -85,7 +85,7 @@ func TraceMiddleware(traceService *service.TraceManagerService, log *slog.Logger
 					"method": req.Method,
 					"path":   req.URL.Path,
 				})
-				defer spanEnd()
+				defer func() { _ = spanEnd() }()
 			}
 
 			// Inject trace into context using context.WithValue

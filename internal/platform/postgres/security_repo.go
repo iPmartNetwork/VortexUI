@@ -414,7 +414,7 @@ func (r *IncidentResponseRepositoryImpl) GetIncident(ctx context.Context, incide
 	}
 
 	if len(metadataStr) > 0 {
-		json.Unmarshal([]byte(metadataStr), &incident.Metadata)
+		_ = json.Unmarshal([]byte(metadataStr), &incident.Metadata)
 	}
 
 	return incident, nil
@@ -462,7 +462,7 @@ func (r *IncidentResponseRepositoryImpl) ListIncidents(ctx context.Context, stat
 		}
 
 		if len(metadataStr) > 0 {
-			json.Unmarshal([]byte(metadataStr), &incident.Metadata)
+			_ = json.Unmarshal([]byte(metadataStr), &incident.Metadata)
 		}
 
 		incidents = append(incidents, incident)
@@ -537,7 +537,7 @@ func (r *IncidentResponseRepositoryImpl) GetIncidentsByType(ctx context.Context,
 		}
 
 		if len(metadataStr) > 0 {
-			json.Unmarshal([]byte(metadataStr), &incident.Metadata)
+			_ = json.Unmarshal([]byte(metadataStr), &incident.Metadata)
 		}
 
 		incidents = append(incidents, incident)
