@@ -5,7 +5,7 @@
 -- TOTP Secrets table
 CREATE TABLE IF NOT EXISTS totp_secrets (
     id UUID PRIMARY KEY,
-    admin_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    admin_id UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
     secret VARCHAR(100) NOT NULL,
     qr_code TEXT,
     verified BOOLEAN DEFAULT FALSE,
@@ -19,7 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_totp_admin_id ON totp_secrets(admin_id);
 -- MFA Configuration table
 CREATE TABLE IF NOT EXISTS mfa_configs (
     id UUID PRIMARY KEY,
-    admin_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    admin_id UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
     totp_enabled BOOLEAN DEFAULT FALSE,
     email_enabled BOOLEAN DEFAULT FALSE,
     backup_codes TEXT[] DEFAULT '{}',
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS password_policies (
 -- Password History table (track old passwords)
 CREATE TABLE IF NOT EXISTS password_history (
     id UUID PRIMARY KEY,
-    admin_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    admin_id UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -58,7 +58,7 @@ CREATE INDEX IF NOT EXISTS idx_password_history_admin_id ON password_history(adm
 
 -- Admin Password Status table
 CREATE TABLE IF NOT EXISTS admin_password_status (
-    admin_id UUID PRIMARY KEY REFERENCES admin_users(id) ON DELETE CASCADE,
+    admin_id UUID PRIMARY KEY REFERENCES admins(id) ON DELETE CASCADE,
     last_changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     expires_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() + INTERVAL '90 days',
     failed_attempts INT DEFAULT 0,
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS admin_password_status (
 -- IP Access Rules table (whitelist/blacklist)
 CREATE TABLE IF NOT EXISTS ip_access_rules (
     id UUID PRIMARY KEY,
-    admin_id UUID REFERENCES admin_users(id) ON DELETE CASCADE,
+    admin_id UUID REFERENCES admins(id) ON DELETE CASCADE,
     rule_type VARCHAR(20) NOT NULL CHECK (rule_type IN ('whitelist', 'blacklist')),
     ip_address INET NOT NULL,
     description TEXT,
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS global_security_config (
 -- Login Attempts tracking table (for rate limiting)
 CREATE TABLE IF NOT EXISTS login_attempts (
     id UUID PRIMARY KEY,
-    admin_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    admin_id UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
     ip_address INET NOT NULL,
     success BOOLEAN NOT NULL,
     reason VARCHAR(100),
