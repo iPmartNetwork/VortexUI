@@ -340,7 +340,11 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 			}
 			clients = append(clients, client)
 		}
-		return mustRaw(map[string]any{"clients": clients, "decryption": "none"}), nil
+		settings := map[string]any{"clients": clients, "decryption": "none"}
+		if fb := decoyFallbacks(in); len(fb) > 0 {
+			settings["fallbacks"] = fb
+		}
+		return mustRaw(settings), nil
 
 	case domain.ProtoVMess:
 		clients := make([]map[string]any, 0, len(users))
@@ -354,7 +358,11 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 		for _, u := range users {
 			clients = append(clients, map[string]any{"password": u.Proxies.TrojanPass, "email": u.ID.String()})
 		}
-		return mustRaw(map[string]any{"clients": clients}), nil
+		settings := map[string]any{"clients": clients}
+		if fb := decoyFallbacks(in); len(fb) > 0 {
+			settings["fallbacks"] = fb
+		}
+		return mustRaw(settings), nil
 
 	case domain.ProtoShadowsocks:
 		return shadowsocksSettings(in, users), nil
@@ -842,6 +850,14 @@ func rawBool(v any) (bool, bool) {
 func asWireguardMap(v any) map[string]any {
 	m, _ := v.(map[string]any)
 	return m
+}
+
+func decoyFallbacks(in domain.Inbound) []map[string]any {
+	dest := core.DecoyFallbackDest(in)
+	if dest == "" {
+		return nil
+	}
+	return []map[string]any{{"dest": dest, "xver": 0}}
 }
 
 func mustRaw(v any) json.RawMessage {	b, err := json.Marshal(v)

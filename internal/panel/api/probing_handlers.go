@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"github.com/vortexui/vortexui/internal/domain"
@@ -12,6 +13,7 @@ import (
 // ProbingHandlers serves active probing protection endpoints.
 type ProbingHandlers struct {
 	Probing *service.ProbingService
+	Resync  *service.FleetResync
 }
 
 // GetProbingPolicy returns the current policy.
@@ -51,6 +53,9 @@ func (h *ProbingHandlers) UpdateProbingPolicy(c echo.Context) error {
 	if err := h.Probing.UpdatePolicy(c.Request().Context(), p); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
+	if h.Resync != nil {
+		_ = h.Resync.All(c.Request().Context())
+	}
 	return c.JSON(http.StatusOK, echo.Map{"policy": p})
 }
 
@@ -85,5 +90,39 @@ func (h *ProbingHandlers) UnblockIP(c echo.Context) error {
 	if err := h.Probing.UnblockIP(c.Request().Context(), req.IP); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
+	if h.Resync != nil {
+		_ = h.Resync.All(c.Request().Context())
+	}
 	return c.JSON(http.StatusOK, echo.Map{"status": "unblocked"})
+}
+
+type probeReportRequest struct {
+	SourceIP    string `json:"source_ip"`
+	Port        int    `json:"port"`
+	Method      string `json:"method"`
+	Fingerprint string `json:"fingerprint"`
+	NodeID      string `json:"node_id"`
+}
+
+// ReportProbe records a probing attempt from a node or edge reporter.
+func (h *ProbingHandlers) ReportProbe(c echo.Context) error {
+	var req probeReportRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if req.SourceIP == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "source_ip is required")
+	}
+	var nodeID *uuid.UUID
+	if req.NodeID != "" {
+		id, err := uuid.Parse(req.NodeID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid node_id")
+		}
+		nodeID = &id
+	}
+	if err := h.Probing.DetectProbe(c.Request().Context(), req.SourceIP, req.Port, req.Method, req.Fingerprint, nodeID); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"status": "recorded"})
 }

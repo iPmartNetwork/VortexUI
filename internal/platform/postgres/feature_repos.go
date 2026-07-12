@@ -1186,6 +1186,18 @@ func (r *SNIDomainRepo) CreateRoute(ctx context.Context, route *domain.SNIRoute)
 	return err
 }
 
+func (r *SNIDomainRepo) GetRoute(ctx context.Context, id uuid.UUID) (*domain.SNIRoute, error) {
+	var route domain.SNIRoute
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, inbound_id, sni, action, target_tag, priority, enabled
+		 FROM sni_routes WHERE id = $1`, id).
+		Scan(&route.ID, &route.InboundID, &route.SNI, &route.Action, &route.TargetTag, &route.Priority, &route.Enabled)
+	if err != nil {
+		return nil, err
+	}
+	return &route, nil
+}
+
 func (r *SNIDomainRepo) UpdateRoute(ctx context.Context, route *domain.SNIRoute) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE sni_routes SET inbound_id = $2, sni = $3, action = $4, target_tag = $5, priority = $6, enabled = $7

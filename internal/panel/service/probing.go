@@ -12,15 +12,19 @@ import (
 
 // ProbingService manages active probing protection.
 type ProbingService struct {
-	repo port.ProbingRepository
-	log  *slog.Logger
-	now  func() time.Time
+	repo   port.ProbingRepository
+	log    *slog.Logger
+	now    func() time.Time
+	resync *FleetResync
 }
 
 // NewProbingService wires the service.
 func NewProbingService(repo port.ProbingRepository, log *slog.Logger) *ProbingService {
 	return &ProbingService{repo: repo, log: log, now: time.Now}
 }
+
+// SetFleetResync triggers node resync after blocklist changes.
+func (s *ProbingService) SetFleetResync(f *FleetResync) { s.resync = f }
 
 // GetPolicy returns the current probing protection policy.
 func (s *ProbingService) GetPolicy(ctx context.Context) (*domain.ProbingPolicy, error) {
@@ -69,6 +73,8 @@ func (s *ProbingService) DetectProbe(ctx context.Context, ip string, port int, m
 		}
 		if err := s.repo.BlockIP(ctx, blocked); err != nil {
 			s.log.Error("failed to block IP", "ip", ip, "error", err)
+		} else if s.resync != nil {
+			_ = s.resync.Node(ctx, nodeID)
 		}
 	}
 
@@ -92,4 +98,22 @@ func (s *ProbingService) ListBlockedIPs(ctx context.Context) ([]domain.BlockedIP
 // UnblockIP removes an IP from the blocklist.
 func (s *ProbingService) UnblockIP(ctx context.Context, ip string) error {
 	return s.repo.UnblockIP(ctx, ip)
+}
+
+// BlockIP adds or refreshes a blocked IP using the current policy duration.
+func (s *ProbingService) BlockIP(ctx context.Context, ip, reason string) error {
+	if ip == "" {
+		return nil
+	}
+	policy, _ := s.GetPolicy(ctx)
+	duration := 3600
+	if policy != nil && policy.BlockDuration > 0 {
+		duration = policy.BlockDuration
+	}
+	return s.repo.BlockIP(ctx, &domain.BlockedIP{
+		IP:        ip,
+		Reason:    reason,
+		BlockedAt: s.now(),
+		ExpiresAt: s.now().Add(time.Duration(duration) * time.Second),
+	})
 }

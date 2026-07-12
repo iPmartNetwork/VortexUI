@@ -483,6 +483,7 @@ func NewRouter(d Deps) *echo.Echo {
 	probing.GET("/events", d.Probing.ListProbeEvents)
 	probing.GET("/blocked", d.Probing.ListBlockedIPs)
 	probing.POST("/unblock", d.Probing.UnblockIP)
+	probing.POST("/report", d.Probing.ReportProbe, RequirePermission(d.Auth, domain.PermNodeWrite))
 
 	// --- Family/Group Subscriptions ---
 	families := authed.Group("/families", RequirePermission(d.Auth, domain.PermUserWrite))
@@ -542,6 +543,7 @@ func NewRouter(d Deps) *echo.Echo {
 	fp.POST("/rules", d.Fingerprint.CreateRule)
 	fp.DELETE("/rules/:id", d.Fingerprint.DeleteRule)
 	fp.GET("/events", d.Fingerprint.ListEvents)
+	fp.POST("/report", d.Fingerprint.Report, RequirePermission(d.Auth, domain.PermNodeWrite))
 
 	// --- Multi-Panel Federation ---
 	fed := authed.Group("/federation", RequirePermission(d.Auth, domain.PermAdminManage))

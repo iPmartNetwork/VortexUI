@@ -53,6 +53,7 @@ type SyncService struct {
 	balancers BalancerLister
 	syncer    Syncer
 	wireguard *WireGuardService
+	security  *SecuritySyncHelper
 }
 
 // NewSyncService wires the service. The outbound/routing/balancer listers are
@@ -74,6 +75,9 @@ func NewSyncService(inbounds InboundLister, users UsersByNoder, syncer Syncer, o
 // optional: a nil WireGuardService leaves WireGuard peers unpopulated.
 func (s *SyncService) SetWireGuard(wg *WireGuardService) { s.wireguard = wg }
 
+// SetSecurity attaches probing/SNI/decoy runtime enrichment for resync.
+func (s *SyncService) SetSecurity(h *SecuritySyncHelper) { s.security = h }
+
 // Resync assembles the node's enabled inbounds plus their bound users, and its
 // outbounds, routing rules, and balancers, into a core.GeneratedConfig and
 // pushes it. Disabled inbounds are excluded so they stop listening after the
@@ -91,6 +95,14 @@ func (s *SyncService) Resync(ctx context.Context, nodeID uuid.UUID) error {
 	// Defense in depth: never push limited/expired/disabled users even if the
 	// DB read model is stale or unfiltered.
 	usersByInbound = filterProvisionableUsers(usersByInbound, time.Now())
+
+	var securityRules []domain.RoutingRule
+	if s.security != nil {
+		securityRules, err = s.security.EnrichInbounds(ctx, nodeID, inbounds)
+		if err != nil {
+			return err
+		}
+	}
 
 	cfg := &core.GeneratedConfig{
 		LogLevel:       "warning",
@@ -139,6 +151,8 @@ func (s *SyncService) Resync(ctx context.Context, nodeID uuid.UUID) error {
 			cfg.Routing = append(cfg.Routing, *r)
 		}
 	}
+	cfg.Routing = append(cfg.Routing, securityRules...)
+
 	if s.balancers != nil {
 		bals, err := s.balancers.ListByNode(ctx, nodeID)
 		if err != nil {

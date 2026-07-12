@@ -28,6 +28,7 @@ type SNIDomainRepository interface {
 
 	// SNI Routes
 	CreateRoute(ctx context.Context, r *domain.SNIRoute) error
+	GetRoute(ctx context.Context, id uuid.UUID) (*domain.SNIRoute, error)
 	UpdateRoute(ctx context.Context, r *domain.SNIRoute) error
 	DeleteRoute(ctx context.Context, id uuid.UUID) error
 	ListRoutesByInbound(ctx context.Context, inboundID uuid.UUID) ([]*domain.SNIRoute, error)

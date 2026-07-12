@@ -20,6 +20,7 @@ import (
 	"github.com/vortexui/vortexui/internal/config"
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/doh"
 	"github.com/vortexui/vortexui/internal/events"
 	"github.com/vortexui/vortexui/internal/geoip"
 	"github.com/vortexui/vortexui/internal/logbuf"
@@ -393,6 +394,22 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	tlsTricksSvc.SetInboundLinker(store.TLSTricks())
 	fpSvc := service.NewFingerprintService(store.Fingerprints())
 	fedSvc := service.NewFederationService(store.Federation())
+
+	securitySync := service.NewSecuritySyncHelper(store.Probing(), store.SNIDomains(), store.DecoySites())
+	syncSvc.SetSecurity(securitySync)
+	fleetResync := service.NewFleetResync(nodes, syncSvc)
+	probingSvc.SetFleetResync(fleetResync)
+	fpSvc.SetProbing(probingSvc)
+	fpSvc.SetFleetResync(fleetResync)
+	fpSvc.SetLogger(log)
+
+	dohServer := doh.NewServer(store.DoH(), log)
+	dohSvc.SetRuntime(dohServer)
+	if err := dohServer.Reload(ctx); err != nil {
+		log.Warn("doh server reload failed", "err", err)
+	}
+	defer func() { _ = dohServer.Stop(context.Background()) }()
+
 	go fedSvc.RunSyncWorker(ctx, log)
 	deepLinkSvc := service.NewDeepLinkService(store.DeepLinks())
 	quotaNotifySvc := service.NewQuotaNotifyService(store.QuotaNotify())
@@ -550,14 +567,14 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		RoutingPacks: &api.RoutingPackHandlers{Packs: routingPackSvc},
 		Quota:       &api.QuotaHandlers{Quota: quotaSvc},
 		Relay:       &api.RelayHandlers{Relay: relaySvc},
-		Decoy:       &api.DecoyHandlers{Decoy: decoySvc},
+		Decoy:       &api.DecoyHandlers{Decoy: decoySvc, Resync: fleetResync},
 		Analytics:   &api.AnalyticsHandlers{Analytics: analyticsSvc},
 		Migration:   &api.MigrationHandlers{Migration: migration},
-		Probing:     &api.ProbingHandlers{Probing: probingSvc},
+		Probing:     &api.ProbingHandlers{Probing: probingSvc, Resync: fleetResync},
 		Family:      &api.FamilyHandlers{Family: familySvc},
 		Referral:    &api.ReferralHandlers{Referral: referralSvc},
 		DoH:         &api.DoHHandlers{DoH: dohSvc},
-		SNI:         &api.SNIHandlers{SNI: sniSvc},
+		SNI:         &api.SNIHandlers{SNI: sniSvc, Inbounds: store.Inbounds(), Resync: fleetResync},
 		TLSTricks:   &api.TLSTricksHandlers{Tricks: tlsTricksSvc},
 		Fingerprint: &api.FingerprintHandlers{FP: fpSvc},
 		Federation:  &api.FederationHandlers{Fed: fedSvc},

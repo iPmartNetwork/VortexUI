@@ -12,7 +12,8 @@ import (
 
 // DecoyHandlers serves decoy website management endpoints.
 type DecoyHandlers struct {
-	Decoy *service.DecoyService
+	Decoy  *service.DecoyService
+	Resync *service.FleetResync
 }
 
 type createDecoyRequest struct {
@@ -44,6 +45,9 @@ func (h *DecoyHandlers) CreateDecoy(c echo.Context) error {
 	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if h.Resync != nil {
+		_ = h.Resync.Node(c.Request().Context(), nodeID)
 	}
 	return c.JSON(http.StatusCreated, echo.Map{"decoy": d})
 }
@@ -78,6 +82,9 @@ func (h *DecoyHandlers) UpdateDecoy(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	if h.Resync != nil {
+		_ = h.Resync.Node(c.Request().Context(), d.NodeID)
+	}
 	return c.JSON(http.StatusOK, echo.Map{"decoy": d})
 }
 
@@ -87,8 +94,17 @@ func (h *DecoyHandlers) DeleteDecoy(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
+	var nodeID *uuid.UUID
+	if h.Decoy != nil {
+		if d, err := h.Decoy.GetByID(c.Request().Context(), id); err == nil && d != nil {
+			nodeID = d.NodeID
+		}
+	}
 	if err := h.Decoy.DeleteDecoy(c.Request().Context(), id); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "delete failed")
+	}
+	if h.Resync != nil {
+		_ = h.Resync.Node(c.Request().Context(), nodeID)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
