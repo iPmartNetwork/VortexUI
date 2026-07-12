@@ -1,3 +1,4 @@
+-- +goose Up
 -- Migration: 0038_totp_and_security.sql
 -- Purpose: Add TOTP, MFA, password policies, and IP access control tables
 

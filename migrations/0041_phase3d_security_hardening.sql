@@ -1,3 +1,4 @@
+-- +goose Up
 -- PHASE 3D: Security Hardening & Defense Schema
 -- Migration: 0041_phase3d_security_hardening.sql
 
