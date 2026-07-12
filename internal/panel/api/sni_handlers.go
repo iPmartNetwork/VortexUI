@@ -1,17 +1,33 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"github.com/vortexui/vortexui/internal/panel/port"
 	"github.com/vortexui/vortexui/internal/panel/service"
 )
 
 // SNIHandlers serves Multi-Domain SNI Routing + SSL endpoints.
 type SNIHandlers struct {
-	SNI *service.SNIService
+	SNI      *service.SNIService
+	Inbounds port.InboundRepository
+	Resync   *service.FleetResync
+}
+
+func (h *SNIHandlers) resyncInbound(ctx context.Context, inboundID uuid.UUID) {
+	if h == nil || h.Resync == nil || h.Inbounds == nil {
+		return
+	}
+	in, err := h.Inbounds.GetByID(ctx, inboundID)
+	if err != nil || in == nil {
+		_ = h.Resync.All(ctx)
+		return
+	}
+	_ = h.Resync.Node(ctx, &in.NodeID)
 }
 
 // --- Domains ---
@@ -37,6 +53,7 @@ func (h *SNIHandlers) AddDomain(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	h.resyncInbound(c.Request().Context(), inbID)
 	return c.JSON(http.StatusCreated, echo.Map{"domain": d})
 }
 
@@ -60,8 +77,12 @@ func (h *SNIHandlers) DeleteDomain(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
+	d, _ := h.SNI.GetDomain(c.Request().Context(), id)
 	if err := h.SNI.DeleteDomain(c.Request().Context(), id); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	if d != nil {
+		h.resyncInbound(c.Request().Context(), d.InboundID)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
@@ -86,6 +107,9 @@ func (h *SNIHandlers) IssueCert(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	if h.Resync != nil {
+		_ = h.Resync.All(c.Request().Context())
+	}
 	return c.JSON(http.StatusCreated, echo.Map{"certificate": cert})
 }
 
@@ -105,6 +129,9 @@ func (h *SNIHandlers) DeleteCert(c echo.Context) error {
 	if err := h.SNI.DeleteCert(c.Request().Context(), id); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
+	if h.Resync != nil {
+		_ = h.Resync.All(c.Request().Context())
+	}
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -116,6 +143,9 @@ func (h *SNIHandlers) RenewCert(c echo.Context) error {
 	cert, err := h.SNI.RenewCert(c.Request().Context(), id)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if h.Resync != nil {
+		_ = h.Resync.All(c.Request().Context())
 	}
 	return c.JSON(http.StatusOK, echo.Map{"certificate": cert})
 }
@@ -145,6 +175,7 @@ func (h *SNIHandlers) AddRoute(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	h.resyncInbound(c.Request().Context(), inbID)
 	return c.JSON(http.StatusCreated, echo.Map{"route": r})
 }
 
@@ -165,8 +196,12 @@ func (h *SNIHandlers) DeleteRoute(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
 	}
+	r, _ := h.SNI.GetRoute(c.Request().Context(), id)
 	if err := h.SNI.DeleteRoute(c.Request().Context(), id); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	if r != nil {
+		h.resyncInbound(c.Request().Context(), r.InboundID)
 	}
 	return c.NoContent(http.StatusNoContent)
 }

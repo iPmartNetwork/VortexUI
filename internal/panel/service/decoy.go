@@ -60,6 +60,11 @@ func (s *DecoyService) ListDecoys(ctx context.Context) ([]*domain.DecoySite, err
 	return s.repo.List(ctx)
 }
 
+// GetByID returns one decoy configuration.
+func (s *DecoyService) GetByID(ctx context.Context, id uuid.UUID) (*domain.DecoySite, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
 // UpdateDecoy updates an existing decoy configuration.
 func (s *DecoyService) UpdateDecoy(ctx context.Context, id uuid.UUID, mode domain.DecoyMode, targetURL, staticHTML string, enabled bool) (*domain.DecoySite, error) {
 	d, err := s.repo.GetByID(ctx, id)

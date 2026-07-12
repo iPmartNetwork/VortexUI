@@ -67,6 +67,10 @@ func (s *SNIService) DeleteDomain(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteDomain(ctx, id)
 }
 
+func (s *SNIService) GetDomain(ctx context.Context, id uuid.UUID) (*domain.SNIDomain, error) {
+	return s.repo.GetDomain(ctx, id)
+}
+
 // --- Certificates ---
 
 type IssueCertInput struct {
@@ -96,13 +100,17 @@ func (s *SNIService) IssueCert(ctx context.Context, in IssueCertInput) (*domain.
 		return nil, err
 	}
 	if s.issuer != nil {
-		_, _, err := s.issuer.ObtainOrRenew(ctx, in.Domain)
+		certPEM, keyPEM, err := s.issuer.ObtainOrRenew(ctx, in.Domain)
 		if err != nil {
 			c.Status = domain.CertFailed
+			c.LastError = err.Error()
 		} else {
 			c.Status = domain.CertActive
+			c.CertPEM = certPEM
+			c.KeyPEM = keyPEM
 			exp := s.now().Add(90 * 24 * time.Hour)
 			c.ExpiresAt = &exp
+			c.IssuedAt = ptrTime(s.now())
 		}
 		_ = s.repo.UpdateCert(ctx, c)
 	}
@@ -127,13 +135,17 @@ func (s *SNIService) RenewCert(ctx context.Context, id uuid.UUID) (*domain.SSLCe
 		return nil, err
 	}
 	if s.issuer != nil {
-		_, _, err := s.issuer.ObtainOrRenew(ctx, c.Domain)
+		certPEM, keyPEM, err := s.issuer.ObtainOrRenew(ctx, c.Domain)
 		if err != nil {
 			c.Status = domain.CertFailed
+			c.LastError = err.Error()
 		} else {
 			c.Status = domain.CertActive
+			c.CertPEM = certPEM
+			c.KeyPEM = keyPEM
 			exp := s.now().Add(90 * 24 * time.Hour)
 			c.ExpiresAt = &exp
+			c.IssuedAt = ptrTime(s.now())
 		}
 		_ = s.repo.UpdateCert(ctx, c)
 	}
@@ -175,4 +187,8 @@ func (s *SNIService) ListRoutes(ctx context.Context, inboundID uuid.UUID) ([]*do
 
 func (s *SNIService) DeleteRoute(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteRoute(ctx, id)
+}
+
+func (s *SNIService) GetRoute(ctx context.Context, id uuid.UUID) (*domain.SNIRoute, error) {
+	return s.repo.GetRoute(ctx, id)
 }
