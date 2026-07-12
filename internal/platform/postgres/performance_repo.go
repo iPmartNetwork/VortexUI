@@ -362,7 +362,7 @@ func (r *RateLimitRepository) DeleteRule(ctx context.Context, ruleID uuid.UUID) 
 // LogViolation records rate limit violation
 func (r *RateLimitRepository) LogViolation(ctx context.Context, violation *domain.RateLimitViolation) error {
 	query := `
-		INSERT INTO rate_limit_violations (id, rule_id, client_ip, endpoint, request_count, limit, action, blocked_until, created_at)
+		INSERT INTO rate_limit_violations (id, rule_id, client_ip, endpoint, request_count, rate_limit, action, blocked_until, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
@@ -389,7 +389,7 @@ func (r *RateLimitRepository) LogViolation(ctx context.Context, violation *domai
 // GetViolations retrieves recent violations for IP
 func (r *RateLimitRepository) GetViolations(ctx context.Context, clientIP string, minutesBack int) ([]*domain.RateLimitViolation, error) {
 	query := `
-		SELECT id, rule_id, client_ip, endpoint, request_count, limit, action, blocked_until, created_at
+		SELECT id, rule_id, client_ip, endpoint, request_count, rate_limit, action, blocked_until, created_at
 		FROM rate_limit_violations
 		WHERE client_ip = $1 AND created_at > NOW() - INTERVAL '1 minute' * $2
 		ORDER BY created_at DESC LIMIT 100
