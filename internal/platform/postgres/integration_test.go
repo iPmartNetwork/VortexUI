@@ -223,7 +223,7 @@ func TestIntegration_BackupRestoreReplacesConfig(t *testing.T) {
 	// Snapshot describing a completely different fleet.
 	newNodeID, newInID, newUID := uuid.New(), uuid.New(), uuid.New()
 	snap := &domain.Backup{
-		Version: domain.BackupVersion,
+		Version: domain.BackupVersionLegacy,
 		Nodes:   []*domain.Node{{ID: newNodeID, Name: "new", Address: "1.1.1.1:50051", Core: domain.CoreSingbox, CreatedAt: time.Now()}},
 		Inbounds: []*domain.Inbound{
 			{ID: newInID, NodeID: newNodeID, Tag: "new-in", Protocol: domain.ProtoVLESS, Port: 8443, Network: "tcp", Security: domain.SecurityReality, Enabled: true},

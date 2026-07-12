@@ -380,6 +380,7 @@ func (h *Handlers) RestoreBackup(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, echo.Map{
 		"restored": echo.Map{
+			"roles": len(b.Roles), "admins": len(b.Admins), "plans": len(b.Plans),
 			"nodes": len(b.Nodes), "inbounds": len(b.Inbounds), "outbounds": len(b.Outbounds),
 			"routing": len(b.Routing), "balancers": len(b.Balancers),
 			"users": len(b.Users), "bindings": len(b.Bindings),

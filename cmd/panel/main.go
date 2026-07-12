@@ -287,6 +287,8 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Probing:      store.Probing(),
 	})
 	backupSvc := service.NewBackupService(nodes, store.Inbounds(), store.Outbounds(), store.Routing(), store.Balancers(), users, store.Backup())
+	backupSvc.SetAdminSource(store.Admins())
+	backupSvc.SetPlanSource(store.Plans())
 
 	// Wire failover migration into the hub now that its dependencies exist (the
 	// migration service provisions onto the target via the hub itself).
