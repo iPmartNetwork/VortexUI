@@ -20,7 +20,8 @@ import { buildCompactNavSections } from "@/navigation/nav-sections-compact";
 import { useOverview } from "@/api/policy-hooks";
 import type { Overview } from "@/api/types";
 
-const PANEL_VERSION = "1.3.1";
+// Injected from ../VERSION at build time; live value still comes from GET /api/version.
+const PANEL_VERSION = __PANEL_VERSION__;
 
 function navBadgeCount(badges: Overview["widgets"]["nav_badges"] | undefined, key?: string): number {
   if (!badges || !key) return 0;
