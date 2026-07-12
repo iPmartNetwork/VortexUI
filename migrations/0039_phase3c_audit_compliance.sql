@@ -149,6 +149,7 @@ CREATE INDEX idx_audit_event_acknowledgments_acknowledged_by ON audit_event_ackn
 CREATE INDEX idx_audit_event_acknowledgments_resolved ON audit_event_acknowledgments(resolved);
 
 -- Create trigger to update updated_at timestamp
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -156,6 +157,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_compliance_events_updated_at BEFORE UPDATE ON compliance_events
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -170,6 +172,7 @@ CREATE TRIGGER trg_audit_alert_rules_updated_at BEFORE UPDATE ON audit_alert_rul
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create function to clean up old audit events (called periodically)
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION cleanup_old_audit_events(retention_days INTEGER DEFAULT 90)
 RETURNS INTEGER AS $$
 DECLARE
@@ -180,8 +183,10 @@ BEGIN
     RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Create function to archive audit events
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION archive_audit_events(start_date TIMESTAMP, end_date TIMESTAMP)
 RETURNS TABLE(archived_count INTEGER, archive_id UUID) AS $$
 DECLARE
@@ -207,6 +212,7 @@ BEGIN
     RETURN QUERY SELECT v_event_count, v_archive_id;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Insert default audit policy
 INSERT INTO audit_policies (
