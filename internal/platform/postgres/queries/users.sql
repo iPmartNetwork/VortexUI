@@ -127,13 +127,18 @@ JOIN user_inbounds ui ON ui.inbound_id = i.id
 WHERE ui.user_id = $1;
 
 -- UsersByNode returns every (inbound tag, user) pair on a node's enabled
--- inbounds, the read model used to assemble a node's full desired core config.
+-- inbounds that may currently connect. Limited/expired/disabled users are
+-- excluded so a full Resync cannot re-provision accounts that already hit
+-- their data cap or expiry.
 -- name: UsersByNode :many
 SELECT i.tag, sqlc.embed(u)
 FROM inbounds i
 JOIN user_inbounds ui ON ui.inbound_id = i.id
 JOIN users u ON u.id = ui.user_id
-WHERE i.node_id = $1 AND i.enabled = TRUE;
+WHERE i.node_id = $1 AND i.enabled = TRUE
+  AND u.status IN ('active', 'on_hold')
+  AND (u.data_limit = 0 OR u.used_traffic < u.data_limit)
+  AND (u.expire_at IS NULL OR u.expire_at > now());
 
 -- UserStats aggregates user counts and total used traffic per status, powering
 -- the dashboard overview in a single round-trip.

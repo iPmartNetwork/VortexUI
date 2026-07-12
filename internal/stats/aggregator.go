@@ -26,6 +26,10 @@ type Aggregator struct {
 	in       chan domain.TrafficDelta
 	flushDur time.Duration
 	maxBatch int
+
+	// AfterFlush runs after each successful user-traffic flush (optional). Used to
+	// cut access promptly when a user crosses their data limit.
+	AfterFlush func(ctx context.Context)
 }
 
 // New builds an Aggregator. flushDur and maxBatch trade latency for write load.
@@ -57,6 +61,7 @@ func (a *Aggregator) Run(ctx context.Context) error {
 	var points []domain.TrafficPoint
 
 	flush := func() {
+		flushedUsers := false
 		if len(pending) > 0 {
 			// One round-trip for every user's accumulated delta.
 			byUser := make(map[uuid.UUID]int64, len(pending))
@@ -66,6 +71,8 @@ func (a *Aggregator) Run(ctx context.Context) error {
 			}
 			if err := a.users.AddUsedTrafficBatch(ctx, byUser); err != nil {
 				slog.Default().Error("failed to update user traffic", "err", err)
+			} else {
+				flushedUsers = true
 			}
 		}
 		if len(points) > 0 {
@@ -73,6 +80,9 @@ func (a *Aggregator) Run(ctx context.Context) error {
 				slog.Default().Error("failed to write traffic points", "err", err)
 			}
 			points = points[:0]
+		}
+		if flushedUsers && a.AfterFlush != nil {
+			a.AfterFlush(ctx)
 		}
 	}
 
