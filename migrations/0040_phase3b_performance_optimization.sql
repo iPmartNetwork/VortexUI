@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS rate_limit_violations (
     client_ip INET NOT NULL,
     endpoint VARCHAR(255) NOT NULL,
     request_count INTEGER NOT NULL,
-    limit INTEGER NOT NULL,
+    rate_limit INTEGER NOT NULL,
     action VARCHAR(50) NOT NULL CHECK (action IN ('throttle', 'block', 'alert')),
     blocked_until TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
