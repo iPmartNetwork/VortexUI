@@ -20,6 +20,7 @@ import (
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/core/singbox"
 	"github.com/vortexui/vortexui/internal/core/xray"
+	"github.com/vortexui/vortexui/internal/decoy"
 	vgrpc "github.com/vortexui/vortexui/internal/transport/grpc"
 )
 
@@ -59,7 +60,10 @@ func run(ctx context.Context, log *slog.Logger) error {
 	}
 	defer driver.Stop(context.Background())
 
-	srv := vgrpc.NewNodeServer(driver, agentVersion)
+	decoySrv := decoy.NewServer()
+	defer func() { _ = decoySrv.Stop(context.Background()) }()
+
+	srv := vgrpc.NewNodeServer(driver, agentVersion, decoySrv)
 
 	creds, err := vgrpc.ServerCreds(vgrpc.TLSFiles{Cert: cfg.TLSCert, Key: cfg.TLSKey, CA: cfg.TLSCA})
 	if err != nil {

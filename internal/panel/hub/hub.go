@@ -79,6 +79,9 @@ type Options struct {
 	RecentTraffic       RecentTrafficCounter
 	RecentTrafficWindow time.Duration
 
+	// SecurityIngest handles probe/fingerprint events parsed from node logs.
+	SecurityIngest SecurityIngest
+
 	// Automatic recovery when nodes stay unhealthy without manual intervention.
 	AutoRecoverCore         bool
 	AutoRecoverCoreAfter    time.Duration
@@ -220,6 +223,13 @@ func (h *Hub) StartWatchdog(ctx context.Context) {
 	go h.runHubWatchdog(ctx)
 }
 
+// SetSecurityIngest wires probe/fingerprint ingestion from node log polling.
+func (h *Hub) SetSecurityIngest(fn SecurityIngest) {
+	h.mu.Lock()
+	h.opts.SecurityIngest = fn
+	h.mu.Unlock()
+}
+
 // Register brings a node under management: it dials, then starts the traffic and
 // health loops. Re-registering an already-managed node is a no-op.
 //
@@ -244,6 +254,7 @@ func (h *Hub) Register(ctx context.Context, node *domain.Node) error {
 	loopCtx, cancel := context.WithCancel(context.Background())
 	mn.cancel = cancel
 	go mn.runTraffic(loopCtx)
+	go mn.runSecurity(loopCtx)
 	go mn.runHealth(loopCtx)
 	return nil
 }

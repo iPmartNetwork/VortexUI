@@ -20,6 +20,20 @@ func TestProbeBlockRules(t *testing.T) {
 	}
 }
 
+func TestDecoyFallbackDestStatic(t *testing.T) {
+	in := domain.Inbound{
+		Raw: map[string]any{
+			"decoy": map[string]any{
+				"mode":        "static",
+				"static_html": "<html></html>",
+			},
+		},
+	}
+	if got := DecoyFallbackDest(in); got != domain.DefaultDecoyListen {
+		t.Fatalf("dest = %q, want %q", got, domain.DefaultDecoyListen)
+	}
+}
+
 func TestDecoyFallbackDest(t *testing.T) {
 	in := domain.Inbound{
 		Raw: map[string]any{

@@ -621,6 +621,14 @@ func (r *ProbingRepo) IsBlocked(ctx context.Context, ip string) (bool, error) {
 	return exists, nil
 }
 
+func (r *ProbingRepo) CountRecentByIP(ctx context.Context, ip string, since time.Time) (int, error) {
+	var n int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM probe_events WHERE source_ip = $1 AND created_at >= $2`, ip, since).
+		Scan(&n)
+	return n, err
+}
+
 
 // --- FamilyRepo ---
 

@@ -30,6 +30,7 @@ const (
 	NodeDisconnectAlert Type = "node.disconnect_alert" // unreachable > 5 min
 	NodeAutoRecover   Type = "node.auto_recover" // panel restarted core or reset hub link
 	AdminQuotaWarning Type = "admin.quota_warning"
+	SecurityProbe     Type = "security.probe"
 )
 
 // Event is a single notification. Fields are flat and JSON-friendly so the

@@ -12,6 +12,7 @@ import (
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/core/singbox"
 	"github.com/vortexui/vortexui/internal/core/xray"
+	"github.com/vortexui/vortexui/internal/decoy"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/hub"
 	"github.com/vortexui/vortexui/internal/panel/port"
@@ -55,11 +56,11 @@ func nodeDialer(tls vgrpc.TLSFiles) hub.Dialer {
 
 // localAwareDialer wraps the gRPC dialer so the one local node (if configured)
 // is served by an in-process LocalConn instead of dialing a remote agent.
-func localAwareDialer(tls vgrpc.TLSFiles, localID uuid.UUID, localDriver core.CoreDriver) hub.Dialer {
+func localAwareDialer(tls vgrpc.TLSFiles, localID uuid.UUID, localDriver core.CoreDriver, decoySrv *decoy.Server) hub.Dialer {
 	grpcDial := nodeDialer(tls)
 	return func(n *domain.Node) (hub.NodeConn, error) {
 		if localDriver != nil && n.ID == localID {
-			return hub.NewLocalConn(n.ID, localDriver), nil
+			return hub.NewLocalConn(n.ID, localDriver, decoySrv), nil
 		}
 		return grpcDial(n)
 	}
