@@ -79,6 +79,26 @@ func (h *TLSTricksHandlers) DeleteProfile(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+type applyTLSProfileRequest struct {
+	InboundIDs []uuid.UUID `json:"inbound_ids"`
+}
+
+// ApplyToInbounds links a TLS/DPI profile onto inbounds (all enabled when
+// inbound_ids is omitted) so client subscriptions pick up fragment/uTLS.
+func (h *TLSTricksHandlers) ApplyToInbounds(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid id")
+	}
+	var req applyTLSProfileRequest
+	_ = c.Bind(&req)
+	n, err := h.Tricks.ApplyToInbounds(c.Request().Context(), id, req.InboundIDs)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"applied": n, "profile_id": id})
+}
+
 func (h *TLSTricksHandlers) GetPresets(c echo.Context) error {
 	presets := h.Tricks.GetAvailablePresets()
 	var out []echo.Map

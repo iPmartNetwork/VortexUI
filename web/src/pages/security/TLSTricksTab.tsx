@@ -132,6 +132,18 @@ export function TLSTricksTab() {
     },
   });
 
+  const applyToInbounds = useMutation({
+    mutationFn: (id: string) => api<{ applied: number }>(`/api/tls-tricks/${id}/apply`, { method: "POST", body: {} }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["inbounds"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-fleet"] });
+      toast.success(
+        t("security.tls.appliedInbounds").replace("{count}", String(res.applied ?? 0)),
+      );
+    },
+    onError: () => toast.error(t("common.failed")),
+  });
+
   function profileForISP(isp: string, presetName?: string): TLSProfile | undefined {
     return (
       profiles.find((p) => p.isp === isp) ??
@@ -222,19 +234,28 @@ export function TLSTricksTab() {
                         {t("security.tls.applyProfile")}
                       </Button>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger text-xs"
-                        onClick={async () => {
-                          if (await confirm({ title: t("common.delete"), destructive: true })) {
-                            await del.mutateAsync(existing.id);
-                            toast.success(t("common.delete"));
-                          }
-                        }}
-                      >
-                        {t("common.delete")}
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => applyToInbounds.mutate(existing.id)}
+                          disabled={applyToInbounds.isPending}
+                        >
+                          {t("security.tls.applyToInbounds")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger text-xs"
+                          onClick={async () => {
+                            if (await confirm({ title: t("common.delete"), destructive: true })) {
+                              await del.mutateAsync(existing.id);
+                              toast.success(t("common.delete"));
+                            }
+                          }}
+                        >
+                          {t("common.delete")}
+                        </Button>
+                      </>
                     )}
                   </div>
                 )}

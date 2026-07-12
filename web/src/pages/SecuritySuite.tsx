@@ -44,6 +44,9 @@ export function SecuritySuite() {
             <Badge color="muted">{t("security.badge")}</Badge>
           </div>
           <p className="text-sm text-fg-muted mt-1 max-w-2xl">{t("security.pageSubtitle")}</p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 max-w-2xl">
+            {t("security.runtimeNote")}
+          </p>
         </div>
         <div className="flex flex-wrap rounded-xl border border-border/70 bg-surface-2/50 p-0.5 gap-0.5">
           {TABS.map(({ id, icon: Icon, labelKey }) => (

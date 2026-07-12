@@ -531,6 +531,7 @@ func NewRouter(d Deps) *echo.Echo {
 	tricks.POST("", d.TLSTricks.CreateProfile)
 	tricks.POST("/preset", d.TLSTricks.CreateFromPreset)
 	tricks.PUT("/:id", d.TLSTricks.UpdateProfile)
+	tricks.POST("/:id/apply", d.TLSTricks.ApplyToInbounds)
 	tricks.DELETE("/:id", d.TLSTricks.DeleteProfile)
 
 	// --- Client Fingerprint Validator ---
@@ -643,7 +644,7 @@ func NewRouter(d Deps) *echo.Echo {
 
 	// Routes for PHASE 3B: Performance Optimization
 	if d.PerformanceHandlers != nil {
-		perf := api.Group("/performance", RequirePermission(d.Auth, domain.PermSystemRead))
+		perf := authed.Group("/performance", RequirePermission(d.Auth, domain.PermSystemRead))
 		perf.GET("/health", d.PerformanceHandlers.GetHealthStatus)
 		perf.GET("/queries/slow", d.PerformanceHandlers.GetSlowQueries)
 		perf.GET("/queries/stats", d.PerformanceHandlers.GetQueryStats)
@@ -656,7 +657,7 @@ func NewRouter(d Deps) *echo.Echo {
 
 	// Routes for PHASE 3D: Security Hardening & Defense
 	if d.SecurityHardeningHandlers != nil {
-		sec := api.Group("/security", RequirePermission(d.Auth, domain.PermSystemRead))
+		sec := authed.Group("/security", RequirePermission(d.Auth, domain.PermSystemRead))
 		sec.GET("/threats", d.SecurityHardeningHandlers.GetSecurityThreats)
 		sec.GET("/threats/blocked", d.SecurityHardeningHandlers.GetBlockedThreats)
 		sec.GET("/threats/count", d.SecurityHardeningHandlers.GetThreatCount)
@@ -664,6 +665,7 @@ func NewRouter(d Deps) *echo.Echo {
 		sec.PUT("/policy", d.SecurityHardeningHandlers.UpdateSecurityPolicy, RequirePermission(d.Auth, domain.PermAdminManage))
 		sec.GET("/score", d.SecurityHardeningHandlers.GetSecurityScore)
 		sec.GET("/compliance/validate", d.SecurityHardeningHandlers.ValidateCompliance)
+		sec.GET("/reputation/:ip", d.SecurityHardeningHandlers.GetIPReputation)
 	}
 
 	return e

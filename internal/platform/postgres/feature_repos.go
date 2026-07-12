@@ -1262,6 +1262,24 @@ func (r *TLSTricksRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+// ApplyEvasionProfile sets evasion_profile_id on the given inbounds (or all
+// enabled inbounds when inboundIDs is empty) so subscription rendering can
+// pick up fragment / uTLS settings from the TLS tricks profile.
+func (r *TLSTricksRepo) ApplyEvasionProfile(ctx context.Context, profileID uuid.UUID, inboundIDs []uuid.UUID) (int64, error) {
+	if len(inboundIDs) == 0 {
+		tag, err := r.pool.Exec(ctx, `UPDATE inbounds SET evasion_profile_id = $1 WHERE enabled = TRUE`, profileID)
+		if err != nil {
+			return 0, err
+		}
+		return tag.RowsAffected(), nil
+	}
+	tag, err := r.pool.Exec(ctx, `UPDATE inbounds SET evasion_profile_id = $1 WHERE id = ANY($2::uuid[])`, profileID, inboundIDs)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
 func (r *TLSTricksRepo) List(ctx context.Context) ([]*domain.TLSTrickProfile, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, name, isp, description, fragment_enabled, fragment_length, fragment_interval, fingerprint, mux_enabled, mux_protocol, enabled, created_at

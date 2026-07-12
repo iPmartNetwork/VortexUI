@@ -16,7 +16,7 @@ import { useAuth } from "@/auth/auth";
 export function SecurityHardening() {
     useTitle("Security Hardening");
     const { can } = useAuth();
-    const canWrite = can("security:write");
+    const canWrite = can("admin:manage");
     const [threatFilter, setThreatFilter] = useState("");
 
     const threats = useSecurityThreats(threatFilter, 20, 0);
