@@ -268,13 +268,15 @@ type UpdateUserInput struct {
 
 // Update applies metadata changes to a user and persists them. Quota/expiry are
 // accounting fields enforced elsewhere, so no live core change is needed; a
-// status flip to disabled de-provisions, and re-enabling re-provisions.
+// status flip that makes the account inactive de-provisions, and re-enabling
+// re-provisions when the account is allowed to connect again.
 func (s *UserService) Update(ctx context.Context, id uuid.UUID, in UpdateUserInput) (*domain.User, error) {
 	u, err := s.users.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	wasActive := u.Status != domain.UserStatusDisabled
+	now := time.Now()
+	wasActive := u.IsActive(now) && u.Status != domain.UserStatusLimited && u.Status != domain.UserStatusExpired
 
 	u.Note = in.Note
 	u.Status = in.Status
@@ -302,16 +304,16 @@ func (s *UserService) Update(ctx context.Context, id uuid.UUID, in UpdateUserInp
 		// for this user: bindings are now updated, so a resync drops the user from
 		// nodes they were unbound from. New WG nodes are handled by provision.
 		s.resyncWireGuardNodes(ctx, old)
-		if u.Status != domain.UserStatusDisabled {
+		if u.IsActive(now) && u.Status != domain.UserStatusLimited && u.Status != domain.UserStatusExpired {
 			_ = s.provision(ctx, u)
 		}
 	}
 
-	nowDisabled := u.Status == domain.UserStatusDisabled
+	nowActive := u.IsActive(now) && u.Status != domain.UserStatusLimited && u.Status != domain.UserStatusExpired
 	switch {
-	case wasActive && nowDisabled:
+	case wasActive && !nowActive:
 		s.deprovision(ctx, u)
-	case !wasActive && !nowDisabled:
+	case !wasActive && nowActive:
 		if err := s.provision(ctx, u); err != nil {
 			return u, err
 		}

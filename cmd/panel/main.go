@@ -215,9 +215,20 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	// 4. Services + 5. HTTP API.
 	issuer := auth.NewIssuer([]byte(cfg.JWTSecret), cfg.JWTTTL)
 	// Enforcement loop: disables + de-provisions users who hit their cap/expiry.
-	enforcer := service.NewEnforcer(users, h, time.Minute, log)
+	// 15s keeps overshoot small; traffic flush also triggers an immediate tick.
+	enforcer := service.NewEnforcer(users, h, 15*time.Second, log)
 	enforcer.SetPublisher(bus)
 	go enforcer.Run(ctx)
+	agg.AfterFlush = func(fctx context.Context) {
+		// Do not block traffic aggregation on RemoveUser RPCs.
+		go func() {
+			tctx, cancel := context.WithTimeout(context.WithoutCancel(fctx), 30*time.Second)
+			defer cancel()
+			if err := enforcer.Tick(tctx); err != nil {
+				log.Warn("post-flush enforcement failed", "err", err)
+			}
+		}()
+	}
 
 	// Reset loop: zeroes used traffic on schedule and re-activates quota-limited
 	// users — the complement to enforcement.

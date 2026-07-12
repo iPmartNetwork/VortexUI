@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -87,6 +88,9 @@ func (s *SyncService) Resync(ctx context.Context, nodeID uuid.UUID) error {
 	if err != nil {
 		return err
 	}
+	// Defense in depth: never push limited/expired/disabled users even if the
+	// DB read model is stale or unfiltered.
+	usersByInbound = filterProvisionableUsers(usersByInbound, time.Now())
 
 	cfg := &core.GeneratedConfig{
 		LogLevel:       "warning",
@@ -146,4 +150,33 @@ func (s *SyncService) Resync(ctx context.Context, nodeID uuid.UUID) error {
 	}
 
 	return s.syncer.Sync(ctx, nodeID, cfg)
+}
+
+// filterProvisionableUsers drops accounts that must not be present on a live
+// core: disabled/limited/expired, or active rows that already crossed data/expiry.
+func filterProvisionableUsers(in map[string][]*domain.User, now time.Time) map[string][]*domain.User {
+	if len(in) == 0 {
+		return in
+	}
+	out := make(map[string][]*domain.User, len(in))
+	for tag, users := range in {
+		kept := make([]*domain.User, 0, len(users))
+		for _, u := range users {
+			if u == nil {
+				continue
+			}
+			switch u.Status {
+			case domain.UserStatusDisabled, domain.UserStatusLimited, domain.UserStatusExpired:
+				continue
+			}
+			if !u.IsActive(now) {
+				continue
+			}
+			kept = append(kept, u)
+		}
+		if len(kept) > 0 {
+			out[tag] = kept
+		}
+	}
+	return out
 }

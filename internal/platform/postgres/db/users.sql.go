@@ -669,6 +669,9 @@ FROM inbounds i
 JOIN user_inbounds ui ON ui.inbound_id = i.id
 JOIN users u ON u.id = ui.user_id
 WHERE i.node_id = $1 AND i.enabled = TRUE
+  AND u.status IN ('active', 'on_hold')
+  AND (u.data_limit = 0 OR u.used_traffic < u.data_limit)
+  AND (u.expire_at IS NULL OR u.expire_at > now())
 `
 
 type UsersByNodeRow struct {
@@ -677,7 +680,7 @@ type UsersByNodeRow struct {
 }
 
 // UsersByNode returns every (inbound tag, user) pair on a node's enabled
-// inbounds, the read model used to assemble a node's full desired core config.
+// inbounds that may currently connect (active/on_hold and under quota/expiry).
 func (q *Queries) UsersByNode(ctx context.Context, nodeID uuid.UUID) ([]UsersByNodeRow, error) {
 	rows, err := q.db.Query(ctx, usersByNode, nodeID)
 	if err != nil {
