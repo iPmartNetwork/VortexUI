@@ -115,6 +115,7 @@ CREATE INDEX IF NOT EXISTS idx_login_attempts_ip ON login_attempts(ip_address, c
 CREATE INDEX IF NOT EXISTS idx_login_attempts_created_at ON login_attempts(created_at DESC);
 
 -- Auto cleanup for old login attempts (keep 90 days)
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION cleanup_old_login_attempts()
 RETURNS void AS $$
 BEGIN
@@ -122,3 +123,4 @@ BEGIN
     WHERE created_at < NOW() - INTERVAL '90 days';
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd

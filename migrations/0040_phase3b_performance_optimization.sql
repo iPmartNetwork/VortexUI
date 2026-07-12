@@ -165,6 +165,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_reports_created_by_created ON audit_reports
 CREATE INDEX IF NOT EXISTS idx_audit_reports_period ON audit_reports(start_date, end_date);
 
 -- Auto-update trigger for updated_at columns
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -172,6 +173,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 -- Apply trigger to performance tables
 DROP TRIGGER IF EXISTS trigger_connection_pool_stats_updated_at ON connection_pool_stats;
