@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/port"
 )
@@ -15,6 +17,22 @@ import (
 // single transaction can span every table.
 type BackupRestorer interface {
 	Restore(ctx context.Context, b *domain.Backup) error
+}
+
+// backupAdminSource exports operator/reseller records needed to restore user
+// ownership on a new panel.
+type backupAdminSource interface {
+	List(ctx context.Context) ([]*domain.Admin, error)
+	ListRoles(ctx context.Context) ([]*domain.Role, error)
+	ListInboundIDs(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error)
+	ListPlanIDs(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error)
+	ListNodeIDs(ctx context.Context, adminID uuid.UUID) ([]uuid.UUID, error)
+	GetPortalBranding(ctx context.Context, adminID uuid.UUID) (*domain.PortalBranding, error)
+}
+
+// backupPlanSource exports shop plans referenced by resellers.
+type backupPlanSource interface {
+	ListPlans(ctx context.Context) ([]*domain.Plan, error)
 }
 
 // BackupService exports the full proxy configuration as a portable document and
@@ -27,11 +45,14 @@ type BackupService struct {
 	routing   port.RoutingRepository
 	balancers port.BalancerRepository
 	users     port.UserRepository
+	admins    backupAdminSource
+	plans     backupPlanSource
 	restorer  BackupRestorer
 	now       func() time.Time
 }
 
-// NewBackupService wires the service.
+// NewBackupService wires the service. admins and plans may be nil; export then
+// omits operator/reseller records (legacy v1-shaped documents).
 func NewBackupService(
 	nodes port.NodeRepository,
 	inbounds port.InboundRepository,
@@ -48,13 +69,64 @@ func NewBackupService(
 	}
 }
 
+// SetAdminSource wires reseller/admin export for full migration backups.
+func (s *BackupService) SetAdminSource(src backupAdminSource) { s.admins = src }
+
+// SetPlanSource wires shop plan export for full migration backups.
+func (s *BackupService) SetPlanSource(src backupPlanSource) { s.plans = src }
+
 const backupUserPage = 500
 
 // Export assembles a complete configuration snapshot. Per-node config is
 // gathered node by node; users are paged through; bindings are derived from each
-// user's inbound memberships.
+// user's inbound memberships. When wired, admins/resellers and their scopes are
+// included so restore on a fresh panel preserves ownership.
 func (s *BackupService) Export(ctx context.Context) (*domain.Backup, error) {
 	b := &domain.Backup{Version: domain.BackupVersion, ExportedAt: s.now()}
+
+	if s.admins != nil {
+		roles, err := s.admins.ListRoles(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list roles: %w", err)
+		}
+		b.Roles = roles
+
+		admins, err := s.admins.List(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list admins: %w", err)
+		}
+		b.Admins = admins
+		for _, a := range admins {
+			inIDs, err := s.admins.ListInboundIDs(ctx, a.ID)
+			if err != nil {
+				return nil, fmt.Errorf("list admin inbounds for %s: %w", a.Username, err)
+			}
+			planIDs, err := s.admins.ListPlanIDs(ctx, a.ID)
+			if err != nil {
+				return nil, fmt.Errorf("list admin plans for %s: %w", a.Username, err)
+			}
+			nodeIDs, err := s.admins.ListNodeIDs(ctx, a.ID)
+			if err != nil {
+				return nil, fmt.Errorf("list admin nodes for %s: %w", a.Username, err)
+			}
+			if len(inIDs)+len(planIDs)+len(nodeIDs) > 0 {
+				b.AdminScopes = append(b.AdminScopes, domain.BackupAdminScope{
+					AdminID: a.ID, InboundIDs: inIDs, PlanIDs: planIDs, NodeIDs: nodeIDs,
+				})
+			}
+			if branding, err := s.admins.GetPortalBranding(ctx, a.ID); err == nil && branding != nil {
+				b.PortalBranding = append(b.PortalBranding, branding)
+			}
+		}
+	}
+
+	if s.plans != nil {
+		plans, err := s.plans.ListPlans(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list plans: %w", err)
+		}
+		b.Plans = plans
+	}
 
 	nodes, err := s.nodes.List(ctx)
 	if err != nil {
@@ -118,8 +190,8 @@ func (s *BackupService) Restore(ctx context.Context, b *domain.Backup) error {
 	if b == nil {
 		return errors.New("empty backup")
 	}
-	if b.Version != domain.BackupVersion {
-		return fmt.Errorf("unsupported backup version %d (want %d)", b.Version, domain.BackupVersion)
+	if b.Version != domain.BackupVersion && b.Version != domain.BackupVersionLegacy {
+		return fmt.Errorf("unsupported backup version %d (want %d or %d)", b.Version, domain.BackupVersion, domain.BackupVersionLegacy)
 	}
 	return s.restorer.Restore(ctx, b)
 }
