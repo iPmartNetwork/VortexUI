@@ -46,7 +46,7 @@ func startMTLSNode(t *testing.T, drv core.CoreDriver, serverFiles TLSFiles) stri
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
-	srv := NewNodeServer(drv, "e2e")
+	srv := NewNodeServer(drv, "e2e", nil)
 	go func() { _ = srv.Serve(lis, grpc.Creds(creds)) }()
 	t.Cleanup(srv.GracefulStop)
 	return lis.Addr().String()

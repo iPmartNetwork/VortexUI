@@ -63,6 +63,11 @@ func (h *SecuritySyncHelper) EnrichInbounds(ctx context.Context, nodeID uuid.UUI
 
 		if decoy != nil {
 			core.ApplyDecoy(in, decoy)
+		} else if h.probing != nil {
+			if policy, err := h.probing.GetPolicy(ctx); err == nil && policy != nil &&
+				policy.Enabled && policy.Action == domain.ProbingHoneypot && policy.HoneypotHTML != "" {
+				core.ApplyHoneypotDecoy(in, policy.HoneypotHTML)
+			}
 		}
 	}
 

@@ -79,7 +79,7 @@ func TestEnsureLocalNodeUpdatesOnConfigChange(t *testing.T) {
 func TestLocalAwareDialerRoutesLocalInProcess(t *testing.T) {
 	localID := uuid.New()
 	drv := &fakeLocalDriverWiring{}
-	dial := localAwareDialer(vgrpc.TLSFiles{}, localID, drv)
+	dial := localAwareDialer(vgrpc.TLSFiles{}, localID, drv, nil)
 
 	conn, err := dial(&domain.Node{ID: localID, Name: "local"})
 	if err != nil {

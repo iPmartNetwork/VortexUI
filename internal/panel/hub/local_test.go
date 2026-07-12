@@ -70,7 +70,7 @@ func (f *fakeLocalDriver) Logs(context.Context, int) ([]string, error) { return 
 func TestLocalConnDelegatesToDriver(t *testing.T) {
 	drv := &fakeLocalDriver{}
 	nodeID := uuid.New()
-	c := NewLocalConn(nodeID, drv)
+	c := NewLocalConn(nodeID, drv, nil)
 	ctx := context.Background()
 
 	if err := c.Sync(ctx, &core.GeneratedConfig{}, domain.CoreXray); err != nil || !drv.started {
@@ -92,7 +92,7 @@ func TestLocalConnStampsNodeIDOnTraffic(t *testing.T) {
 	nodeID := uuid.New()
 	uid := uuid.New()
 	drv := &fakeLocalDriver{deltas: []domain.TrafficDelta{{UserID: uid, Up: 10, Down: 20}}}
-	c := NewLocalConn(nodeID, drv)
+	c := NewLocalConn(nodeID, drv, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -115,7 +115,7 @@ func TestLocalConnStampsNodeIDOnTraffic(t *testing.T) {
 
 func TestLocalConnCloseDoesNotStopDriver(t *testing.T) {
 	drv := &fakeLocalDriver{}
-	c := NewLocalConn(uuid.New(), drv)
+	c := NewLocalConn(uuid.New(), drv, nil)
 	if err := c.Close(); err != nil {
 		t.Fatalf("close: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestLocalConnOnlineStatsAndLogs(t *testing.T) {
 		online: map[string]int{uid.String(): 2},
 		logs:   []string{"x", "y"},
 	}
-	c := NewLocalConn(uuid.New(), drv)
+	c := NewLocalConn(uuid.New(), drv, nil)
 	ctx := context.Background()
 
 	online, err := c.OnlineStats(ctx)

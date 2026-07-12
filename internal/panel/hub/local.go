@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/vortexui/vortexui/internal/core"
+	"github.com/vortexui/vortexui/internal/decoy"
 	"github.com/vortexui/vortexui/internal/domain"
 )
 
@@ -19,6 +20,7 @@ import (
 type LocalConn struct {
 	nodeID uuid.UUID
 	driver core.CoreDriver
+	decoy  *decoy.Server
 
 	mu      sync.Mutex
 	lastCfg *core.GeneratedConfig // remembered so Restart/Start can re-apply it
@@ -27,8 +29,8 @@ type LocalConn struct {
 var _ NodeConn = (*LocalConn)(nil)
 
 // NewLocalConn wraps driver as the in-process connection for nodeID.
-func NewLocalConn(nodeID uuid.UUID, driver core.CoreDriver) *LocalConn {
-	return &LocalConn{nodeID: nodeID, driver: driver}
+func NewLocalConn(nodeID uuid.UUID, driver core.CoreDriver, decoySrv *decoy.Server) *LocalConn {
+	return &LocalConn{nodeID: nodeID, driver: driver, decoy: decoySrv}
 }
 
 // Sync applies the full config by (re)starting the local core, remembering the
@@ -38,7 +40,13 @@ func (c *LocalConn) Sync(ctx context.Context, cfg *core.GeneratedConfig, _ domai
 	c.mu.Lock()
 	c.lastCfg = cfg
 	c.mu.Unlock()
-	return c.driver.Start(ctx, cfg)
+	if err := c.driver.Start(ctx, cfg); err != nil {
+		return err
+	}
+	if c.decoy != nil {
+		_ = c.decoy.ReloadFromInbounds(cfg.Inbounds)
+	}
+	return nil
 }
 
 // AddUser provisions a user on the local core at runtime.

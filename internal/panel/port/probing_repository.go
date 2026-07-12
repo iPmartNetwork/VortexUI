@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"time"
 
 	"github.com/vortexui/vortexui/internal/domain"
 )
@@ -18,4 +19,5 @@ type ProbingRepository interface {
 	UnblockIP(ctx context.Context, ip string) error
 	ListBlockedIPs(ctx context.Context) ([]domain.BlockedIP, error)
 	IsBlocked(ctx context.Context, ip string) (bool, error)
+	CountRecentByIP(ctx context.Context, ip string, since time.Time) (int, error)
 }

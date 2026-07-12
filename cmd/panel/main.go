@@ -21,6 +21,7 @@ import (
 	"github.com/vortexui/vortexui/internal/core"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/doh"
+	"github.com/vortexui/vortexui/internal/decoy"
 	"github.com/vortexui/vortexui/internal/events"
 	"github.com/vortexui/vortexui/internal/geoip"
 	"github.com/vortexui/vortexui/internal/logbuf"
@@ -122,8 +123,11 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		log.Info("local node enabled", "name", localNode.Name, "core", cfg.Core, "id", localID)
 	}
 
+	decoySrv := decoy.NewServer()
+	defer func() { _ = decoySrv.Stop(context.Background()) }()
+
 	h := hub.New(hub.Options{
-		Dialer:              localAwareDialer(tlsFiles, localID, localDriver),
+		Dialer:              localAwareDialer(tlsFiles, localID, localDriver, decoySrv),
 		Nodes:               nodes,
 		Ingest:              agg.Ingest,
 		Logger:              log,
@@ -402,6 +406,10 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	fpSvc.SetProbing(probingSvc)
 	fpSvc.SetFleetResync(fleetResync)
 	fpSvc.SetLogger(log)
+
+	securityIngest := &service.SecurityIngestService{Probing: probingSvc, Fingerprint: fpSvc, Log: log}
+	h.SetSecurityIngest(securityIngest.Ingest)
+	probingSvc.SetPublisher(bus)
 
 	dohServer := doh.NewServer(store.DoH(), log)
 	dohSvc.SetRuntime(dohServer)

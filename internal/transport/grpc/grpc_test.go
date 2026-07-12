@@ -91,7 +91,7 @@ func newTestLink(t *testing.T, drv core.CoreDriver, nodeID uuid.UUID) *NodeClien
 	t.Helper()
 	lis := bufconn.Listen(1024 * 1024)
 	srv := grpc.NewServer()
-	genv1.RegisterNodeServiceServer(srv, NewNodeServer(drv, "test-agent"))
+	genv1.RegisterNodeServiceServer(srv, NewNodeServer(drv, "test-agent", nil))
 	go func() { _ = srv.Serve(lis) }()
 	t.Cleanup(srv.Stop)
 

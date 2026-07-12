@@ -49,6 +49,10 @@ func describe(e events.Event) string {
 		pct := e.Data["usage_pct"]
 		th := e.Data["threshold"]
 		return fmt.Sprintf("📊 Reseller quota alert: %s — %s at %v%% (threshold %v%%)", admin, metric, pct, th)
+	case events.SecurityProbe:
+		ip, _ := e.Data["source_ip"].(string)
+		method, _ := e.Data["method"].(string)
+		return fmt.Sprintf("🛡 Probe detected: %s (%s) on %s", ip, method, e.NodeName)
 	default:
 		msg := e.Message
 		if msg == "" {

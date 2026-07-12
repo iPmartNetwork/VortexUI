@@ -19,14 +19,21 @@ import (
 	"github.com/vortexui/vortexui/internal/panel/port"
 )
 
+type cacheEntry struct {
+	wire      []byte
+	expiresAt time.Time
+}
+
 // Server serves DNS queries over HTTPS using upstream resolvers from config.
 type Server struct {
 	repo port.DoHRepository
 	log  *slog.Logger
 
-	mu   sync.Mutex
-	srv  *http.Server
-	cfg  atomic.Pointer[domain.DoHConfig]
+	mu      sync.Mutex
+	srv     *http.Server
+	cfg     atomic.Pointer[domain.DoHConfig]
+	matcher atomic.Pointer[BlockMatcher]
+	cache   sync.Map
 }
 
 // NewServer wires the DoH server.
@@ -45,6 +52,8 @@ func (s *Server) Reload(ctx context.Context) error {
 		cfg = &def
 	}
 	s.cfg.Store(cfg)
+	s.matcher.Store(NewBlockMatcher(cfg.CustomBlocklist, cfg.BlockAds, cfg.BlockMalware))
+	s.cache = sync.Map{}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -129,11 +138,22 @@ func (s *Server) handleDNS(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	clientIP := clientIPFromRequest(r)
 	qname, qtype := queryMeta(req)
+	cacheKey := qname + "|" + qtype
 
-	if blocked := s.shouldBlock(cfg, qname); blocked {
+	if blocked := s.shouldBlock(qname); blocked {
 		s.logQuery(cfg, qname, qtype, clientIP, true, start)
 		writeEmptyDNS(w, req)
 		return
+	}
+
+	if hit, ok := s.cache.Load(cacheKey); ok {
+		if ent, ok := hit.(cacheEntry); ok && time.Now().Before(ent.expiresAt) {
+			s.logQuery(cfg, qname, qtype, clientIP, false, start)
+			w.Header().Set("Content-Type", "application/dns-message")
+			w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", maxAge(cfg)))
+			_, _ = w.Write(ent.wire)
+			return
+		}
 	}
 
 	resp, err := s.exchange(cfg, req)
@@ -145,6 +165,10 @@ func (s *Server) handleDNS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "encode failed", http.StatusInternalServerError)
 		return
+	}
+
+	if ttl := maxAge(cfg); ttl > 0 {
+		s.cache.Store(cacheKey, cacheEntry{wire: out, expiresAt: time.Now().Add(time.Duration(ttl) * time.Second)})
 	}
 
 	s.logQuery(cfg, qname, qtype, clientIP, false, start)
@@ -177,21 +201,12 @@ func (s *Server) exchange(cfg *domain.DoHConfig, req *dns.Msg) (*dns.Msg, error)
 	return nil, lastErr
 }
 
-func (s *Server) shouldBlock(cfg *domain.DoHConfig, qname string) bool {
-	name := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(qname)), ".")
-	if name == "" {
+func (s *Server) shouldBlock(qname string) bool {
+	m := s.matcher.Load()
+	if m == nil {
 		return false
 	}
-	for _, blocked := range cfg.CustomBlocklist {
-		b := strings.ToLower(strings.TrimSpace(blocked))
-		if b == "" {
-			continue
-		}
-		if name == b || strings.HasSuffix(name, "."+b) {
-			return true
-		}
-	}
-	return false
+	return m.Blocked(qname)
 }
 
 func (s *Server) logQuery(cfg *domain.DoHConfig, qname, qtype, clientIP string, blocked bool, start time.Time) {

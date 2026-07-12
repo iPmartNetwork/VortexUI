@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/vortexui/vortexui/internal/core"
+	"github.com/vortexui/vortexui/internal/decoy"
 	"github.com/vortexui/vortexui/internal/domain"
 	genv1 "github.com/vortexui/vortexui/internal/transport/genv1"
 )
@@ -20,14 +21,15 @@ type NodeServer struct {
 	genv1.UnimplementedNodeServiceServer
 	driver   core.CoreDriver
 	agentVer string
+	decoy    *decoy.Server
 
 	mu  sync.Mutex
 	srv *grpc.Server
 }
 
 // NewNodeServer wraps a driver. The driver owns the actual proxy engine.
-func NewNodeServer(driver core.CoreDriver, agentVer string) *NodeServer {
-	return &NodeServer{driver: driver, agentVer: agentVer}
+func NewNodeServer(driver core.CoreDriver, agentVer string, decoySrv *decoy.Server) *NodeServer {
+	return &NodeServer{driver: driver, agentVer: agentVer, decoy: decoySrv}
 }
 
 // Serve registers the service and blocks serving on lis until GracefulStop is
@@ -88,6 +90,9 @@ func (s *NodeServer) Sync(ctx context.Context, req *genv1.SyncRequest) (*genv1.A
 	}
 	if err := s.driver.Start(ctx, cfg); err != nil {
 		return ack(false, fmt.Sprintf("sync: %v", err)), nil
+	}
+	if s.decoy != nil {
+		_ = s.decoy.ReloadFromInbounds(cfg.Inbounds)
 	}
 	return ack(true, ""), nil
 }

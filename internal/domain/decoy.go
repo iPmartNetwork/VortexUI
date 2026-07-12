@@ -14,6 +14,9 @@ const (
 	DecoyStatic DecoyMode = "static" // serve uploaded static HTML
 )
 
+// DefaultDecoyListen is the loopback address xray fallbacks use for static/honeypot pages.
+const DefaultDecoyListen = "127.0.0.1:18080"
+
 // DecoySite configures the decoy/fallback website served when invalid
 // connections probe the server (active probing protection).
 type DecoySite struct {

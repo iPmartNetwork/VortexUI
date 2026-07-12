@@ -154,6 +154,20 @@ func ApplyDecoy(in *domain.Inbound, decoy *domain.DecoySite) {
 	}
 }
 
+// ApplyHoneypotDecoy injects honeypot HTML as a static decoy fallback.
+func ApplyHoneypotDecoy(in *domain.Inbound, html string) {
+	if in == nil || strings.TrimSpace(html) == "" {
+		return
+	}
+	if in.Raw == nil {
+		in.Raw = map[string]any{}
+	}
+	in.Raw["decoy"] = map[string]any{
+		"mode":        string(domain.DecoyStatic),
+		"static_html": html,
+	}
+}
+
 // DecoyFallbackDest returns an xray fallback destination from inbound Raw decoy config.
 func DecoyFallbackDest(in domain.Inbound) string {
 	raw, ok := in.Raw["decoy"].(map[string]any)
@@ -164,9 +178,14 @@ func DecoyFallbackDest(in domain.Inbound) string {
 	switch domain.DecoyMode(mode) {
 	case domain.DecoyProxy:
 		return normalizeDecoyDest(raw["target_url"])
+	case domain.DecoyStatic:
+		if html, _ := raw["static_html"].(string); strings.TrimSpace(html) != "" {
+			return domain.DefaultDecoyListen
+		}
 	default:
 		return ""
 	}
+	return ""
 }
 
 func normalizeDecoyDest(v any) string {

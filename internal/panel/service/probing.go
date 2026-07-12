@@ -3,10 +3,13 @@ package service
 import (
 	"context"
 	"log/slog"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/events"
 	"github.com/vortexui/vortexui/internal/panel/port"
 )
 
@@ -16,15 +19,23 @@ type ProbingService struct {
 	log    *slog.Logger
 	now    func() time.Time
 	resync *FleetResync
+	pub    events.Publisher
 }
 
 // NewProbingService wires the service.
 func NewProbingService(repo port.ProbingRepository, log *slog.Logger) *ProbingService {
-	return &ProbingService{repo: repo, log: log, now: time.Now}
+	return &ProbingService{repo: repo, log: log, now: time.Now, pub: events.Nop{}}
 }
 
 // SetFleetResync triggers node resync after blocklist changes.
 func (s *ProbingService) SetFleetResync(f *FleetResync) { s.resync = f }
+
+// SetPublisher emits security probe alerts (e.g. Telegram).
+func (s *ProbingService) SetPublisher(p events.Publisher) {
+	if p != nil {
+		s.pub = p
+	}
+}
 
 // GetPolicy returns the current probing protection policy.
 func (s *ProbingService) GetPolicy(ctx context.Context) (*domain.ProbingPolicy, error) {
@@ -44,7 +55,10 @@ func (s *ProbingService) UpdatePolicy(ctx context.Context, p *domain.ProbingPoli
 // DetectProbe records a probing attempt and takes the configured action.
 func (s *ProbingService) DetectProbe(ctx context.Context, ip string, port int, method, fingerprint string, nodeID *uuid.UUID) error {
 	policy, _ := s.GetPolicy(ctx)
-	if !policy.Enabled {
+	if policy == nil || !policy.Enabled {
+		return nil
+	}
+	if probeWhitelisted(policy, ip) {
 		return nil
 	}
 
@@ -63,8 +77,19 @@ func (s *ProbingService) DetectProbe(ctx context.Context, ip string, port int, m
 		s.log.Error("failed to save probe event", "error", err)
 	}
 
-	// Block IP if action is block or honeypot.
-	if action == domain.ProbingBlock || action == domain.ProbingHoneypot {
+	shouldBlock := action == domain.ProbingBlock || action == domain.ProbingHoneypot
+	if policy.MaxProbePerMin > 0 {
+		since := s.now().Add(-time.Minute)
+		count, err := s.repo.CountRecentByIP(ctx, ip, since)
+		if err == nil && count < policy.MaxProbePerMin {
+			shouldBlock = false
+		}
+	}
+	if action == domain.ProbingLog {
+		shouldBlock = false
+	}
+
+	if shouldBlock {
 		blocked := &domain.BlockedIP{
 			IP:        ip,
 			Reason:    method,
@@ -78,8 +103,54 @@ func (s *ProbingService) DetectProbe(ctx context.Context, ip string, port int, m
 		}
 	}
 
-	s.log.Warn("probe detected", "ip", ip, "method", method, "action", action)
+	if policy.NotifyTelegram {
+		msg := "Probe from " + ip + " (" + method + ")"
+		if nodeID != nil {
+			msg += " node=" + nodeID.String()
+		}
+		s.pub.Publish(events.Event{
+			Type:    events.SecurityProbe,
+			Time:    s.now(),
+			NodeID:  nodeIDString(nodeID),
+			Message: msg,
+			Data: map[string]any{
+				"source_ip": ip,
+				"method":    method,
+				"action":    string(action),
+				"blocked":   shouldBlock,
+			},
+		})
+	}
+
+	s.log.Warn("probe detected", "ip", ip, "method", method, "action", action, "blocked", shouldBlock)
 	return nil
+}
+
+func probeWhitelisted(policy *domain.ProbingPolicy, ip string) bool {
+	if policy == nil || ip == "" {
+		return false
+	}
+	parsed := net.ParseIP(ip)
+	for _, w := range policy.WhitelistedIPs {
+		w = strings.TrimSpace(w)
+		if w == "" {
+			continue
+		}
+		if w == ip {
+			return true
+		}
+		if _, cidr, err := net.ParseCIDR(w); err == nil && parsed != nil && cidr.Contains(parsed) {
+			return true
+		}
+	}
+	return false
+}
+
+func nodeIDString(id *uuid.UUID) string {
+	if id == nil {
+		return ""
+	}
+	return id.String()
 }
 
 // ListEvents returns recent probe events.
