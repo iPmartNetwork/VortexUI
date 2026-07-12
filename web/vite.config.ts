@@ -3,7 +3,15 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
-const panelVersion = readFileSync(path.resolve(__dirname, "../VERSION"), "utf8").trim();
+function readPanelVersion(): string {
+  try {
+    return readFileSync(path.resolve(__dirname, "../VERSION"), "utf8").trim();
+  } catch {
+    return "0.0.0";
+  }
+}
+
+const panelVersion = readPanelVersion();
 
 // Dev server proxies API + subscription calls to the local panel so the SPA and
 // backend share an origin during development.

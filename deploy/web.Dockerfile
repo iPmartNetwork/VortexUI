@@ -9,6 +9,8 @@ WORKDIR /web
 COPY web/package.json web/package-lock.json* ./
 RUN npm ci
 COPY web/ ./
+# vite.config.ts reads ../VERSION at build time for the sidebar fallback.
+COPY VERSION /VERSION
 RUN npm run build
 
 # ---- serve with Caddy ----
