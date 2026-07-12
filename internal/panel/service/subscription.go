@@ -28,6 +28,7 @@ type SubscriptionService struct {
 	users      port.UserRepository
 	nodes      port.NodeRepository
 	subHosts   port.SubHostRepository
+	tlsTricks  port.TLSTricksRepository
 	packs      PackResolver
 	staleAfter time.Duration
 	now        func() time.Time
@@ -54,6 +55,12 @@ func NewSubscriptionService(users port.UserRepository, nodes port.NodeRepository
 // when no pack resolves) subscriptions render exactly as before (Req 3.3.3).
 func (s *SubscriptionService) SetRoutingPacks(packs PackResolver) {
 	s.packs = packs
+}
+
+// SetTLSTricks wires TLS/DPI profiles linked via inbound.evasion_profile_id so
+// fragment and uTLS fingerprint land in client subscription configs.
+func (s *SubscriptionService) SetTLSTricks(repo port.TLSTricksRepository) {
+	s.tlsTricks = repo
 }
 
 // SubResult bundles the resolved proxies with the owning user so the handler can
@@ -115,6 +122,11 @@ func (s *SubscriptionService) buildFor(ctx context.Context, user *domain.User) (
 			continue
 		}
 		base := buildProxy(user, in, info.host, info.name)
+		if s.tlsTricks != nil && in.EvasionProfileID != nil {
+			if profile, err := s.tlsTricks.GetByID(ctx, *in.EvasionProfileID); err == nil {
+				applyTLSProfile(&base, profile)
+			}
+		}
 		// No enabled hosts for this inbound: emit the inbound's own link exactly
 		// as before (no regression).
 		hosts := hostsByInbound[in.ID]
@@ -264,6 +276,35 @@ func buildProxy(u *domain.User, in domain.Inbound, host, name string) subscripti
 		p.Fingerprint = "chrome"
 	}
 	return p
+}
+
+// applyTLSProfile overlays fragment / uTLS / mux from a TLS tricks profile onto
+// a subscription proxy. Host overrides still win later in buildProxyWithHost.
+func applyTLSProfile(p *subscription.Proxy, profile *domain.TLSTrickProfile) {
+	if p == nil || profile == nil || !profile.Enabled {
+		return
+	}
+	if profile.UTLSFingerprint != "" {
+		p.Fingerprint = profile.UTLSFingerprint
+	}
+	if profile.MuxEnabled {
+		p.Mux = true
+	}
+	if profile.FragmentEnabled {
+		size := profile.FragmentSize
+		if size == "" {
+			size = "10-30"
+		}
+		interval := profile.FragmentInterval
+		if interval == "" {
+			interval = "10-20"
+		}
+		packets := profile.FragmentPackets
+		if packets == "" {
+			packets = "tlshello"
+		}
+		p.Fragment = size + "," + interval + "," + packets
+	}
 }
 
 // buildProxyWithHost overlays a SubHost onto the inbound's base Proxy, producing

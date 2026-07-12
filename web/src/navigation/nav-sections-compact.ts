@@ -5,6 +5,10 @@ import {
   Globe,
   Route as RouteIcon,
   ShieldCheck,
+  ShieldAlert,
+  Fingerprint,
+  Network,
+  Lock,
   Package,
   LifeBuoy,
   Settings as SettingsIcon,
@@ -30,6 +34,10 @@ export function buildCompactNavSections(sudo: boolean): NavSection[] {
         { to: "/inbounds", key: "nav.inboundsSubhosts", icon: Globe },
         { to: "/routing", key: "nav.smartRoutingBalancers", icon: RouteIcon },
         { to: "/evasion", key: "nav.securityAntiDpi", icon: ShieldCheck, hotDot: true },
+        { to: "/ip-limit", key: "nav.ipLimit", icon: ShieldAlert },
+        { to: "/fingerprint", key: "nav.fingerprint", icon: Fingerprint },
+        { to: "/doh", key: "nav.doh", icon: Network },
+        { to: "/sni-manager", key: "nav.sniManager", icon: Lock },
       ],
     },
     {
@@ -48,7 +56,10 @@ export function buildCompactNavSections(sudo: boolean): NavSection[] {
     {
       label: "nav.section.systemConfig",
       id: "system",
-      items: [{ to: "/settings", key: "nav.systemSettings", icon: SettingsIcon }],
+      items: [
+        { to: "/security", key: "nav.security", icon: ShieldAlert },
+        { to: "/settings", key: "nav.systemSettings", icon: SettingsIcon },
+      ],
     },
   ];
 }

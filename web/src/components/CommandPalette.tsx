@@ -25,6 +25,8 @@ const ROUTES: { path: string; labelKey: TKey; keywords: string[] }[] = [
   { path: "/tickets", labelKey: "nav.supportDesk", keywords: ["help", "support", "tickets"] },
   { path: "/monitor", labelKey: "nav.monitor", keywords: ["realtime", "watch"] },
   { path: "/evasion", labelKey: "nav.securityAntiDpi", keywords: ["reality", "clean-ip", "tls", "decoy", "probing", "anti-dpi", "fragment", "gfw"] },
+  { path: "/ip-limit", labelKey: "nav.ipLimit", keywords: ["share", "device", "ip", "limit", "shareguard"] },
+  { path: "/security", labelKey: "nav.security", keywords: ["threat", "hardening", "waf", "score"] },
   { path: "/smart-quota", labelKey: "nav.smartQuota", keywords: ["fair use", "throttle", "speed"] },
   { path: "/relay-chains", labelKey: "nav.relayChains", keywords: ["cdn", "relay", "chain"] },
   { path: "/migration", labelKey: "nav.migration", keywords: ["failover", "health"] },

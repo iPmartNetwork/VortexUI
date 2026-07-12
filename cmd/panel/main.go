@@ -268,6 +268,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	go adminQuotaWarner.Run(ctx)
 
 	subSvc := service.NewSubscriptionService(users, nodes, store.SubHosts())
+	subSvc.SetTLSTricks(store.TLSTricks())
 	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	syncSvc.SetWireGuard(wgSvc)
@@ -389,6 +390,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	sniSvc := service.NewSNIService(store.SNIDomains())
 	sniSvc.SetCertIssuer(acmeMgr)
 	tlsTricksSvc := service.NewTLSTricksService(store.TLSTricks())
+	tlsTricksSvc.SetInboundLinker(store.TLSTricks())
 	fpSvc := service.NewFingerprintService(store.Fingerprints())
 	fedSvc := service.NewFederationService(store.Federation())
 	go fedSvc.RunSyncWorker(ctx, log)

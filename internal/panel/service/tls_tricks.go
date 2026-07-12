@@ -12,8 +12,9 @@ import (
 
 // TLSTricksService manages advanced TLS trick profiles.
 type TLSTricksService struct {
-	repo port.TLSTricksRepository
-	now  func() time.Time
+	repo     port.TLSTricksRepository
+	inbounds inboundEvasionLinker
+	now      func() time.Time
 }
 
 func NewTLSTricksService(repo port.TLSTricksRepository) *TLSTricksService {
@@ -63,4 +64,29 @@ func (s *TLSTricksService) GetAvailablePresets() []domain.ISPPreset {
 		domain.ISPHamrahAval, domain.ISPIrancell, domain.ISPMokhaberat,
 		domain.ISPShatel, domain.ISPAsiatech, domain.ISPCustom,
 	}
+}
+
+// inboundEvasionLinker assigns a TLS/DPI profile to live inbounds via
+// evasion_profile_id so subscriptions can emit fragment/uTLS settings.
+type inboundEvasionLinker interface {
+	ApplyEvasionProfile(ctx context.Context, profileID uuid.UUID, inboundIDs []uuid.UUID) (int64, error)
+}
+
+// SetInboundLinker wires optional inbound assignment for ApplyToInbounds.
+func (s *TLSTricksService) SetInboundLinker(l inboundEvasionLinker) { s.inbounds = l }
+
+// ApplyToInbounds links the profile to the given inbound IDs (or every enabled
+// inbound when inboundIDs is empty) and returns how many rows were updated.
+func (s *TLSTricksService) ApplyToInbounds(ctx context.Context, profileID uuid.UUID, inboundIDs []uuid.UUID) (int64, error) {
+	p, err := s.repo.GetByID(ctx, profileID)
+	if err != nil {
+		return 0, err
+	}
+	if p == nil {
+		return 0, domain.ErrNotFound
+	}
+	if s.inbounds == nil {
+		return 0, errors.New("inbound linker not configured")
+	}
+	return s.inbounds.ApplyEvasionProfile(ctx, profileID, inboundIDs)
 }
