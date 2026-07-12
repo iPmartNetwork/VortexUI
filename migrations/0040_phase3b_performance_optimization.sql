@@ -1,3 +1,4 @@
+-- +goose Up
 -- PHASE 3B: Performance Optimization Schema
 -- Migration: 0040_phase3b_performance_optimization.sql
 

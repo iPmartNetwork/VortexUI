@@ -1,3 +1,4 @@
+-- +goose Up
 -- PHASE 3C: Audit & Compliance Infrastructure
 -- Migration for comprehensive audit event logging, compliance tracking, and report generation
 
