@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/vortexui/vortexui/internal/domain"
 )
@@ -53,8 +54,9 @@ func (s *Server) Reload(body string, enabled bool) error {
 	})
 
 	s.srv = &http.Server{
-		Addr:    s.listen,
-		Handler: mux,
+		Addr:              s.listen,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() { _ = s.srv.ListenAndServe() }()
 	return waitListen(s.listen)
