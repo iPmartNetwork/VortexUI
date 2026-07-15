@@ -6,6 +6,24 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-07-15
+
+Multi-core Phase 1: run **Xray** and **sing-box** on the same node for A/B testing, with per-inbound engine selection.
+
+### Added
+- **Dual-core nodes** — `enabled_cores` on nodes; `CompositeDriver` on the agent runs both engines with split config sync.
+- **Per-inbound core override** — `inbounds.core` routes each inbound to xray or sing-box; empty inherits the node default.
+- **Migration `0042_multicore.sql`** — persists `nodes.enabled_cores` and `inbounds.core`.
+- **gRPC** — `CORE_TYPE_MULTI` and `InboundSpec.core` for multi-engine sync.
+- **Node agent** — `VORTEX_ENABLED_CORES=xray,singbox` with per-engine config/API env vars (`VORTEX_XRAY_CONFIG`, `VORTEX_SINGBOX_CONFIG`, …).
+- **Panel UI** — enabled-core toggles on create/edit node; engine picker on inbound form when the node is dual-core; multi-core badges on the fleet view.
+
+### Changed
+- Hub resolves each inbound's effective core before sync and sends `multi` when the node runs both engines.
+- Inbound validation checks the effective core against the node's enabled engines and capability matrix.
+
+**Release by ali**
+
 ## [1.3.2] - 2026-07-11
 
 PHASE 3 Frontend release: Performance monitoring, Security hardening, Compliance dashboard, and Overview UI enhancements.

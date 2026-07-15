@@ -48,6 +48,7 @@ CREATE TABLE nodes (
     name          TEXT NOT NULL UNIQUE,
     address       TEXT NOT NULL,
     core          TEXT NOT NULL DEFAULT 'xray',
+    enabled_cores JSONB NOT NULL DEFAULT '["xray"]',
     status        TEXT NOT NULL DEFAULT 'disconnected',
     usage_ratio   DOUBLE PRECISION NOT NULL DEFAULT 1,
     endpoint      TEXT NOT NULL DEFAULT '',
@@ -84,6 +85,7 @@ CREATE TABLE inbounds (
     enabled            BOOLEAN NOT NULL DEFAULT TRUE,
     speed_limit        BIGINT NOT NULL DEFAULT 0,
     geo_policy         JSONB,
+    core               TEXT NOT NULL DEFAULT '',
     UNIQUE (node_id, tag)
 );
 

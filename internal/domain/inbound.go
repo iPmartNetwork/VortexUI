@@ -62,6 +62,8 @@ type Inbound struct {
 	ID       uuid.UUID `json:"id"`
 	NodeID   uuid.UUID `json:"node_id"`
 	Tag      string    `json:"tag"` // unique per node; used as the core inbound tag
+	// Core optionally overrides the parent node's default engine for this inbound.
+	Core     CoreType  `json:"core,omitempty"`
 	Protocol Protocol  `json:"protocol"`
 	Listen   string    `json:"listen"`
 	Port     int       `json:"port"`

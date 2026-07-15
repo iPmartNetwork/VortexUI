@@ -13,6 +13,8 @@ type CoreType string
 const (
 	CoreXray    CoreType = "xray"
 	CoreSingbox CoreType = "singbox"
+	// CoreMulti marks a node agent running several engines via CompositeDriver.
+	CoreMulti CoreType = "multi"
 )
 
 // NodeStatus reflects the live connectivity of a remote node agent.
@@ -60,6 +62,9 @@ type Node struct {
 	Name    string     `json:"name"`
 	Address string     `json:"address"` // host:port of the node agent
 	Core    CoreType   `json:"core"`    // default core for inbounds on this node
+	// EnabledCores lists proxy engines active on this node. When more than one is
+	// set the agent runs a CompositeDriver and inbounds may override via Core.
+	EnabledCores []CoreType `json:"enabled_cores,omitempty"`
 	Status  NodeStatus `json:"status"`
 
 	// UsageRatio lets you weight a node when distributing/auto-failing-over users.
@@ -128,4 +133,51 @@ func (n *Node) Live(now time.Time, staleAfter time.Duration) bool {
 		return false
 	}
 	return now.Sub(*n.LastSeen) <= staleAfter
+}
+
+// NormalizedEnabledCores returns the active engines for this node, falling back
+// to Core (then xray) when enabled_cores is unset in older records.
+func (n *Node) NormalizedEnabledCores() []CoreType {
+	if len(n.EnabledCores) > 0 {
+		return n.EnabledCores
+	}
+	if n.Core != "" {
+		return []CoreType{n.Core}
+	}
+	return []CoreType{CoreXray}
+}
+
+// IsMultiCore reports whether the node runs more than one proxy engine.
+func (n *Node) IsMultiCore() bool {
+	return len(n.NormalizedEnabledCores()) > 1
+}
+
+// SyncCoreType is the core value sent over gRPC during full sync.
+func (n *Node) SyncCoreType() CoreType {
+	if n.IsMultiCore() {
+		return CoreMulti
+	}
+	return n.NormalizedEnabledCores()[0]
+}
+
+// CoreEnabled reports whether ct is listed in the node's enabled engines.
+func (n *Node) CoreEnabled(ct CoreType) bool {
+	for _, c := range n.NormalizedEnabledCores() {
+		if c == ct {
+			return true
+		}
+	}
+	return false
+}
+
+// ResolveInboundCore picks the engine for an inbound: explicit override, else
+// the node's default Core, else xray.
+func (n *Node) ResolveInboundCore(override CoreType) CoreType {
+	if override != "" {
+		return override
+	}
+	if n.Core != "" {
+		return n.Core
+	}
+	return CoreXray
 }

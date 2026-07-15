@@ -453,7 +453,7 @@ export function Nodes() {
                     <p className="text-[9px] font-semibold uppercase tracking-wide text-fg-subtle">
                       {t("nodes.core")}
                     </p>
-                    <div className="mt-0.5"><CoreBadge core={n.core} /></div>
+                    <div className="mt-0.5"><CoreBadge core={n.core} enabledCores={n.enabled_cores} /></div>
                   </div>
                 </div>
 

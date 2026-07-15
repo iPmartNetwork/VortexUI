@@ -118,6 +118,7 @@ type CreateNodeInput struct {
 	Name         string
 	Address      string
 	Core         domain.CoreType
+	EnabledCores []domain.CoreType
 	UsageRatio   float64
 	Endpoint     string
 	Region       string
@@ -135,6 +136,10 @@ func (s *NodeService) Create(ctx context.Context, in CreateNodeInput) (*domain.N
 	if core == "" {
 		core = domain.CoreXray
 	}
+	enabled := in.EnabledCores
+	if len(enabled) == 0 {
+		enabled = []domain.CoreType{core}
+	}
 	ratio := in.UsageRatio
 	if ratio == 0 {
 		ratio = 1
@@ -144,6 +149,7 @@ func (s *NodeService) Create(ctx context.Context, in CreateNodeInput) (*domain.N
 		Name:         in.Name,
 		Address:      in.Address,
 		Core:         core,
+		EnabledCores: enabled,
 		Status:       domain.NodeDisconnected,
 		UsageRatio:   ratio,
 		Endpoint:     in.Endpoint,
@@ -180,6 +186,8 @@ func (s *NodeService) Get(ctx context.Context, id uuid.UUID) (*domain.Node, erro
 type UpdateNodeInput struct {
 	Name         string
 	Address      string
+	Core         domain.CoreType
+	EnabledCores []domain.CoreType
 	UsageRatio   float64
 	Endpoint     string
 	Region       string
@@ -203,6 +211,12 @@ func (s *NodeService) Update(ctx context.Context, id uuid.UUID, in UpdateNodeInp
 	}
 	if in.Address != "" {
 		n.Address = in.Address
+	}
+	if in.Core != "" {
+		n.Core = in.Core
+	}
+	if len(in.EnabledCores) > 0 {
+		n.EnabledCores = in.EnabledCores
 	}
 	if in.UsageRatio > 0 {
 		n.UsageRatio = in.UsageRatio

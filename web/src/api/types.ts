@@ -57,11 +57,14 @@ export interface EnrollmentBundle {
   cert_dir: string;
 }
 
+export type CoreType = "xray" | "singbox";
+
 export interface Node {
   id: string;
   name: string;
   address: string;
-  core: "xray" | "singbox";
+  core: CoreType;
+  enabled_cores?: CoreType[];
   status: "connected" | "disconnected" | "error" | "disabled";
   usage_ratio: number;
   endpoint?: string;

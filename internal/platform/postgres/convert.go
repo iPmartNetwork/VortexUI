@@ -94,6 +94,29 @@ func stringsFromJSONB(b []byte) []string {
 	return out
 }
 
+func coreTypesToJSONB(cores []domain.CoreType) []byte {
+	if len(cores) == 0 {
+		return jsonbStrings([]string{string(domain.CoreXray)})
+	}
+	ss := make([]string, len(cores))
+	for i, c := range cores {
+		ss[i] = string(c)
+	}
+	return jsonbStrings(ss)
+}
+
+func coreTypesFromJSONB(b []byte) []domain.CoreType {
+	ss := stringsFromJSONB(b)
+	if len(ss) == 0 {
+		return nil
+	}
+	out := make([]domain.CoreType, len(ss))
+	for i, s := range ss {
+		out[i] = domain.CoreType(s)
+	}
+	return out
+}
+
 func jsonbMap(m map[string]any) []byte {
 	if m == nil {
 		m = map[string]any{}

@@ -58,6 +58,7 @@ enum CoreType {
   CORE_TYPE_UNSPECIFIED = 0;
   CORE_TYPE_XRAY = 1;
   CORE_TYPE_SINGBOX = 2;
+  CORE_TYPE_MULTI = 3;
 }
 
 // UserSpec is the minimal, engine-neutral identity the core needs to admit a
@@ -87,6 +88,7 @@ message InboundSpec {
   string path = 9;             // ws path / grpc service name
   repeated string host = 10;   // ws Host header(s)
   string flow = 11;            // vless flow (e.g. xtls-rprx-vision)
+  string core = 12;            // xray | singbox; empty = node default
 }
 
 // OutboundSpec is a rendered egress handler (freedom/blackhole/dns or a proxy

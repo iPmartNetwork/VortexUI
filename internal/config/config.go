@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -102,10 +103,13 @@ type Panel struct {
 // binary/config paths.
 type Node struct {
 	ListenAddr string // where the NodeService gRPC server listens
-	Core       string // which engine this node runs: xray | singbox
-	CoreBin    string // path to the core binary
-	CoreConfig string // where the agent writes the rendered core config
-	APIPort    int    // loopback port for the core's stats/control API
+	Core       string // legacy single-engine selector: xray | singbox
+	// EnabledCores lists engines this agent runs. When len > 1 a CompositeDriver
+	// is used. Defaults to Core when VORTEX_ENABLED_CORES is unset.
+	EnabledCores []string
+	CoreBin      string // path to the core binary (single-core mode)
+	CoreConfig   string // where the agent writes the rendered core config
+	APIPort      int    // loopback port for the core's stats/control API (single-core)
 
 	// SingboxV2RayAPI controls whether the sing-box config emits the
 	// experimental.v2ray_api block (per-user stats). When VORTEX_SINGBOX_V2RAY_API
@@ -121,9 +125,14 @@ type Node struct {
 // LoadNode reads node-agent config from the environment, validating required keys.
 func LoadNode() (*Node, error) {
 	core := env("VORTEX_CORE", "xray")
+	enabled := parseCoreList(env("VORTEX_ENABLED_CORES", ""))
+	if len(enabled) == 0 {
+		enabled = []string{core}
+	}
 	c := &Node{
 		ListenAddr:      env("VORTEX_NODE_LISTEN", ":50051"),
 		Core:            core,
+		EnabledCores:    enabled,
 		CoreBin:         env("VORTEX_CORE_BIN", DefaultCoreBin(core)),
 		CoreConfig:      env("VORTEX_CORE_CONFIG", "/etc/vortex/core.json"),
 		APIPort:         envInt("VORTEX_CORE_API_PORT", 10085),
@@ -245,4 +254,92 @@ func redact(url string) string {
 		return "<unset>"
 	}
 	return "<set>"
+}
+
+func parseCoreList(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	var out []string
+	seen := make(map[string]struct{})
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if _, ok := seen[part]; ok {
+			continue
+		}
+		seen[part] = struct{}{}
+		out = append(out, part)
+	}
+	return out
+}
+
+func coreEnvPrefix(core string) string {
+	switch core {
+	case "singbox":
+		return "SINGBOX"
+	case "xray":
+		return "XRAY"
+	default:
+		return strings.ToUpper(core)
+	}
+}
+
+// CoreBinFor returns the binary path for one engine in multi-core mode.
+func (n *Node) CoreBinFor(core string) string {
+	if v := os.Getenv("VORTEX_" + coreEnvPrefix(core) + "_BIN"); v != "" {
+		return v
+	}
+	if len(n.EnabledCores) == 1 && n.CoreBin != "" {
+		return n.CoreBin
+	}
+	return DefaultCoreBin(core)
+}
+
+// CoreConfigFor returns the config file path for one engine.
+func (n *Node) CoreConfigFor(core string) string {
+	if v := os.Getenv("VORTEX_" + coreEnvPrefix(core) + "_CONFIG"); v != "" {
+		return v
+	}
+	if len(n.EnabledCores) == 1 {
+		return n.CoreConfig
+	}
+	switch core {
+	case "xray":
+		return "/etc/vortex/xray.json"
+	case "singbox":
+		return "/etc/vortex/singbox.json"
+	default:
+		return fmt.Sprintf("/etc/vortex/%s.json", core)
+	}
+}
+
+// APIPortFor returns the loopback stats API port for one engine.
+func (n *Node) APIPortFor(core string) int {
+	if v := os.Getenv("VORTEX_" + coreEnvPrefix(core) + "_API_PORT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	if len(n.EnabledCores) == 1 {
+		return n.APIPort
+	}
+	switch core {
+	case "xray":
+		return 10085
+	case "singbox":
+		return 10086
+	default:
+		return 10085
+	}
+}
+
+// SingboxV2RayAPIFor reports whether sing-box should emit v2ray_api for this agent.
+func (n *Node) SingboxV2RayAPIFor() bool {
+	if v, ok := envBoolUnset("VORTEX_SINGBOX_V2RAY_API"); ok {
+		return v
+	}
+	return defaultSingboxV2RayAPI("singbox")
 }

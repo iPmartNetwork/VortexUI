@@ -4,6 +4,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { useCreateNode, useNodeEnrollment, useTestNodeConnection } from "@/api/hooks";
 import type { NodeDiagnostics, NodeEnrollmentPhase } from "@/api/types";
 import { SERVER_LOCATIONS } from "@/lib/serverLocations";
+import type { CoreType } from "@/lib/coreTypes";
+import { EnabledCoresPicker } from "./EnabledCoresPicker";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 import { useToast } from "./toast";
@@ -48,7 +50,8 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [core, setCore] = useState("xray");
+  const [core, setCore] = useState<CoreType>("xray");
+  const [enabledCores, setEnabledCores] = useState<CoreType[]>(["xray"]);
   const [endpoint, setEndpoint] = useState("");
   const [locationKey, setLocationKey] = useState(AUTO_LOCATION);
   const [error, setError] = useState("");
@@ -68,6 +71,7 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
     setName("");
     setAddress("");
     setCore("xray");
+    setEnabledCores(["xray"]);
     setEndpoint("");
     setLocationKey(AUTO_LOCATION);
     setError("");
@@ -95,7 +99,7 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
     try {
       const preset = SERVER_LOCATIONS.find((p) => `${p.code}-${p.city}` === locationKey);
       const res = await create.mutateAsync({
-        name, address, core, endpoint: endpoint || undefined,
+        name, address, core, enabled_cores: enabledCores, endpoint: endpoint || undefined,
         location_auto: !preset,
         ...(preset ? { region: preset.label, country_code: preset.code } : {}),
       });
@@ -189,6 +193,14 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
             <li>Choose <strong>Node</strong> when prompted.</li>
             <li>Paste the bundle or scan the QR when asked (option 2).</li>
             <li>Ensure port <span className="font-mono">50051</span> is open to the panel.</li>
+            {enabledCores.length > 1 && (
+              <li>
+                For dual-core, set on the node:{" "}
+                <span className="font-mono text-fg">VORTEX_ENABLED_CORES=xray,singbox</span>
+                {" "}plus separate config paths (<span className="font-mono">VORTEX_XRAY_CONFIG</span>,{" "}
+                <span className="font-mono">VORTEX_SINGBOX_CONFIG</span>).
+              </li>
+            )}
             <li>On the node, verify CA fingerprint matches the panel value shown in step 1.</li>
           </ol>
           <p className="text-[10px] text-fg-subtle">After install, run <span className="font-mono">vortexui doctor</span> on the node to verify certs and the agent.</p>
@@ -204,10 +216,12 @@ export function CreateNodeModal({ open, onClose }: { open: boolean; onClose: () 
           <p className="text-sm text-fg-muted">Register the node in the panel using its public IP and agent port.</p>
           <Input placeholder="Name (e.g. fr-1)" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
           <Input placeholder="Agent address (host:50051)" value={address} onChange={(e) => setAddress(e.target.value)} required />
-          <Select value={core} onChange={(e) => setCore(e.target.value)}>
-            <option value="xray">Xray-core</option>
-            <option value="singbox">sing-box</option>
-          </Select>
+          <EnabledCoresPicker
+            value={enabledCores}
+            onChange={setEnabledCores}
+            defaultCore={core}
+            onDefaultCoreChange={setCore}
+          />
           <Input placeholder="Endpoint (optional — tunnel/CDN IP or domain)" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} />
           <label className="block text-xs text-fg-subtle">
             Server location
