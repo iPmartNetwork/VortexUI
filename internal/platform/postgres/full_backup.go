@@ -20,6 +20,21 @@ import (
 	"github.com/vortexui/vortexui/internal/domain"
 )
 
+// pgClientVersion runs "pg_dump --version" and extracts the major version.
+func pgClientVersion(bin string) (int, error) {
+	out, err := exec.Command(bin, "--version").Output()
+	if err != nil {
+		return 0, fmt.Errorf("cannot determine %s version: %w", bin, err)
+	}
+	parts := strings.Fields(string(out))
+	for _, p := range parts {
+		if v, err := strconv.Atoi(strings.Split(p, ".")[0]); err == nil && v > 0 {
+			return v, nil
+		}
+	}
+	return 0, fmt.Errorf("cannot parse %s version from: %s", bin, strings.TrimSpace(string(out)))
+}
+
 const (
 	fullBackupManifestName = "manifest.json"
 	fullBackupDumpName     = "database.dump"
@@ -71,7 +86,36 @@ func DumpDatabase(ctx context.Context, databaseURL string) ([]byte, error) {
 	}
 	pgDump, err := resolvePgBinary(ctx, databaseURL, "pg_dump")
 	if err != nil {
-		return nil, fmt.Errorf("pg_dump not found: install postgresql-client-16 (sudo apt-get install postgresql-client || sudo apt-get install postgresql-client-16). On restricted networks (Iran/China), use a proxy or download manually from https://ftp.postgresql.org/pub/source/")
+		return nil, fmt.Errorf("pg_dump not found: install postgresql-client-16 (sudo apt-get install postgresql-client-16). On restricted networks (Iran/China), use a proxy or download manually from https://ftp.postgresql.org/pub/source/")
+	}
+	// Verify pg_dump version matches server version before running.
+	// resolvePgBinary above already checks versioned paths, but it falls
+	// back to whatever is on PATH — which may be the wrong major version.
+	// Catch that here and try harder before giving a clear error.
+	serverMajor, srvErr := serverMajorVersion(ctx, databaseURL)
+	clientMajor, clientErr := pgClientVersion(pgDump)
+	if srvErr == nil && clientErr == nil && serverMajor != clientMajor {
+		// Try versioned paths one more time (in case resolvePgBinary's
+		// version query had a transient issue or PATH was later updated).
+		for _, candidate := range []string{
+			fmt.Sprintf("/usr/lib/postgresql/%d/bin/pg_dump", serverMajor),
+			fmt.Sprintf("/usr/pgsql-%d/bin/pg_dump", serverMajor),
+		} {
+			if st, statErr := os.Stat(candidate); statErr == nil && !st.IsDir() {
+				pgDump = candidate
+				clientMajor, clientErr = pgClientVersion(pgDump)
+				break
+			}
+		}
+	}
+	// If the version still doesn't match, clear instructions for the user.
+	if srvErr == nil && clientErr == nil && serverMajor != clientMajor {
+		return nil, fmt.Errorf(
+			"pg_dump version mismatch: server is PostgreSQL %d but pg_dump is version %d (found at %s). "+
+				"Install the matching client: sudo apt-get install postgresql-client-%d. "+
+				"For restricted networks, try a proxy or download from https://ftp.postgresql.org/pub/source/",
+			serverMajor, clientMajor, pgDump, serverMajor,
+		)
 	}
 	tmp, err := os.CreateTemp("", "vortex-dump-*.dump")
 	if err != nil {

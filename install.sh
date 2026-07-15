@@ -97,13 +97,14 @@ ensure_pg_client() {
       apt-get install -y "postgresql-client-$want" || apt-get install -y postgresql-client
     else
       info "apt.postgresql.org unreachable (network filtering) — installing distro default postgresql-client."
-      apt-get install -y postgresql-client || {
-        # Last resort: install from PostgreSQL APT mirror (timescale.cloud) for restricted networks
-        curl -fsSL https://install.postgresql.org | sudo sh -s -- -y -p "$want" 2>/dev/null ||
-        apt-get install -y "postgresql-client-${want}" 2>/dev/null ||
-        apt-get install -y postgresql-client 2>/dev/null ||
-        warn "could not install postgresql-client — full database backup/restore will not work until pg_dump is installed manually."
-      }
+      # Try several fallbacks: versioned package, then distro default
+      if ! apt-get install -y "postgresql-client-${want}" 2>/dev/null && ! apt-get install -y postgresql-client 2>/dev/null; then
+        # Last resort: try the generic installer script (no sudo needed, we're already root)
+        if ! curl -fsSL https://install.postgresql.org | sh -s -- -y -p "$want" 2>/dev/null; then
+          warn "could not install postgresql-client — full database backup/restore will not work until pg_dump is installed manually."
+          warn "Run: apt-get install postgresql-client-${want}  or  download from https://ftp.postgresql.org/pub/source/"
+        fi
+      fi
     fi
   elif command -v yum >/dev/null 2>&1; then
     yum install -y "postgresql${want}" || yum install -y postgresql
