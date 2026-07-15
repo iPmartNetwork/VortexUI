@@ -285,6 +285,14 @@ deploy_native() {
   info "bringing up PostgreSQL + Redis (Docker)…"
   docker compose -f docker-compose.yml up -d
 
+  # pg_dump/pg_restore run on the host for full-DB backup/restore, so the
+  # native install needs the postgres client tools even though the DB itself
+  # lives in Docker.
+  command -v pg_dump >/dev/null 2>&1 || {
+    info "installing postgresql-client (needed for full DB backup/restore)…"
+    (apt-get update -y && apt-get install -y postgresql-client) || yum install -y postgresql || apk add --no-cache postgresql-client || true
+  }
+
   info "building binaries…"
   /usr/local/go/bin/go build -o /usr/local/bin/vortex-panel ./cmd/panel 2>/dev/null || go build -o /usr/local/bin/vortex-panel ./cmd/panel
   go build -o /usr/local/bin/vortex-node ./cmd/node || true

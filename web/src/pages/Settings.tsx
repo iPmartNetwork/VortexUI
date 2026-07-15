@@ -1040,8 +1040,11 @@ function BackupTab({
               variant="outline"
               onClick={() =>
                 usersOnly
-                  ? exportUsers.mutate()
-                  : exportBackup.mutate({ format: "json", passphrase: passphrase || undefined, includeTraffic })
+                  ? exportUsers.mutate(undefined, { onError: (e) => toast.error(e instanceof Error ? e.message : "Export failed") })
+                  : exportBackup.mutate(
+                      { format: "json", passphrase: passphrase || undefined, includeTraffic },
+                      { onError: (e) => toast.error(e instanceof Error ? e.message : "Export failed") },
+                    )
               }
               disabled={usersOnly ? exportUsers.isPending : exportBackup.isPending}
             >
@@ -1052,7 +1055,12 @@ function BackupTab({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => exportBackup.mutate({ format: "full" })}
+                onClick={() =>
+                  exportBackup.mutate(
+                    { format: "full" },
+                    { onError: (e) => toast.error(e instanceof Error ? e.message : "Full DB backup failed") },
+                  )
+                }
                 disabled={exportBackup.isPending}
               >
                 <Download size={15} />
