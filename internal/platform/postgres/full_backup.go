@@ -11,8 +11,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/vortexui/vortexui/internal/domain"
 )
@@ -22,12 +25,51 @@ const (
 	fullBackupDumpName     = "database.dump"
 )
 
+// serverMajorVersion queries the connected server's major version (e.g. 16).
+// Used to pick a pg_dump/pg_restore binary that matches the server even when
+// the distro's default package (found first on PATH) is an older or newer
+// major version — pg_dump refuses to talk to a server newer than itself.
+func serverMajorVersion(ctx context.Context, databaseURL string) (int, error) {
+	conn, err := pgx.Connect(ctx, databaseURL)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close(ctx)
+	var raw string
+	if err := conn.QueryRow(ctx, "SHOW server_version_num").Scan(&raw); err != nil {
+		return 0, err
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, err
+	}
+	return n / 10000, nil
+}
+
+// resolvePgBinary finds a pg_dump/pg_restore binary matching the server's
+// major version. Debian/Ubuntu (PGDG) and RHEL-family (PGDG) both install
+// version-specific client binaries under well-known paths that are not
+// necessarily first on PATH, so check those before falling back to PATH.
+func resolvePgBinary(ctx context.Context, databaseURL, tool string) (string, error) {
+	if major, err := serverMajorVersion(ctx, databaseURL); err == nil {
+		for _, c := range []string{
+			fmt.Sprintf("/usr/lib/postgresql/%d/bin/%s", major, tool), // Debian/Ubuntu
+			fmt.Sprintf("/usr/pgsql-%d/bin/%s", major, tool),          // RHEL/CentOS
+		} {
+			if st, statErr := os.Stat(c); statErr == nil && !st.IsDir() {
+				return c, nil
+			}
+		}
+	}
+	return exec.LookPath(tool)
+}
+
 // DumpDatabase runs pg_dump in custom format (-Fc) against databaseURL.
 func DumpDatabase(ctx context.Context, databaseURL string) ([]byte, error) {
 	if strings.TrimSpace(databaseURL) == "" {
 		return nil, fmt.Errorf("database URL is required")
 	}
-	pgDump, err := exec.LookPath("pg_dump")
+	pgDump, err := resolvePgBinary(ctx, databaseURL, "pg_dump")
 	if err != nil {
 		return nil, fmt.Errorf("pg_dump not found in PATH: install postgresql-client for full database backup")
 	}
@@ -55,7 +97,7 @@ func RestoreDatabase(ctx context.Context, databaseURL string, dump []byte) error
 	if len(dump) == 0 {
 		return fmt.Errorf("empty database dump")
 	}
-	pgRestore, err := exec.LookPath("pg_restore")
+	pgRestore, err := resolvePgBinary(ctx, databaseURL, "pg_restore")
 	if err != nil {
 		return fmt.Errorf("pg_restore not found in PATH: install postgresql-client for full database restore")
 	}
