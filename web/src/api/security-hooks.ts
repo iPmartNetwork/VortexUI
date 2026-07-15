@@ -34,6 +34,17 @@ export interface RateLimitRule {
     created_at: string;
 }
 
+export interface RateLimitViolation {
+    id: string;
+    rule_id: string;
+    client_ip: string;
+    path: string;
+    method: string;
+    count: number;
+    blocked: boolean;
+    created_at: string;
+}
+
 export interface PerformanceHealth {
     cache: CacheStats;
     slow_queries_last_hour: number;
@@ -73,10 +84,20 @@ export function useQueryStats() {
     });
 }
 
+export interface PerformanceAlert {
+    id: string;
+    type: string;
+    severity: "info" | "warning" | "critical";
+    message: string;
+    created_at: string;
+    resolved: boolean;
+    resolved_at?: string;
+}
+
 export function usePerformanceAlerts() {
     return useQuery({
         queryKey: ["performance-alerts"],
-        queryFn: () => api<{ alerts: any[] }>("/api/performance/alerts"),
+        queryFn: () => api<{ alerts: PerformanceAlert[] }>("/api/performance/alerts"),
         refetchInterval: 15000,
     });
 }
@@ -103,7 +124,7 @@ export function useRateLimitViolations(clientIp: string, minutesBack = 60) {
     return useQuery({
         queryKey: ["rate-limit-violations", clientIp, minutesBack],
         queryFn: () =>
-            api<{ violations: any[] }>("/api/performance/rate-limits/violations", {
+            api<{ violations: RateLimitViolation[] }>("/api/performance/rate-limits/violations", {
                 query: { client_ip: clientIp, minutes_back: minutesBack },
             }),
         enabled: !!clientIp,

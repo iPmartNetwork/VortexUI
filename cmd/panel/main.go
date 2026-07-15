@@ -247,10 +247,6 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	go resetter.Run(ctx)
 
 	authSvc := service.NewAuthService(admins, issuer)
-	// Note: AuditService requires full port.AuditRepository implementation
-	// which extends the existing AuditRepo with additional methods.
-	// This will be completed in Phase 1.2
-	// auditSvc := service.NewAuditService(store.Audit(), log)
 	userSvc := service.NewUserService(users, h)
 	userSvc.SetPublisher(bus)
 	userSvc.SetOnlineQuerier(h)
@@ -603,8 +599,9 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Audit:       store.Audit(),
 		IPGuard:     ipGuard,
 		PanelSettings: &api.PanelSettingsHandlers{Svc: panelSettingsSvc},
-		AuditService: nil, // Disabled pending port implementation
-		SessionService: nil, // Disabled pending pgxpool integration
+		// AuditService and SessionService are disabled: the underlying
+		// AuditRepo/SessionRepo stubs need full sqlc query generation before
+		// these services can be safely wired into the middleware chain.
 		MetricsService: metricsService,
 		HealthService: healthService,
 		LoggerService: loggerService,
