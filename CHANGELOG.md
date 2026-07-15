@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-07-15
+
+Systemd auto-start reliability fix and graceful backup restore for legacy (pre-credentials) exports.
+
+### Fixed
+- **Systemd auto-start** — panel and node services now declare `Wants=network-online.target` and set `StartLimitIntervalSec=0` so the service always restarts after a server reboot or update, even when the PostgreSQL/Redis Docker containers take longer than usual to become ready.
+- **`vortexui update`** — calls `systemctl daemon-reload` and re-enables the unit before restarting, so any service-file changes from the Git pull take effect immediately.
+- **Backup restore (legacy)** — restoring a JSON backup exported before v1.3.4 (which lacked admin credentials) no longer fails the entire restore. A temporary random password is generated for each affected admin, printed to the log with the `reset immediately` hint, and the restore completes. Use `vortexui admin reset-password` to set a permanent password afterwards.
+
 ## [1.3.4] - 2026-07-15
 
 Comprehensive backup & restore for server migration, billing/wallet history, and reseller-scoped user backups.

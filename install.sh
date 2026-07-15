@@ -330,12 +330,14 @@ EOF
   cat > /etc/systemd/system/vortexui-panel.service <<EOF
 [Unit]
 Description=VortexUI panel
-After=network.target docker.service
+Wants=network-online.target
+After=network-online.target docker.service
 [Service]
 EnvironmentFile=/etc/vortexui/panel.env
 ExecStart=/usr/local/bin/vortex-panel
 Restart=always
-RestartSec=3
+RestartSec=5
+StartLimitIntervalSec=0
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -454,12 +456,14 @@ EOF
   cat > /etc/systemd/system/vortexui-node.service <<EOF
 [Unit]
 Description=VortexUI node agent
-After=network.target
+Wants=network-online.target
+After=network-online.target
 [Service]
 EnvironmentFile=/etc/vortexui/node.env
 ExecStart=/usr/local/bin/vortex-node
 Restart=always
-RestartSec=3
+RestartSec=5
+StartLimitIntervalSec=0
 [Install]
 WantedBy=multi-user.target
 EOF

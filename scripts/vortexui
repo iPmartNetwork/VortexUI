@@ -159,6 +159,13 @@ c_update() {
       export PATH="$PATH:/usr/local/go/bin"
       ( cd "$DIR" && go build -a -o /usr/local/bin/vortex-panel ./cmd/panel && install_node_binary )
       ( cd "$DIR/web" && npm ci && npm run build && mkdir -p /var/www/vortexui && cp -r dist/* /var/www/vortexui/ )
+      # Refresh the systemd unit (StartLimitIntervalSec etc.) and reload before restart.
+      if [ -f "$DIR/install.sh" ]; then
+        grep -A12 'cat > /etc/systemd/system/vortexui-panel.service' "$DIR/install.sh" \
+          | sed '1d;/^EOF$/q;s/^EOF$//' > /etc/systemd/system/vortexui-panel.service 2>/dev/null || true
+      fi
+      systemctl daemon-reload
+      systemctl enable vortexui-panel 2>/dev/null || true
       systemctl restart vortexui-panel caddy
       echo "${g}✓ panel updated${n} — run ${b}vortexui doctor${n} to verify services, DB, and certs." ;;
     *)      $COMPOSE up -d --build

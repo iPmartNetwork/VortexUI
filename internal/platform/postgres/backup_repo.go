@@ -2,9 +2,12 @@ package postgres
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/vortexui/vortexui/internal/auth"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/platform/postgres/db"
 )
@@ -321,6 +325,16 @@ func (r *BackupRepo) RestoreReseller(ctx context.Context, rb *domain.ResellerBac
 	return tx.Commit(ctx)
 }
 
+// generateTempPassword returns a cryptographically random 12-character hex
+// string used as a one-time password when a backup is missing admin credentials.
+func generateTempPassword() (string, error) {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
 func credentialMap(creds []domain.BackupAdminCredential) map[uuid.UUID]domain.BackupAdminCredential {
 	out := make(map[uuid.UUID]domain.BackupAdminCredential, len(creds))
 	for _, c := range creds {
@@ -416,7 +430,22 @@ func upsertAdmin(ctx context.Context, q *db.Queries, admins *AdminRepo, a *domai
 			return mapErr(err)
 		}
 		if a.PasswordHash == "" {
-			return fmt.Errorf("restore admin %s: password hash missing (export with credentials or reset via CLI)", a.Username)
+			// Old backup format without admin credentials: generate a random
+			// temporary password so restore succeeds. The operator MUST run
+			// `vortexui admin reset-password` (or use the CLI) to regain access.
+			tmpPass, genErr := generateTempPassword()
+			if genErr != nil {
+				return fmt.Errorf("restore admin %s: generate temp password: %w", a.Username, genErr)
+			}
+			hash, hashErr := auth.HashPassword(tmpPass)
+			if hashErr != nil {
+				return fmt.Errorf("restore admin %s: hash temp password: %w", a.Username, hashErr)
+			}
+			a.PasswordHash = hash
+			slog.Warn("restored admin with generated temporary password — reset immediately",
+				"username", a.Username,
+				"temp_password", tmpPass,
+				"hint", "run: vortexui admin reset-password --username "+a.Username+" --password <new>")
 		}
 		if err := admins.Create(ctx, a); err != nil && !isUniqueViolation(err) {
 			return err
