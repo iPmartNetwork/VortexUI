@@ -4,7 +4,7 @@ import { useAuth } from "@/auth/auth";
 import { Layout } from "@/components/Layout";
 import { Login } from "@/pages/Login";
 import { Overview } from "@/pages/Overview";
-import { useI18n } from "@/i18n/i18n";
+import { SkeletonPage } from "@/components/Skeleton";
 
 const LazyUsers = lazy(() => import("@/pages/Users").then((m) => ({ default: m.Users })));
 const LazyUserDetail = lazy(() => import("@/pages/UserDetail").then((m) => ({ default: m.UserDetail })));
@@ -50,9 +50,8 @@ const LazyPortalTickets = lazy(() => import("@/pages/portal/PortalTickets").then
 const LazyPortalReferral = lazy(() => import("@/pages/portal/PortalReferral").then((m) => ({ default: m.PortalReferral })));
 
 const LazyRoute = ({ component: Component }: { component: ComponentType }) => {
-  const { t } = useI18n();
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center p-6 text-sm text-fg-muted">{t("common.loading")}</div>}>
+    <Suspense fallback={<SkeletonPage />}>
       <Component />
     </Suspense>
   );

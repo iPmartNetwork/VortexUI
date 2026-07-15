@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { CommandPalette } from "@/components/CommandPalette";
 import { PanelBrandingSync } from "@/components/PanelBrandingSync";
+import { PageTransition } from "@/components/PageTransition";
 import { useAuth } from "@/auth/auth";
 import { useLiveEvents } from "@/api/live";
 import { useStopImpersonation } from "@/api/reseller-hooks";
@@ -51,7 +52,7 @@ export function Layout() {
                 </button>
               </div>
             )}
-            <Outlet />
+            <PageTransition><Outlet /></PageTransition>
           </div>
         </main>
       </div>
