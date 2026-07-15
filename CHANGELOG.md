@@ -21,6 +21,7 @@ Comprehensive backup & restore for server migration, billing/wallet history, and
 
 ### Fixed
 - Config restore now wipes orphan rows (traffic_points, sub_hosts, orders, …) and preserves admin passwords when credentials are included in the backup.
+- **Admin login after backup restore** — restore no longer overwrites `password_hash` with empty values when backup lacks `admin_credentials`; added `panel admin reset-password` for CLI recovery.
 
 **Release by ali**
 

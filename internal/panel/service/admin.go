@@ -686,6 +686,27 @@ func (s *AdminService) Permissions(ctx context.Context, id uuid.UUID) ([]domain.
 	return role.Permissions, nil
 }
 
+// ResetPassword sets a new password for an existing admin (CLI recovery when login
+// is broken, e.g. after restoring a backup without admin_credentials).
+func (s *AdminService) ResetPassword(ctx context.Context, username, next string) error {
+	if username == "" || next == "" {
+		return errors.New("username and password are required")
+	}
+	if len(next) < 6 {
+		return errors.New("password must be at least 6 characters")
+	}
+	admin, err := s.admins.GetByUsername(ctx, username)
+	if err != nil {
+		return err
+	}
+	hash, err := auth.HashPassword(next)
+	if err != nil {
+		return err
+	}
+	admin.PasswordHash = hash
+	return s.admins.Update(ctx, admin)
+}
+
 // ChangePassword lets an admin change their own password after proving the
 // current one — so a hijacked session cannot silently lock the owner out.
 func (s *AdminService) ChangePassword(ctx context.Context, adminID uuid.UUID, current, next string) error {

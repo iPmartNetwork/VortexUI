@@ -389,7 +389,7 @@ vortexui — manage the VortexUI stack (${MODE} install)
   vortexui status              service status
   vortexui logs [panel|caddy]  follow logs
   vortexui update              pull latest and rebuild
-  vortexui admin ...           run 'panel admin' (e.g. admin create --username U --password P --sudo)
+  vortexui admin ...           run 'panel admin' (create / reset-password)
   vortexui node-bundle         print an mTLS enrollment bundle for a new node
   vortexui doctor              check certs, services, ports, and connectivity
   vortexui settings            show URL / port / status
