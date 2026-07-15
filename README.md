@@ -108,12 +108,105 @@
 - Dark + Light themes · **Command palette** (Ctrl+K)
 - **Customizable dashboard widgets** (drag & drop)
 - **Onboarding tour** for new admins
+- **Skeleton loading** · **Page transitions** · **Animated counters**
+- **Stagger animations** · **Login particles** · **Shimmer states**
+- **framer-motion AnimatePresence** modals + toasts
 - Real-time charts + animated gauges + **World map**
 - PWA (installable mobile app)
 
 </td>
 </tr>
 </table>
+
+---
+
+## 🆕 What's New in 1.3.7
+
+> **Frontend UX overhaul · skeleton loading · page transitions · animated counters · stagger animations · login particles · improved modals/toasts · shimmer states · empty states · copy morph**
+
+| Feature | Description |
+|---------|-------------|
+| **Skeleton loading** | `SkeletonPage` replaces plain text fallback; shimmer placeholders for cards, tables, charts across all pages |
+| **Page transitions** | CSS-based fade+slide on every route change via `PageTransition` wrapper |
+| **Animated counters** | Numbers count up from 0 using rAF with ease-out cubic easing, triggered on scroll via IntersectionObserver |
+| **Stagger animations** | `StaggerContainer` — children animate in sequence with configurable delay for lists and grids |
+| **Login particles** | Canvas-based floating particles with connection lines, adapting to dark/light theme |
+| **Modal animations** | framer-motion `AnimatePresence` with spring scale+slide transitions |
+| **Toast animations** | Spring-based enter/exit with AnimatePresence for smooth toast lifecycle |
+| **Empty states** | Reusable `EmptyState` component with icons, descriptions, and CTAs across DataTable, Users, Nodes, Analytics, Tickets, Orders, Audit |
+| **CopyField morph** | Animated icon swap (Copy → Check) with spring physics and ripple effect |
+| **Settings tab transitions** | framer-motion `AnimatePresence mode="wait"` with fade+blur between settings tabs |
+| **Shimmer loading** | Animated shimmer gradients on Nodes and Users loading states |
+
+---
+
+## 🆕 What's New in 1.3.6
+
+> **Critical crash-loop fix · pg_dump version mismatch · Iranian server support · Docker fixes**
+
+| Feature | Description |
+|---------|-------------|
+| **Panel crash-loop fix** | Missing `-- +goose Up` directive in migration `0042_multicore.sql` caused infinite restart cycles on every boot |
+| **pg_dump version mismatch** | Server PostgreSQL 16 vs client pg_dump 14 error handled gracefully with clear install instructions |
+| **Iranian server compatibility** | `VORTEXUI_GH_MIRROR` env var, Chinese Go mirrors (USTC/Tsinghua), Alibaba Docker mirror fallback |
+| **Docker static binary fix** | Correct tarball extraction path for Docker static install; GH_MIRROR made globally available |
+| **TypeScript cleanup** | Replaced `any[]` with proper `PerformanceAlert` and `RateLimitViolation` interfaces |
+| **Stale comments removed** | Phase 1.2 audit service comments cleaned from `cmd/panel/main.go` |
+
+---
+
+## 🆕 What's New in 1.3.5
+
+> **Systemd auto-start · graceful legacy backup restore**
+
+| Feature | Description |
+|---------|-------------|
+| **Systemd auto-start** | Panel/node services now declare `Wants=network-online.target` and `StartLimitIntervalSec=0` for reliable post-reboot startup |
+| **Legacy backup restore** | JSON backups exported before v1.3.4 (lacking admin credentials) no longer fail; random temp password generated with reset hint |
+| **`vortexui update`** | Calls `systemctl daemon-reload` and re-enables the unit before restarting for immediate service-file changes |
+
+---
+
+## 🆕 What's New in 1.3.4
+
+> **Backup v3 · full pg_dump · AES-256 encryption · reseller backup v2**
+
+| Feature | Description |
+|---------|-------------|
+| **Backup v3 JSON** | Supplemental tables (wallet, billing, orders, sub hosts, panel settings, reseller payment config) with usage manifest |
+| **Full database backup** | `pg_dump` archive (`.tar.gz`) via `GET /api/backup?format=full` for byte-for-byte server migration |
+| **Restore modes** | JSON config restore (transactional) and full DB restore (`POST /api/backup/restore?mode=full`) |
+| **AES-256-GCM encryption** | Optional passphrase via `X-Backup-Passphrase` header on export/import |
+| **Reseller backup v2** | Users, bindings, wallet, orders, payment config, portal branding; restore via `POST /api/account/backup/users/restore` |
+| **Settings UI** | Backup preview panel, JSON vs full DB export, restore mode selector, encryption passphrase, traffic time-series toggle |
+
+---
+
+## 🆕 What's New in 1.3.3
+
+> **Multi-core Phase 1 · dual engine nodes · per-inbound core selection**
+
+| Feature | Description |
+|---------|-------------|
+| **Dual-core nodes** | Run **Xray** and **sing-box** on the same node; `enabled_cores` on nodes with `CompositeDriver` for split config sync |
+| **Per-inbound core override** | Each inbound can target xray or sing-box; empty inherits the node default |
+| **Multi-core UI** | Enabled-core toggles on create/edit node; engine picker on inbound form; multi-core badges on fleet view |
+
+---
+
+## 🆕 What's New in 1.3.2
+
+> **PHASE 3 · Performance monitoring · Security hardening · Compliance · Enhanced inbounds · UI overhaul**
+
+| Feature | Description |
+|---------|-------------|
+| **Performance Monitoring** | `/performance` with real-time cache stats, query metrics, slow query tracking, performance alerts |
+| **Security Hardening** | `/security` with threat monitoring, compliance status, security policies, threat statistics |
+| **Compliance Dashboard** | `/compliance` with system compliance checklist, status tracking, policy enforcement |
+| **Enhanced Inbounds** | `/inbounds` with search/filter, statistics cards, protocol distribution visualization |
+| **Overview UI redesign** | Gradient backgrounds, improved charts, enhanced node fleet telemetry, user pool display |
+| **Traffic Series Chart** | Gradient styling, enhanced header, summary stats cards (Upload/Download/Peak) |
+| **Protocol Donut Chart** | Better visual hierarchy and professional appearance |
 
 ---
 
@@ -294,7 +387,7 @@ Collapsible sidebar · Command palette · Skeleton loading · Data tables · Pag
 
 ### How VortexUI stacks up against other panels
 
-|  | VortexUI 1.3.1 | 3x-ui | Marzban | Hiddify |
+|  | VortexUI 1.3.7 | 3x-ui | Marzban | Hiddify |
 |--|----------------|-------|---------|---------|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |
