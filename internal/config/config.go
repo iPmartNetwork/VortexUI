@@ -65,6 +65,7 @@ type Panel struct {
 	LocalNodeName string // node name/identity in the DB (default "local")
 	LocalNodeHost string // public host advertised in subscriptions (default 127.0.0.1)
 	Core          string // xray | singbox
+	EnabledCores  []string // when len>1 local node uses CompositeDriver
 	CoreBin       string // path to the core binary
 	CoreConfig    string // where the rendered core config is written
 	CoreAPIPort   int    // loopback port for the core's stats/control API
@@ -151,6 +152,10 @@ func LoadNode() (*Node, error) {
 // LoadPanel reads panel config from the environment, validating required keys.
 func LoadPanel() (*Panel, error) {
 	core := env("VORTEX_CORE", "xray")
+	enabled := parseCoreList(env("VORTEX_ENABLED_CORES", ""))
+	if len(enabled) == 0 {
+		enabled = []string{core}
+	}
 	c := &Panel{
 		HTTPAddr:         env("VORTEX_HTTP_ADDR", ":8080"),
 		GRPCAddr:         env("VORTEX_GRPC_ADDR", ":50051"),
@@ -171,6 +176,7 @@ func LoadPanel() (*Panel, error) {
 		LocalNodeName:    env("VORTEX_LOCAL_NODE_NAME", "local"),
 		LocalNodeHost:    env("VORTEX_LOCAL_NODE_HOST", "127.0.0.1"),
 		Core:             core,
+		EnabledCores:     enabled,
 		CoreBin:          os.Getenv("VORTEX_CORE_BIN"),
 		CoreConfig:       env("VORTEX_CORE_CONFIG", "/etc/vortex/local-core.json"),
 		CoreAPIPort:      envInt("VORTEX_CORE_API_PORT", 10085),

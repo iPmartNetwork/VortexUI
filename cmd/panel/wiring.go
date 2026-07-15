@@ -2,16 +2,14 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/vortexui/vortexui/internal/agent"
 	"github.com/vortexui/vortexui/internal/config"
 	"github.com/vortexui/vortexui/internal/core"
-	"github.com/vortexui/vortexui/internal/core/singbox"
-	"github.com/vortexui/vortexui/internal/core/xray"
 	"github.com/vortexui/vortexui/internal/decoy"
 	"github.com/vortexui/vortexui/internal/domain"
 	"github.com/vortexui/vortexui/internal/panel/hub"
@@ -67,16 +65,9 @@ func localAwareDialer(tls vgrpc.TLSFiles, localID uuid.UUID, localDriver core.Co
 }
 
 // buildLocalDriver constructs the in-process core driver for the local node,
-// mirroring the node agent's selection logic.
+// mirroring the node agent's selection logic (including multi-core).
 func buildLocalDriver(cfg *config.Panel, log *slog.Logger) (core.CoreDriver, error) {
-	switch cfg.Core {
-	case "singbox":
-		return singbox.New(singbox.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.CoreAPIPort, OmitV2RayAPI: !cfg.SingboxV2RayAPI, Logger: log}), nil
-	case "xray", "":
-		return xray.New(xray.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.CoreAPIPort, Logger: log}), nil
-	default:
-		return nil, fmt.Errorf("unknown core %q (want xray|singbox)", cfg.Core)
-	}
+	return agent.NewDriverFromPanel(cfg, log)
 }
 
 // ensureLocalNode returns the local node's DB record, creating it on first run
@@ -93,9 +84,14 @@ func ensureLocalNode(ctx context.Context, nodes port.NodeRepository, cfg *config
 	}
 	for _, n := range list {
 		if n.Name == cfg.LocalNodeName {
-			if n.Address != cfg.LocalNodeHost || n.Core != core {
+			enabled := make([]domain.CoreType, len(cfg.EnabledCores))
+			for i, c := range cfg.EnabledCores {
+				enabled[i] = domain.CoreType(c)
+			}
+			if n.Address != cfg.LocalNodeHost || n.Core != core || !slicesEqualCore(n.EnabledCores, enabled) {
 				n.Address = cfg.LocalNodeHost
 				n.Core = core
+				n.EnabledCores = enabled
 				if err := nodes.Update(ctx, n); err != nil {
 					return nil, err
 				}
@@ -108,13 +104,36 @@ func ensureLocalNode(ctx context.Context, nodes port.NodeRepository, cfg *config
 		Name:         cfg.LocalNodeName,
 		Address:      cfg.LocalNodeHost,
 		Core:         core,
-		EnabledCores: []domain.CoreType{core},
+		EnabledCores: coresFromStrings(cfg.EnabledCores, core),
 		Status:       domain.NodeDisconnected,
-		UsageRatio: 1,
-		CreatedAt:  time.Now(),
+		UsageRatio:   1,
+		CreatedAt:    time.Now(),
 	}
 	if err := nodes.Create(ctx, n); err != nil {
 		return nil, err
 	}
 	return n, nil
+}
+
+func coresFromStrings(ss []string, fallback domain.CoreType) []domain.CoreType {
+	if len(ss) == 0 {
+		return []domain.CoreType{fallback}
+	}
+	out := make([]domain.CoreType, len(ss))
+	for i, s := range ss {
+		out[i] = domain.CoreType(s)
+	}
+	return out
+}
+
+func slicesEqualCore(a, b []domain.CoreType) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

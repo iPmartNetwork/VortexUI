@@ -25,9 +25,10 @@ type NodeDeployInput struct {
 	Username   string `json:"username"`   // SSH user (default root)
 	Password   string `json:"password"`   // or use key
 	PrivateKey string `json:"private_key"` // SSH private key (PEM)
-	NodeName   string `json:"node_name"`  // name for the node in the panel
-	Core       string `json:"core"`       // xray or singbox
-	AgentPort  int    `json:"agent_port"` // gRPC listen port (default 50051)
+	NodeName      string   `json:"node_name"`  // name for the node in the panel
+	Core          string   `json:"core"`       // default core: xray or singbox
+	EnabledCores  []string `json:"enabled_cores"` // optional; e.g. ["xray","singbox"]
+	AgentPort     int      `json:"agent_port"` // gRPC listen port (default 50051)
 }
 
 // Deployer handles automated node provisioning.
@@ -82,6 +83,54 @@ func singboxV2RayAPIValue(core string) string {
 	return "true"
 }
 
+func normalizedDeployCores(core string, enabled []string) []string {
+	if len(enabled) == 0 {
+		return []string{core}
+	}
+	out := make([]string, 0, len(enabled))
+	seen := make(map[string]struct{})
+	for _, c := range enabled {
+		if c == "" {
+			continue
+		}
+		if _, ok := seen[c]; ok {
+			continue
+		}
+		seen[c] = struct{}{}
+		out = append(out, c)
+	}
+	if len(out) == 0 {
+		return []string{core}
+	}
+	return out
+}
+
+func nodeEnvContent(agentPort int, core string, enabled []string) string {
+	cores := normalizedDeployCores(core, enabled)
+	lines := []string{
+		fmt.Sprintf("VORTEX_NODE_LISTEN=:%d", agentPort),
+		fmt.Sprintf("VORTEX_CORE=%s", core),
+		fmt.Sprintf("VORTEX_CORE_BIN=%s", coreBinPath(core)),
+		"VORTEX_CORE_CONFIG=/etc/vortex/node-core.json",
+		fmt.Sprintf("VORTEX_SINGBOX_V2RAY_API=%s", singboxV2RayAPIValue(core)),
+		"VORTEX_TLS_CERT=/etc/vortex/certs/node.crt",
+		"VORTEX_TLS_KEY=/etc/vortex/certs/node.key",
+		"VORTEX_TLS_CA=/etc/vortex/certs/ca.crt",
+		"XRAY_LOCATION_ASSET=/etc/vortex/assets",
+	}
+	if len(cores) > 1 {
+		lines = append(lines,
+			"VORTEX_ENABLED_CORES="+strings.Join(cores, ","),
+			"VORTEX_XRAY_CONFIG=/etc/vortex/xray.json",
+			"VORTEX_SINGBOX_CONFIG=/etc/vortex/singbox.json",
+			"VORTEX_XRAY_API_PORT=10085",
+			"VORTEX_SINGBOX_API_PORT=10086",
+			"VORTEX_SINGBOX_V2RAY_API=false",
+		)
+	}
+	return strings.Join(lines, "\n") + "\n"
+}
+
 // singboxInstallCmd installs sing-box 1.12.12 (arch-aware).
 const singboxInstallCmd = `sarch=$(uname -m); case "$sarch" in aarch64|arm64) sarch=arm64 ;; *) sarch=amd64 ;; esac; sbver=v1.12.12; curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${sbver}/sing-box-${sbver#v}-linux-${sarch}.tar.gz" && tar -xzf /tmp/sb.tgz -C /tmp && install -m 755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box || true`
 
@@ -134,16 +183,7 @@ WantedBy=multi-user.target
 EOF
 mkdir -p /etc/vortexui
 cat > /etc/vortexui/node.env << 'EOF'
-VORTEX_NODE_LISTEN=:%d
-VORTEX_CORE=%s
-VORTEX_CORE_BIN=%s
-VORTEX_CORE_CONFIG=/etc/vortex/node-core.json
-VORTEX_SINGBOX_V2RAY_API=%s
-VORTEX_TLS_CERT=/etc/vortex/certs/node.crt
-VORTEX_TLS_KEY=/etc/vortex/certs/node.key
-VORTEX_TLS_CA=/etc/vortex/certs/ca.crt
-XRAY_LOCATION_ASSET=/etc/vortex/assets
-EOF`, input.AgentPort, input.Core, coreBinPath(input.Core), singboxV2RayAPIValue(input.Core))},
+%sEOF`, nodeEnvContent(input.AgentPort, input.Core, input.EnabledCores))},
 		{"open firewall", fmt.Sprintf("ufw allow %d/tcp 2>/dev/null || iptables -I INPUT -p tcp --dport %d -j ACCEPT 2>/dev/null || true", input.AgentPort, input.AgentPort)},
 		{"enable service", "systemctl daemon-reload && systemctl enable vortexui-node"},
 	}
