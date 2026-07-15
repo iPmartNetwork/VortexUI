@@ -28,13 +28,39 @@ die()  { echo "${r}✗ $*${n}" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "please run as root (sudo)."
 
-PUBLIC_HOST="$(curl -fsS4 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1)"
+PUBLIC_HOST="$(curl -fsS4 https://api.ipify.org 2>/dev/null || curl -fsS4 https://icanhazip.com 2>/dev/null || curl -fsS4 https://ip.sb 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1)"
 
 ensure_docker() {
   if ! command -v docker >/dev/null 2>&1; then
-    info "installing Docker…"; curl -fsSL https://get.docker.com | sh; systemctl enable --now docker || true
+    info "installing Docker…"
+    # Try official script first, then alternative mirrors for restricted networks
+    if ! curl -fsSL https://get.docker.com | sh 2>/dev/null; then
+      warn "official Docker install failed — trying mirror (get.docker.com may be blocked)."
+      # Alibaba Cloud mirror (accessible from most regions including Iran)
+      local os_id="$(. /etc/os-release; echo "$ID")"
+      local os_codename="$(. /etc/os-release; echo "$VERSION_CODENAME")"
+      curl -fsSL "https://mirrors.aliyun.com/docker-ce/linux/${os_id}/gpg" | apt-key add - 2>/dev/null || true
+      echo "deb [arch=amd64] https://mirrors.aliyun.com/docker-ce/linux/${os_id} ${os_codename} stable" \
+        > /etc/apt/sources.list.d/docker.list 2>/dev/null || true
+      apt-get update -y && apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>/dev/null || {
+        # Last resort: use the static binary install
+        warn "could not install Docker via apt — trying static binaries."
+        local dl_url; local docker_ver="27.3.1"
+        if curl -fsSL -o /tmp/docker.tgz "https://mirrors.aliyun.com/docker-ce/linux/static/stable/$(uname -m)/docker-${docker_ver}.tgz" 2>/dev/null; then
+          tar -xzf /tmp/docker.tgz -C /tmp
+          install -m 0755 /tmp/docker/docker /usr/local/bin/docker 2>/dev/null || install -m 0755 /tmp/docker/*/docker /usr/local/bin/docker 2>/dev/null || true
+          # Install Docker Compose plugin for the static install
+          mkdir -p /usr/local/lib/docker/cli-plugins
+          local compose_ver; compose_ver="$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest 2>/dev/null | grep -oP '"tag_name": "\K[^"]+' || echo "v2.32.0")"
+          curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-compose \
+            "${GH_MIRROR}https://github.com/docker/compose/releases/download/${compose_ver}/docker-compose-linux-$(uname -m)" 2>/dev/null
+          chmod +x /usr/local/lib/docker/cli-plugins/docker-compose 2>/dev/null || true
+        fi
+      }
+    fi
+    systemctl enable --now docker || true
   fi
-  docker compose version >/dev/null 2>&1 || die "Docker Compose v2 plugin not found."
+  docker compose version >/dev/null 2>&1 || docker-compose version >/dev/null 2>&1 || die "Docker Compose v2 plugin not found."
 }
 ensure_git() {
   command -v git >/dev/null 2>&1 || { info "installing git…"; (apt-get update -y && apt-get install -y git) || yum install -y git || apk add git; }
@@ -57,11 +83,23 @@ ensure_pg_client() {
   fi
   if command -v apt-get >/dev/null 2>&1; then
     apt-get update -y && apt-get install -y postgresql-common curl ca-certificates gnupg || true
-    if [ -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ]; then
-      yes | /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y || true
+    # Try PGDG repo first, then fall back to distro's default client package
+    if curl -fsSL --connect-timeout 5 https://apt.postgresql.org/pub/repos/apt/ 2>/dev/null; then
+      if [ -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ]; then
+        yes | /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y || true
+      fi
+      apt-get update -y
+      apt-get install -y "postgresql-client-$want" || apt-get install -y postgresql-client
+    else
+      info "apt.postgresql.org unreachable (network filtering) — installing distro default postgresql-client."
+      apt-get install -y postgresql-client || {
+        # Last resort: install from PostgreSQL APT mirror (timescale.cloud) for restricted networks
+        curl -fsSL https://install.postgresql.org | sudo sh -s -- -y -p "$want" 2>/dev/null ||
+        apt-get install -y "postgresql-client-${want}" 2>/dev/null ||
+        apt-get install -y postgresql-client 2>/dev/null ||
+        warn "could not install postgresql-client — full database backup/restore will not work until pg_dump is installed manually."
+      }
     fi
-    apt-get update -y
-    apt-get install -y "postgresql-client-$want" || apt-get install -y postgresql-client
   elif command -v yum >/dev/null 2>&1; then
     yum install -y "postgresql${want}" || yum install -y postgresql
   elif command -v apk >/dev/null 2>&1; then
@@ -231,7 +269,9 @@ ensure_go() {
   for v in "$latest" go1.26.3; do
     [ -n "$v" ] || continue
     tgz="${v}.linux-${arch}.tar.gz"
-    for host in "https://go.dev/dl" "https://dl.google.com/go"; do
+    # Try official hosts first, then Chinese mirrors (for Iran and similar regions)
+    for host in "https://go.dev/dl" "https://dl.google.com/go" \
+                "https://mirrors.ustc.edu.cn/golang/" "https://mirrors.tuna.tsinghua.edu.cn/golang/"; do
       if curl -fsSL "${host}/${tgz}" -o /tmp/go.tgz; then
         rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go.tgz
         export PATH="$PATH:/usr/local/go/bin"
@@ -240,7 +280,7 @@ ensure_go() {
       fi
     done
   done
-  die "could not download the Go toolchain (go.dev / dl.google.com unreachable — likely network filtering). Options: (1) export https_proxy and re-run; (2) set VORTEXUI_GO_URL to a reachable Go tarball and re-run; (3) copy /usr/local/go from a working server (tar it, scp it, extract to /usr/local), then re-run. Go downloads: https://go.dev/dl/"
+  die "could not download the Go toolchain (go.dev / dl.google.com / mirrors unreachable — likely network filtering). Options: (1) export https_proxy and re-run; (2) set VORTEXUI_GO_URL to a reachable Go tarball and re-run; (3) copy /usr/local/go from a working server (tar it, scp it, extract to /usr/local), then re-run. Go downloads: https://go.dev/dl/"
 }
 
 # Download the xray-core and sing-box engines to the host and stage geo data.
@@ -259,9 +299,11 @@ install_cores() {
   command -v unzip >/dev/null 2>&1 || die "could not install 'unzip' — install it manually and re-run."
   mkdir -p /etc/vortex/assets
 
+  GH_MIRROR="${VORTEXUI_GH_MIRROR:-}"
+
   if [ ! -x /usr/local/bin/xray ]; then
     info "installing xray-core…"
-    curl -fsSL -o /tmp/xray.zip "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-${xarch}.zip"
+    curl -fsSL -o /tmp/xray.zip "${GH_MIRROR}https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-${xarch}.zip"
     unzip -o /tmp/xray.zip -d /tmp/xray-dl >/dev/null
     install -m 0755 /tmp/xray-dl/xray /usr/local/bin/xray
     cp -f /tmp/xray-dl/*.dat /etc/vortex/assets/ 2>/dev/null || true
@@ -273,7 +315,10 @@ install_cores() {
     info "installing sing-box…"
     # Keep in sync with deploy/Dockerfile SINGBOX_VERSION.
     local ver="v1.12.12"
-    curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${ver}/sing-box-${ver#v}-linux-${sarch}.tar.gz"
+    # Try directly first, then with GH mirror prefix
+    if ! curl -fsSL -o /tmp/sb.tgz "${GH_MIRROR}https://github.com/SagerNet/sing-box/releases/download/${ver}/sing-box-${ver#v}-linux-${sarch}.tar.gz" 2>/dev/null; then
+      curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${ver}/sing-box-${ver#v}-linux-${sarch}.tar.gz"
+    fi
     tar -xzf /tmp/sb.tgz -C /tmp
     install -m 0755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box
     rm -rf /tmp/sing-box-* /tmp/sb.tgz
@@ -286,7 +331,7 @@ install_cores() {
     else
       info "upgrading sing-box${cur:+ (was $cur)} to $target…"
       local ver="v$target"
-      curl -fsSL -o /tmp/sb.tgz "https://github.com/SagerNet/sing-box/releases/download/${ver}/sing-box-${target}-linux-${sarch}.tar.gz"
+      curl -fsSL -o /tmp/sb.tgz "${GH_MIRROR}https://github.com/SagerNet/sing-box/releases/download/${ver}/sing-box-${target}-linux-${sarch}.tar.gz"
       tar -xzf /tmp/sb.tgz -C /tmp
       install -m 0755 /tmp/sing-box-*/sing-box /usr/local/bin/sing-box
       rm -rf /tmp/sing-box-* /tmp/sb.tgz
@@ -300,7 +345,7 @@ install_cores() {
   if [ ! -f /etc/vortex/GeoLite2-Country.mmdb ]; then
     info "downloading GeoLite2-Country database…"
     if curl -fsSL -o /etc/vortex/GeoLite2-Country.mmdb \
-        "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"; then
+        "${GH_MIRROR}https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-Country.mmdb"; then
       ok "GeoLite2-Country database installed."
     else
       rm -f /etc/vortex/GeoLite2-Country.mmdb
@@ -323,7 +368,7 @@ deploy_native() {
   /usr/local/go/bin/go build -o /usr/local/bin/vortex-panel ./cmd/panel 2>/dev/null || go build -o /usr/local/bin/vortex-panel ./cmd/panel
   go build -o /usr/local/bin/vortex-node ./cmd/node || true
 
-  # Proxy engines (xray + sing-box).
+  # Proxy engines (xray + sing-box). VORTEXUI_GH_MIRROR read inside install_cores.
   install_cores
 
   info "building web UI…"
@@ -430,10 +475,10 @@ deploy_node() {
 
   install_cores
 
-  # Prefer a prebuilt release binary; fall back to building from source.
+  # GH_MIRROR is set inside install_cores above. Prefer a prebuilt release binary; fall back to building from source.
   info "installing node agent…"
   local rel; rel="$(curl -fsSL https://api.github.com/repos/iPmartNetwork/VortexUI/releases/latest | grep -oE '"tag_name": *"v[0-9.]+"' | head -1 | grep -oE 'v[0-9.]+')"
-  if [ -n "$rel" ] && curl -fL -o /tmp/node.tgz "https://github.com/iPmartNetwork/VortexUI/releases/download/${rel}/vortexui-node-linux-${sarch}.tar.gz" 2>/dev/null; then
+  if [ -n "$rel" ] && curl -fL -o /tmp/node.tgz "${GH_MIRROR}https://github.com/iPmartNetwork/VortexUI/releases/download/${rel}/vortexui-node-linux-${sarch}.tar.gz" 2>/dev/null; then
     tar -xzf /tmp/node.tgz -C /tmp && install -m 0755 "/tmp/vortexui-node-linux-${sarch}" /usr/local/bin/vortex-node
   else
     ensure_go; ( cd "$INSTALL_DIR" && go build -o /usr/local/bin/vortex-node ./cmd/node )

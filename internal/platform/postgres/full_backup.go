@@ -71,7 +71,7 @@ func DumpDatabase(ctx context.Context, databaseURL string) ([]byte, error) {
 	}
 	pgDump, err := resolvePgBinary(ctx, databaseURL, "pg_dump")
 	if err != nil {
-		return nil, fmt.Errorf("pg_dump not found in PATH: install postgresql-client for full database backup")
+		return nil, fmt.Errorf("pg_dump not found: install postgresql-client-16 (sudo apt-get install postgresql-client || sudo apt-get install postgresql-client-16). On restricted networks (Iran/China), use a proxy or download manually from https://ftp.postgresql.org/pub/source/")
 	}
 	tmp, err := os.CreateTemp("", "vortex-dump-*.dump")
 	if err != nil {
