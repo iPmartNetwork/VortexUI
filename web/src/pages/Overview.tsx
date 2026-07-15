@@ -20,6 +20,7 @@ import {
 } from "@/components/veltrix";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
+import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { cn, formatBytes } from "@/lib/utils";
 
 function fmtUptime(sec: number): string {
@@ -247,7 +248,7 @@ export function Overview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatsCard
           title={t("overview.totalSubscriptions")}
-          value={overviewLoading ? "—" : totalUsers.toLocaleString()}
+          value={overviewLoading ? "—" : <AnimatedCounter value={totalUsers} />}
           change={trends?.users_pct}
           icon={<Users size={17} />}
           color="cyan"
@@ -256,7 +257,7 @@ export function Overview() {
         />
         <StatsCard
           title={t("overview.nodeFleetOnline")}
-          value={overviewLoading ? "—" : onlineCount}
+          value={overviewLoading ? "—" : <AnimatedCounter value={onlineCount} />}
           suffix={totalNodes > 0 ? `/ ${totalNodes}` : undefined}
           change={0}
           icon={<Server size={17} />}
@@ -266,7 +267,7 @@ export function Overview() {
         />
         <StatsCard
           title={t("overview.dailyBandwidth")}
-          value={overviewLoading ? "—" : formatDailyBandwidth(totalUsed)}
+          value={overviewLoading ? "—" : <AnimatedCounter value={totalUsed} formatter={(n) => formatDailyBandwidth(n)} />}
           change={trends?.bandwidth_pct}
           icon={<Zap size={17} />}
           color="purple"
@@ -279,7 +280,7 @@ export function Overview() {
         />
         <StatsCard
           title={t("overview.activeSessions")}
-          value={overviewLoading ? "—" : totalConnections.toLocaleString()}
+          value={overviewLoading ? "—" : <AnimatedCounter value={totalConnections} />}
           change={trends?.sessions_pct}
           icon={<Wifi size={17} />}
           color="blue"

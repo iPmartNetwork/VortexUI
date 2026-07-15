@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input, Button } from "@/components/ui";
+import { EmptyState } from "@/components/EmptyState";
+import { SearchX } from "lucide-react";
 
 export interface Column<T> {
   key: string;
@@ -143,8 +145,13 @@ export function DataTable<T extends Record<string, any>>({
             ))}
             {paged.length === 0 && (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-sm text-fg-muted">
-                  {emptyMessage}
+                <td colSpan={columns.length} className="px-4 py-8">
+                  <EmptyState
+                    icon={SearchX}
+                    title={search.trim() ? "No matching results" : emptyMessage}
+                    description={search.trim() ? "Try adjusting your search or filters." : undefined}
+                    compact
+                  />
                 </td>
               </tr>
             )}

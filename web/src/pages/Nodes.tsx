@@ -25,6 +25,7 @@ import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 import { useAuth } from "@/auth/auth";
+import { EmptyState } from "@/components/EmptyState";
 import { cn } from "@/lib/utils";
 
 type FleetFilter = "" | "online" | "warning" | "offline";
@@ -307,15 +308,15 @@ export function Nodes() {
       )}
 
       {!isLoading && filteredNodes.length === 0 && (
-        <GlassCard hover={false} className="flex flex-col items-center gap-3 py-16 text-center">
-          <Server size={32} className="text-fg-subtle" />
-          <p className="text-sm text-fg-muted">
-            {nodes.length === 0
-              ? canManage
-                ? t("nodes.none")
-                : "No nodes assigned to your account yet — ask the main admin to allow nodes for you."
-              : t("users.none")}
-          </p>
+        <GlassCard hover={false}>
+          <EmptyState
+            icon={Server}
+            title={nodes.length === 0 ? t("nodes.none") : t("users.none")}
+            description={nodes.length === 0
+              ? (canManage ? "Add your first node to start routing traffic." : "No nodes assigned yet.")
+              : undefined}
+            action={nodes.length === 0 && canManage ? { label: "Add Node", onClick: () => setCreateOpen(true) } : undefined}
+          />
         </GlassCard>
       )}
 

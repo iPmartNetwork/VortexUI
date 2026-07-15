@@ -30,6 +30,8 @@ import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useAuth } from "@/auth/auth";
 import { cn, formatBytes } from "@/lib/utils";
+import { EmptyState } from "@/components/EmptyState";
+import { Users as UsersIcon } from "lucide-react";
 
 type StatusFilter = "" | "active" | "warning" | "inactive";
 
@@ -353,8 +355,13 @@ export function Users() {
                 })}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-fg-muted">
-                      {t("users.none")}
+                    <td colSpan={7} className="px-5 py-8">
+                      <EmptyState
+                        icon={UsersIcon}
+                        title={search ? "No users match your search" : t("users.none")}
+                        description={search ? "Try a different name or clear the filter." : t("users.totalUsers")}
+                        compact
+                      />
                     </td>
                   </tr>
                 )}
