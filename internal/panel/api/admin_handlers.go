@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -515,7 +517,7 @@ func (h *Handlers) ExportAccountUsers(c echo.Context) error {
 	return nil
 }
 
-// ExportAccountUsersBackup returns a JSON snapshot of users owned by the caller (reseller backup).
+// ExportAccountUsersBackup returns a JSON snapshot of users owned by the caller (reseller backup v2).
 func (h *Handlers) ExportAccountUsersBackup(c echo.Context) error {
 	claims := claimsFrom(c)
 	if claims == nil {
@@ -528,24 +530,85 @@ func (h *Handlers) ExportAccountUsersBackup(c echo.Context) error {
 	if !claims.Sudo && !admin.AllowUserBackup {
 		return echo.NewHTTPError(http.StatusForbidden, "user backup is disabled for this account")
 	}
-	if h.Repo == nil {
+	if h.Backup == nil || h.Repo == nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "export unavailable")
 	}
-	f := port.UserFilter{Limit: 100_000}
-	if !claims.Sudo {
-		f.AdminID = &claims.AdminID
+	adminID := claims.AdminID
+	if claims.Sudo && c.QueryParam("admin_id") != "" {
+		id, err := uuid.Parse(c.QueryParam("admin_id"))
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid admin_id")
+		}
+		adminID = id
 	}
-	users, _, err := h.Repo.List(c.Request().Context(), f)
+	rb, err := h.Backup.ExportReseller(c.Request().Context(), adminID, func(ctx context.Context, id uuid.UUID) ([]*domain.User, []domain.UserProxy, error) {
+		return h.listUsersForResellerBackup(ctx, id)
+	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "export failed")
 	}
 	c.Response().Header().Set("Content-Disposition", `attachment; filename="my-users-backup.json"`)
-	return c.JSON(http.StatusOK, echo.Map{
-		"version":     1,
-		"exported_at": time.Now().UTC(),
-		"admin_id":    claims.AdminID,
-		"users":       users,
-	})
+	return c.JSON(http.StatusOK, rb)
+}
+
+// RestoreAccountUsersBackup restores a reseller-scoped user backup for the caller.
+func (h *Handlers) RestoreAccountUsersBackup(c echo.Context) error {
+	claims := claimsFrom(c)
+	if claims == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "not authenticated")
+	}
+	admin, err := h.Admins.Get(c.Request().Context(), claims.AdminID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "fetch failed")
+	}
+	if !claims.Sudo && !admin.AllowUserBackup {
+		return echo.NewHTTPError(http.StatusForbidden, "user backup is disabled for this account")
+	}
+	if h.Backup == nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "restore unavailable")
+	}
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "read failed")
+	}
+	rb, err := service.ParseResellerBackupJSON(body)
+	if err != nil {
+		if legacy, legErr := service.LegacyResellerBackup(body); legErr == nil {
+			rb = legacy
+		} else {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid reseller backup")
+		}
+	}
+	if !claims.Sudo && rb.AdminID != claims.AdminID {
+		return echo.NewHTTPError(http.StatusForbidden, "backup belongs to another account")
+	}
+	report, err := h.Backup.RestoreReseller(c.Request().Context(), rb)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
+	}
+	return c.JSON(http.StatusOK, report)
+}
+
+func (h *Handlers) listUsersForResellerBackup(ctx context.Context, adminID uuid.UUID) ([]*domain.User, []domain.UserProxy, error) {
+	if h.Repo == nil {
+		return nil, nil, errors.New("user repository unavailable")
+	}
+	f := port.UserFilter{Limit: 100_000, AdminID: &adminID}
+	users, _, err := h.Repo.List(ctx, f)
+	if err != nil {
+		return nil, nil, err
+	}
+	var bindings []domain.UserProxy
+	for _, u := range users {
+		ins, err := h.Repo.InboundsFor(ctx, u.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, in := range ins {
+			bindings = append(bindings, domain.UserProxy{UserID: u.ID, InboundID: in.ID})
+		}
+	}
+	return users, bindings, nil
 }
 
 // ListResellerQuotaUsage returns quota usage for all resellers (sudo).

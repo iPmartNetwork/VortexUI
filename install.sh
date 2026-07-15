@@ -15,7 +15,7 @@ set -euo pipefail
 
 REPO_URL="${VORTEXUI_REPO:-https://github.com/iPmartNetwork/VortexUI}"
 BRANCH="${VORTEXUI_BRANCH:-master}"
-VORTEXUI_VERSION="${VORTEXUI_VERSION:-1.3.3}"
+VORTEXUI_VERSION="${VORTEXUI_VERSION:-1.3.4}"
 INSTALL_DIR="${VORTEXUI_DIR:-/opt/vortexui}"
 WEB_PORT="${VORTEXUI_WEB_PORT:-80}"
 METHOD="${VORTEXUI_METHOD:-}"   # docker | native (prompted if empty)

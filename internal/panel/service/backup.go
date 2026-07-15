@@ -48,6 +48,9 @@ type BackupService struct {
 	admins    backupAdminSource
 	plans     backupPlanSource
 	restorer  BackupRestorer
+	databaseURL string
+	resellerAdmins backupResellerSource
+	resellerPay    backupPaymentSource
 	now       func() time.Time
 }
 
@@ -190,8 +193,8 @@ func (s *BackupService) Restore(ctx context.Context, b *domain.Backup) error {
 	if b == nil {
 		return errors.New("empty backup")
 	}
-	if b.Version != domain.BackupVersion && b.Version != domain.BackupVersionLegacy {
-		return fmt.Errorf("unsupported backup version %d (want %d or %d)", b.Version, domain.BackupVersion, domain.BackupVersionLegacy)
+	if b.Version != domain.BackupVersion && b.Version != domain.BackupVersionV2 && b.Version != domain.BackupVersionLegacy {
+		return fmt.Errorf("unsupported backup version %d (want %d, %d, or %d)", b.Version, domain.BackupVersion, domain.BackupVersionV2, domain.BackupVersionLegacy)
 	}
 	return s.restorer.Restore(ctx, b)
 }

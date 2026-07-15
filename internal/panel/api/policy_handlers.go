@@ -1,10 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -357,35 +361,123 @@ func (h *Handlers) GenerateReality(c echo.Context) error {
 
 // --- backup / restore ---
 
-// GetBackup exports the full proxy configuration as a downloadable JSON document.
+func backupPassphrase(c echo.Context) string {
+	return strings.TrimSpace(c.Request().Header.Get("X-Backup-Passphrase"))
+}
+
+// GetBackupManifest previews export coverage and usage without downloading.
+func (h *Handlers) GetBackupManifest(c echo.Context) error {
+	m, err := h.Backup.Manifest(c.Request().Context())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "manifest failed")
+	}
+	return c.JSON(http.StatusOK, m)
+}
+
+// GetBackup exports the full panel snapshot as JSON v3 or a full pg_dump archive.
 func (h *Handlers) GetBackup(c echo.Context) error {
-	b, err := h.Backup.Export(c.Request().Context())
+	ctx := c.Request().Context()
+	if c.QueryParam("format") == "full" {
+		archive, _, err := h.Backup.ExportFull(ctx)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, errString(err))
+		}
+		name := fmt.Sprintf("vortexui-full-backup-%s.tar.gz", time.Now().UTC().Format("2006-01-02"))
+		c.Response().Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, name))
+		return c.Blob(http.StatusOK, "application/gzip", archive)
+	}
+	includeTraffic := c.QueryParam("include_traffic") == "1" || c.QueryParam("include_traffic") == "true"
+	b, err := h.Backup.ExportV3(ctx, service.BackupExportOptions{
+		IncludeCredentials: true, IncludeSupplemental: true, IncludeTrafficMetrics: includeTraffic,
+	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "export failed")
 	}
+	raw, err := json.Marshal(b)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "export failed")
+	}
+	if pass := backupPassphrase(c); pass != "" {
+		raw, err = service.EncryptExport(raw, pass)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "encrypt failed")
+		}
+	}
 	c.Response().Header().Set("Content-Disposition", `attachment; filename="vortexui-backup.json"`)
-	return c.JSON(http.StatusOK, b)
+	if pass := backupPassphrase(c); pass != "" {
+		return c.Blob(http.StatusOK, "application/octet-stream", raw)
+	}
+	return c.JSONBlob(http.StatusOK, raw)
 }
 
-// RestoreBackup replaces the entire proxy configuration with the posted snapshot.
-// Destructive: it wipes the current config and re-applies the document in one
-// transaction. Live cores reconcile on the next node (re)connect.
+type restoreBackupRequest struct {
+	Backup   *domain.Backup          `json:"backup"`
+	Mode     domain.BackupRestoreMode `json:"mode"`
+	Passphrase string                `json:"passphrase,omitempty"`
+}
+
+// RestoreBackup replaces configuration from a JSON v3 document or full archive.
 func (h *Handlers) RestoreBackup(c echo.Context) error {
-	var b domain.Backup
-	if err := c.Bind(&b); err != nil {
+	ctx := c.Request().Context()
+	pass := backupPassphrase(c)
+	if pass == "" {
+		pass = c.QueryParam("passphrase")
+	}
+	if c.QueryParam("mode") == "full" || strings.Contains(strings.ToLower(c.Request().Header.Get("Content-Type")), "multipart/form-data") {
+		file, err := c.FormFile("file")
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "file required for full restore")
+		}
+		f, err := file.Open()
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid file")
+		}
+		defer f.Close()
+		archive, err := io.ReadAll(f)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "read failed")
+		}
+		report, err := h.Backup.RestoreWithMode(ctx, domain.BackupRestoreFull, nil, archive)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, errString(err))
+		}
+		return c.JSON(http.StatusOK, report)
+	}
+
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "read failed")
+	}
+	var req restoreBackupRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		b, parseErr := service.ParseBackupJSON(body, pass)
+		if parseErr != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid backup document")
+		}
+		req.Backup = b
+	}
+	if req.Backup == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid backup document")
 	}
-	if err := h.Backup.Restore(c.Request().Context(), &b); err != nil {
+	if pass == "" && req.Passphrase != "" {
+		pass = req.Passphrase
+	}
+	if pass != "" && req.Backup.Version == 0 {
+		b, err := service.ParseBackupJSON(body, pass)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "decrypt failed")
+		}
+		req.Backup = b
+	}
+	mode := req.Mode
+	if mode == "" {
+		mode = domain.BackupRestoreConfig
+	}
+	report, err := h.Backup.RestoreWithMode(ctx, mode, req.Backup, nil)
+	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, errString(err))
 	}
-	return c.JSON(http.StatusOK, echo.Map{
-		"restored": echo.Map{
-			"roles": len(b.Roles), "admins": len(b.Admins), "plans": len(b.Plans),
-			"nodes": len(b.Nodes), "inbounds": len(b.Inbounds), "outbounds": len(b.Outbounds),
-			"routing": len(b.Routing), "balancers": len(b.Balancers),
-			"users": len(b.Users), "bindings": len(b.Bindings),
-		},
-	})
+	return c.JSON(http.StatusOK, report)
 }
 
 // --- logs ---

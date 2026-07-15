@@ -38,7 +38,7 @@ import (
 
 // version is the panel build version. It defaults to the contents of the VERSION
 // file and is overridden at build time via -ldflags "-X main.version=...".
-var version = "1.3.3"
+var version = "1.3.4"
 
 func main() {
 	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)
@@ -306,6 +306,8 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	backupSvc := service.NewBackupService(nodes, store.Inbounds(), store.Outbounds(), store.Routing(), store.Balancers(), users, store.Backup())
 	backupSvc.SetAdminSource(store.Admins())
 	backupSvc.SetPlanSource(store.Plans())
+	backupSvc.SetDatabaseURL(cfg.DatabaseURL)
+	backupSvc.SetResellerSources(store.Admins(), store.ResellerPayment())
 
 	// Wire failover migration into the hub now that its dependencies exist (the
 	// migration service provisions onto the target via the hub itself).

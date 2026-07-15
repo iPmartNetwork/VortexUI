@@ -9,7 +9,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { useConfirmTOTP, useDisableTOTP, useSetupTOTP } from "@/api/admin-hooks";
-import { useExportBackup, useRestoreBackup, useExportUserBackup, useAPITokens, useCreateAPIToken, useDeleteAPIToken } from "@/api/policy-hooks";
+import { useExportBackup, useRestoreBackup, useExportUserBackup, useRestoreUserBackup, useBackupManifest, useAPITokens, useCreateAPIToken, useDeleteAPIToken } from "@/api/policy-hooks";
 import { Button, Input, Switch } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
 import { useConfirm } from "@/components/confirm";
@@ -863,6 +863,18 @@ function APITokenPanel() {
   );
 }
 
+function formatBytes(n: number) {
+  if (!n || n <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let v = n;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 function BackupTab({
   show,
   sudo,
@@ -882,16 +894,23 @@ function BackupTab({
   const exportBackup = useExportBackup();
   const exportUsers = useExportUserBackup();
   const restoreBackup = useRestoreBackup();
+  const restoreUsers = useRestoreUserBackup();
+  const { data: manifest } = useBackupManifest(sudo && show("backup"));
   const fileRef = useRef<HTMLInputElement>(null);
+  const userFileRef = useRef<HTMLInputElement>(null);
   const [autoBackup, setAutoBackup] = useState(true);
   const [s3Endpoint, setS3Endpoint] = useState("");
   const [s3Bucket, setS3Bucket] = useState("");
   const [interval, setInterval] = useState("24");
   const [tgChat, setTgChat] = useState("");
+  const [passphrase, setPassphrase] = useState("");
+  const [restoreMode, setRestoreMode] = useState<"config" | "full">("config");
+  const [includeTraffic, setIncludeTraffic] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const usersOnly = !sudo && allowUserBackup;
   const canRestore = sudo && show("backup");
+  const canRestoreUsers = usersOnly || (sudo && allowUserBackup);
 
   useEffect(() => {
     if (!panelSettings) return;
@@ -926,20 +945,43 @@ function BackupTab({
     const file = fileRef.current?.files?.[0];
     if (!file) return;
     const ok = await confirm({
-      title: "Restore backup?",
-      message: "This REPLACES the entire configuration. The current config will be lost.",
+      title: restoreMode === "full" ? "Restore full database?" : "Restore backup?",
+      message:
+        restoreMode === "full"
+          ? "This REPLACES the entire PostgreSQL database. All current data will be lost."
+          : "This REPLACES configuration, users, billing tables included in the backup. Current data in those areas will be lost.",
       confirmLabel: "Restore",
       destructive: true,
     });
     if (!ok) return;
     try {
-      const res = await restoreBackup.mutateAsync(file);
+      const res = await restoreBackup.mutateAsync({ file, mode: restoreMode, passphrase: passphrase || undefined });
       const r = res.restored;
-      toast.success(`Restored: ${r.nodes ?? 0} nodes, ${r.users ?? 0} users`);
+      toast.success(`Restored (${res.mode}): ${r.nodes ?? 0} nodes, ${r.users ?? 0} users, ${r.orders ?? 0} orders`);
+      if (res.warnings?.length) toast.info(res.warnings.join(" · "));
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Restore failed");
     }
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function handleUserRestore() {
+    const file = userFileRef.current?.files?.[0];
+    if (!file) return;
+    const ok = await confirm({
+      title: "Restore my users backup?",
+      message: "This updates your users, bindings, wallet ledger, and orders from the backup file.",
+      confirmLabel: "Restore",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      const res = await restoreUsers.mutateAsync(file);
+      toast.success(`Restored ${res.restored.users ?? 0} users, ${res.restored.orders ?? 0} orders`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Restore failed");
+    }
+    if (userFileRef.current) userFileRef.current.value = "";
   }
 
   return (
@@ -959,22 +1001,95 @@ function BackupTab({
 
       {(show("backup") || usersOnly) && (
         <PanelBlock title={usersOnly ? "My users backup" : t("settings.backup")}>
+          {manifest && !usersOnly && (
+            <div className="mb-4 rounded-xl border border-border-strong/60 bg-surface/40 p-3 text-xs text-fg-muted space-y-2">
+              <p className="font-medium text-fg">Backup preview (v{manifest.version})</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                <span>{manifest.counts.nodes} nodes</span>
+                <span>{manifest.counts.users} users</span>
+                <span>{manifest.counts.admins} admins</span>
+                <span>{manifest.counts.orders} orders</span>
+                <span>{manifest.counts.wallet_ledger} ledger rows</span>
+                <span>{manifest.counts.wallet_deposits} deposits</span>
+              </div>
+              <p>
+                Traffic: {formatBytes(manifest.usage.total_used_traffic)} used /{" "}
+                {formatBytes(manifest.usage.total_remaining_traffic)} remaining
+                {manifest.usage.users_over_limit > 0 ? ` · ${manifest.usage.users_over_limit} over limit` : ""}
+              </p>
+              {manifest.warnings?.length ? (
+                <p className="text-warning">{manifest.warnings.join(" · ")}</p>
+              ) : null}
+            </div>
+          )}
+          {!usersOnly && (
+            <div className="mb-3 flex flex-wrap gap-3 items-end">
+              <div>
+                <p className="mb-1 text-xs font-medium text-fg-muted">Encryption passphrase (optional)</p>
+                <Input value={passphrase} onChange={(e) => setPassphrase(e.target.value)} type="password" placeholder="AES-256 if set on export" className="max-w-xs" />
+              </div>
+              <label className="flex items-center gap-2 text-xs text-fg-muted pb-2">
+                <input type="checkbox" checked={includeTraffic} onChange={(e) => setIncludeTraffic(e.target.checked)} />
+                Include traffic time-series
+              </label>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             <Button
               type="button"
               variant="outline"
-              onClick={() => (usersOnly ? exportUsers : exportBackup).mutate()}
+              onClick={() =>
+                usersOnly
+                  ? exportUsers.mutate()
+                  : exportBackup.mutate({ format: "json", passphrase: passphrase || undefined, includeTraffic })
+              }
               disabled={usersOnly ? exportUsers.isPending : exportBackup.isPending}
             >
               <Download size={15} />
               {usersOnly ? "Export my users" : t("settings.backupNow")}
             </Button>
+            {!usersOnly && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => exportBackup.mutate({ format: "full" })}
+                disabled={exportBackup.isPending}
+              >
+                <Download size={15} />
+                Full DB backup
+              </Button>
+            )}
             {canRestore && (
+              <>
+                <select
+                  value={restoreMode}
+                  onChange={(e) => setRestoreMode(e.target.value as "config" | "full")}
+                  className="rounded-xl border border-border-strong/80 bg-surface/60 px-3 py-2 text-sm"
+                >
+                  <option value="config">Restore JSON config</option>
+                  <option value="full">Restore full DB (.tar.gz)</option>
+                </select>
+                <label className="cursor-pointer">
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept={restoreMode === "full" ? ".tar.gz,.gz" : ".json,.bin"}
+                    className="hidden"
+                    onChange={handleRestore}
+                  />
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-border-strong/80 bg-surface/60 px-4 py-2 text-sm font-medium text-fg transition hover:bg-surface-2/80">
+                    <Upload size={15} />
+                    {t("settings.restore")}
+                  </span>
+                </label>
+              </>
+            )}
+            {canRestoreUsers && usersOnly && (
               <label className="cursor-pointer">
-                <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleRestore} />
+                <input ref={userFileRef} type="file" accept=".json" className="hidden" onChange={handleUserRestore} />
                 <span className="inline-flex items-center gap-2 rounded-xl border border-border-strong/80 bg-surface/60 px-4 py-2 text-sm font-medium text-fg transition hover:bg-surface-2/80">
                   <Upload size={15} />
-                  {t("settings.restore")}
+                  Restore my users
                 </span>
               </label>
             )}
