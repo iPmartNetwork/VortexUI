@@ -15,7 +15,7 @@ import (
 // admin (auto-seeding a default credential would be a security footgun).
 func runAdmin(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: panel admin create|reset-password ...")
+		return fmt.Errorf("usage: panel admin create|reset-password")
 	}
 	switch args[0] {
 	case "create":
@@ -23,7 +23,7 @@ func runAdmin(ctx context.Context, args []string) error {
 	case "reset-password":
 		return runAdminResetPassword(ctx, args[1:])
 	default:
-		return fmt.Errorf("usage: panel admin create|reset-password ...")
+		return fmt.Errorf("usage: panel admin create|reset-password")
 	}
 }
 
