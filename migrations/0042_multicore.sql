@@ -1,3 +1,4 @@
+-- +goose Up
 -- Multi-core Phase 1: run xray and sing-box on the same node for A/B testing.
 -- nodes.enabled_cores lists active engines; inbounds.core overrides the node default.
 
@@ -10,3 +11,8 @@ WHERE enabled_cores IS NULL OR enabled_cores = '[]'::jsonb OR enabled_cores = 'n
 
 ALTER TABLE inbounds
     ADD COLUMN IF NOT EXISTS core TEXT NOT NULL DEFAULT '';
+
+-- +goose Down
+ALTER TABLE inbounds DROP COLUMN IF EXISTS core;
+ALTER TABLE nodes DROP COLUMN IF EXISTS enabled_cores;
+

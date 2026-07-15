@@ -6,6 +6,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-07-15
+
+Critical startup crash fix: the panel could crash-loop forever on every boot,
+which made every symptom reported for v1.3.5 (login failing, admin appearing to
+not exist, panel not coming back up after restart) actually be a downstream
+effect of the panel process never successfully starting at all.
+
+### Fixed
+- **Panel crash-loop on startup** — `migrations/0042_multicore.sql` was missing
+  the `-- +goose Up` directive required by the goose migration parser. Every
+  panel start failed at `apply migrations` with
+  `unexpected state 0 on line "ALTER TABLE nodes"`, and systemd kept
+  restarting the process indefinitely (this is also why `journalctl` showed
+  thousands of restart cycles). Login, admin creation, and password reset all
+  failed as a side effect because the panel was never actually serving traffic.
+  Added a `-- +goose Down` block for symmetry/rollback support.
+- **Regression test** — added `TestAllMigrationsHaveGooseUpHeader`, which scans
+  every embedded `.sql` file and fails the build if any migration is missing
+  the `-- +goose Up` header, so this class of bug is caught in CI before release.
+
 ## [1.3.5] - 2026-07-15
 
 Systemd auto-start reliability fix and graceful backup restore for legacy (pre-credentials) exports.
