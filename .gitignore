@@ -52,6 +52,9 @@ go.work.sum
 .claude/
 .kiro/
 
+# Freebuff desktop local data (contains session tokens)
+.freebuff/
+
 # Python bytecode caches
 __pycache__/
 *.pyc
