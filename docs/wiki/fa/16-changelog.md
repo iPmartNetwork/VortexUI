@@ -1,13 +1,39 @@
-!!! info "Translation pending"
-    This page is currently available in English only.
-
 # Changelog
 
-Version history and migration guides for VortexUI.
+تاریخچه نسخه‌ها و راهنمای مهاجرت VortexUI.
 
 ---
 
-## v1.3.1 — Latest
+## v1.3.3 — آخرین نسخه
+
+**تمرکز: Multi-core — xray + sing-box روی یک نود (A/B testing)**
+
+### Added
+- **Dual-core nodes** — فیلد `enabled_cores` روی نود؛ agent با `CompositeDriver` هر دو موتور را همزمان اجرا می‌کند.
+- **Per-inbound core** — هر inbound می‌تواند `core: xray` یا `core: singbox` داشته باشد.
+- **UI** — toggle موتورها در ساخت/ویرایش نود؛ picker موتور در فرم inbound؛ badge دو موتور در fleet.
+- **Migration `0042_multicore.sql`** — ستون‌های `nodes.enabled_cores` و `inbounds.core`.
+
+### Node agent (dual-core)
+```bash
+VORTEX_ENABLED_CORES=xray,singbox
+VORTEX_XRAY_CONFIG=/etc/vortex/xray.json
+VORTEX_SINGBOX_CONFIG=/etc/vortex/singbox.json
+VORTEX_XRAY_API_PORT=10085
+VORTEX_SINGBOX_API_PORT=10086
+```
+
+### Upgrade
+```bash
+goose -dir migrations postgres "$DATABASE_URL" up
+# panel + node agents را به v1.3.3 به‌روز کنید
+```
+
+**Release by ali**
+
+---
+
+## v1.3.1
 
 **Focus: Stability & Polish**
 

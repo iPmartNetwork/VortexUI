@@ -14,7 +14,6 @@ type stubDriver struct {
 	coreType domain.CoreType
 	mu       sync.Mutex
 	started  []*GeneratedConfig
-	tag      string
 }
 
 func (s *stubDriver) Type() domain.CoreType { return s.coreType }

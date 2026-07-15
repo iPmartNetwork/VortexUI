@@ -79,6 +79,10 @@ components:
         name: {type: string}
         address: {type: string, example: "1.2.3.4:50051"}
         core: {type: string, enum: [xray, singbox]}
+        enabled_cores:
+          type: array
+          items: {type: string, enum: [xray, singbox]}
+          description: Active proxy engines on this node (multi-core A/B)
         status: {type: string, enum: [connected, disconnected, error, disabled]}
         usage_ratio: {type: number}
         last_seen: {type: string, format: date-time, nullable: true}
@@ -92,6 +96,10 @@ components:
         id: {type: string, format: uuid}
         node_id: {type: string, format: uuid}
         tag: {type: string}
+        core:
+          type: string
+          enum: [xray, singbox, ""]
+          description: Engine override; empty inherits node default
         protocol: {type: string, enum: [vmess, vless, trojan, shadowsocks, hysteria2, tuic, wireguard]}
         listen: {type: string}
         port: {type: integer}
