@@ -118,15 +118,17 @@ func PackFullBackup(manifest domain.BackupManifest, dump []byte) ([]byte, error)
 }
 
 // UnpackFullBackup extracts manifest and dump from a gzip tar archive.
-func UnpackFullBackup(data []byte) (domain.BackupManifest, []byte, error) {
+func UnpackFullBackup(data []byte) (manifest domain.BackupManifest, dump []byte, err error) {
 	gz, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return domain.BackupManifest{}, nil, fmt.Errorf("invalid gzip archive: %w", err)
 	}
-	defer gz.Close()
+	defer func() {
+		if closeErr := gz.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 	tr := tar.NewReader(gz)
-	var manifest domain.BackupManifest
-	var dump []byte
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
