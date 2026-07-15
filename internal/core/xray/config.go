@@ -40,10 +40,14 @@ func (b Builder) Build(cfg *core.GeneratedConfig) ([]byte, error) {
 	}
 
 	// Reserved loopback inbound carrying the Xray API.
+	apiSettings, err := tryRaw(map[string]any{"address": "127.0.0.1"})
+	if err != nil {
+		return nil, err
+	}
 	x.Inbounds = append(x.Inbounds, inbound{
 		Tag: APIInboundTag, Listen: "127.0.0.1", Port: b.APIPort,
 		Protocol: "dokodemo-door",
-		Settings: mustRaw(map[string]any{"address": "127.0.0.1"}),
+		Settings: apiSettings,
 	})
 
 	for _, in := range cfg.Inbounds {
@@ -119,33 +123,57 @@ func buildOutbounds(outs []domain.Outbound) ([]outbound, error) {
 
 func buildOutbound(o domain.Outbound) (outbound, error) {
 	ob := outbound{Protocol: string(o.Protocol), Tag: o.Tag}
+	var (
+		s   json.RawMessage
+		err error
+	)
 	switch o.Protocol {
 	case domain.OutFreedom, domain.OutBlackhole, domain.OutDNS:
 		// No settings needed; freedom/blackhole/dns dispatch locally.
 	case domain.OutVLESS:
-		ob.Settings = mustRaw(map[string]any{"vnext": []map[string]any{{
+		s, err = tryRaw(map[string]any{"vnext": []map[string]any{{
 			"address": o.Address, "port": o.Port,
 			"users": []map[string]any{{"id": o.UUID, "encryption": "none", "flow": o.Flow}},
 		}}})
+		if err != nil {
+			return outbound{}, fmt.Errorf("outbound %q vless: %w", o.Tag, err)
+		}
+		ob.Settings = s
 	case domain.OutVMess:
-		ob.Settings = mustRaw(map[string]any{"vnext": []map[string]any{{
+		s, err = tryRaw(map[string]any{"vnext": []map[string]any{{
 			"address": o.Address, "port": o.Port,
 			"users": []map[string]any{{"id": o.UUID}},
 		}}})
+		if err != nil {
+			return outbound{}, fmt.Errorf("outbound %q vmess: %w", o.Tag, err)
+		}
+		ob.Settings = s
 	case domain.OutTrojan:
-		ob.Settings = mustRaw(map[string]any{"servers": []map[string]any{{
+		s, err = tryRaw(map[string]any{"servers": []map[string]any{{
 			"address": o.Address, "port": o.Port, "password": o.Password,
 		}}})
+		if err != nil {
+			return outbound{}, fmt.Errorf("outbound %q trojan: %w", o.Tag, err)
+		}
+		ob.Settings = s
 	case domain.OutShadowsocks:
-		ob.Settings = mustRaw(map[string]any{"servers": []map[string]any{{
+		s, err = tryRaw(map[string]any{"servers": []map[string]any{{
 			"address": o.Address, "port": o.Port, "password": o.Password, "method": orDefault(o.Method, "aes-128-gcm"),
 		}}})
+		if err != nil {
+			return outbound{}, fmt.Errorf("outbound %q shadowsocks: %w", o.Tag, err)
+		}
+		ob.Settings = s
 	case domain.OutSocks, domain.OutHTTP:
 		server := map[string]any{"address": o.Address, "port": o.Port}
 		if o.Username != "" {
 			server["users"] = []map[string]any{{"user": o.Username, "pass": o.Password}}
 		}
-		ob.Settings = mustRaw(map[string]any{"servers": []map[string]any{server}})
+		s, err = tryRaw(map[string]any{"servers": []map[string]any{server}})
+		if err != nil {
+			return outbound{}, fmt.Errorf("outbound %q socks/http: %w", o.Tag, err)
+		}
+		ob.Settings = s
 	case domain.OutWireguard:
 		// WireGuard/WARP: build the native xray wireguard outbound from the params
 		// persisted in Raw["wireguard"]. cfg.XrayOutbound returns the full
@@ -154,23 +182,32 @@ func buildOutbound(o domain.Outbound) (outbound, error) {
 		// streamSettings are attached — wireguard carries its own endpoint.
 		cfg := warp.ConfigFromMap(asWireguardMap(o.Raw["wireguard"]))
 		ob.Protocol = "wireguard"
-		ob.Settings = mustRaw(cfg.XrayOutbound(o.Tag)["settings"])
+		s, err = tryRaw(cfg.XrayOutbound(o.Tag)["settings"])
+		if err != nil {
+			return outbound{}, fmt.Errorf("outbound %q wireguard: %w", o.Tag, err)
+		}
+		ob.Settings = s
 		return ob, nil
 	default:
 		return outbound{}, fmt.Errorf("unsupported outbound protocol %q", o.Protocol)
 	}
 	if o.Protocol.NeedsEndpoint() {
-		ob.StreamSettings = outboundStream(o)
+		var st json.RawMessage
+		st, err = outboundStream(o)
+		if err != nil {
+			return outbound{}, fmt.Errorf("outbound %q stream: %w", o.Tag, err)
+		}
+		ob.StreamSettings = st
 	}
 	return ob, nil
 }
 
 // outboundStream renders the transport/TLS for a proxy outbound, mirroring the
 // inbound streamSettings shape.
-func outboundStream(o domain.Outbound) json.RawMessage {
+func outboundStream(o domain.Outbound) (json.RawMessage, error) {
 	if o.Raw != nil {
 		if raw, ok := o.Raw["streamSettings"]; ok {
-			return mustRaw(raw)
+			return tryRaw(raw)
 		}
 	}
 	ss := map[string]any{
@@ -202,7 +239,7 @@ func outboundStream(o domain.Outbound) json.RawMessage {
 		}
 		ss["httpupgradeSettings"] = hu
 	}
-	return mustRaw(ss)
+	return tryRaw(ss)
 }
 
 func orSecurity(s domain.Security) domain.Security {
@@ -316,7 +353,11 @@ func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound,
 	// no streamSettings block at all — their only allowed security is none, so a
 	// plain proxy with no transport layer is correct.
 	if !core.SkipsTransport(domain.CoreXray, in.Protocol) {
-		out.StreamSettings = streamSettings(in)
+		st, err := streamSettings(in)
+		if err != nil {
+			return inbound{}, fmt.Errorf("inbound %s stream settings: %w", in.Tag, err)
+		}
+		out.StreamSettings = st
 	}
 	return out, nil
 }
@@ -344,14 +385,22 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 		if fb := decoyFallbacks(in); len(fb) > 0 {
 			settings["fallbacks"] = fb
 		}
-		return mustRaw(settings), nil
+		raw, err := tryRaw(settings)
+		if err != nil {
+			return nil, err
+		}
+		return raw, nil
 
 	case domain.ProtoVMess:
 		clients := make([]map[string]any, 0, len(users))
 		for _, u := range users {
 			clients = append(clients, map[string]any{"id": u.Proxies.VMessUUID.String(), "email": u.ID.String()})
 		}
-		return mustRaw(map[string]any{"clients": clients}), nil
+		raw, err := tryRaw(map[string]any{"clients": clients})
+		if err != nil {
+			return nil, err
+		}
+		return raw, nil
 
 	case domain.ProtoTrojan:
 		clients := make([]map[string]any, 0, len(users))
@@ -362,13 +411,17 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 		if fb := decoyFallbacks(in); len(fb) > 0 {
 			settings["fallbacks"] = fb
 		}
-		return mustRaw(settings), nil
+		raw, err := tryRaw(settings)
+		if err != nil {
+			return nil, err
+		}
+		return raw, nil
 
 	case domain.ProtoShadowsocks:
-		return shadowsocksSettings(in, users), nil
+		return shadowsocksSettings(in, users)
 
 	case domain.ProtoDokodemo:
-		return dokodemoSettings(in), nil
+		return dokodemoSettings(in)
 
 	case domain.ProtoSocks:
 		// SOCKS5 utility proxy. Per-user auth reuses the existing credentials
@@ -377,9 +430,17 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 		// fall back to noauth so the inbound still starts.
 		accounts := socksHTTPAccounts(users)
 		if len(accounts) > 0 {
-			return mustRaw(map[string]any{"auth": "password", "accounts": accounts, "udp": true}), nil
+			raw, err := tryRaw(map[string]any{"auth": "password", "accounts": accounts, "udp": true})
+			if err != nil {
+				return nil, err
+			}
+			return raw, nil
 		}
-		return mustRaw(map[string]any{"auth": "noauth", "udp": true}), nil
+		raw, err := tryRaw(map[string]any{"auth": "noauth", "udp": true})
+		if err != nil {
+			return nil, err
+		}
+		return raw, nil
 
 	case domain.ProtoHTTP:
 		// HTTP CONNECT utility proxy. accounts reuse the same shared credentials;
@@ -389,7 +450,11 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 		if len(accounts) > 0 {
 			settings["accounts"] = accounts
 		}
-		return mustRaw(settings), nil
+		raw, err := tryRaw(settings)
+		if err != nil {
+			return nil, err
+		}
+		return raw, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q for xray", in.Protocol)
@@ -432,7 +497,7 @@ func proxyUsername(u *domain.User) string {
 //
 // This stops the previous behaviour where only users[0] was ever rendered (a
 // silent single-user drop) — with a 2022 method every bound user is now emitted.
-func shadowsocksSettings(in domain.Inbound, users []*domain.User) json.RawMessage {
+func shadowsocksSettings(in domain.Inbound, users []*domain.User) (json.RawMessage, error) {
 	method := ssInboundMethod(users)
 	const network = "tcp,udp"
 
@@ -446,7 +511,7 @@ func shadowsocksSettings(in domain.Inbound, users []*domain.User) json.RawMessag
 				"email":    u.ID.String(),
 			})
 		}
-		return mustRaw(map[string]any{
+		return tryRaw(map[string]any{
 			"method":   method,
 			"password": ssServerPassword(in),
 			"network":  network,
@@ -468,7 +533,7 @@ func shadowsocksSettings(in domain.Inbound, users []*domain.User) json.RawMessag
 	if password == "" {
 		password = "placeholder-no-users-bound"
 	}
-	return mustRaw(map[string]any{"method": method, "password": password, "network": network})
+	return tryRaw(map[string]any{"method": method, "password": password, "network": network})
 }
 
 // isSS2022Method reports whether an SS cipher is a Shadowsocks-2022 method
@@ -537,9 +602,9 @@ func effectiveFlow(in domain.Inbound) string {
 
 // streamSettings renders transport + security. Operators can override the whole
 // block via Inbound.Raw["streamSettings"] for fields the abstraction omits.
-func streamSettings(in domain.Inbound) json.RawMessage {
+func streamSettings(in domain.Inbound) (json.RawMessage, error) {
 	if raw, ok := in.Raw["streamSettings"]; ok {
-		return mustRaw(raw)
+		return tryRaw(raw)
 	}
 	ss := map[string]any{
 		"network":  orDefault(in.Network, "tcp"),
@@ -620,7 +685,7 @@ func streamSettings(in domain.Inbound) json.RawMessage {
 	case "kcp":
 		ss["kcpSettings"] = kcpSettings(in)
 	}
-	return mustRaw(ss)
+	return tryRaw(ss)
 }
 
 func orDefault(v, def string) string {
@@ -742,7 +807,7 @@ func inboundUsable(in domain.Inbound) bool {
 //     do NOT force followRedirect.
 //   - "network" always defaults to "tcp,udp".
 //   - "timeout" / "userLevel" are passed through only when present.
-func dokodemoSettings(in domain.Inbound) json.RawMessage {
+func dokodemoSettings(in domain.Inbound) (json.RawMessage, error) {
 	var raw map[string]any
 	if in.Raw != nil {
 		raw, _ = in.Raw["dokodemo"].(map[string]any)
@@ -778,7 +843,7 @@ func dokodemoSettings(in domain.Inbound) json.RawMessage {
 	if userLevel, ok := rawInt(raw["userLevel"]); ok {
 		settings["userLevel"] = userLevel
 	}
-	return mustRaw(settings)
+	return tryRaw(settings)
 }
 
 // kcpSettings renders the mKCP "kcpSettings" block (network token "kcp"). Only
@@ -860,9 +925,10 @@ func decoyFallbacks(in domain.Inbound) []map[string]any {
 	return []map[string]any{{"dest": dest, "xver": 0}}
 }
 
-func mustRaw(v any) json.RawMessage {	b, err := json.Marshal(v)
-	if err != nil { // only unmarshalable types (chan/func) hit this; never with our inputs
-		panic(fmt.Sprintf("xray: marshal settings: %v", err))
+func tryRaw(v any) (json.RawMessage, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("xray: marshal settings: %w", err)
 	}
-	return b
+	return b, nil
 }

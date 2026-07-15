@@ -39,7 +39,7 @@ func (p *PrometheusExporter) Export() string {
 	buf.WriteString("# TYPE vortex_http_request_duration histogram\n")
 
 	// Get all metrics
-	metrics, err := p.metricsService.GetMetrics(context.TODO(), nil)
+	metrics, err := p.metricsService.GetMetrics(context.Background(), nil)
 	if err != nil {
 		p.log.Error("failed to get metrics for prometheus export", "error", err)
 		return buf.String()
@@ -155,7 +155,7 @@ func (r *RequestMetricsAggregator) AggregateMetrics() map[string]interface{} {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	metrics, err := r.metricsService.GetMetrics(context.TODO(), nil)
+	metrics, err := r.metricsService.GetMetrics(context.Background(), nil)
 	if err != nil {
 		r.log.Error("failed to aggregate metrics", "error", err)
 		return make(map[string]interface{})
@@ -188,13 +188,17 @@ func (r *RequestMetricsAggregator) AggregateMetrics() map[string]interface{} {
 		}
 
 		ep := endpoints[key]
-		ep["count"] = ep["count"].(int) + 1
-		ep["total_time"] = ep["total_time"].(float64) + metric.Value
+		cnt, _ := ep["count"].(int)
+		ep["count"] = cnt + 1
+		totalTime, _ := ep["total_time"].(float64)
+		ep["total_time"] = totalTime + metric.Value
 
-		if metric.Value < ep["min_time"].(float64) {
+		minTime, _ := ep["min_time"].(float64)
+		if metric.Value < minTime {
 			ep["min_time"] = metric.Value
 		}
-		if metric.Value > ep["max_time"].(float64) {
+		maxTime, _ := ep["max_time"].(float64)
+		if metric.Value > maxTime {
 			ep["max_time"] = metric.Value
 		}
 	}
@@ -202,9 +206,9 @@ func (r *RequestMetricsAggregator) AggregateMetrics() map[string]interface{} {
 	// Convert to response format
 	result := make(map[string]interface{})
 	for key, ep := range endpoints {
-		count := ep["count"].(int)
+		count, _ := ep["count"].(int)
 		if count > 0 {
-			total := ep["total_time"].(float64)
+			total, _ := ep["total_time"].(float64)
 			ep["avg_time"] = total / float64(count)
 		}
 		result[key] = ep
