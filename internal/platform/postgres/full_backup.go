@@ -34,7 +34,7 @@ func serverMajorVersion(ctx context.Context, databaseURL string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 	var raw string
 	if err := conn.QueryRow(ctx, "SHOW server_version_num").Scan(&raw); err != nil {
 		return 0, err
