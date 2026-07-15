@@ -115,10 +115,26 @@ func coreSupports(coreType domain.CoreType, proto domain.Protocol, network strin
 	return core.Supports(coreType, proto, network, security)
 }
 
+func validateInboundCore(node *domain.Node, override domain.CoreType, proto domain.Protocol, network string, security domain.Security) error {
+	ct := node.ResolveInboundCore(override)
+	if !node.CoreEnabled(ct) {
+		return fmt.Errorf("core %q is not enabled on node %q (enabled: %v)", ct, node.Name, node.NormalizedEnabledCores())
+	}
+	return coreSupports(ct, proto, network, security)
+}
+
+func effectiveInboundCore(existing *domain.Inbound, override *domain.CoreType) domain.CoreType {
+	if override != nil {
+		return *override
+	}
+	return existing.Core
+}
+
 // CreateInboundInput describes a new inbound.
 type CreateInboundInput struct {
 	NodeID     uuid.UUID
 	Tag        string
+	Core       domain.CoreType
 	Protocol   domain.Protocol
 	Listen     string
 	Port       int
@@ -145,13 +161,14 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 	if err != nil {
 		return nil, errors.New("node not found")
 	}
-	if err := coreSupports(node.Core, in.Protocol, orStr(in.Network, "tcp"), orSec(in.Security, domain.SecurityNone)); err != nil {
+	if err := validateInboundCore(node, in.Core, in.Protocol, orStr(in.Network, "tcp"), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
 	inbound := &domain.Inbound{
 		ID:         uuid.New(),
 		NodeID:     in.NodeID,
 		Tag:        in.Tag,
+		Core:       in.Core,
 		Protocol:   in.Protocol,
 		Listen:     in.Listen,
 		Port:       in.Port,
@@ -193,6 +210,7 @@ type UpdateInboundInput struct {
 	Port       int
 	Network    string
 	Security   domain.Security
+	Core       *domain.CoreType
 	SNI        []string
 	Path       string
 	Host       []string
@@ -215,7 +233,7 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	if err != nil {
 		return nil, errors.New("node not found")
 	}
-	if err := coreSupports(node.Core, existing.Protocol, orStr(in.Network, "tcp"), orSec(in.Security, domain.SecurityNone)); err != nil {
+	if err := validateInboundCore(node, effectiveInboundCore(existing, in.Core), existing.Protocol, orStr(in.Network, "tcp"), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
 	existing.Listen = in.Listen
@@ -226,6 +244,9 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	existing.Path = in.Path
 	existing.Host = in.Host
 	existing.Flow = in.Flow
+	if in.Core != nil {
+		existing.Core = *in.Core
+	}
 	if in.Raw != nil {
 		existing.Raw = *in.Raw
 	}

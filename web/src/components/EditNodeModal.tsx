@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useUpdateNode } from "@/api/hooks";
 import type { Node } from "@/api/types";
 import { findLocationPreset, SERVER_LOCATIONS } from "@/lib/serverLocations";
+import type { CoreType } from "@/lib/coreTypes";
+import { normalizedEnabledCores } from "@/lib/coreTypes";
+import { EnabledCoresPicker } from "./EnabledCoresPicker";
 import { Button, Input, Select } from "./ui";
 import { Modal } from "./Modal";
 import { useToast } from "./toast";
@@ -21,6 +24,8 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
   const [countryCode, setCountryCode] = useState("");
   const [speedLimit, setSpeedLimit] = useState("");
   const [geoBlock, setGeoBlock] = useState("");
+  const [enabledCores, setEnabledCores] = useState<CoreType[]>(["xray"]);
+  const [defaultCore, setDefaultCore] = useState<CoreType>("xray");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -39,6 +44,8 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
     }
     setSpeedLimit(node.speed_limit ? String(node.speed_limit) : "");
     setGeoBlock(node.geo_block?.join(",") ?? "");
+    setEnabledCores(normalizedEnabledCores(node));
+    setDefaultCore(node.core);
     setError("");
   }, [node]);
 
@@ -57,6 +64,8 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
         id: node.id,
         input: {
           name, address, usage_ratio: ratio ? Number(ratio) : undefined, endpoint,
+          enabled_cores: enabledCores,
+          core: defaultCore,
           location_auto: isAutoLocation,
           region: isAutoLocation ? "" : preset ? preset.label : region,
           country_code: isAutoLocation ? "" : preset ? preset.code : countryCode,
@@ -82,6 +91,12 @@ export function EditNodeModal({ node, onClose }: { node: Node | null; onClose: (
           Agent address
           <Input className="mt-1" value={address} onChange={(e) => setAddress(e.target.value)} required />
         </label>
+        <EnabledCoresPicker
+          value={enabledCores}
+          onChange={setEnabledCores}
+          defaultCore={defaultCore}
+          onDefaultCoreChange={setDefaultCore}
+        />
         <label className="block text-xs text-muted-foreground">
           Usage ratio
           <Input className="mt-1" value={ratio} onChange={(e) => setRatio(e.target.value)} inputMode="decimal" />

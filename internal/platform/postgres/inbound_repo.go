@@ -34,6 +34,7 @@ func (r *InboundRepo) Create(ctx context.Context, in *domain.Inbound) error {
 		Enabled:          in.Enabled,
 		SpeedLimit:       in.SpeedLimit,
 		GeoPolicy:        geoPolicyToJSONB(in.GeoPolicy),
+		Core:             string(in.Core),
 	})
 }
 
@@ -64,6 +65,7 @@ func (r *InboundRepo) Update(ctx context.Context, in *domain.Inbound) error {
 		Enabled:          in.Enabled,
 		SpeedLimit:       in.SpeedLimit,
 		GeoPolicy:        geoPolicyToJSONB(in.GeoPolicy),
+		Core:             string(in.Core),
 	})
 }
 
@@ -118,5 +120,6 @@ func inboundToDomain(in db.Inbound) domain.Inbound {
 		Enabled:          in.Enabled,
 		SpeedLimit:       in.SpeedLimit,
 		GeoPolicy:        geoPolicyFromJSONB(in.GeoPolicy),
+		Core:             domain.CoreType(in.Core),
 	}
 }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ensureArray } from "@/lib/utils";
 import { api } from "./client";
-import type { CreateUserInput, EnrollmentBundle, ListUsersResponse, Node, NodeDiagnostics, NodeEnrollmentPhase, User } from "./types";
+import type { CoreType, CreateUserInput, EnrollmentBundle, ListUsersResponse, Node, NodeDiagnostics, NodeEnrollmentPhase, User } from "./types";
 
 // --- panel version ---
 
@@ -154,7 +154,17 @@ export function useNodes() {
 export function useCreateNode() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; address: string; core: string; usage_ratio?: number; endpoint?: string; region?: string; country_code?: string; location_auto?: boolean }) =>
+    mutationFn: (input: {
+      name: string;
+      address: string;
+      core: string;
+      enabled_cores?: string[];
+      usage_ratio?: number;
+      endpoint?: string;
+      region?: string;
+      country_code?: string;
+      location_auto?: boolean;
+    }) =>
       api<{ node: Node; warning?: string }>("/api/nodes", { method: "POST", body: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nodes"] }),
   });
@@ -163,7 +173,19 @@ export function useCreateNode() {
 export function useUpdateNode() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: { name?: string; address?: string; usage_ratio?: number; endpoint?: string; region?: string; country_code?: string; location_auto?: boolean; speed_limit?: number; geo_block?: string[] } }) =>
+    mutationFn: ({ id, input }: { id: string; input: {
+      name?: string;
+      address?: string;
+      core?: string;
+      enabled_cores?: string[];
+      usage_ratio?: number;
+      endpoint?: string;
+      region?: string;
+      country_code?: string;
+      location_auto?: boolean;
+      speed_limit?: number;
+      geo_block?: string[];
+    } }) =>
       api<{ node: Node; warning?: string }>(`/api/nodes/${id}`, { method: "PUT", body: input }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nodes"] }),
   });
@@ -244,6 +266,7 @@ export interface Inbound {
   id: string;
   node_id: string;
   tag: string;
+  core?: CoreType | "";
   protocol: string;
   listen: string;
   port: number;
@@ -262,6 +285,7 @@ export interface Inbound {
 export interface CreateInboundInput {
   node_id: string;
   tag: string;
+  core?: CoreType | "";
   protocol: string;
   port: number;
   network?: string;
@@ -301,6 +325,7 @@ export interface UpdateInboundInput {
   port: number;
   network?: string;
   security?: string;
+  core?: CoreType | "";
   sni?: string[];
   path?: string;
   host?: string[];
@@ -317,6 +342,7 @@ export function inboundToUpdateInput(ib: Inbound, overrides: Partial<UpdateInbou
     port: ib.port,
     network: ib.network,
     security: ib.security,
+    core: ib.core ?? "",
     sni: ib.sni ?? [],
     path: ib.path ?? "",
     host: ib.host ?? [],

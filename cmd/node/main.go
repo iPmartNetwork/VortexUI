@@ -21,6 +21,7 @@ import (
 	"github.com/vortexui/vortexui/internal/core/singbox"
 	"github.com/vortexui/vortexui/internal/core/xray"
 	"github.com/vortexui/vortexui/internal/decoy"
+	"github.com/vortexui/vortexui/internal/domain"
 	vgrpc "github.com/vortexui/vortexui/internal/transport/grpc"
 )
 
@@ -49,14 +50,9 @@ func run(ctx context.Context, log *slog.Logger) error {
 	// Select the core driver this node runs. Both satisfy core.CoreDriver, so the
 	// rest of the agent is engine-agnostic. The panel drives it through the
 	// NodeServer; nothing starts until the first Sync.
-	var driver core.CoreDriver
-	switch cfg.Core {
-	case "singbox":
-		driver = singbox.New(singbox.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.APIPort, OmitV2RayAPI: !cfg.SingboxV2RayAPI, Logger: log})
-	case "xray", "":
-		driver = xray.New(xray.Options{BinPath: cfg.CoreBin, ConfigPath: cfg.CoreConfig, APIPort: cfg.APIPort, Logger: log})
-	default:
-		return fmt.Errorf("unknown core %q (want xray|singbox)", cfg.Core)
+	driver, err := buildDriver(cfg, log)
+	if err != nil {
+		return err
 	}
 	defer driver.Stop(context.Background())
 
@@ -77,7 +73,7 @@ func run(ctx context.Context, log *slog.Logger) error {
 	// Serve in the background; stop gracefully when the signal context cancels.
 	errCh := make(chan error, 1)
 	go func() {
-		log.Info("node agent listening (mTLS)", "addr", cfg.ListenAddr, "core", cfg.Core)
+		log.Info("node agent listening (mTLS)", "addr", cfg.ListenAddr, "cores", cfg.EnabledCores)
 		errCh <- srv.Serve(lis,
 			grpc.Creds(creds),
 			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
@@ -98,5 +94,42 @@ func run(ctx context.Context, log *slog.Logger) error {
 		return nil
 	case err := <-errCh:
 		return err
+	}
+}
+
+func buildDriver(cfg *config.Node, log *slog.Logger) (core.CoreDriver, error) {
+	if len(cfg.EnabledCores) <= 1 {
+		return singleDriver(cfg.EnabledCores[0], cfg, log)
+	}
+	drivers := make(map[domain.CoreType]core.CoreDriver, len(cfg.EnabledCores))
+	for _, ct := range cfg.EnabledCores {
+		d, err := singleDriver(ct, cfg, log)
+		if err != nil {
+			return nil, err
+		}
+		drivers[domain.CoreType(ct)] = d
+	}
+	return core.NewCompositeDriver(drivers)
+}
+
+func singleDriver(ct string, cfg *config.Node, log *slog.Logger) (core.CoreDriver, error) {
+	switch ct {
+	case "singbox":
+		return singbox.New(singbox.Options{
+			BinPath:      cfg.CoreBinFor(ct),
+			ConfigPath:   cfg.CoreConfigFor(ct),
+			APIPort:      cfg.APIPortFor(ct),
+			OmitV2RayAPI: !cfg.SingboxV2RayAPIFor(),
+			Logger:       log,
+		}), nil
+	case "xray", "":
+		return xray.New(xray.Options{
+			BinPath:    cfg.CoreBinFor(ct),
+			ConfigPath: cfg.CoreConfigFor(ct),
+			APIPort:    cfg.APIPortFor(ct),
+			Logger:     log,
+		}), nil
+	default:
+		return nil, fmt.Errorf("unknown core %q (want xray|singbox)", ct)
 	}
 }

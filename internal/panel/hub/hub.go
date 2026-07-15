@@ -284,7 +284,10 @@ func (h *Hub) Sync(ctx context.Context, nodeID uuid.UUID, cfg *core.GeneratedCon
 	if err != nil {
 		return err
 	}
-	return conn.Sync(ctx, cfg, mn.node.Core)
+	for i := range cfg.Inbounds {
+		cfg.Inbounds[i].Core = mn.node.ResolveInboundCore(cfg.Inbounds[i].Core)
+	}
+	return conn.Sync(ctx, cfg, mn.node.SyncCoreType())
 }
 
 // AddUser provisions a user on one node's inbound at runtime.

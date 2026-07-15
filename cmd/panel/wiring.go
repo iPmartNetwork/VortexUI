@@ -104,11 +104,12 @@ func ensureLocalNode(ctx context.Context, nodes port.NodeRepository, cfg *config
 		}
 	}
 	n := &domain.Node{
-		ID:         uuid.New(),
-		Name:       cfg.LocalNodeName,
-		Address:    cfg.LocalNodeHost,
-		Core:       core,
-		Status:     domain.NodeDisconnected,
+		ID:           uuid.New(),
+		Name:         cfg.LocalNodeName,
+		Address:      cfg.LocalNodeHost,
+		Core:         core,
+		EnabledCores: []domain.CoreType{core},
+		Status:       domain.NodeDisconnected,
 		UsageRatio: 1,
 		CreatedAt:  time.Now(),
 	}

@@ -20,6 +20,8 @@ func coreTypeToProto(c domain.CoreType) genv1.CoreType {
 		return genv1.CoreType_CORE_TYPE_XRAY
 	case domain.CoreSingbox:
 		return genv1.CoreType_CORE_TYPE_SINGBOX
+	case domain.CoreMulti:
+		return genv1.CoreType_CORE_TYPE_MULTI
 	default:
 		return genv1.CoreType_CORE_TYPE_UNSPECIFIED
 	}
@@ -31,6 +33,8 @@ func coreTypeFromProto(c genv1.CoreType) domain.CoreType {
 		return domain.CoreXray
 	case genv1.CoreType_CORE_TYPE_SINGBOX:
 		return domain.CoreSingbox
+	case genv1.CoreType_CORE_TYPE_MULTI:
+		return domain.CoreMulti
 	default:
 		return ""
 	}
@@ -80,6 +84,7 @@ func inboundToSpec(in domain.Inbound) *genv1.InboundSpec {
 		Path:     in.Path,
 		Host:     in.Host,
 		Flow:     in.Flow,
+		Core:     string(in.Core),
 	}
 	if len(in.Raw) > 0 {
 		if b, err := json.Marshal(in.Raw); err == nil {
@@ -101,6 +106,7 @@ func inboundFromSpec(s *genv1.InboundSpec) domain.Inbound {
 		Path:     s.GetPath(),
 		Host:     s.GetHost(),
 		Flow:     s.GetFlow(),
+		Core:     domain.CoreType(s.GetCore()),
 		Enabled:  true, // only enabled inbounds are ever synced
 	}
 	if raw := s.GetRaw(); len(raw) > 0 {

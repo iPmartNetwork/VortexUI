@@ -10,6 +10,9 @@ import { SubHostsModal } from "./SubHostsModal";
 import { useToast } from "./toast";
 import { useI18n } from "@/i18n/i18n";
 import { useAuth } from "@/auth/auth";
+import type { CoreType } from "@/lib/coreTypes";
+import { isMultiCore, resolveInboundCore } from "@/lib/coreTypes";
+import { CoreBadge } from "@/components/veltrix/CoreBadge";
 
 // Static fallbacks used only until the per-core capability matrix
 // (GET /api/capabilities) loads, so the form still works before the fetch
@@ -44,7 +47,7 @@ function inboundTransportLabel(
 // non-conflicting port. The admin can still type any port.
 const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
 
-const newBlank = () => ({ editId: "", tag: "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "", wgPrivateKey: "", wgSubnet: "", wgMtu: "" });
+const newBlank = () => ({ editId: "", tag: "", core: "" as CoreType | "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "", wgPrivateKey: "", wgSubnet: "", wgMtu: "" });
 const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {
@@ -93,9 +96,10 @@ export function NodeInboundsModal({
     setEditSnapshot(null);
   };
 
-  // Per-core capability for the current node, with static fallbacks until the
-  // matrix has been fetched.
-  const cap = caps?.[node?.core === "singbox" ? "singbox" : "xray"];
+  // Per-core capability for the form's effective engine, with static fallbacks.
+  const nodeMulti = node ? isMultiCore(node) : false;
+  const formCore = node ? resolveInboundCore(node, f.core) : "xray";
+  const cap = caps?.[formCore === "singbox" ? "singbox" : "xray"];
   const protocols = cap?.protocols ?? PROTOCOLS;
   const networks = cap?.transports ?? NETWORKS;
   const securities = cap?.securities ?? SECURITIES;
@@ -123,7 +127,7 @@ export function NodeInboundsModal({
     setEditSnapshot(ib);
     setRealityKeys(null);
     const wg = (ib.raw?.wireguard ?? {}) as Record<string, unknown>;
-    setF({ editId: ib.id, tag: ib.tag, protocol: ib.protocol, port: String(ib.port), network: udpNative.includes(ib.protocol) || noTransport.includes(ib.protocol) ? "" : ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", "), wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "", wgSubnet: typeof wg.subnet === "string" ? wg.subnet : "", wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "" });
+    setF({ editId: ib.id, tag: ib.tag, core: (ib.core ?? "") as CoreType | "", protocol: ib.protocol, port: String(ib.port), network: udpNative.includes(ib.protocol) || noTransport.includes(ib.protocol) ? "" : ib.network, security: ib.security, sni: (ib.sni ?? []).join(", "), path: ib.path ?? "", host: (ib.host ?? []).join(", "), flow: ib.flow ?? "", geoAllow: (ib.geo_policy?.allowed_countries ?? []).join(", "), wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "", wgSubnet: typeof wg.subnet === "string" ? wg.subnet : "", wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "" });
   }
 
   // When the capability matrix loads or the node's core changes, reconcile the
@@ -147,7 +151,7 @@ export function NodeInboundsModal({
       }
       return next === s ? s : next;
     });
-  }, [cap]);
+  }, [cap, formCore]);
 
   useEffect(() => {
     if (!node || !initialEdit || initialEdit.node_id !== node.id) return;
@@ -200,6 +204,7 @@ export function NodeInboundsModal({
       if (Object.keys(wg).length > 0) raw = { ...(raw ?? {}), wireguard: wg };
     }
     const network = isNoTransport ? "" : f.network;
+    const corePayload = f.core || undefined;
     try {
       if (editing && editSnapshot) {
         const mergedRaw = raw ?? editSnapshot.raw;
@@ -209,6 +214,7 @@ export function NodeInboundsModal({
             port: Number(f.port),
             network,
             security: f.security,
+            core: f.core,
             sni,
             path: f.path,
             host,
@@ -230,13 +236,14 @@ export function NodeInboundsModal({
             host,
             flow: f.flow,
             geo_policy,
+            core: f.core,
             enabled: true,
             ...(raw ? { raw } : {}),
           },
         });
         toast.success(`Updated ${f.tag}`);
       } else {
-        await create.mutateAsync({ node_id: node.id, tag: f.tag, protocol: f.protocol, port: Number(f.port), network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) });
+        await create.mutateAsync({ node_id: node.id, tag: f.tag, core: corePayload, protocol: f.protocol, port: Number(f.port), network, security: f.security, sni, path: f.path, host, flow: f.flow, geo_policy, enabled: true, ...(raw ? { raw } : {}) });
         toast.success(`Added ${f.tag}`);
       }
       resetForm();
@@ -286,6 +293,9 @@ export function NodeInboundsModal({
             <div className="flex items-center gap-2 min-w-0">
               <span className="font-medium truncate min-w-0">{ib.tag}</span>
               <Badge>{ib.protocol}</Badge>
+              {nodeMulti && (
+                <CoreBadge core={resolveInboundCore(node, ib.core)} className="scale-90" />
+              )}
               <span className="truncate text-xs text-muted-foreground">:{ib.port} · {inboundTransportLabel(ib, udpNative, noTransport)}</span>
               <span className={`h-2 w-2 shrink-0 rounded-full ${ib.enabled ? "bg-success" : "bg-fg-subtle"}`} title={ib.enabled ? "Enabled" : "Disabled"} />
             </div>
@@ -346,6 +356,17 @@ export function NodeInboundsModal({
           <Input placeholder="Tag" value={f.tag} onChange={set("tag")} required disabled={editing} />
           <Input placeholder="Port" value={f.port} onChange={set("port")} inputMode="numeric" required />
         </div>
+        {nodeMulti && (
+          <label className="block text-xs text-muted-foreground">
+            Engine
+            <Select className="mt-1" value={f.core || ""} onChange={set("core")}>
+              <option value="">Default ({node.core === "singbox" ? "sing-box" : "Xray"})</option>
+              {(node.enabled_cores ?? [node.core]).map((c) => (
+                <option key={c} value={c}>{c === "singbox" ? "sing-box" : "Xray-core"}</option>
+              ))}
+            </Select>
+          </label>
+        )}
         <div className="grid grid-cols-3 gap-2">
           <Select value={f.protocol} onChange={set("protocol")} disabled={editing}>
             {protocols.map((p) => <option key={p} value={p}>{p}</option>)}

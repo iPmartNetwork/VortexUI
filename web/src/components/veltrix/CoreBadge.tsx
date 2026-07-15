@@ -1,11 +1,14 @@
 import { cn } from "@/lib/utils";
+import type { CoreType } from "@/lib/coreTypes";
+import { normalizedEnabledCores } from "@/lib/coreTypes";
 
 interface CoreBadgeProps {
-  core: "xray" | "singbox";
+  core: CoreType;
+  enabledCores?: CoreType[];
   className?: string;
 }
 
-export function CoreBadge({ core, className }: CoreBadgeProps) {
+function SingleCoreBadge({ core, className }: { core: CoreType; className?: string }) {
   const label = core === "singbox" ? "sing-box" : "XRAY";
   const style =
     core === "singbox"
@@ -20,6 +23,20 @@ export function CoreBadge({ core, className }: CoreBadgeProps) {
       )}
     >
       {label}
+    </span>
+  );
+}
+
+export function CoreBadge({ core, enabledCores, className }: CoreBadgeProps) {
+  const cores = normalizedEnabledCores({ core, enabled_cores: enabledCores });
+  if (cores.length <= 1) {
+    return <SingleCoreBadge core={cores[0] ?? core} className={className} />;
+  }
+  return (
+    <span className={cn("inline-flex flex-wrap gap-1", className)}>
+      {cores.map((c) => (
+        <SingleCoreBadge key={c} core={c} />
+      ))}
     </span>
   );
 }

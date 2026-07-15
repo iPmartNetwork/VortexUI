@@ -28,6 +28,7 @@ const (
 	CoreType_CORE_TYPE_UNSPECIFIED CoreType = 0
 	CoreType_CORE_TYPE_XRAY        CoreType = 1
 	CoreType_CORE_TYPE_SINGBOX     CoreType = 2
+	CoreType_CORE_TYPE_MULTI       CoreType = 3
 )
 
 // Enum value maps for CoreType.
@@ -36,11 +37,13 @@ var (
 		0: "CORE_TYPE_UNSPECIFIED",
 		1: "CORE_TYPE_XRAY",
 		2: "CORE_TYPE_SINGBOX",
+		3: "CORE_TYPE_MULTI",
 	}
 	CoreType_value = map[string]int32{
 		"CORE_TYPE_UNSPECIFIED": 0,
 		"CORE_TYPE_XRAY":        1,
 		"CORE_TYPE_SINGBOX":     2,
+		"CORE_TYPE_MULTI":       3,
 	}
 )
 
@@ -188,6 +191,7 @@ type InboundSpec struct {
 	Path          string                 `protobuf:"bytes,9,opt,name=path,proto3" json:"path,omitempty"`  // ws path / grpc service name
 	Host          []string               `protobuf:"bytes,10,rep,name=host,proto3" json:"host,omitempty"` // ws Host header(s)
 	Flow          string                 `protobuf:"bytes,11,opt,name=flow,proto3" json:"flow,omitempty"` // vless flow (e.g. xtls-rprx-vision)
+	Core          string                 `protobuf:"bytes,12,opt,name=core,proto3" json:"core,omitempty"` // xray | singbox; empty = node default
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -295,6 +299,13 @@ func (x *InboundSpec) GetHost() []string {
 func (x *InboundSpec) GetFlow() string {
 	if x != nil {
 		return x.Flow
+	}
+	return ""
+}
+
+func (x *InboundSpec) GetCore() string {
+	if x != nil {
+		return x.Core
 	}
 	return ""
 }
@@ -1672,7 +1683,7 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\vss_password\x18\x06 \x01(\tR\n" +
 	"ssPassword\x12\x1b\n" +
 	"\tss_method\x18\a \x01(\tR\bssMethod\x12\x12\n" +
-	"\x04flow\x18\b \x01(\tR\x04flow\"\xfd\x01\n" +
+	"\x04flow\x18\b \x01(\tR\x04flow\"\x91\x02\n" +
 	"\vInboundSpec\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1a\n" +
 	"\bprotocol\x18\x02 \x01(\tR\bprotocol\x12\x16\n" +
@@ -1685,7 +1696,8 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\x04path\x18\t \x01(\tR\x04path\x12\x12\n" +
 	"\x04host\x18\n" +
 	" \x03(\tR\x04host\x12\x12\n" +
-	"\x04flow\x18\v \x01(\tR\x04flow\"\xfe\x02\n" +
+	"\x04flow\x18\v \x01(\tR\x04flow\x12\x12\n" +
+	"\x04core\x18\f \x01(\tR\x04core\"\xfe\x02\n" +
 	"\fOutboundSpec\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1a\n" +
 	"\bprotocol\x18\x02 \x01(\tR\bprotocol\x12\x18\n" +
@@ -1793,11 +1805,12 @@ const file_vortex_v1_node_proto_rawDesc = "" +
 	"\x0fNodeLogsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\"(\n" +
 	"\x10NodeLogsResponse\x12\x14\n" +
-	"\x05lines\x18\x01 \x03(\tR\x05lines*P\n" +
+	"\x05lines\x18\x01 \x03(\tR\x05lines*e\n" +
 	"\bCoreType\x12\x19\n" +
 	"\x15CORE_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eCORE_TYPE_XRAY\x10\x01\x12\x15\n" +
-	"\x11CORE_TYPE_SINGBOX\x10\x022\xd4\x05\n" +
+	"\x11CORE_TYPE_SINGBOX\x10\x02\x12\x13\n" +
+	"\x0fCORE_TYPE_MULTI\x10\x032\xd4\x05\n" +
 	"\vNodeService\x12.\n" +
 	"\x04Sync\x12\x16.vortex.v1.SyncRequest\x1a\x0e.vortex.v1.Ack\x124\n" +
 	"\aAddUser\x12\x19.vortex.v1.AddUserRequest\x1a\x0e.vortex.v1.Ack\x12:\n" +

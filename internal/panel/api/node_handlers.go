@@ -14,10 +14,11 @@ import (
 // --- nodes ---
 
 type createNodeRequest struct {
-	Name         string  `json:"name"`
-	Address      string  `json:"address"`
-	Core         string  `json:"core"`
-	UsageRatio   float64 `json:"usage_ratio"`
+	Name         string   `json:"name"`
+	Address      string   `json:"address"`
+	Core         string   `json:"core"`
+	EnabledCores []string `json:"enabled_cores"`
+	UsageRatio   float64  `json:"usage_ratio"`
 	Endpoint     string  `json:"endpoint"`
 	Region       string  `json:"region"`
 	CountryCode  string  `json:"country_code"`
@@ -32,6 +33,7 @@ func (h *Handlers) CreateNode(c echo.Context) error {
 	}
 	n, err := h.Nodes.Create(c.Request().Context(), service.CreateNodeInput{
 		Name: req.Name, Address: req.Address, Core: domain.CoreType(req.Core),
+		EnabledCores: coreTypesFromStrings(req.EnabledCores),
 		UsageRatio: req.UsageRatio, Endpoint: req.Endpoint,
 		Region: req.Region, CountryCode: req.CountryCode, LocationAuto: req.LocationAuto,
 	})
@@ -104,9 +106,11 @@ func (h *Handlers) GetNode(c echo.Context) error {
 }
 
 type updateNodeRequest struct {
-	Name         string  `json:"name"`
-	Address      string  `json:"address"`
-	UsageRatio   float64 `json:"usage_ratio"`
+	Name         string   `json:"name"`
+	Address      string   `json:"address"`
+	Core         string   `json:"core"`
+	EnabledCores []string `json:"enabled_cores"`
+	UsageRatio   float64  `json:"usage_ratio"`
 	Endpoint     string  `json:"endpoint"`
 	Region       *string `json:"region"`
 	CountryCode  *string `json:"country_code"`
@@ -125,6 +129,8 @@ func (h *Handlers) UpdateNode(c echo.Context) error {
 	}
 	in := service.UpdateNodeInput{
 		Name: req.Name, Address: req.Address, UsageRatio: req.UsageRatio, Endpoint: req.Endpoint,
+		Core: domain.CoreType(req.Core),
+		EnabledCores: coreTypesFromStrings(req.EnabledCores),
 	}
 	if req.Region != nil {
 		in.RegionSet = true
@@ -254,6 +260,7 @@ func (h *Handlers) StopNodeCore(c echo.Context) error {
 type createInboundRequest struct {
 	NodeID     string            `json:"node_id"`
 	Tag        string            `json:"tag"`
+	Core       string            `json:"core"`
 	Protocol   string            `json:"protocol"`
 	Listen     string            `json:"listen"`
 	Port       int               `json:"port"`
@@ -280,7 +287,8 @@ func (h *Handlers) CreateInbound(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid node_id")
 	}
 	in, err := h.Inbounds.Create(c.Request().Context(), service.CreateInboundInput{
-		NodeID: nodeID, Tag: req.Tag, Protocol: domain.Protocol(req.Protocol),
+		NodeID: nodeID, Tag: req.Tag, Core: domain.CoreType(req.Core),
+		Protocol: domain.Protocol(req.Protocol),
 		Listen: req.Listen, Port: req.Port, Network: req.Network,
 		Security: domain.Security(req.Security), SNI: req.SNI, Path: req.Path,
 		Host: req.Host, Flow: req.Flow, Raw: req.Raw, Enabled: req.Enabled,
@@ -361,6 +369,7 @@ type updateInboundRequest struct {
 	Port       int               `json:"port"`
 	Network    string            `json:"network"`
 	Security   string            `json:"security"`
+	Core       *string           `json:"core"`
 	SNI        []string          `json:"sni"`
 	Path       string            `json:"path"`
 	Host       []string          `json:"host"`
@@ -383,7 +392,7 @@ func (h *Handlers) UpdateInbound(c echo.Context) error {
 	}
 	in, err := h.Inbounds.Update(c.Request().Context(), id, service.UpdateInboundInput{
 		Listen: req.Listen, Port: req.Port, Network: req.Network,
-		Security: domain.Security(req.Security), SNI: req.SNI, Path: req.Path,
+		Security: domain.Security(req.Security), Core: optionalCoreType(req.Core), SNI: req.SNI, Path: req.Path,
 		Host: req.Host, Flow: req.Flow, Raw: req.Raw, Enabled: req.Enabled,
 		SpeedLimit: req.SpeedLimit, GeoPolicy: req.GeoPolicy,
 	})
@@ -412,4 +421,26 @@ func (h *Handlers) DeleteInbound(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "delete failed")
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+func coreTypesFromStrings(ss []string) []domain.CoreType {
+	if len(ss) == 0 {
+		return nil
+	}
+	out := make([]domain.CoreType, 0, len(ss))
+	for _, s := range ss {
+		if s == "" {
+			continue
+		}
+		out = append(out, domain.CoreType(s))
+	}
+	return out
+}
+
+func optionalCoreType(s *string) *domain.CoreType {
+	if s == nil {
+		return nil
+	}
+	ct := domain.CoreType(*s)
+	return &ct
 }
