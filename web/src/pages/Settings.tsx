@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Moon, Sun, Monitor, Download, Upload,
   Palette, Key, Copy, Check,
@@ -43,14 +44,14 @@ const TAB_DEFS: {
   labelKey: TKey;
   flag?: ResellerSettingKey | "notifications" | "user_backup" | "admins";
 }[] = [
-  { id: "general", icon: SettingsIcon, labelKey: "settings.tabGeneral", flag: "branding" },
-  { id: "security", icon: Shield, labelKey: "settings.tabSecurity", flag: "password" },
-  { id: "notifications", icon: Bell, labelKey: "settings.tabNotifications", flag: "notifications" },
-  { id: "appearance", icon: Palette, labelKey: "settings.tabAppearance", flag: "appearance" },
-  { id: "api", icon: Key, labelKey: "settings.tabApiKeys", flag: "api_tokens" },
-  { id: "backup", icon: Database, labelKey: "settings.tabBackup", flag: "backup" },
-  { id: "admins", icon: Users, labelKey: "settings.tabAdmins" },
-];
+    { id: "general", icon: SettingsIcon, labelKey: "settings.tabGeneral", flag: "branding" },
+    { id: "security", icon: Shield, labelKey: "settings.tabSecurity", flag: "password" },
+    { id: "notifications", icon: Bell, labelKey: "settings.tabNotifications", flag: "notifications" },
+    { id: "appearance", icon: Palette, labelKey: "settings.tabAppearance", flag: "appearance" },
+    { id: "api", icon: Key, labelKey: "settings.tabApiKeys", flag: "api_tokens" },
+    { id: "backup", icon: Database, labelKey: "settings.tabBackup", flag: "backup" },
+    { id: "admins", icon: Users, labelKey: "settings.tabAdmins" },
+  ];
 
 function tabVisible(
   id: SettingsTab,
@@ -260,22 +261,40 @@ export function Settings() {
         </GlassCard>
 
         <GlassCard>
-          <h2 className="text-lg font-bold text-fg">{t(tabTitleKey[tab])}</h2>
-          <div className="mt-5">
-            {tab === "general" && <GeneralTab show={show} registerSave={registerSave} />}
-            {tab === "security" && <SecurityTab show={show} sudo={sudo} registerSave={registerSave} />}
-            {tab === "notifications" && <NotificationsTab registerSave={registerSave} />}
-            {tab === "appearance" && <AppearanceTab show={show} registerSave={registerSave} />}
-            {tab === "api" && <APITokenPanel />}
-            {tab === "backup" && (
-              <BackupTab
-                show={show}
-                sudo={sudo}
-                allowUserBackup={!!session?.admin.allow_user_backup}
-                registerSave={registerSave}
-              />
-            )}
-            {tab === "admins" && sudo && <AdminsTab embedded />}
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-fg">{t(tabTitleKey[tab])}</h2>
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="h-1.5 w-1.5 rounded-full bg-primary/60"
+            />
+          </div>
+          <div className="mt-5 relative">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 8, filter: "blur(2px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -8, filter: "blur(2px)" }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {tab === "general" && <GeneralTab show={show} registerSave={registerSave} />}
+                {tab === "security" && <SecurityTab show={show} sudo={sudo} registerSave={registerSave} />}
+                {tab === "notifications" && <NotificationsTab registerSave={registerSave} />}
+                {tab === "appearance" && <AppearanceTab show={show} registerSave={registerSave} />}
+                {tab === "api" && <APITokenPanel />}
+                {tab === "backup" && (
+                  <BackupTab
+                    show={show}
+                    sudo={sudo}
+                    allowUserBackup={!!session?.admin.allow_user_backup}
+                    registerSave={registerSave}
+                  />
+                )}
+                {tab === "admins" && sudo && <AdminsTab embedded />}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </GlassCard>
       </div>
@@ -1042,9 +1061,9 @@ function BackupTab({
                 usersOnly
                   ? exportUsers.mutate(undefined, { onError: (e) => toast.error(e instanceof Error ? e.message : "Export failed") })
                   : exportBackup.mutate(
-                      { format: "json", passphrase: passphrase || undefined, includeTraffic },
-                      { onError: (e) => toast.error(e instanceof Error ? e.message : "Export failed") },
-                    )
+                    { format: "json", passphrase: passphrase || undefined, includeTraffic },
+                    { onError: (e) => toast.error(e instanceof Error ? e.message : "Export failed") },
+                  )
               }
               disabled={usersOnly ? exportUsers.isPending : exportBackup.isPending}
             >
