@@ -40,6 +40,35 @@ ensure_git() {
   command -v git >/dev/null 2>&1 || { info "installing git…"; (apt-get update -y && apt-get install -y git) || yum install -y git || apk add git; }
 }
 
+# Installs a pg_dump/pg_restore matching the DB's major version (pinned to
+# pg16 by docker-compose.yml's timescale/timescaledb:latest-pg16 image).
+# Distro repos often ship an older client (e.g. Ubuntu 22.04 → pg14), and
+# pg_dump refuses to talk to a newer server, so a plain
+# `apt install postgresql-client` is not enough — pull from the official
+# PostgreSQL APT repo (PGDG) instead.
+ensure_pg_client() {
+  local want=16
+  if command -v pg_dump >/dev/null 2>&1; then
+    local have; have="$(pg_dump --version | grep -oE '[0-9]+' | head -1)"
+    [ "$have" = "$want" ] && return 0
+    info "pg_dump v$have found but DB is v$want — installing a matching client…"
+  else
+    info "installing postgresql-client-$want (matches the TimescaleDB pg$want image)…"
+  fi
+  if command -v apt-get >/dev/null 2>&1; then
+    apt-get update -y && apt-get install -y postgresql-common curl ca-certificates gnupg || true
+    if [ -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ]; then
+      yes | /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y || true
+    fi
+    apt-get update -y
+    apt-get install -y "postgresql-client-$want" || apt-get install -y postgresql-client
+  elif command -v yum >/dev/null 2>&1; then
+    yum install -y "postgresql${want}" || yum install -y postgresql
+  elif command -v apk >/dev/null 2>&1; then
+    apk add --no-cache "postgresql${want}-client" || apk add --no-cache postgresql-client
+  fi
+}
+
 checkout() {
   if [ -d "$INSTALL_DIR/.git" ]; then
     info "updating $INSTALL_DIR…"
@@ -286,12 +315,9 @@ deploy_native() {
   docker compose -f docker-compose.yml up -d
 
   # pg_dump/pg_restore run on the host for full-DB backup/restore, so the
-  # native install needs the postgres client tools even though the DB itself
-  # lives in Docker.
-  command -v pg_dump >/dev/null 2>&1 || {
-    info "installing postgresql-client (needed for full DB backup/restore)…"
-    (apt-get update -y && apt-get install -y postgresql-client) || yum install -y postgresql || apk add --no-cache postgresql-client || true
-  }
+  # native install needs a version-matched postgres client even though the DB
+  # itself lives in Docker.
+  ensure_pg_client
 
   info "building binaries…"
   /usr/local/go/bin/go build -o /usr/local/bin/vortex-panel ./cmd/panel 2>/dev/null || go build -o /usr/local/bin/vortex-panel ./cmd/panel
