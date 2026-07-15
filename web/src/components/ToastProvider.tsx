@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, Info, X, AlertTriangle } from "lucide-react";
 
@@ -58,9 +59,11 @@ export function ToastProviderV2({ children }: { children: React.ReactNode }) {
       {children}
       {/* Toast container */}
       <div className="fixed bottom-4 end-4 z-[200] flex flex-col-reverse gap-2 w-80 pointer-events-none">
-        {toasts.map(toast => (
-          <ToastItem key={toast.id} toast={toast} onDismiss={() => dismiss(toast.id)} />
-        ))}
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <ToastItem key={toast.id} toast={toast} onDismiss={() => dismiss(toast.id)} />
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );
@@ -82,10 +85,17 @@ const COLORS: Record<ToastType, string> = {
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
   return (
-    <div className={cn(
-      "pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-xl animate-slide-in-right",
-      COLORS[toast.type],
-    )}>
+    <motion.div
+      initial={{ opacity: 0, x: 60, scale: 0.92 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 60, scale: 0.92, transition: { duration: 0.15 } }}
+      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+      layout
+      className={cn(
+        "pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-xl",
+        COLORS[toast.type],
+      )}
+    >
       <div className="mt-0.5">{ICONS[toast.type]}</div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-fg">{toast.message}</p>
@@ -102,6 +112,6 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden rounded-b-xl">
         <div className="h-full bg-current opacity-30 animate-progress" style={{ animationDuration: `${toast.duration}ms` }} />
       </div>
-    </div>
+    </motion.div>
   );
 }

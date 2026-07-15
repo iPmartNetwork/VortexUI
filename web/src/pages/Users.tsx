@@ -215,7 +215,7 @@ export function Users() {
           </div>
         </div>
 
-        {isLoading && <div className="p-8 text-sm text-fg-muted text-center">{t("common.loading")}</div>}
+        {isLoading && <div className="p-8 space-y-4">{Array.from({ length: 5 }).map((_, i) => (<div key={i} className="flex items-center gap-4 animate-shimmer bg-gradient-to-r from-surface-2/40 via-surface-2/80 to-surface-2/40 bg-[length:200%_100%] rounded-xl h-12" />))}</div>}
         {error && <div className="p-8 text-sm text-danger text-center">Failed to load users</div>}
 
         {data && (

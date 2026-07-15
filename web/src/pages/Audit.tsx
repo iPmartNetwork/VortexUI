@@ -1,5 +1,6 @@
-import { History } from "lucide-react";
+import { History, ScrollText } from "lucide-react";
 import { useAudit } from "@/api/policy-hooks";
+import { EmptyState } from "@/components/EmptyState";
 import { GlassCard } from "@/components/veltrix";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
@@ -50,7 +51,9 @@ export function Audit() {
               ))}
               {!isLoading && (!data?.entries || data.entries.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-fg-muted">{t("common.none")}</td>
+                  <td colSpan={5} className="px-4 py-8">
+                    <EmptyState icon={ScrollText} title={t("common.none")} description="Audit log entries appear as admins perform actions." compact />
+                  </td>
                 </tr>
               )}
             </tbody>

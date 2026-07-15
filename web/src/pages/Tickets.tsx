@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Send, X } from "lucide-react";
+import { RefreshCw, Send, X, Ticket as TicketIcon } from "lucide-react";
 import { api } from "@/api/client";
 import { Badge, Button } from "@/components/ui";
 import { GlassCard, StatusBadge } from "@/components/veltrix";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
+import { EmptyState } from "@/components/EmptyState";
 import { cn } from "@/lib/utils";
 
 interface Ticket {
@@ -202,7 +203,7 @@ export function Tickets() {
               </button>
             ))}
             {tickets.length === 0 && (
-              <p className="text-sm text-fg-muted text-center py-12 px-4">{t("tickets.empty")}</p>
+              <EmptyState icon={TicketIcon} title={t("tickets.empty")} compact />
             )}
           </div>
         </GlassCard>

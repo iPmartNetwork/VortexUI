@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, History, Search } from "lucide-react";
+import { CreditCard, History, Search, Receipt } from "lucide-react";
 import { api } from "@/api/client";
 import { Input, Select } from "@/components/ui";
 import { GlassCard, StatsCard, StatusBadge } from "@/components/veltrix";
 import { useI18n } from "@/i18n/i18n";
+import { EmptyState } from "@/components/EmptyState";
 import { useTitle } from "@/lib/useTitle";
 
 interface Order {
@@ -107,7 +108,7 @@ export function Orders() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-10 text-center text-fg-muted">{t("common.none")}</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8"><EmptyState icon={Receipt} title={query || status !== "all" ? "No matching orders" : t("common.none")} compact /></td></tr>
               )}
             </tbody>
           </table>

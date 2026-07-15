@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Globe2, TrendingUp, Users } from "lucide-react";
+import { Download, Globe2, TrendingUp, Users, BarChart3 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Select } from "@/components/ui";
 import { GlassCard, StatsCard } from "@/components/veltrix";
 import { formatBytes } from "@/lib/utils";
 import { useI18n } from "@/i18n/i18n";
+import { EmptyState } from "@/components/EmptyState";
 import { useTitle } from "@/lib/useTitle";
 
 interface GeoPoint {
@@ -76,8 +77,14 @@ export function Analytics() {
         </div>
       </div>
 
-      {isLoading && <p className="text-sm text-fg-muted text-center py-8">{t("common.loading")}</p>}
-      {isError && <p className="text-sm text-fg-muted text-center py-8">{t("analytics.error")}</p>}
+      {isLoading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+        </div>
+      )}
+      {isError && (
+        <EmptyState icon={BarChart3} title={t("analytics.error")} description="Try changing the date range or check back later." />
+      )}
 
       {hasData && data && (
         <>
@@ -167,7 +174,7 @@ export function Analytics() {
       )}
 
       {!isLoading && !isError && data && !hasData && (
-        <p className="text-sm text-fg-muted text-center py-8">{t("analytics.noData")}</p>
+        <EmptyState icon={BarChart3} title={t("analytics.noData")} description="Analytics data will appear once users start connecting." />
       )}
     </div>
   );

@@ -304,7 +304,15 @@ export function Nodes() {
       </div>
 
       {isLoading && (
-        <div className="p-8 text-sm text-fg-muted text-center">{t("common.loading")}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-2xl bg-bg-elevated border border-border p-4 space-y-3 animate-shimmer bg-gradient-to-r from-surface-2/40 via-surface-2/80 to-surface-2/40 bg-[length:200%_100%]">
+              <div className="h-4 w-24 bg-surface-2/60 rounded" />
+              <div className="h-8 w-32 bg-surface-2/40 rounded" />
+              <div className="h-3 w-full bg-surface-2/30 rounded" />
+            </div>
+          ))}
+        </div>
       )}
 
       {!isLoading && filteredNodes.length === 0 && (
