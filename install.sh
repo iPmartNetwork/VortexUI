@@ -26,6 +26,10 @@ ok()   { echo "${g}✓${n} $*"; }
 warn() { echo "${y}!${n} $*"; }
 die()  { echo "${r}✗ $*${n}" >&2; exit 1; }
 
+# GitHub mirror for restricted networks (Iran/China). Set VORTEXUI_GH_MIRROR to
+# prefix GitHub URLs, e.g. https://ghproxy.com/ or https://mirror.ghproxy.com/
+GH_MIRROR="${VORTEXUI_GH_MIRROR:-}"
+
 [ "$(id -u)" -eq 0 ] || die "please run as root (sudo)."
 
 PUBLIC_HOST="$(curl -fsS4 https://api.ipify.org 2>/dev/null || curl -fsS4 https://icanhazip.com 2>/dev/null || curl -fsS4 https://ip.sb 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo 127.0.0.1)"
@@ -48,7 +52,8 @@ ensure_docker() {
         local dl_url; local docker_ver="27.3.1"
         if curl -fsSL -o /tmp/docker.tgz "https://mirrors.aliyun.com/docker-ce/linux/static/stable/$(uname -m)/docker-${docker_ver}.tgz" 2>/dev/null; then
           tar -xzf /tmp/docker.tgz -C /tmp
-          install -m 0755 /tmp/docker/docker /usr/local/bin/docker 2>/dev/null || install -m 0755 /tmp/docker/*/docker /usr/local/bin/docker 2>/dev/null || true
+          # Docker static tarball has all binaries flat inside docker/ dir
+          install -m 0755 /tmp/docker/* /usr/local/bin/ 2>/dev/null || true
           # Install Docker Compose plugin for the static install
           mkdir -p /usr/local/lib/docker/cli-plugins
           local compose_ver; compose_ver="$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest 2>/dev/null | grep -oP '"tag_name": "\K[^"]+' || echo "v2.32.0")"
@@ -298,8 +303,6 @@ install_cores() {
   fi
   command -v unzip >/dev/null 2>&1 || die "could not install 'unzip' — install it manually and re-run."
   mkdir -p /etc/vortex/assets
-
-  GH_MIRROR="${VORTEXUI_GH_MIRROR:-}"
 
   if [ ! -x /usr/local/bin/xray ]; then
     info "installing xray-core…"
