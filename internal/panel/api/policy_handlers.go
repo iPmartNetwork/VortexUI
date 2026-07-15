@@ -457,6 +457,18 @@ func (h *Handlers) RestoreBackup(c echo.Context) error {
 		req.Backup = b
 	}
 	if req.Backup == nil {
+		var direct domain.Backup
+		if err := json.Unmarshal(body, &direct); err != nil {
+			b, parseErr := service.ParseBackupJSON(body, pass)
+			if parseErr != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, "invalid backup document")
+			}
+			req.Backup = b
+		} else if direct.Version != 0 {
+			req.Backup = &direct
+		}
+	}
+	if req.Backup == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid backup document")
 	}
 	if pass == "" && req.Passphrase != "" {

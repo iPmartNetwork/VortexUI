@@ -394,14 +394,35 @@ func upsertRole(ctx context.Context, q *db.Queries, role *domain.Role) error {
 	return q.UpdateRole(ctx, db.UpdateRoleParams{ID: role.ID, Name: role.Name, Permissions: perms})
 }
 
+func preserveAdminSecretsFromRow(a *domain.Admin, existing db.Admin) {
+	if a == nil {
+		return
+	}
+	if a.PasswordHash == "" {
+		a.PasswordHash = existing.PasswordHash
+	}
+	if a.TOTPSecret == "" {
+		a.TOTPSecret = existing.TotpSecret
+	}
+	if a.WebhookSecret == "" {
+		a.WebhookSecret = existing.WebhookSecret
+	}
+}
+
 func upsertAdmin(ctx context.Context, q *db.Queries, admins *AdminRepo, a *domain.Admin) error {
-	if _, err := q.GetAdminByID(ctx, a.ID); err != nil {
+	existing, err := q.GetAdminByID(ctx, a.ID)
+	if err != nil {
 		if !errors.Is(mapErr(err), domain.ErrNotFound) {
 			return mapErr(err)
+		}
+		if a.PasswordHash == "" {
+			return fmt.Errorf("restore admin %s: password hash missing (export with credentials or reset via CLI)", a.Username)
 		}
 		if err := admins.Create(ctx, a); err != nil && !isUniqueViolation(err) {
 			return err
 		}
+	} else {
+		preserveAdminSecretsFromRow(a, existing)
 	}
 	if err := admins.Update(ctx, a); err != nil {
 		return err
