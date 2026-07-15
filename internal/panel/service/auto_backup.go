@@ -73,7 +73,9 @@ func (ab *AutoBackup) tick(ctx context.Context) {
 		return
 	}
 
-	data, err := ab.backup.Export(ctx)
+	data, err := ab.backup.ExportV3(ctx, BackupExportOptions{
+		IncludeCredentials: true, IncludeSupplemental: true,
+	})
 	if err != nil {
 		ab.log.Warn("auto-backup export failed", "err", err)
 		return

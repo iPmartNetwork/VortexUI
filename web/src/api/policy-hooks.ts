@@ -169,17 +169,90 @@ export const balancerHooks = makePolicyHooks<Balancer>("balancers", "balancers")
 
 // --- backup ---
 
+export type BackupManifest = {
+  format: "json" | "full";
+  exported_at: string;
+  version: number;
+  counts: {
+    roles: number; admins: number; plans: number; nodes: number;
+    inbounds: number; outbounds: number; routing: number; balancers: number;
+    users: number; bindings: number; orders: number; wallet_ledger: number;
+    wallet_deposits: number; wallet_packages: number;
+  };
+  usage: {
+    total_users: number;
+    total_used_traffic: number;
+    total_data_limit: number;
+    total_remaining_traffic: number;
+    users_over_limit: number;
+    unlimited_users: number;
+  };
+  included_tables?: string[];
+  excluded_tables?: string[];
+  warnings?: string[];
+};
+
+export type BackupRestoreReport = {
+  mode: "config" | "full";
+  restored: BackupManifest["counts"];
+  warnings?: string[];
+};
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function fetchBackup(path: string, headers: Record<string, string> = {}) {
+  const token = localStorage.getItem("vortex.token");
+  const res = await fetch(path, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers },
+  });
+  if (!res.ok) {
+    const raw = await res.text();
+    throw new Error(raw || `request failed (${res.status})`);
+  }
+  return res;
+}
+
+export function useBackupManifest(enabled = true) {
+  return useQuery({
+    queryKey: ["backup-manifest"],
+    enabled,
+    queryFn: () => api<BackupManifest>("/api/backup/manifest"),
+  });
+}
+
 export function useExportBackup() {
   return useMutation({
-    mutationFn: async () => {
-      const data = await api<unknown>("/api/backup");
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `vortexui-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+    mutationFn: async (opts?: { format?: "json" | "full"; passphrase?: string; includeTraffic?: boolean }) => {
+      const format = opts?.format ?? "json";
+      const query: Record<string, string> = {};
+      if (format === "full") query.format = "full";
+      if (opts?.includeTraffic) query.include_traffic = "1";
+      const headers: Record<string, string> = {};
+      if (opts?.passphrase) headers["X-Backup-Passphrase"] = opts.passphrase;
+      const qs = new URLSearchParams(query).toString();
+      const path = `/api/backup${qs ? `?${qs}` : ""}`;
+      const res = await fetchBackup(path, headers);
+      const date = new Date().toISOString().slice(0, 10);
+      if (format === "full") {
+        const blob = await res.blob();
+        downloadBlob(blob, `vortexui-full-backup-${date}.tar.gz`);
+        return;
+      }
+      const ct = res.headers.get("content-type") ?? "";
+      if (ct.includes("octet-stream")) {
+        const blob = await res.blob();
+        downloadBlob(blob, `vortexui-backup-${date}.bin`);
+        return;
+      }
+      const data = await res.json();
+      downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), `vortexui-backup-${date}.json`);
     },
   });
 }
@@ -188,13 +261,10 @@ export function useExportUserBackup() {
   return useMutation({
     mutationFn: async () => {
       const data = await api<unknown>("/api/account/backup/users");
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `my-users-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(
+        new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+        `my-users-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      );
     },
   });
 }
@@ -202,10 +272,51 @@ export function useExportUserBackup() {
 export function useRestoreBackup() {
   const qc = useQueryClient();
   return useMutation({
+    mutationFn: async (opts: { file: File; mode?: "config" | "full"; passphrase?: string }) => {
+      const { file, mode = "config", passphrase } = opts;
+      if (mode === "full") {
+        const token = localStorage.getItem("vortex.token");
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/backup/restore?mode=full", {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: form,
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.json() as Promise<BackupRestoreReport>;
+      }
+      const text = await file.text();
+      let body: unknown;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        throw new Error("invalid JSON backup file");
+      }
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (passphrase) headers["X-Backup-Passphrase"] = passphrase;
+      const token = localStorage.getItem("vortex.token");
+      const res = await fetch("/api/backup/restore", {
+        method: "POST",
+        headers: { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json() as Promise<BackupRestoreReport>;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries();
+    },
+  });
+}
+
+export function useRestoreUserBackup() {
+  const qc = useQueryClient();
+  return useMutation({
     mutationFn: async (file: File) => {
       const text = await file.text();
       const body = JSON.parse(text);
-      return api<{ restored: Record<string, number> }>("/api/backup/restore", { method: "POST", body });
+      return api<BackupRestoreReport>("/api/account/backup/users/restore", { method: "POST", body });
     },
     onSuccess: () => {
       qc.invalidateQueries();

@@ -4,7 +4,24 @@
 
 ---
 
-## v1.3.3 — آخرین نسخه
+## v1.3.4 — آخرین نسخه
+
+**تمرکز: پشتیبان‌گیری و بازیابی کامل (مهاجرت سرور، کیف پول، ریسلر)**
+
+### Added
+- **Backup v3 (JSON)** — ledger/deposits/orders، تنظیمات billing/panel، secrets ادمین، manifest مصرف/باقیمانده ترافیک.
+- **Full DB backup** — `GET /api/backup?format=full` (pg_dump در `.tar.gz`) برای مهاجرت کامل سرور.
+- **Restore** — JSON config یا full DB (`mode=full` + multipart).
+- **Manifest** — `GET /api/backup/manifest` پیش‌نمایش قبل از export/restore.
+- **رمزنگاری اختیاری** — AES-256 با header `X-Backup-Passphrase`.
+- **Reseller backup v2 + restore** — `POST /api/account/backup/users/restore`.
+- **UI Settings** — پیش‌نمایش، export JSON/full، restore mode، passphrase.
+
+**Release by ali**
+
+---
+
+## v1.3.3
 
 **تمرکز: Multi-core — xray + sing-box روی یک نود (A/B testing)**
 

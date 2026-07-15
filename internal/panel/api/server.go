@@ -259,6 +259,7 @@ func NewRouter(d Deps) *echo.Echo {
 
 	// Configuration backup/restore — sudo-level (admin:manage); restore is destructive.
 	backup := authed.Group("/backup", RequirePermission(d.Auth, domain.PermAdminManage))
+	backup.GET("/manifest", d.Handlers.GetBackupManifest)
 	backup.GET("", d.Handlers.GetBackup)
 	backup.POST("/restore", d.Handlers.RestoreBackup)
 
@@ -295,6 +296,7 @@ func NewRouter(d Deps) *echo.Echo {
 	account.GET("/dashboard", d.Handlers.GetResellerDashboard)
 	account.GET("/export/users", d.Handlers.ExportAccountUsers)
 	account.GET("/backup/users", d.Handlers.ExportAccountUsersBackup, RequirePermission(d.Auth, domain.PermUserRead))
+	account.POST("/backup/users/restore", d.Handlers.RestoreAccountUsersBackup, RequirePermission(d.Auth, domain.PermUserWrite))
 	account.GET("/wallet", d.Handlers.GetAccountWallet)
 	account.GET("/wallet/export", d.Handlers.ExportAccountWallet)
 	account.GET("/wallet/packages", d.Handlers.ListAccountWalletPackages)

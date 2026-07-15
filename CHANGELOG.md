@@ -6,6 +6,24 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-07-15
+
+Comprehensive backup & restore for server migration, billing/wallet history, and reseller-scoped user backups.
+
+### Added
+- **Backup v3 JSON** — supplemental tables (wallet ledger/deposits/packages, orders, billing/panel settings, reseller payment config, sub hosts, …), admin login secrets, and usage manifest (used/remaining traffic).
+- **Full database backup** — `pg_dump` archive (`.tar.gz`) via `GET /api/backup?format=full` for byte-for-byte server migration.
+- **Restore modes** — JSON config restore (transactional) and full DB restore (`POST /api/backup/restore?mode=full` with multipart file).
+- **Manifest API** — `GET /api/backup/manifest` previews counts, traffic usage, and warnings before export/restore.
+- **Optional AES-256-GCM encryption** — passphrase via `X-Backup-Passphrase` header on export/import.
+- **Reseller backup v2** — export includes users, bindings, wallet ledger, orders, payment config, portal branding; **restore** via `POST /api/account/backup/users/restore`.
+- **Settings UI** — backup preview panel, JSON vs full DB export, restore mode selector, encryption passphrase, traffic time-series toggle.
+
+### Fixed
+- Config restore now wipes orphan rows (traffic_points, sub_hosts, orders, …) and preserves admin passwords when credentials are included in the backup.
+
+**Release by ali**
+
 ## [1.3.3] - 2026-07-15
 
 Multi-core Phase 1: run **Xray** and **sing-box** on the same node for A/B testing, with per-inbound engine selection.
