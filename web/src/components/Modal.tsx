@@ -28,17 +28,17 @@ export function Modal({
           onClick={onClose}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 8 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
             className={cn(
-              "w-full max-w-md rounded-2xl bg-bg-elevated border border-border/60 shadow-2xl p-6 relative",
+              "w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl bg-bg-elevated border border-border/60 shadow-2xl p-6 relative",
               className,
             )}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-5 flex items-center justify-between">
+            <div className="flex items-center justify-between pb-5 flex-shrink-0">
               <h2 className="text-lg font-semibold tracking-tight text-fg">{title}</h2>
               <button
                 onClick={onClose}
@@ -48,7 +48,7 @@ export function Modal({
                 <X size={16} />
               </button>
             </div>
-            {children}
+            <div className="flex-1 overflow-y-auto min-h-0">{children}</div>
           </motion.div>
         </motion.div>
       )}

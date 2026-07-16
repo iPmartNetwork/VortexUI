@@ -197,7 +197,7 @@ export function Inbounds() {
       </GlassCard>
 
       {/* Search + Filter */}
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
+      <GlassCard hover={false} className="!p-0 overflow-x-hidden">
         <div className="p-4 border-b border-border/40 space-y-3">
           <div className="relative">
             <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" />
