@@ -68,6 +68,13 @@ type InboundRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*domain.Inbound, error)
 	ListFleet(ctx context.Context) ([]domain.InboundListItem, error)
+	ListByNodePort(ctx context.Context, nodeID uuid.UUID, port, portEnd int) ([]*domain.Inbound, error)
+}
+
+// InboundTrafficRepository persists per-inbound traffic stats.
+type InboundTrafficRepository interface {
+	AddTraffic(ctx context.Context, inboundID uuid.UUID, upload, download int64) error
+	GetStats(ctx context.Context, inboundID uuid.UUID, days int) (*domain.InboundTrafficStats, error)
 }
 
 // OutboundRepository persists per-node egress handlers.

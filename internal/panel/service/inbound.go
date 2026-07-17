@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 
 	"github.com/google/uuid"
 
@@ -138,6 +139,7 @@ type CreateInboundInput struct {
 	Protocol   domain.Protocol
 	Listen     string
 	Port       int
+	PortEnd    int
 	Network    string
 	Security   domain.Security
 	SNI        []string
@@ -147,6 +149,7 @@ type CreateInboundInput struct {
 	Raw        map[string]any
 	Enabled    bool
 	SpeedLimit int64
+	Notes      string
 	GeoPolicy  *domain.GeoPolicy
 }
 
@@ -172,6 +175,7 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 		Protocol:   in.Protocol,
 		Listen:     in.Listen,
 		Port:       in.Port,
+		PortEnd:    in.PortEnd,
 		Network:    orStr(in.Network, "tcp"),
 		Security:   orSec(in.Security, domain.SecurityNone),
 		SNI:        in.SNI,
@@ -181,11 +185,12 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 		Raw:        in.Raw,
 		Enabled:    in.Enabled,
 		SpeedLimit: in.SpeedLimit,
+		Notes:      in.Notes,
 		GeoPolicy:  in.GeoPolicy,
 	}
 	provisionSecurity(inbound)
 	if inbound.Enabled {
-		tag, err := s.portConflict(ctx, inbound.NodeID, uuid.Nil, inbound.Port, inbound.Listen)
+		tag, err := s.portConflict(ctx, inbound.NodeID, uuid.Nil, inbound.Port, inbound.PortEnd, inbound.Listen)
 		if err != nil {
 			return nil, err
 		}
@@ -208,6 +213,7 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 type UpdateInboundInput struct {
 	Listen     string
 	Port       int
+	PortEnd    int
 	Network    string
 	Security   domain.Security
 	Core       *domain.CoreType
@@ -218,6 +224,7 @@ type UpdateInboundInput struct {
 	Raw        *map[string]any
 	Enabled    bool
 	SpeedLimit int64
+	Notes      string
 	GeoPolicy  *domain.GeoPolicy
 }
 
@@ -238,6 +245,7 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	}
 	existing.Listen = in.Listen
 	existing.Port = in.Port
+	existing.PortEnd = in.PortEnd
 	existing.Network = orStr(in.Network, "tcp")
 	existing.Security = orSec(in.Security, domain.SecurityNone)
 	existing.SNI = in.SNI
@@ -252,10 +260,11 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	}
 	existing.Enabled = in.Enabled
 	existing.SpeedLimit = in.SpeedLimit
+	existing.Notes = in.Notes
 	existing.GeoPolicy = in.GeoPolicy
 	provisionSecurity(existing)
 	if existing.Enabled {
-		tag, err := s.portConflict(ctx, existing.NodeID, existing.ID, existing.Port, existing.Listen)
+		tag, err := s.portConflict(ctx, existing.NodeID, existing.ID, existing.Port, existing.PortEnd, existing.Listen)
 		if err != nil {
 			return nil, err
 		}
@@ -292,6 +301,103 @@ func (s *InboundService) ListByNode(ctx context.Context, nodeID uuid.UUID) ([]*d
 // ListFleet returns every inbound with its node name (single query).
 func (s *InboundService) ListFleet(ctx context.Context) ([]domain.InboundListItem, error) {
 	return s.repo.ListFleet(ctx)
+}
+
+// Clone duplicates an inbound with a new tag and port.
+// If newPort is 0, a random port in the 10000-60000 range is assigned.
+func (s *InboundService) Clone(ctx context.Context, id uuid.UUID, newPort int) (*domain.Inbound, error) {
+	existing, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if newPort == 0 {
+		newPort = 10000 + rand.IntN(50000)
+	}
+	input := CreateInboundInput{
+		NodeID:     existing.NodeID,
+		Tag:        existing.Tag + "-copy",
+		Core:       existing.Core,
+		Protocol:   existing.Protocol,
+		Listen:     existing.Listen,
+		Port:       newPort,
+		PortEnd:    0, // clone is always single-port
+		Network:    existing.Network,
+		Security:   existing.Security,
+		SNI:        existing.SNI,
+		Path:       existing.Path,
+		Host:       existing.Host,
+		Flow:       existing.Flow,
+		Raw:        existing.Raw,
+		Enabled:    existing.Enabled,
+		SpeedLimit: existing.SpeedLimit,
+		Notes:      existing.Notes,
+		GeoPolicy:  existing.GeoPolicy,
+	}
+	return s.Create(ctx, input)
+}
+
+// BulkAction applies enable/disable/delete to multiple inbounds.
+// It returns the count of successfully processed inbounds.
+func (s *InboundService) BulkAction(ctx context.Context, ids []uuid.UUID, action string) (int, error) {
+	if action != "enable" && action != "disable" && action != "delete" {
+		return 0, fmt.Errorf("unsupported bulk action: %q", action)
+	}
+	affected := 0
+	nodeSet := make(map[uuid.UUID]struct{})
+	for _, id := range ids {
+		switch action {
+		case "enable":
+			existing, err := s.repo.GetByID(ctx, id)
+			if err != nil {
+				continue
+			}
+			existing.Enabled = true
+			if err := s.repo.Update(ctx, existing); err != nil {
+				continue
+			}
+			nodeSet[existing.NodeID] = struct{}{}
+			affected++
+		case "disable":
+			existing, err := s.repo.GetByID(ctx, id)
+			if err != nil {
+				continue
+			}
+			existing.Enabled = false
+			if err := s.repo.Update(ctx, existing); err != nil {
+				continue
+			}
+			nodeSet[existing.NodeID] = struct{}{}
+			affected++
+		case "delete":
+			existing, err := s.repo.GetByID(ctx, id)
+			if err != nil {
+				continue
+			}
+			if err := s.repo.Delete(ctx, id); err != nil {
+				continue
+			}
+			nodeSet[existing.NodeID] = struct{}{}
+			affected++
+		}
+	}
+	// Resync each unique node once.
+	for nodeID := range nodeSet {
+		_ = s.sync.Resync(ctx, nodeID)
+	}
+	return affected, nil
+}
+
+// CheckPort reports whether a port is available on a node.
+// Returns (available, conflictTag, error).
+func (s *InboundService) CheckPort(ctx context.Context, nodeID uuid.UUID, port int) (bool, string, error) {
+	tag, err := s.portConflict(ctx, nodeID, uuid.Nil, port, 0, "")
+	if err != nil {
+		return false, "", err
+	}
+	if tag != "" {
+		return false, tag, nil
+	}
+	return true, "", nil
 }
 
 // syncRealitySNI keeps Raw["reality"].server_names and dest aligned with the
@@ -334,18 +440,33 @@ func orSec(v, def domain.Security) domain.Security {
 	return v
 }
 
+// portsOverlap reports whether two port ranges [aStart, aEnd] and [bStart, bEnd] overlap.
+// An end of 0 means single-port (end == start).
+func portsOverlap(aStart, aEnd, bStart, bEnd int) bool {
+	if aEnd == 0 {
+		aEnd = aStart
+	}
+	if bEnd == 0 {
+		bEnd = bStart
+	}
+	return aStart <= bEnd && bStart <= aEnd
+}
+
 // portConflict reports the tag of an existing ENABLED inbound on the same node
-// that would collide with the given port/listen, or "" if there is no conflict.
-// Two inbounds clash when they share a port and their listen addresses overlap
+// that would collide with the given port range/listen, or "" if there is no conflict.
+// Two inbounds clash when their port ranges overlap and their listen addresses overlap
 // (an empty or 0.0.0.0 listen binds every interface). excludeID skips the
 // inbound being updated.
-func (s *InboundService) portConflict(ctx context.Context, nodeID, excludeID uuid.UUID, port int, listen string) (string, error) {
+func (s *InboundService) portConflict(ctx context.Context, nodeID, excludeID uuid.UUID, port, portEnd int, listen string) (string, error) {
 	existing, err := s.repo.ListByNode(ctx, nodeID)
 	if err != nil {
 		return "", err
 	}
 	for _, e := range existing {
-		if e.ID == excludeID || !e.Enabled || e.Port != port {
+		if e.ID == excludeID || !e.Enabled {
+			continue
+		}
+		if !portsOverlap(port, portEnd, e.Port, e.PortEnd) {
 			continue
 		}
 		if listenOverlap(listen, e.Listen) {
@@ -353,6 +474,15 @@ func (s *InboundService) portConflict(ctx context.Context, nodeID, excludeID uui
 		}
 	}
 	return "", nil
+}
+
+// GetNodeIDForInbound returns the hosting node's ID for a given inbound.
+func (s *InboundService) GetNodeIDForInbound(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	in, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	return in.NodeID, nil
 }
 
 // listenOverlap reports whether two listen addresses bind overlapping interfaces.

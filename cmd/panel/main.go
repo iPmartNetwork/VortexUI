@@ -93,7 +93,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 
 	// 2. Stats aggregator: folds node traffic deltas into the users table and
 	// the time series. Runs as a single background consumer.
-	agg := stats.New(users, traffic)
+	agg := stats.New(users, traffic, store.InboundTraffic())
 	go func() {
 		if err := agg.Run(ctx); err != nil && ctx.Err() == nil {
 			log.Error("aggregator stopped", "err", err)

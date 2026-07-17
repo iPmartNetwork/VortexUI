@@ -29,6 +29,9 @@ func (f *fakeMigrationInbounds) ListByNode(_ context.Context, nodeID uuid.UUID) 
 func (f *fakeMigrationInbounds) ListFleet(context.Context) ([]domain.InboundListItem, error) {
 	return nil, nil
 }
+func (f *fakeMigrationInbounds) ListByNodePort(context.Context, uuid.UUID, int, int) ([]*domain.Inbound, error) {
+	return nil, nil
+}
 
 type fakeMigrationUsers struct {
 	users    []*domain.User

@@ -13,6 +13,7 @@ import (
 type TrafficDelta struct {
 	NodeID    uuid.UUID `json:"node_id"`
 	UserID    uuid.UUID `json:"user_id"`
+	InboundID uuid.UUID `json:"inbound_id,omitempty"`
 	Up        int64     `json:"up"`   // bytes uploaded since last report
 	Down      int64     `json:"down"` // bytes downloaded since last report
 	Timestamp time.Time `json:"timestamp"`

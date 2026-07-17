@@ -44,6 +44,9 @@ func (s *Store) Nodes() *NodeRepo { return &NodeRepo{q: s.q} }
 // Inbounds returns the inbound repository.
 func (s *Store) Inbounds() *InboundRepo { return &InboundRepo{q: s.q} }
 
+// InboundTraffic returns the inbound traffic stats repository.
+func (s *Store) InboundTraffic() *InboundTrafficRepo { return &InboundTrafficRepo{pool: s.pool} }
+
 // Outbounds returns the outbound repository.
 func (s *Store) Outbounds() *OutboundRepo { return &OutboundRepo{q: s.q} }
 

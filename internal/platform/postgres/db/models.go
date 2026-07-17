@@ -259,6 +259,7 @@ type Inbound struct {
 	Protocol         string
 	Listen           string
 	Port             int32
+	PortEnd          int32
 	Network          string
 	Security         string
 	Sni              []byte
@@ -271,6 +272,7 @@ type Inbound struct {
 	SpeedLimit       int64
 	GeoPolicy        []byte
 	Core             string
+	Notes            string
 }
 
 type IpLimitEvent struct {

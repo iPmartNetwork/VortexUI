@@ -35,6 +35,8 @@ func (r *InboundRepo) Create(ctx context.Context, in *domain.Inbound) error {
 		SpeedLimit:       in.SpeedLimit,
 		GeoPolicy:        geoPolicyToJSONB(in.GeoPolicy),
 		Core:             string(in.Core),
+		Notes:            in.Notes,
+		PortEnd:          int32(in.PortEnd),
 	})
 }
 
@@ -66,6 +68,8 @@ func (r *InboundRepo) Update(ctx context.Context, in *domain.Inbound) error {
 		SpeedLimit:       in.SpeedLimit,
 		GeoPolicy:        geoPolicyToJSONB(in.GeoPolicy),
 		Core:             string(in.Core),
+		Notes:            in.Notes,
+		PortEnd:          int32(in.PortEnd),
 	})
 }
 
@@ -109,6 +113,7 @@ func inboundToDomain(in db.Inbound) domain.Inbound {
 		Protocol:         domain.Protocol(in.Protocol),
 		Listen:           in.Listen,
 		Port:             int(in.Port),
+		PortEnd:          int(in.PortEnd),
 		Network:          in.Network,
 		Security:         domain.Security(in.Security),
 		SNI:              stringsFromJSONB(in.Sni),
@@ -121,5 +126,30 @@ func inboundToDomain(in db.Inbound) domain.Inbound {
 		SpeedLimit:       in.SpeedLimit,
 		GeoPolicy:        geoPolicyFromJSONB(in.GeoPolicy),
 		Core:             domain.CoreType(in.Core),
+		Notes:            in.Notes,
 	}
+}
+
+func (r *InboundRepo) ListByNodePort(ctx context.Context, nodeID uuid.UUID, port, portEnd int) ([]*domain.Inbound, error) {
+	// Use the standard ListByNode and filter in Go for port-range overlap.
+	rows, err := r.q.ListInboundsByNode(ctx, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	if portEnd == 0 {
+		portEnd = port
+	}
+	var out []*domain.Inbound
+	for i := range rows {
+		bEnd := int(rows[i].Port)
+		if rows[i].PortEnd > 0 {
+			bEnd = int(rows[i].PortEnd)
+		}
+		// Overlap: aStart <= bEnd && bStart <= aEnd
+		if port <= bEnd && int(rows[i].Port) <= portEnd {
+			in := inboundToDomain(rows[i])
+			out = append(out, &in)
+		}
+	}
+	return out, nil
 }

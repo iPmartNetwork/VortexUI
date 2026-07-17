@@ -12,6 +12,7 @@ import type { CoreType } from "@/lib/coreTypes";
 import { isMultiCore, resolveInboundCore } from "@/lib/coreTypes";
 import { CoreBadge } from "@/components/veltrix/CoreBadge";
 import { cn } from "@/lib/utils";
+import { PortConflictIndicator } from "./PortConflictIndicator";
 
 const PROTOCOLS = ["vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "wireguard", "socks", "http", "naive", "dokodemo"];
 const NETWORKS = ["tcp", "ws", "grpc", "httpupgrade", "http", "h2", "xhttp", "kcp", "quic", "udp"];
@@ -61,7 +62,7 @@ function inboundTransportLabel(
 
 const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
 
-const newBlank = () => ({ editId: "", tag: "", core: "" as CoreType | "", protocol: "vless", port: randomPort(), network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "", wgPrivateKey: "", wgSubnet: "", wgMtu: "" });
+const newBlank = () => ({ editId: "", tag: "", core: "" as CoreType | "", protocol: "vless", port: randomPort(), portEnd: "", network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "", wgPrivateKey: "", wgSubnet: "", wgMtu: "", listen: "", speedLimit: "", notes: "" });
 const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {
@@ -275,6 +276,10 @@ export function NodeInboundsModal({
       wgPrivateKey: typeof wg.private_key === "string" ? wg.private_key : "",
       wgSubnet: typeof wg.subnet === "string" ? wg.subnet : "",
       wgMtu: typeof wg.mtu === "number" ? String(wg.mtu) : "",
+      listen: ib.listen || "",
+      speedLimit: ib.speed_limit ? String(ib.speed_limit / 125000) : "",
+      portEnd: ib.port_end ? String(ib.port_end) : "",
+      notes: ib.notes || "",
     });
     setTab("basics");
   }
@@ -346,6 +351,7 @@ export function NodeInboundsModal({
     }
     const network = isNoTransport ? "" : f.network;
     const corePayload = f.core || undefined;
+    const speedLimitBytes = f.speedLimit ? Number(f.speedLimit) * 125000 : 0;
     try {
       if (editing && editSnapshot) {
         const mergedRaw = raw ?? editSnapshot.raw;
@@ -355,6 +361,10 @@ export function NodeInboundsModal({
             port: Number(f.port), network, security: f.security,
             core: f.core, sni, path: f.path, host, flow: f.flow, geo_policy,
             ...(mergedRaw ? { raw: mergedRaw } : {}),
+            speed_limit: speedLimitBytes,
+            port_end: f.portEnd ? Number(f.portEnd) : 0,
+            notes: f.notes,
+            listen: f.listen || "",
           }),
         });
         toast.success(`Updated ${f.tag}`);
@@ -365,6 +375,10 @@ export function NodeInboundsModal({
             port: Number(f.port), network, security: f.security, sni, path: f.path,
             host, flow: f.flow, geo_policy, core: f.core, enabled: true,
             ...(raw ? { raw } : {}),
+            speed_limit: speedLimitBytes,
+            port_end: f.portEnd ? Number(f.portEnd) : 0,
+            notes: f.notes,
+            listen: f.listen || "",
           },
         });
         toast.success(`Updated ${f.tag}`);
@@ -374,6 +388,10 @@ export function NodeInboundsModal({
           port: Number(f.port), network, security: f.security, sni, path: f.path,
           host, flow: f.flow, geo_policy, enabled: true,
           ...(raw ? { raw } : {}),
+          speed_limit: speedLimitBytes,
+          port_end: f.portEnd ? Number(f.portEnd) : 0,
+          notes: f.notes,
+          listen: f.listen || "",
         });
         toast.success(`Added ${f.tag}`);
       }
@@ -534,7 +552,18 @@ export function NodeInboundsModal({
                 <div>
                   <FieldLabel label="Port" required hint="The port this inbound listens on. Random port is pre-filled." />
                   <Input placeholder="443" value={f.port} onChange={set("port")} inputMode="numeric" required />
+                  <PortConflictIndicator nodeId={node?.id ?? ""} port={f.port} />
                 </div>
+              </div>
+              {["hysteria2", "tuic"].includes(f.protocol) && (
+                <div>
+                  <FieldLabel label="Port End (Range)" hint="End of port range for multi-port. Leave empty for single port." />
+                  <Input placeholder="e.g. 3000 (empty = single port)" value={f.portEnd} onChange={set("portEnd")} inputMode="numeric" />
+                </div>
+              )}
+              <div>
+                <FieldLabel label="Listen" hint="IP address to bind. 0.0.0.0 binds all interfaces." />
+                <Input placeholder="0.0.0.0 (all interfaces)" value={f.listen} onChange={set("listen")} dir="ltr" className="font-mono text-xs" />
               </div>
               <div>
                 <FieldLabel label="Protocol" required hint="The proxy protocol to use. Different protocols have different features and transport options." />
@@ -678,6 +707,30 @@ export function NodeInboundsModal({
                 Only connections from these countries will be accepted. Useful for limiting attack surface.
                 Requires geoip databases to be configured on the node.
               </p>
+            </SectionCard>
+
+            {/* Section: Speed Limit */}
+            <SectionCard title="Speed Limit" description="Per-user download speed limit on this inbound (0 = unlimited).">
+              <div>
+                <FieldLabel label="Speed (Mbps)" hint="Download speed limit in megabits per second. Leave 0 or empty for unlimited." />
+                <Input placeholder="e.g. 10 (0 = unlimited)" value={f.speedLimit} onChange={set("speedLimit")} inputMode="numeric" />
+                {f.speedLimit && Number(f.speedLimit) > 0 && (
+                  <p className="text-[10px] text-fg-subtle mt-1">
+                    &asymp; {(Number(f.speedLimit) * 125000 / 1024 / 1024).toFixed(1)} MB/s
+                  </p>
+                )}
+              </div>
+            </SectionCard>
+
+            {/* Section: Notes */}
+            <SectionCard title="Notes" description="Operator notes for documentation (not shown to users).">
+              <textarea
+                className="w-full rounded-lg border border-border/50 bg-surface/30 px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none resize-y min-h-[60px]"
+                placeholder="e.g. CDN behind Cloudflare, Direct connection for Hysteria2..."
+                value={f.notes}
+                onChange={(e) => setF(s => ({ ...s, notes: e.target.value }))}
+                rows={2}
+              />
             </SectionCard>
 
             {/* Submit */}

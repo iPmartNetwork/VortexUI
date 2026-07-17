@@ -81,7 +81,7 @@ func (f *fakeTraffic) TotalSeries(context.Context, port.SeriesQuery) ([]domain.T
 func TestAggregatorFoldsDeltasPerUser(t *testing.T) {
 	users := &fakeUsers{}
 	traffic := &fakeTraffic{}
-	agg := New(users, traffic)
+	agg := New(users, traffic, nil)
 	agg.flushDur = 20 * time.Millisecond // flush quickly for the test
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -112,7 +112,7 @@ func TestAggregatorFoldsDeltasPerUser(t *testing.T) {
 
 func TestAggregatorDrainsOnShutdown(t *testing.T) {
 	users := &fakeUsers{}
-	agg := New(users, &fakeTraffic{})
+	agg := New(users, &fakeTraffic{}, nil)
 	agg.flushDur = time.Hour // ensure the only flush is the shutdown drain
 
 	ctx, cancel := context.WithCancel(context.Background())

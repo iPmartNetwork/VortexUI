@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Globe, Info, Network, Plus, Server, Settings, Search, Copy, CheckCircle } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useInboundsFleet,
   useNodes,
@@ -10,9 +11,12 @@ import {
   type SubHost,
 } from "@/api/hooks";
 import type { Node } from "@/api/types";
+import { api } from "@/api/client";
 import { Badge, Button, Input } from "@/components/ui";
 import { NodeInboundsModal } from "@/components/NodeInboundsModal";
 import { SubHostsModal } from "@/components/SubHostsModal";
+import { InboundBulkBar } from "@/components/InboundBulkBar";
+import { InboundExpandedPanel } from "@/components/InboundExpandedPanel";
 import { GlassCard, ProtocolBadge, StatusBadge } from "@/components/veltrix";
 import { StaggerContainer } from "@/components/StaggerContainer";
 import { EmptyState } from "@/components/EmptyState";
@@ -89,6 +93,7 @@ export function Inbounds() {
   const [subHostsFor, setSubHostsFor] = useState<Inbound | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const inbounds = fleet.data?.inbounds ?? [];
   const nodeList = nodes.data?.nodes ?? [];
@@ -137,6 +142,37 @@ export function Inbounds() {
       setPendingEdit(edit ?? null);
       setManaging(node);
     }
+  }
+
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelected(new Set(filtered.map(ib => ib.id)));
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
+  const qc = useQueryClient();
+  const bulkMutation = useMutation({
+    mutationFn: (input: { ids: string[]; action: string }) =>
+      api<{ affected: number }>("/api/inbounds/bulk", { method: "POST", body: input }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbounds-fleet"] });
+      clearSelection();
+    },
+  });
+
+  function bulkAction(action: string) {
+    bulkMutation.mutate({ ids: [...selected], action });
   }
 
   const protocolEntries = useMemo(
@@ -237,6 +273,19 @@ export function Inbounds() {
               </button>
             ))}
           </div>
+          {canWrite && filtered.length > 0 && (
+            <div className="flex items-center gap-2 pt-2 border-t border-border/20">
+              <input
+                type="checkbox"
+                className="h-3.5 w-3.5 accent-primary rounded"
+                checked={selected.size === filtered.length && filtered.length > 0}
+                onChange={(e) => e.target.checked ? selectAll() : clearSelection()}
+              />
+              <span className="text-[10px] text-fg-subtle font-medium">
+                Select All ({filtered.length})
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Loading */}
@@ -272,6 +321,8 @@ export function Inbounds() {
                   ib={ib}
                   showNode={!nodeFilter}
                   canWrite={canWrite}
+                  selected={selected.has(ib.id)}
+                  onToggleSelect={() => toggleSelect(ib.id)}
                   expanded={expandedId === ib.id}
                   onToggleExpand={() => setExpandedId((cur) => (cur === ib.id ? null : ib.id))}
                   onAddSubHost={() => setSubHostsFor(ib)}
@@ -308,16 +359,27 @@ export function Inbounds() {
           </div>
         </GlassCard>
       )}
+
+      <InboundBulkBar
+        selectedCount={selected.size}
+        onEnable={() => bulkAction("enable")}
+        onDisable={() => bulkAction("disable")}
+        onDelete={() => bulkAction("delete")}
+        onClearSelection={clearSelection}
+        isPending={bulkMutation.isPending}
+      />
     </div>
   );
 }
 
 function InboundRow({
-  ib, showNode, canWrite, expanded, onToggleExpand, onAddSubHost, onEdit, copiedId, onCopy,
+  ib, showNode, canWrite, selected, onToggleSelect, expanded, onToggleExpand, onAddSubHost, onEdit, copiedId, onCopy,
 }: {
   ib: InboundFleetRow;
   showNode: boolean;
   canWrite: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
   expanded: boolean;
   onToggleExpand: () => void;
   onAddSubHost: () => void;
@@ -331,6 +393,17 @@ function InboundRow({
     <div className="p-4 hover:bg-surface/30 transition-colors group">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Checkbox */}
+          {canWrite && (
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 accent-primary rounded flex-shrink-0"
+              checked={selected}
+              onChange={onToggleSelect}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+
           {/* Icon */}
           <div className={cn(
             "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 border",
@@ -345,7 +418,7 @@ function InboundRow({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className={cn(
-                "font-semibold text-sm truncate max-w-[200px]",
+                "font-semibold text-sm truncate max-w-[300px]",
                 ib.enabled ? "text-fg" : "text-fg-muted",
               )}>
                 {ib.tag}
@@ -355,6 +428,30 @@ function InboundRow({
                 {transportLabel(ib)}
               </span>
               <Badge color={securityColor(ib.security)}>{securityLabel(ib.security)}</Badge>
+              {(ib.speed_limit ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                  ⚡ {Math.round((ib.speed_limit ?? 0) / 125000)} Mbps
+                </span>
+              )}
+              {ib.health && ib.health !== "" && (
+                <span className={cn(
+                  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border",
+                  ib.health === "healthy" ? "bg-success/10 border-success/20 text-success" :
+                  ib.health === "degraded" ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
+                  "bg-danger/10 border-danger/20 text-danger"
+                )}>
+                  <span className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    ib.health === "healthy" ? "bg-success" :
+                    ib.health === "degraded" ? "bg-amber-500" :
+                    "bg-danger"
+                  )} />
+                  {ib.health}
+                </span>
+              )}
+              {ib.notes && (
+                <span className="text-fg-subtle" title={ib.notes}>📝</span>
+              )}
               {showNode && (
                 <span className="inline-flex items-center gap-1 rounded-md bg-surface-2/70 px-2 py-0.5 text-[10px] font-medium text-fg-subtle">
                   <Server size={10} /> {ib.node_name}
@@ -362,7 +459,14 @@ function InboundRow({
               )}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted">
-              <span className="font-mono text-fg-subtle">:{ib.port}</span>
+              <span className="font-mono text-fg-subtle">
+                :{ib.port}{ib.port_end ? `-${ib.port_end}` : ""}
+              </span>
+              {ib.listen && ib.listen !== "" && ib.listen !== "0.0.0.0" && (
+                <span className="text-fg-subtle font-mono text-[10px]" title="Listen address">
+                  {ib.listen}
+                </span>
+              )}
               {sniList.length > 0 && (
                 <span className="truncate max-w-[240px]" title={sniList.join(", ")}>
                   SNI: <span className="text-fg-subtle">{sniList.join(", ")}</span>
@@ -424,7 +528,12 @@ function InboundRow({
         </div>
       </div>
 
-      {expanded && <SubHostsSection inboundId={ib.id} onOpen={onAddSubHost} />}
+      {expanded && (
+        <>
+          <InboundExpandedPanel inboundId={ib.id} notes={ib.notes} />
+          <SubHostsSection inboundId={ib.id} onOpen={onAddSubHost} />
+        </>
+      )}
     </div>
   );
 }

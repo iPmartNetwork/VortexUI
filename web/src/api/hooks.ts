@@ -280,6 +280,9 @@ export interface Inbound {
   enabled: boolean;
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
   raw?: Record<string, unknown>;
+  notes?: string;
+  port_end?: number;
+  speed_limit?: number;
 }
 
 export interface CreateInboundInput {
@@ -297,6 +300,10 @@ export interface CreateInboundInput {
   raw?: Record<string, unknown>;
   enabled: boolean;
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
+  notes?: string;
+  port_end?: number;
+  speed_limit?: number;
+  listen?: string;
 }
 
 export function useNodeInbounds(nodeId: string | null) {
@@ -333,6 +340,9 @@ export interface UpdateInboundInput {
   raw?: Record<string, unknown>;
   enabled: boolean;
   geo_policy?: { allowed_countries?: string[]; blocked_countries?: string[] } | null;
+  notes?: string;
+  port_end?: number;
+  speed_limit?: number;
 }
 
 /** Build a full PUT body from an inbound row so partial toggles never wipe host/raw. */
@@ -390,6 +400,7 @@ export interface InboundOption {
 
 export interface InboundFleetRow extends Inbound {
   node_name: string;
+  health?: string; // "healthy" | "degraded" | "down"
 }
 
 export function useInboundsFleet() {
@@ -774,5 +785,88 @@ export function useIPLimitEvents() {
   return useQuery({
     queryKey: ["ip-limit-events"],
     queryFn: () => api<{ events: IPLimitEvent[] }>("/api/ip-limit/events"),
+  });
+}
+
+// --- Inbound Enhancement Hooks ---
+
+export interface InboundTrafficStats {
+  inbound_id: string;
+  upload: number;
+  download: number;
+  total: number;
+  daily: { date: string; upload: number; download: number }[];
+}
+
+export interface CertStatusResponse {
+  status: "valid" | "expiring" | "expired" | "reality" | "none";
+  expires_at?: string;
+  days_remaining?: number;
+}
+
+export function useInboundStats(id: string | null) {
+  return useQuery({
+    queryKey: ["inbound-stats", id],
+    enabled: !!id,
+    queryFn: () => api<InboundTrafficStats>(`/api/inbounds/${id}/stats`),
+  });
+}
+
+export function useInboundOnline(id: string | null) {
+  return useQuery({
+    queryKey: ["inbound-online", id],
+    enabled: !!id,
+    queryFn: () => api<{ count: number }>(`/api/inbounds/${id}/online`),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useCloneInbound() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, port }: { id: string; port?: number }) =>
+      api<{ inbound: Inbound }>(`/api/inbounds/${id}/clone`, { method: "POST", body: { port } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbounds"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-fleet"] });
+    },
+  });
+}
+
+export function useBulkInboundAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { ids: string[]; action: "enable" | "disable" | "delete" }) =>
+      api<{ affected: number }>("/api/inbounds/bulk", { method: "POST", body: input }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbounds"] });
+      qc.invalidateQueries({ queryKey: ["inbounds-fleet"] });
+    },
+  });
+}
+
+export function useCheckPort(nodeId: string | null, port: number) {
+  return useQuery({
+    queryKey: ["check-port", nodeId, port],
+    enabled: !!nodeId && port > 0,
+    queryFn: () => api<{ available: boolean; conflict_tag?: string }>(
+      "/api/inbounds/check-port", { query: { node_id: nodeId!, port } }
+    ),
+  });
+}
+
+export function useShareLink(id: string | null) {
+  return useQuery({
+    queryKey: ["share-link", id],
+    enabled: false, // manual trigger only
+    queryFn: () => api<{ link?: string; error?: string }>(`/api/inbounds/${id}/share-link`),
+  });
+}
+
+export function useCertStatus(id: string | null) {
+  return useQuery({
+    queryKey: ["cert-status", id],
+    enabled: !!id,
+    queryFn: () => api<CertStatusResponse>(`/api/inbounds/${id}/cert-status`),
   });
 }

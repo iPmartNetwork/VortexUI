@@ -16,10 +16,10 @@ const createInbound = `-- name: CreateInbound :exec
 INSERT INTO inbounds (
     id, node_id, tag, protocol, listen, port, network, security,
     sni, path, host, flow, evasion_profile_id, raw, enabled,
-    speed_limit, geo_policy, core
+    speed_limit, geo_policy, core, notes, port_end
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-    $16, $17, $18
+    $16, $17, $18, $19, $20
 )
 `
 
@@ -42,6 +42,8 @@ type CreateInboundParams struct {
 	SpeedLimit       int64
 	GeoPolicy        []byte
 	Core             string
+	Notes            string
+	PortEnd          int32
 }
 
 func (q *Queries) CreateInbound(ctx context.Context, arg CreateInboundParams) error {
@@ -64,6 +66,8 @@ func (q *Queries) CreateInbound(ctx context.Context, arg CreateInboundParams) er
 		arg.SpeedLimit,
 		arg.GeoPolicy,
 		arg.Core,
+		arg.Notes,
+		arg.PortEnd,
 	)
 	return err
 }
@@ -78,7 +82,7 @@ func (q *Queries) DeleteInbound(ctx context.Context, id uuid.UUID) error {
 }
 
 const getInboundByID = `-- name: GetInboundByID :one
-SELECT id, node_id, tag, protocol, listen, port, network, security, sni, path, host, flow, evasion_profile_id, raw, enabled, speed_limit, geo_policy, core FROM inbounds WHERE id = $1
+SELECT id, node_id, tag, protocol, listen, port, network, security, sni, path, host, flow, evasion_profile_id, raw, enabled, speed_limit, geo_policy, core, notes, port_end FROM inbounds WHERE id = $1
 `
 
 func (q *Queries) GetInboundByID(ctx context.Context, id uuid.UUID) (Inbound, error) {
@@ -103,12 +107,14 @@ func (q *Queries) GetInboundByID(ctx context.Context, id uuid.UUID) (Inbound, er
 		&i.SpeedLimit,
 		&i.GeoPolicy,
 		&i.Core,
+		&i.Notes,
+		&i.PortEnd,
 	)
 	return i, err
 }
 
 const listInboundsByNode = `-- name: ListInboundsByNode :many
-SELECT id, node_id, tag, protocol, listen, port, network, security, sni, path, host, flow, evasion_profile_id, raw, enabled, speed_limit, geo_policy, core FROM inbounds WHERE node_id = $1 ORDER BY tag
+SELECT id, node_id, tag, protocol, listen, port, network, security, sni, path, host, flow, evasion_profile_id, raw, enabled, speed_limit, geo_policy, core, notes, port_end FROM inbounds WHERE node_id = $1 ORDER BY tag
 `
 
 func (q *Queries) ListInboundsByNode(ctx context.Context, nodeID uuid.UUID) ([]Inbound, error) {
@@ -139,6 +145,8 @@ func (q *Queries) ListInboundsByNode(ctx context.Context, nodeID uuid.UUID) ([]I
 			&i.SpeedLimit,
 			&i.GeoPolicy,
 			&i.Core,
+			&i.Notes,
+			&i.PortEnd,
 		); err != nil {
 			return nil, err
 		}
@@ -151,7 +159,7 @@ func (q *Queries) ListInboundsByNode(ctx context.Context, nodeID uuid.UUID) ([]I
 }
 
 const listInboundsFleet = `-- name: ListInboundsFleet :many
-SELECT i.id, i.node_id, i.tag, i.protocol, i.listen, i.port, i.network, i.security, i.sni, i.path, i.host, i.flow, i.evasion_profile_id, i.raw, i.enabled, i.speed_limit, i.geo_policy, i.core, n.name AS node_name
+SELECT i.id, i.node_id, i.tag, i.protocol, i.listen, i.port, i.network, i.security, i.sni, i.path, i.host, i.flow, i.evasion_profile_id, i.raw, i.enabled, i.speed_limit, i.geo_policy, i.core, i.notes, i.port_end, n.name AS node_name
 FROM inbounds i
 JOIN nodes n ON n.id = i.node_id
 ORDER BY n.name, i.tag
@@ -190,6 +198,8 @@ func (q *Queries) ListInboundsFleet(ctx context.Context) ([]ListInboundsFleetRow
 			&i.Inbound.SpeedLimit,
 			&i.Inbound.GeoPolicy,
 			&i.Inbound.Core,
+			&i.Inbound.Notes,
+			&i.Inbound.PortEnd,
 			&i.NodeName,
 		); err != nil {
 			return nil, err
@@ -207,7 +217,7 @@ UPDATE inbounds SET
     tag = $2, protocol = $3, listen = $4, port = $5, network = $6,
     security = $7, sni = $8, path = $9, host = $10, flow = $11,
     evasion_profile_id = $12, raw = $13, enabled = $14,
-    speed_limit = $15, geo_policy = $16, core = $17
+    speed_limit = $15, geo_policy = $16, core = $17, notes = $18, port_end = $19
 WHERE id = $1
 `
 
@@ -229,6 +239,8 @@ type UpdateInboundParams struct {
 	SpeedLimit       int64
 	GeoPolicy        []byte
 	Core             string
+	Notes            string
+	PortEnd          int32
 }
 
 func (q *Queries) UpdateInbound(ctx context.Context, arg UpdateInboundParams) error {
@@ -250,6 +262,8 @@ func (q *Queries) UpdateInbound(ctx context.Context, arg UpdateInboundParams) er
 		arg.SpeedLimit,
 		arg.GeoPolicy,
 		arg.Core,
+		arg.Notes,
+		arg.PortEnd,
 	)
 	return err
 }

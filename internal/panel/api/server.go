@@ -231,9 +231,16 @@ func NewRouter(d Deps) *echo.Echo {
 
 	inbounds := authed.Group("/inbounds")
 	inbounds.GET("", d.Handlers.ListInbounds, RequirePermission(d.Auth, domain.PermInboundRead))
+	inbounds.GET("/check-port", d.Handlers.CheckInboundPort, RequirePermission(d.Auth, domain.PermInboundRead))
 	inbounds.POST("", d.Handlers.CreateInbound, RequirePermission(d.Auth, domain.PermInboundWrite))
+	inbounds.POST("/bulk", d.Handlers.BulkInboundAction, RequirePermission(d.Auth, domain.PermInboundWrite))
 	inbounds.PUT("/:id", d.Handlers.UpdateInbound, RequirePermission(d.Auth, domain.PermInboundWrite))
 	inbounds.DELETE("/:id", d.Handlers.DeleteInbound, RequirePermission(d.Auth, domain.PermInboundWrite))
+	inbounds.POST("/:id/clone", d.Handlers.CloneInbound, RequirePermission(d.Auth, domain.PermInboundWrite))
+	inbounds.GET("/:id/stats", d.Handlers.GetInboundStats, RequirePermission(d.Auth, domain.PermInboundRead))
+	inbounds.GET("/:id/online", d.Handlers.GetInboundOnline, RequirePermission(d.Auth, domain.PermInboundRead))
+	inbounds.GET("/:id/share-link", d.Handlers.GetShareLink, RequirePermission(d.Auth, domain.PermInboundRead))
+	inbounds.GET("/:id/cert-status", d.Handlers.GetCertStatus, RequirePermission(d.Auth, domain.PermInboundRead))
 
 	// Egress + steering policy share the inbound (core-config) permission.
 	outbounds := authed.Group("/outbounds")

@@ -20,8 +20,9 @@ type userKey struct{ UserID uuid.UUID }
 // Aggregator batches incoming deltas and flushes them periodically to bound DB
 // write amplification under heavy traffic.
 type Aggregator struct {
-	users   port.UserRepository
-	traffic port.TrafficRepository
+	users          port.UserRepository
+	traffic        port.TrafficRepository
+	inboundTraffic port.InboundTrafficRepository // nil means per-inbound tracking disabled
 
 	in       chan domain.TrafficDelta
 	flushDur time.Duration
@@ -33,13 +34,15 @@ type Aggregator struct {
 }
 
 // New builds an Aggregator. flushDur and maxBatch trade latency for write load.
-func New(users port.UserRepository, traffic port.TrafficRepository) *Aggregator {
+// inboundTraffic may be nil to disable per-inbound accumulation.
+func New(users port.UserRepository, traffic port.TrafficRepository, inboundTraffic port.InboundTrafficRepository) *Aggregator {
 	return &Aggregator{
-		users:    users,
-		traffic:  traffic,
-		in:       make(chan domain.TrafficDelta, 4096),
-		flushDur: 5 * time.Second,
-		maxBatch: 1000,
+		users:          users,
+		traffic:        traffic,
+		inboundTraffic: inboundTraffic,
+		in:             make(chan domain.TrafficDelta, 4096),
+		flushDur:       5 * time.Second,
+		maxBatch:       1000,
 	}
 }
 
@@ -58,6 +61,8 @@ func (a *Aggregator) Run(ctx context.Context) error {
 	// pending accumulates per-user byte sums between flushes to collapse many
 	// tiny deltas into one UPDATE per user.
 	pending := make(map[userKey]int64)
+	// pendingInbound accumulates per-inbound upload/download between flushes.
+	pendingInbound := make(map[uuid.UUID][2]int64) // [0]=up, [1]=down
 	var points []domain.TrafficPoint
 
 	flush := func() {
@@ -81,6 +86,13 @@ func (a *Aggregator) Run(ctx context.Context) error {
 			}
 			points = points[:0]
 		}
+		// Flush per-inbound accumulated traffic.
+		if a.inboundTraffic != nil && len(pendingInbound) > 0 {
+			for ibID, ud := range pendingInbound {
+				_ = a.inboundTraffic.AddTraffic(ctx, ibID, ud[0], ud[1])
+			}
+			clear(pendingInbound)
+		}
 		if flushedUsers && a.AfterFlush != nil {
 			a.AfterFlush(ctx)
 		}
@@ -100,6 +112,13 @@ func (a *Aggregator) Run(ctx context.Context) error {
 				Time: d.Timestamp, UserID: d.UserID, NodeID: d.NodeID,
 				Up: d.Up, Down: d.Down,
 			})
+			// Accumulate per-inbound traffic when InboundID is set.
+			if d.InboundID != (uuid.UUID{}) {
+				v := pendingInbound[d.InboundID]
+				v[0] += d.Up
+				v[1] += d.Down
+				pendingInbound[d.InboundID] = v
+			}
 			if len(points) >= a.maxBatch {
 				flush()
 			}

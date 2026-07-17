@@ -67,6 +67,9 @@ type Inbound struct {
 	Protocol Protocol  `json:"protocol"`
 	Listen   string    `json:"listen"`
 	Port     int       `json:"port"`
+	// PortEnd defines the end of a port range. When > 0, the inbound
+	// listens on ports [Port, PortEnd]. When 0, it is a single-port inbound.
+	PortEnd int `json:"port_end,omitempty"`
 
 	// Transport / TLS layer.
 	Network   string   `json:"network"` // tcp, ws, grpc, httpupgrade, xhttp
@@ -94,12 +97,15 @@ type Inbound struct {
 	Raw map[string]any `json:"raw,omitempty"`
 
 	Enabled bool `json:"enabled"`
+	// Notes is a free-text description for operator reference.
+	Notes string `json:"notes,omitempty"`
 }
 
 // InboundListItem is an inbound row with its parent node name for fleet views.
 type InboundListItem struct {
 	Inbound
 	NodeName string `json:"node_name"`
+	Health   string `json:"health,omitempty"` // "healthy", "degraded", "down"
 }
 
 // UserProxy binds a User to an Inbound. This many-to-many join is what makes the
@@ -107,4 +113,27 @@ type InboundListItem struct {
 type UserProxy struct {
 	UserID    uuid.UUID `json:"user_id"`
 	InboundID uuid.UUID `json:"inbound_id"`
+}
+
+// InboundTrafficStats holds accumulated upload/download for an inbound.
+type InboundTrafficStats struct {
+	InboundID uuid.UUID           `json:"inbound_id"`
+	Upload    int64               `json:"upload"`
+	Download  int64               `json:"download"`
+	Total     int64               `json:"total"`
+	Daily     []InboundDailyPoint `json:"daily"`
+}
+
+// InboundDailyPoint is one day's traffic for an inbound.
+type InboundDailyPoint struct {
+	Date     string `json:"date"`
+	Upload   int64  `json:"upload"`
+	Download int64  `json:"download"`
+}
+
+// InboundCertStatus reports the TLS certificate state of an inbound.
+type InboundCertStatus struct {
+	Status        string  `json:"status"` // "valid", "expiring", "expired", "reality", "none"
+	ExpiresAt     *string `json:"expires_at,omitempty"`
+	DaysRemaining int     `json:"days_remaining,omitempty"`
 }

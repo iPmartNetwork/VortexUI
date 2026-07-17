@@ -37,6 +37,7 @@ type Handlers struct {
 	Hub       *hub.Hub                   // optional; enriches node list with live diagnostics
 	Enrollment *service.EnrollmentService // optional; node enrollment bundle API
 	Inbounds  *service.InboundService
+	InboundTraffic *service.InboundTrafficService // optional; nil disables per-inbound stats
 	Outbounds *service.OutboundService
 	Routing   *service.RoutingService
 	Balancers *service.BalancerService
@@ -61,6 +62,8 @@ type Handlers struct {
 	Issuer    *auth.Issuer   // JWT issuer for impersonation flows
 	WalletBilling *service.WalletBillingService // optional; nil disables wallet billing
 	ResellerPayment *service.ResellerPaymentService // optional; per-reseller payment config
+	ShareLinks *service.ShareLinkService // optional; nil disables share link generation
+	CertStatus *service.CertStatusService // optional; nil disables cert status endpoint
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a

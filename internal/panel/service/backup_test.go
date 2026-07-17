@@ -139,3 +139,6 @@ func (a inboundRepoAdapter) ListByNode(ctx context.Context, nodeID uuid.UUID) ([
 func (a inboundRepoAdapter) ListFleet(context.Context) ([]domain.InboundListItem, error) {
 	return nil, nil
 }
+func (a inboundRepoAdapter) ListByNodePort(context.Context, uuid.UUID, int, int) ([]*domain.Inbound, error) {
+	return nil, nil
+}
