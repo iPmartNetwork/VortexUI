@@ -74,6 +74,7 @@ CREATE TABLE inbounds (
     protocol           TEXT NOT NULL,
     listen             TEXT NOT NULL DEFAULT '',
     port               INTEGER NOT NULL,
+    port_end           INTEGER NOT NULL DEFAULT 0,
     network            TEXT NOT NULL DEFAULT 'tcp',
     security           TEXT NOT NULL DEFAULT 'none',
     sni                JSONB NOT NULL DEFAULT '[]',
@@ -86,6 +87,7 @@ CREATE TABLE inbounds (
     speed_limit        BIGINT NOT NULL DEFAULT 0,
     geo_policy         JSONB,
     core               TEXT NOT NULL DEFAULT '',
+    notes              TEXT NOT NULL DEFAULT '',
     UNIQUE (node_id, tag)
 );
 
@@ -783,3 +785,13 @@ CREATE TABLE orders (
 
 CREATE INDEX idx_orders_user ON orders(user_id);
 CREATE INDEX idx_orders_status ON orders(status);
+
+-- v1.3.7: Per-inbound traffic stats
+CREATE TABLE inbound_traffic_stats (
+    inbound_id UUID NOT NULL REFERENCES inbounds(id) ON DELETE CASCADE,
+    date       DATE NOT NULL DEFAULT CURRENT_DATE,
+    upload     BIGINT NOT NULL DEFAULT 0,
+    download   BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (inbound_id, date)
+);
+CREATE INDEX idx_inbound_traffic_stats_date ON inbound_traffic_stats (inbound_id, date DESC);
