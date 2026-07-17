@@ -551,7 +551,17 @@ export function NodeInboundsModal({
                 </div>
                 <div>
                   <FieldLabel label="Port" required hint="The port this inbound listens on. Random port is pre-filled." />
-                  <Input placeholder="443" value={f.port} onChange={set("port")} inputMode="numeric" required />
+                  <div className="flex items-center gap-1.5">
+                    <Input placeholder="443" value={f.port} onChange={set("port")} inputMode="numeric" required className="flex-1" />
+                    <button
+                      type="button"
+                      onClick={() => setF(s => ({ ...s, port: randomPort() }))}
+                      className="h-9 w-9 rounded-lg border border-border/50 bg-surface/40 flex items-center justify-center text-fg-subtle hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all flex-shrink-0"
+                      title="Generate random port"
+                    >
+                      🎲
+                    </button>
+                  </div>
                   <PortConflictIndicator nodeId={node?.id ?? ""} port={f.port} />
                 </div>
                 <div>
