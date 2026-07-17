@@ -62,12 +62,29 @@ func RenderClashWithTemplate(proxies []Proxy, title string, tmpl *ClashTemplate)
 		"proxies": clashProxies,
 	}
 
-	// Build proxy groups: include template's groups + our selector.
-	groups := []map[string]any{{
-		"name":    title,
-		"type":    "select",
-		"proxies": append([]string{"DIRECT"}, names...),
-	}}
+	// Build proxy groups: include template's groups + our selector + auto + fallback.
+	groups := []map[string]any{
+		{
+			"name":    title,
+			"type":    "select",
+			"proxies": append([]string{"♻️ Auto", "♻️ Fallback", "DIRECT"}, names...),
+		},
+		{
+			"name":      "♻️ Auto",
+			"type":      "url-test",
+			"proxies":   names,
+			"url":       "https://www.gstatic.com/generate_204",
+			"interval":  90,
+			"tolerance": 150,
+		},
+		{
+			"name":      "♻️ Fallback",
+			"type":      "fallback",
+			"proxies":   names,
+			"url":       "https://www.gstatic.com/generate_204",
+			"interval":  90,
+		},
+	}
 	if tmpl != nil {
 		groups = append(groups, tmpl.ProxyGroups...)
 	}
@@ -115,10 +132,26 @@ func RenderSingboxWithTemplate(proxies []Proxy, title string, tmpl *SingboxTempl
 	selector := map[string]any{
 		"type":      "selector",
 		"tag":       title,
+		"outbounds": append([]string{"♻️ Auto", "♻️ Fallback"}, tags...),
+	}
+	autoTest := map[string]any{
+		"type":      "urltest",
+		"tag":       "♻️ Auto",
 		"outbounds": tags,
+		"url":       "https://www.gstatic.com/generate_204",
+		"interval":  "90s",
+		"tolerance": 150,
+	}
+	fallback := map[string]any{
+		"type":      "urltest",
+		"tag":       "♻️ Fallback",
+		"outbounds": tags,
+		"url":       "https://www.gstatic.com/generate_204",
+		"interval":  "90s",
+		"tolerance": 0,
 	}
 	direct := map[string]any{"type": "direct", "tag": "direct"}
-	all := append([]map[string]any{selector}, outbounds...)
+	all := append([]map[string]any{selector, autoTest, fallback}, outbounds...)
 	all = append(all, direct)
 
 	cfg := map[string]any{"outbounds": all}

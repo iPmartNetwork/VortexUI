@@ -30,18 +30,26 @@ func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule) ([
 	selector := map[string]any{
 		"type":      "selector",
 		"tag":       title,
-		"outbounds": append([]string{"♻️ Auto"}, tags...),
+		"outbounds": append([]string{"♻️ Auto", "♻️ Fallback"}, tags...),
 	}
 	autoTest := map[string]any{
 		"type":      "urltest",
 		"tag":       "♻️ Auto",
 		"outbounds": tags,
 		"url":       "https://www.gstatic.com/generate_204",
-		"interval":  "5m",
-		"tolerance": 50,
+		"interval":  "90s",
+		"tolerance": 150,
+	}
+	fallback := map[string]any{
+		"type":      "urltest",
+		"tag":       "♻️ Fallback",
+		"outbounds": tags,
+		"url":       "https://www.gstatic.com/generate_204",
+		"interval":  "90s",
+		"tolerance": 0,
 	}
 	direct := map[string]any{"type": "direct", "tag": "direct"}
-	all := append([]map[string]any{selector, autoTest}, outbounds...)
+	all := append([]map[string]any{selector, autoTest, fallback}, outbounds...)
 	all = append(all, direct)
 
 	cfg := map[string]any{"outbounds": all}
@@ -66,6 +74,8 @@ func singboxOutbound(p Proxy) map[string]any {
 		"server":      p.Host,
 		"server_port": p.Port,
 	}
+	o["dial_timeout"] = "5s"
+	o["tcp_fast_open"] = true
 	if p.Security == "tls" || p.Security == "reality" {
 		tls := map[string]any{"enabled": true}
 		if p.SNI != "" {
@@ -89,7 +99,7 @@ func singboxOutbound(p Proxy) map[string]any {
 	}
 	// Additive: client-side multiplexing only when the host enables it.
 	if p.Mux {
-		o["multiplex"] = map[string]any{"enabled": true, "protocol": "smux"}
+		o["multiplex"] = map[string]any{"enabled": true, "protocol": "smux", "idle_timeout": "30s"}
 	}
 
 	switch p.Protocol {
