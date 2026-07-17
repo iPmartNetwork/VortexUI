@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand/v2"
+	"math/big"
 
 	"github.com/google/uuid"
 
@@ -311,7 +312,11 @@ func (s *InboundService) Clone(ctx context.Context, id uuid.UUID, newPort int) (
 		return nil, err
 	}
 	if newPort == 0 {
-		newPort = 10000 + rand.IntN(50000)
+		n, err := rand.Int(rand.Reader, big.NewInt(50000))
+		if err != nil {
+			return nil, fmt.Errorf("generate random port: %w", err)
+		}
+		newPort = 10000 + int(n.Int64())
 	}
 	input := CreateInboundInput{
 		NodeID:     existing.NodeID,

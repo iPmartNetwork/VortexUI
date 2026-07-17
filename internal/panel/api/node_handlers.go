@@ -521,7 +521,9 @@ func (h *Handlers) CheckInboundPort(c echo.Context) error {
 	portStr := c.QueryParam("port")
 	port := 0
 	if portStr != "" {
-		fmt.Sscanf(portStr, "%d", &port)
+		if _, err := fmt.Sscanf(portStr, "%d", &port); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid port")
+		}
 	}
 	if port <= 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid port")
