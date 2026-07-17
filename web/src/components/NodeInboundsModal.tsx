@@ -438,7 +438,7 @@ export function NodeInboundsModal({
 
   return (
     <>
-    <Modal open={!!node} onClose={onClose} title="" className="max-w-6xl">
+    <Modal open={!!node} onClose={onClose} title="" className="!max-w-6xl">
       {/* Header */}
       {node && (
         <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-4">
