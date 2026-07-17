@@ -1,6 +1,8 @@
 package subscription
 
 import (
+	"strings"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/vortexui/vortexui/internal/domain"
@@ -103,6 +105,10 @@ func clashProxy(p Proxy) map[string]any {
 	if p.AllowInsecure {
 		base["skip-cert-verify"] = true
 	}
+	// uTLS fingerprint for all TLS proxies (not just REALITY) to avoid Go-TLS detection.
+	if tls && p.Security != "reality" {
+		base["client-fingerprint"] = orDefault(p.Fingerprint, "chrome")
+	}
 	if p.Security == "reality" {
 		base["reality-opts"] = map[string]any{"public-key": p.PublicKey, "short-id": p.ShortID}
 		base["client-fingerprint"] = orDefault(p.Fingerprint, "chrome")
@@ -114,6 +120,17 @@ func clashProxy(p Proxy) map[string]any {
 	}
 	if p.Mux {
 		base["smux"] = map[string]any{"enabled": true}
+	}
+	// TLS fragment: Clash Meta supports the `tls-fragment` option for anti-DPI.
+	if p.Fragment != "" && tls {
+		parts := strings.Split(p.Fragment, ",")
+		if len(parts) >= 2 {
+			base["tls-fragment"] = map[string]any{
+				"enabled": true,
+				"size":    parts[0],
+				"sleep":   parts[1],
+			}
+		}
 	}
 	return base
 }

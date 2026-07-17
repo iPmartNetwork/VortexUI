@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/vortexui/vortexui/internal/domain"
 )
@@ -91,6 +92,20 @@ func singboxOutbound(p Proxy) map[string]any {
 		if p.Security == "reality" {
 			tls["reality"] = map[string]any{"enabled": true, "public_key": p.PublicKey, "short_id": p.ShortID}
 			tls["utls"] = map[string]any{"enabled": true, "fingerprint": orDefault(p.Fingerprint, "chrome")}
+		} else {
+			// uTLS for regular TLS too — prevents Go-TLS fingerprint detection.
+			tls["utls"] = map[string]any{"enabled": true, "fingerprint": orDefault(p.Fingerprint, "chrome")}
+		}
+		// TLS fragment for anti-DPI bypass.
+		if p.Fragment != "" {
+			parts := strings.Split(p.Fragment, ",")
+			if len(parts) >= 2 {
+				tls["fragment"] = map[string]any{
+					"enabled": true,
+					"size":    parts[0],
+					"sleep":   parts[1],
+				}
+			}
 		}
 		o["tls"] = tls
 	}
