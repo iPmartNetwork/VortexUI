@@ -116,7 +116,7 @@ function InboundListItem({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={cn(
-              "font-semibold text-sm truncate max-w-[240px]",
+              "font-semibold text-sm truncate max-w-[400px]",
               ib.enabled ? "text-fg" : "text-fg-muted",
             )}>
               {ib.tag}
@@ -134,31 +134,33 @@ function InboundListItem({
             <span className="text-[10px] text-fg-subtle px-1.5 py-0.5 rounded bg-surface-2/50 border border-border/30">
               {inboundTransportLabel(ib, udpNative, noTransport)}
             </span>
-            <div className={cn(
-              "h-1.5 w-1.5 rounded-full",
-              ib.enabled ? "bg-success shadow-sm shadow-success/30" : "bg-fg-subtle",
-            )} />
+            <span className={cn(
+              "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded",
+              ib.enabled ? "text-success bg-success/10" : "text-fg-subtle bg-surface-2/50"
+            )}>
+              {ib.enabled ? "ON" : "OFF"}
+            </span>
           </div>
         </div>
       </div>
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         {canWrite && (
           <>
             <button type="button" onClick={onToggle}
-              className="h-7 px-2 rounded-lg text-[10px] font-medium text-fg-subtle hover:text-fg hover:bg-surface-2/60 transition-all"
+              className="h-7 px-2.5 rounded-lg text-[10px] font-medium border border-border/50 text-fg-subtle hover:text-fg hover:bg-surface-2/60 transition-all"
               title={ib.enabled ? "Disable" : "Enable"}
             >
               {ib.enabled ? "Disable" : "Enable"}
             </button>
             <button type="button" onClick={onEdit}
-              className="h-7 px-2 rounded-lg text-[10px] font-medium text-primary/80 hover:text-primary hover:bg-primary/10 transition-all"
+              className="h-7 px-2.5 rounded-lg text-[10px] font-medium border border-primary/30 text-primary/80 hover:text-primary hover:bg-primary/10 transition-all"
               title="Edit inbound"
             >
               Edit
             </button>
             <button type="button" onClick={onDelete}
-              className="h-7 px-2 rounded-lg text-[10px] font-medium text-danger/70 hover:text-danger hover:bg-danger/10 transition-all"
+              className="h-7 px-2.5 rounded-lg text-[10px] font-medium border border-danger/30 text-danger/70 hover:text-danger hover:bg-danger/10 transition-all"
               title="Delete inbound"
             >
               Delete
@@ -166,7 +168,7 @@ function InboundListItem({
           </>
         )}
         <button type="button" onClick={onHosts}
-          className="h-7 px-2 rounded-lg text-[10px] font-medium text-fg-subtle hover:text-fg hover:bg-surface-2/60 transition-all"
+          className="h-7 px-2.5 rounded-lg text-[10px] font-medium border border-border/50 text-fg-subtle hover:text-fg hover:bg-surface-2/60 transition-all"
           title="Subscription hosts"
         >
           Hosts
