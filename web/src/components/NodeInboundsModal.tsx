@@ -116,7 +116,7 @@ function InboundListItem({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className={cn(
-              "font-semibold text-sm truncate max-w-[160px]",
+              "font-semibold text-sm truncate max-w-[240px]",
               ib.enabled ? "text-fg" : "text-fg-muted",
             )}>
               {ib.tag}
@@ -438,7 +438,7 @@ export function NodeInboundsModal({
 
   return (
     <>
-    <Modal open={!!node} onClose={onClose} title="" className="max-w-2xl">
+    <Modal open={!!node} onClose={onClose} title="" className="max-w-4xl">
       {/* Header */}
       {node && (
         <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-4">
@@ -544,7 +544,7 @@ export function NodeInboundsModal({
           <form onSubmit={submit} className="space-y-4">
             {/* Section: General */}
             <SectionCard title="General" description="Basic identification and protocol selection">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <FieldLabel label="Tag" required hint="A unique name for this inbound (e.g. vless-ws-443)" />
                   <Input placeholder="e.g. inbound-main" value={f.tag} onChange={set("tag")} required disabled={editing} />
@@ -554,6 +554,10 @@ export function NodeInboundsModal({
                   <Input placeholder="443" value={f.port} onChange={set("port")} inputMode="numeric" required />
                   <PortConflictIndicator nodeId={node?.id ?? ""} port={f.port} />
                 </div>
+                <div>
+                  <FieldLabel label="Listen" hint="IP address to bind. 0.0.0.0 binds all interfaces." />
+                  <Input placeholder="0.0.0.0 (all interfaces)" value={f.listen} onChange={set("listen")} dir="ltr" className="font-mono text-xs" />
+                </div>
               </div>
               {["hysteria2", "tuic"].includes(f.protocol) && (
                 <div>
@@ -561,10 +565,6 @@ export function NodeInboundsModal({
                   <Input placeholder="e.g. 3000 (empty = single port)" value={f.portEnd} onChange={set("portEnd")} inputMode="numeric" />
                 </div>
               )}
-              <div>
-                <FieldLabel label="Listen" hint="IP address to bind. 0.0.0.0 binds all interfaces." />
-                <Input placeholder="0.0.0.0 (all interfaces)" value={f.listen} onChange={set("listen")} dir="ltr" className="font-mono text-xs" />
-              </div>
               <div>
                 <FieldLabel label="Protocol" required hint="The proxy protocol to use. Different protocols have different features and transport options." />
                 <div className="relative">
