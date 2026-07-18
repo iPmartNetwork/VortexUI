@@ -53,7 +53,9 @@ function inboundTransportLabel(
   udpNative: string[],
   noTransport: string[],
 ): string {
-  if (udpNative.includes(ib.protocol)) return "udp";
+  // Always show "udp" for UDP-native protocols regardless of caps
+  const UDP_ALWAYS = ["hysteria2", "tuic", "wireguard", "hysteria"];
+  if (UDP_ALWAYS.includes(ib.protocol) || udpNative.includes(ib.protocol)) return "udp";
   if (noTransport.includes(ib.protocol) && !ib.network) return "—";
   const net = ib.network || "tcp";
   const sec = ib.security || "none";

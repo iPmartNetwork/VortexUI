@@ -26,6 +26,9 @@ import { useAuth } from "@/auth/auth";
 import { cn } from "@/lib/utils";
 
 function transportLabel(ib: InboundFleetRow): string {
+  // UDP-native protocols always show "UDP" regardless of stored network value
+  const UDP_ALWAYS = ["hysteria2", "tuic", "wireguard", "hysteria"];
+  if (UDP_ALWAYS.includes(ib.protocol)) return "UDP";
   const net = ib.network || "tcp";
   return net.toUpperCase();
 }
