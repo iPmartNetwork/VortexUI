@@ -120,6 +120,25 @@
 
 ---
 
+## 🆕 What's New in 1.3.8
+
+> **Anti-censorship · Inbound professional toolkit · Connection stability · Smart alerting · Rate limiting · Performance**
+
+| Feature | Description |
+|---------|-------------|
+| **XHTTP/SplitHTTP** | Latest DPI-bypass transport rendered in Clash/sing-box subscription output |
+| **ECH (Encrypted Client Hello)** | Hides SNI entirely from DPI; auto-applied via TLS Tricks profiles |
+| **Auto ISP Detection** | `?isp=mci` on subscription URL auto-applies optimal anti-DPI settings per ISP |
+| **DNS-over-HTTPS** | DoH servers injected into sing-box subscription preventing DNS leaks |
+| **14 Inbound Features** | Clone, bulk actions, port conflict check, traffic stats, health badge, share link, cert status, notes, speed limit, port range, listen address, random port button |
+| **Connection Stability** | 90s failover, fallback group, dial_timeout 5s, tcp_fast_open, mux idle_timeout, tolerance 150ms |
+| **Smart Alerting** | Threshold alerts for CPU/memory/offline/quota/cert with cooldown dedup |
+| **Rate Limiting** | Per-endpoint limits (login 5/min, bulk 5/min, subscription 60/min) |
+| **Performance** | Gzip compression, subscription cache, bundle splitting (870→537KB) |
+| **UI Polish** | Overview health indicators, gradient stats cards, wider inbound modal, avatar initials |
+
+---
+
 ## 🆕 What's New in 1.3.7
 
 > **Frontend UX overhaul · skeleton loading · page transitions · animated counters · stagger animations · login particles · improved modals/toasts · shimmer states · empty states · copy morph**
@@ -387,7 +406,7 @@ Collapsible sidebar · Command palette · Skeleton loading · Data tables · Pag
 
 ### How VortexUI stacks up against other panels
 
-|  | VortexUI 1.3.7 | 3x-ui | Marzban | Hiddify |
+|  | VortexUI 1.3.8 | 3x-ui | Marzban | Hiddify |
 |--|----------------|-------|---------|---------|
 | **Proxy engines** | Xray + sing-box | Xray | Xray | Xray + sing-box |
 | **Data model** | User-centric | Inbound-centric | User-centric | User-centric |

@@ -6,6 +6,83 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.8] - 2026-07-17
+
+Major anti-censorship, performance, and platform enhancement release with ~30 new features across 6 development phases.
+
+### Added — Anti-Censorship (Phase 1)
+- **XHTTP/SplitHTTP transport** — renders in Clash Meta and sing-box subscription output for the latest DPI-bypass transport.
+- **ECH (Encrypted Client Hello)** — sing-box output includes `tls.ech.enabled` when linked TLS tricks profile has ECH active, hiding SNI entirely from DPI.
+- **Auto ISP Detection** — `?isp=mci|irancell|mokhaberat|shatel|asiatech` query parameter on subscription URL auto-applies optimal fragment/mux/padding settings per Iranian ISP.
+- **DNS-over-HTTPS in subscription** — sing-box output injects DoH DNS block (Cloudflare 1.1.1.1 + Google 8.8.8.8) preventing DNS leaks to ISP resolvers.
+- **Random Padding** — TLS `padding_size` rendered in sing-box output from evasion profiles, defeating length-based DPI fingerprinting.
+- **TLS Fragment in Clash/sing-box** — fragment settings from evasion profiles now render in subscription configs (previously only in share links).
+- **uTLS fingerprint for all TLS proxies** — all TLS proxies (not just REALITY) now get `client-fingerprint: chrome` to avoid Go-TLS detection.
+
+### Added — Inbound Professional Enhancement (14 features)
+- **Speed Limit UI** — Mbps slider in inbound form, converts to bytes/sec, badge on inbound rows.
+- **Port Range & Multi-Port** — `port_end` field for Hysteria2/TUIC multi-port inbounds.
+- **Listen Address** — explicit bind address in inbound form (default 0.0.0.0).
+- **Clone Inbound** — `POST /api/inbounds/:id/clone` duplicates with new tag/port.
+- **Bulk Actions** — checkbox selection + floating bar for enable/disable/delete multiple inbounds.
+- **Port Conflict Warning** — real-time debounced check as you type port in the form.
+- **Per-Inbound Traffic Stats** — `GET /api/inbounds/:id/stats` with daily series + chart in expanded panel.
+- **Online Connection Count** — `GET /api/inbounds/:id/online` from node agent.
+- **Health Badge** — green/amber/red per inbound based on node CPU/memory/connectivity.
+- **Share Link Generator** — `GET /api/inbounds/:id/share-link` for VLESS/VMess/Trojan/SS/Hysteria2/TUIC.
+- **Certificate Status** — `GET /api/inbounds/:id/cert-status` parses X.509 NotAfter, shows valid/expiring/expired.
+- **Inbound Notes** — free-text description field for operator documentation.
+- **Expanded Details Panel** — clone, share link, cert status, notes, daily traffic chart on row expand.
+- **Random Port Button** — 🎲 dice button next to port input for quick random generation.
+
+### Added — Connection Stability
+- **Faster failover** — url-test interval reduced from 300s/5m to 90s for quick dead-node detection.
+- **Fallback group** — sequential failover proxy group in both Clash and sing-box output.
+- **dial_timeout: 5s** — all sing-box outbounds fail fast instead of 15-30s default.
+- **tcp_fast_open: true** — reduced connection setup latency on all outbounds.
+- **mux idle_timeout: 30s** — detects NAT-killed idle connections promptly.
+- **Tolerance 150ms** — prevents unnecessary node switching on jittery connections.
+
+### Added — Monitoring (Phase 4)
+- **Smart Alerting Service** — threshold-based alerts with cooldown deduplication:
+  - Node CPU ≥ 90% (15-min cooldown)
+  - Node Memory ≥ 90% (15-min cooldown)
+  - Node offline > 5 minutes (30-min cooldown)
+  - User traffic ≥ 80% of data limit (6-hour cooldown)
+  - TLS certificate expiring within 7 days (24-hour cooldown)
+- **Event types** — `node.alert`, `user.quota_warning`, `cert.expiring`, `backup.completed`, `admin.login`.
+
+### Added — Security (Phase 5)
+- **Per-endpoint rate limiting** — configurable middleware: login 5/min, bulk 5/min, subscription 60/min, default 120/min. Fails open on Redis errors.
+
+### Added — Automation (Phase 6)
+- **Webhook event documentation** — categorized admin-facing and reseller-facing event types.
+- **Scheduler service** — periodic background task runner for future scheduled jobs (cleanup, renewal checks, reports).
+
+### Changed — Performance (Phase 3)
+- **Subscription cache headers** — `Cache-Control: private, max-age=60` reduces DB pressure from rapid client polling.
+- **Gzip compression** — all API responses >1KB compressed at level 5 (~60-70% size reduction).
+- **Frontend bundle splitting** — Vite manual chunks split vendor libraries into cacheable segments (870KB → 537KB main bundle).
+
+### Changed — UI/UX (Phase 2)
+- **Overview redesign** — real-time traffic speed indicator, System Health mini-card row, gradient StatsCards with icon glow.
+- **Users page** — gradient avatar circles with 2-letter initials.
+- **Inbound Manager modal** — widened to 1152px (`!max-w-6xl`), 3-column form layout, always-visible action buttons, single-line item layout.
+- **StatusBadge** — hover:scale-105 micro-interaction.
+
+### Fixed
+- **Modal resize bug** — removed scale animation causing stale layout; added `max-h-[85vh]` + overflow-y-auto + flex-col structure.
+- **GlassCard clip** — changed `overflow-hidden` to `overflow-x-hidden` preventing StaggerContainer entrance animation clipping.
+- **CI lint** — resolved errcheck (fmt.Sscanf) and gosec G404 (crypto/rand) violations.
+- **CI integration tests** — added `notes`, `port_end`, `inbound_traffic_stats` to schema.sql.
+- **Panel version display** — bumped `cmd/panel/main.go` default from 1.3.6 to 1.3.8.
+- **fast-check dependency** — committed package.json/lock for CI typecheck.
+
+### Database
+- Migration `0043_inbound_enhancements.sql` — `notes TEXT`, `port_end INTEGER`, `inbound_traffic_stats` table with composite PK and index.
+
+**Release by ali**
+
 ## [1.3.6] - 2026-07-15
 
 Critical startup crash fix: the panel could crash-loop forever on every boot,
@@ -667,7 +744,16 @@ First stable release.
 
 ---
 
-[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.9...HEAD
+[Unreleased]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.8...HEAD
+[1.3.8]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.7...v1.3.8
+[1.3.7]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.6...v1.3.7
+[1.3.6]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.5...v1.3.6
+[1.3.5]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.4...v1.3.5
+[1.3.4]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.3...v1.3.4
+[1.3.3]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.2...v1.3.3
+[1.3.2]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.1...v1.3.2
+[1.3.1]: https://github.com/iPmartNetwork/VortexUI/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.9...v1.3.0
 [1.2.9]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.8...v1.2.9
 [1.2.8]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.7...v1.2.8
 [1.2.7]: https://github.com/iPmartNetwork/VortexUI/compare/v1.2.6...v1.2.7
