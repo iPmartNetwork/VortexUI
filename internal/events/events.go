@@ -31,6 +31,9 @@ const (
 	NodeAutoRecover   Type = "node.auto_recover" // panel restarted core or reset hub link
 	AdminQuotaWarning Type = "admin.quota_warning"
 	SecurityProbe     Type = "security.probe"
+	NodeAlert         Type = "node.alert"         // resource threshold crossed
+	UserQuotaWarn     Type = "user.quota_warning"  // traffic nearing data_limit
+	CertExpiring      Type = "cert.expiring"       // TLS cert expires within 7 days
 )
 
 // Event is a single notification. Fields are flat and JSON-friendly so the
