@@ -704,8 +704,12 @@ export function NodeInboundsModal({
                 )}
                 {f.protocol === "vless" && (f.security === "tls" || f.security === "reality") && (
                   <div>
-                    <FieldLabel label="Flow" hint="Flow control for VLESS (e.g. xtls-rprx-vision). Only for VLESS+TLS/REALITY." />
-                    <Input placeholder="e.g. xtls-rprx-vision (optional)" value={f.flow} onChange={set("flow")} />
+                    <FieldLabel label="Flow" hint="Flow control for VLESS. xtls-rprx-vision is recommended for REALITY." />
+                    <Select value={f.flow} onChange={set("flow")}>
+                      <option value="">None (no flow)</option>
+                      <option value="xtls-rprx-vision">xtls-rprx-vision (recommended)</option>
+                      <option value="xtls-rprx-vision-udp443">xtls-rprx-vision-udp443</option>
+                    </Select>
                   </div>
                 )}
               </SectionCard>
@@ -743,6 +747,41 @@ export function NodeInboundsModal({
 
             {/* Section: Geo-filtering */}
             <SectionCard title="Geo-blocking" description="Restrict inbound access by country (optional).">
+              {/* Quick-select buttons */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { code: "IR", flag: "🇮🇷" },
+                  { code: "TR", flag: "🇹🇷" },
+                  { code: "RU", flag: "🇷🇺" },
+                  { code: "DE", flag: "🇩🇪" },
+                  { code: "NL", flag: "🇳🇱" },
+                  { code: "US", flag: "🇺🇸" },
+                  { code: "GB", flag: "🇬🇧" },
+                  { code: "FR", flag: "🇫🇷" },
+                ].map(({ code, flag }) => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => {
+                      setF(s => {
+                        const existing = s.geoAllow ? s.geoAllow.split(",").map(c => c.trim()).filter(Boolean) : [];
+                        if (existing.includes(code)) {
+                          return { ...s, geoAllow: existing.filter(c => c !== code).join(", ") };
+                        }
+                        return { ...s, geoAllow: [...existing, code].join(", ") };
+                      });
+                    }}
+                    className={cn(
+                      "px-2 py-1 rounded-lg text-[11px] font-medium border transition-all",
+                      f.geoAllow?.includes(code)
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : "border-border/50 text-fg-subtle hover:border-primary/30 hover:text-fg"
+                    )}
+                  >
+                    {flag} {code}
+                  </button>
+                ))}
+              </div>
               <div>
                 <FieldLabel label="Allowed Countries" hint="Comma-separated ISO 3166-1 alpha-2 country codes. Leave empty to allow all." />
                 <Input placeholder="e.g. IR, TR (empty = all allowed)" value={f.geoAllow ?? ""} onChange={(e) => setF(s => ({...s, geoAllow: e.target.value}))} dir="ltr" />
@@ -755,12 +794,30 @@ export function NodeInboundsModal({
 
             {/* Section: Speed Limit */}
             <SectionCard title="Speed Limit" description="Per-user download speed limit on this inbound (0 = unlimited).">
+              {/* Quick-select speed buttons */}
+              <div className="flex flex-wrap gap-1.5">
+                {[0, 1, 5, 10, 25, 50, 100].map((mbps) => (
+                  <button
+                    key={mbps}
+                    type="button"
+                    onClick={() => setF(s => ({ ...s, speedLimit: mbps === 0 ? "" : String(mbps) }))}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all",
+                      (mbps === 0 && !f.speedLimit) || f.speedLimit === String(mbps)
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : "border-border/50 text-fg-subtle hover:border-primary/30 hover:text-fg"
+                    )}
+                  >
+                    {mbps === 0 ? "∞ Unlimited" : `${mbps} Mbps`}
+                  </button>
+                ))}
+              </div>
               <div>
                 <FieldLabel label="Speed (Mbps)" hint="Download speed limit in megabits per second. Leave 0 or empty for unlimited." />
                 <Input placeholder="e.g. 10 (0 = unlimited)" value={f.speedLimit} onChange={set("speedLimit")} inputMode="numeric" />
                 {f.speedLimit && Number(f.speedLimit) > 0 && (
                   <p className="text-[10px] text-fg-subtle mt-1">
-                    &asymp; {(Number(f.speedLimit) * 125000 / 1024 / 1024).toFixed(1)} MB/s
+                    ≈ {(Number(f.speedLimit) * 125000 / 1024 / 1024).toFixed(1)} MB/s
                   </p>
                 )}
               </div>
@@ -768,6 +825,27 @@ export function NodeInboundsModal({
 
             {/* Section: Notes */}
             <SectionCard title="Notes" description="Operator notes for documentation (not shown to users).">
+              {/* Quick-add tags */}
+              <div className="flex flex-wrap gap-1.5">
+                {["CDN", "Direct", "Backup", "Primary", "Test", "Iran", "Europe", "Cloudflare"].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setF(s => ({
+                      ...s,
+                      notes: s.notes ? (s.notes.includes(tag) ? s.notes : `${s.notes} [${tag}]`) : `[${tag}]`,
+                    }))}
+                    className={cn(
+                      "px-2 py-0.5 rounded text-[10px] font-medium border transition-all",
+                      f.notes?.includes(tag)
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border/40 text-fg-subtle hover:text-fg hover:border-border"
+                    )}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
               <textarea
                 className="w-full rounded-lg border border-border/50 bg-surface/30 px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none resize-y min-h-[60px]"
                 placeholder="e.g. CDN behind Cloudflare, Direct connection for Hysteria2..."
