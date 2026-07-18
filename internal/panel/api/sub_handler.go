@@ -75,6 +75,10 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		h.Geo.RecordUserIP(c.Request().Context(), res.User.ID, c.RealIP())
 	}
 
+	// Cache subscription output for 60s to reduce DB pressure on rapid client polls.
+	c.Response().Header().Set("Cache-Control", "private, max-age=60")
+	c.Response().Header().Set("X-Subscription-Cached", "false")
+
 	// Standard headers consumed by subscription clients to show quota/expiry and
 	// to label and auto-refresh the profile.
 	c.Response().Header().Set("Subscription-Userinfo", userInfoHeader(res.User))

@@ -120,6 +120,10 @@ func NewRouter(d Deps) *echo.Echo {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestID())
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Level:     5,
+		MinLength: 1024, // only compress responses larger than 1 KB
+	}))
 	e.Use(middleware.Logger())
 	if d.IPGuard != nil {
 		e.Use(d.IPGuard.Middleware())
