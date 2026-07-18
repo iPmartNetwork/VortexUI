@@ -527,12 +527,12 @@ export function NodeInboundsModal({
               🌐 CDN-Ready (VLESS+WS+TLS)
             </button>
             <button type="button" onClick={() => setF({
-              ...newBlank(), tag: "vless-reality", protocol: "vless", network: "tcp", security: "reality",
+              ...newBlank(), tag: "vless-reality", protocol: "vless", network: "tcp", security: "reality", flow: "xtls-rprx-vision",
             })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-purple-500/30 text-purple-400 bg-purple-500/5 hover:bg-purple-500/10 transition-all">
               🔮 Direct REALITY
             </button>
             <button type="button" onClick={() => setF({
-              ...newBlank(), tag: "hysteria2", protocol: "hysteria2", network: "", security: "tls",
+              ...newBlank(), tag: "hysteria2", protocol: "hysteria2", network: "", security: "tls", core: "singbox" as CoreType | "",
             })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-cyan-500/30 text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 transition-all">
               ⚡ Hysteria2 (UDP)
             </button>
@@ -545,6 +545,11 @@ export function NodeInboundsModal({
               ...newBlank(), tag: "vmess-grpc-tls", protocol: "vmess", network: "grpc", security: "tls", path: "vmessgrpc",
             })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-blue-500/30 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10 transition-all">
               📡 VMess+gRPC+TLS
+            </button>
+            <button type="button" onClick={() => setF({
+              ...newBlank(), tag: "tuic-udp", protocol: "tuic", network: "", security: "tls", core: "singbox" as CoreType | "",
+            })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-pink-500/30 text-pink-400 bg-pink-500/5 hover:bg-pink-500/10 transition-all">
+              🎯 TUIC (UDP)
             </button>
           </div>
         )}
