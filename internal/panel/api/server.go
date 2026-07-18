@@ -233,6 +233,9 @@ func NewRouter(d Deps) *echo.Echo {
 	// consumed by the UI to filter inbound-form options to the node's core.
 	authed.GET("/capabilities", d.Handlers.GetCapabilities, RequirePermission(d.Auth, domain.PermInboundRead))
 
+	// AI auto-config: rule-based recommendation engine for optimal proxy settings.
+	authed.GET("/auto-config", d.Handlers.GetAutoConfig, RequirePermission(d.Auth, domain.PermInboundRead))
+
 	inbounds := authed.Group("/inbounds")
 	inbounds.GET("", d.Handlers.ListInbounds, RequirePermission(d.Auth, domain.PermInboundRead))
 	inbounds.GET("/check-port", d.Handlers.CheckInboundPort, RequirePermission(d.Auth, domain.PermInboundRead))
