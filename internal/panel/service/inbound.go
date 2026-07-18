@@ -165,7 +165,7 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 	if err != nil {
 		return nil, errors.New("node not found")
 	}
-	if err := validateInboundCore(node, in.Core, in.Protocol, orStr(in.Network, "tcp"), orSec(in.Security, domain.SecurityNone)); err != nil {
+	if err := validateInboundCore(node, in.Core, in.Protocol, networkDefault(in.Protocol, in.Network), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
 	inbound := &domain.Inbound{
@@ -177,7 +177,7 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 		Listen:     in.Listen,
 		Port:       in.Port,
 		PortEnd:    in.PortEnd,
-		Network:    orStr(in.Network, "tcp"),
+		Network:    networkDefault(in.Protocol, in.Network),
 		Security:   orSec(in.Security, domain.SecurityNone),
 		SNI:        in.SNI,
 		Path:       in.Path,
@@ -241,13 +241,13 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	if err != nil {
 		return nil, errors.New("node not found")
 	}
-	if err := validateInboundCore(node, effectiveInboundCore(existing, in.Core), existing.Protocol, orStr(in.Network, "tcp"), orSec(in.Security, domain.SecurityNone)); err != nil {
+	if err := validateInboundCore(node, effectiveInboundCore(existing, in.Core), existing.Protocol, networkDefault(existing.Protocol, in.Network), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
 	existing.Listen = in.Listen
 	existing.Port = in.Port
 	existing.PortEnd = in.PortEnd
-	existing.Network = orStr(in.Network, "tcp")
+	existing.Network = networkDefault(existing.Protocol, in.Network)
 	existing.Security = orSec(in.Security, domain.SecurityNone)
 	existing.SNI = in.SNI
 	existing.Path = in.Path
@@ -429,6 +429,21 @@ func syncRealitySNI(in *domain.Inbound) {
 	rm["server_names"] = names
 	rm["dest"] = in.SNI[0] + ":443"
 	in.Raw["reality"] = rm
+}
+
+// networkDefault returns the appropriate default network for a protocol.
+// UDP-native protocols (hysteria2, tuic, wireguard, hysteria) default to empty
+// (their transport is intrinsic), while TCP-based protocols default to "tcp".
+func networkDefault(proto domain.Protocol, network string) string {
+	if network != "" {
+		return network
+	}
+	switch proto {
+	case domain.ProtoHysteria2, domain.ProtoTUIC, domain.ProtoWireGuard, domain.ProtoHysteria:
+		return "" // UDP-native — no network layer
+	default:
+		return "tcp"
+	}
 }
 
 func orStr(v, def string) string {
