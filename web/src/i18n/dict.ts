@@ -1187,6 +1187,26 @@ const en = {
   "errors.tooManyRequests": "Too many requests. Please wait a moment and try again.",
   "settings.saveFailed": "We could not save your changes. Please try again.",
 
+  /* v1.3.9 inbound enhancements i18n */
+  "inbounds.speedLimit": "Speed Limit",
+  "inbounds.speedLimitHint": "Download speed limit in Mbps (0 = unlimited)",
+  "inbounds.notes": "Notes",
+  "inbounds.notesHint": "Operator notes (not shown to users)",
+  "inbounds.portRange": "Port Range",
+  "inbounds.portRangeHint": "End port for multi-port protocols",
+  "inbounds.listen": "Listen Address",
+  "inbounds.listenHint": "IP to bind (0.0.0.0 = all interfaces)",
+  "inbounds.clone": "Clone",
+  "inbounds.bulkEnable": "Enable All",
+  "inbounds.bulkDisable": "Disable All",
+  "inbounds.bulkDelete": "Delete All",
+  "inbounds.health.healthy": "Healthy",
+  "inbounds.health.degraded": "Degraded",
+  "inbounds.health.down": "Down",
+  "inbounds.portAvailable": "Available",
+  "inbounds.portConflict": "Port used by",
+  "inbounds.randomPort": "Random Port",
+
 } as const;
 
 const fa: Record<string, string> = {
@@ -2347,6 +2367,26 @@ const fa: Record<string, string> = {
   "errors.tooManyRequests": "درخواست زیاد است. کمی صبر کنید و دوباره تلاش کنید.",
   "settings.saveFailed": "ذخیره تغییرات ممکن نشد. دوباره تلاش کنید.",
 
+  /* v1.3.9 inbound enhancements i18n */
+  "inbounds.speedLimit": "محدودیت سرعت",
+  "inbounds.speedLimitHint": "محدودیت سرعت دانلود (مگابیت بر ثانیه، ۰ = نامحدود)",
+  "inbounds.notes": "یادداشت",
+  "inbounds.notesHint": "یادداشت مدیر (به کاربران نمایش داده نمی‌شود)",
+  "inbounds.portRange": "محدوده پورت",
+  "inbounds.portRangeHint": "پورت پایانی برای پروتکل‌های چند پورتی",
+  "inbounds.listen": "آدرس شنود",
+  "inbounds.listenHint": "آی‌پی اتصال (0.0.0.0 = همه)",
+  "inbounds.clone": "کپی",
+  "inbounds.bulkEnable": "فعال کردن همه",
+  "inbounds.bulkDisable": "غیرفعال کردن همه",
+  "inbounds.bulkDelete": "حذف همه",
+  "inbounds.health.healthy": "سالم",
+  "inbounds.health.degraded": "ضعیف",
+  "inbounds.health.down": "خاموش",
+  "inbounds.portAvailable": "آزاد",
+  "inbounds.portConflict": "پورت استفاده شده توسط",
+  "inbounds.randomPort": "پورت تصادفی",
+
 };
 
 const tr: Record<string, string> = {
@@ -3479,6 +3519,26 @@ const tr: Record<string, string> = {
   "errors.conflict": "Bu değişiklik mevcut bir öğeyle çakışıyor.",
   "errors.tooManyRequests": "Çok fazla istek. Lütfen biraz bekleyip tekrar deneyin.",
   "settings.saveFailed": "Değişiklikler kaydedilemedi. Lütfen tekrar deneyin.",
+
+  /* v1.3.9 inbound enhancements i18n */
+  "inbounds.speedLimit": "Speed Limit",
+  "inbounds.speedLimitHint": "Download speed limit in Mbps (0 = unlimited)",
+  "inbounds.notes": "Notes",
+  "inbounds.notesHint": "Operator notes (not shown to users)",
+  "inbounds.portRange": "Port Range",
+  "inbounds.portRangeHint": "End port for multi-port protocols",
+  "inbounds.listen": "Listen Address",
+  "inbounds.listenHint": "IP to bind (0.0.0.0 = all interfaces)",
+  "inbounds.clone": "Clone",
+  "inbounds.bulkEnable": "Enable All",
+  "inbounds.bulkDisable": "Disable All",
+  "inbounds.bulkDelete": "Delete All",
+  "inbounds.health.healthy": "Healthy",
+  "inbounds.health.degraded": "Degraded",
+  "inbounds.health.down": "Down",
+  "inbounds.portAvailable": "Available",
+  "inbounds.portConflict": "Port used by",
+  "inbounds.randomPort": "Random Port",
 
 };
 
@@ -4613,6 +4673,26 @@ const ar: Record<string, string> = {
   "errors.tooManyRequests": "طلبات كثيرة جداً. يرجى الانتظار والمحاولة مرة أخرى.",
   "settings.saveFailed": "تعذر حفظ التغييرات. يرجى المحاولة مرة أخرى.",
 
+  /* v1.3.9 inbound enhancements i18n */
+  "inbounds.speedLimit": "Speed Limit",
+  "inbounds.speedLimitHint": "Download speed limit in Mbps (0 = unlimited)",
+  "inbounds.notes": "Notes",
+  "inbounds.notesHint": "Operator notes (not shown to users)",
+  "inbounds.portRange": "Port Range",
+  "inbounds.portRangeHint": "End port for multi-port protocols",
+  "inbounds.listen": "Listen Address",
+  "inbounds.listenHint": "IP to bind (0.0.0.0 = all interfaces)",
+  "inbounds.clone": "Clone",
+  "inbounds.bulkEnable": "Enable All",
+  "inbounds.bulkDisable": "Disable All",
+  "inbounds.bulkDelete": "Delete All",
+  "inbounds.health.healthy": "Healthy",
+  "inbounds.health.degraded": "Degraded",
+  "inbounds.health.down": "Down",
+  "inbounds.portAvailable": "Available",
+  "inbounds.portConflict": "Port used by",
+  "inbounds.randomPort": "Random Port",
+
 };
 
 const ru: Record<string, string> = {
@@ -5745,6 +5825,26 @@ const ru: Record<string, string> = {
   "errors.conflict": "Изменение конфликтует с существующей записью.",
   "errors.tooManyRequests": "Слишком много запросов. Подождите и повторите.",
   "settings.saveFailed": "Не удалось сохранить изменения. Повторите попытку.",
+
+  /* v1.3.9 inbound enhancements i18n */
+  "inbounds.speedLimit": "Speed Limit",
+  "inbounds.speedLimitHint": "Download speed limit in Mbps (0 = unlimited)",
+  "inbounds.notes": "Notes",
+  "inbounds.notesHint": "Operator notes (not shown to users)",
+  "inbounds.portRange": "Port Range",
+  "inbounds.portRangeHint": "End port for multi-port protocols",
+  "inbounds.listen": "Listen Address",
+  "inbounds.listenHint": "IP to bind (0.0.0.0 = all interfaces)",
+  "inbounds.clone": "Clone",
+  "inbounds.bulkEnable": "Enable All",
+  "inbounds.bulkDisable": "Disable All",
+  "inbounds.bulkDelete": "Delete All",
+  "inbounds.health.healthy": "Healthy",
+  "inbounds.health.degraded": "Degraded",
+  "inbounds.health.down": "Down",
+  "inbounds.portAvailable": "Available",
+  "inbounds.portConflict": "Port used by",
+  "inbounds.randomPort": "Random Port",
 
 };
 
@@ -6879,6 +6979,26 @@ const zh: Record<string, string> = {
   "errors.tooManyRequests": "请求过多，请稍后再试。",
   "settings.saveFailed": "无法保存更改，请重试。",
 
+  /* v1.3.9 inbound enhancements i18n */
+  "inbounds.speedLimit": "Speed Limit",
+  "inbounds.speedLimitHint": "Download speed limit in Mbps (0 = unlimited)",
+  "inbounds.notes": "Notes",
+  "inbounds.notesHint": "Operator notes (not shown to users)",
+  "inbounds.portRange": "Port Range",
+  "inbounds.portRangeHint": "End port for multi-port protocols",
+  "inbounds.listen": "Listen Address",
+  "inbounds.listenHint": "IP to bind (0.0.0.0 = all interfaces)",
+  "inbounds.clone": "Clone",
+  "inbounds.bulkEnable": "Enable All",
+  "inbounds.bulkDisable": "Disable All",
+  "inbounds.bulkDelete": "Delete All",
+  "inbounds.health.healthy": "Healthy",
+  "inbounds.health.degraded": "Degraded",
+  "inbounds.health.down": "Down",
+  "inbounds.portAvailable": "Available",
+  "inbounds.portConflict": "Port used by",
+  "inbounds.randomPort": "Random Port",
+
 };
 
 const ja: Record<string, string> = {
@@ -8012,6 +8132,26 @@ const ja: Record<string, string> = {
   "errors.tooManyRequests": "リクエストが多すぎます。しばらく待ってから再試行してください。",
   "settings.saveFailed": "変更を保存できませんでした。もう一度お試しください。",
 
+  /* v1.3.9 inbound enhancements i18n */
+  "inbounds.speedLimit": "Speed Limit",
+  "inbounds.speedLimitHint": "Download speed limit in Mbps (0 = unlimited)",
+  "inbounds.notes": "Notes",
+  "inbounds.notesHint": "Operator notes (not shown to users)",
+  "inbounds.portRange": "Port Range",
+  "inbounds.portRangeHint": "End port for multi-port protocols",
+  "inbounds.listen": "Listen Address",
+  "inbounds.listenHint": "IP to bind (0.0.0.0 = all interfaces)",
+  "inbounds.clone": "Clone",
+  "inbounds.bulkEnable": "Enable All",
+  "inbounds.bulkDisable": "Disable All",
+  "inbounds.bulkDelete": "Delete All",
+  "inbounds.health.healthy": "Healthy",
+  "inbounds.health.degraded": "Degraded",
+  "inbounds.health.down": "Down",
+  "inbounds.portAvailable": "Available",
+  "inbounds.portConflict": "Port used by",
+  "inbounds.randomPort": "Random Port",
+
 };
 
 const es: Record<string, string> = {
@@ -9144,6 +9284,26 @@ const es: Record<string, string> = {
   "errors.conflict": "Este cambio entra en conflicto con un elemento existente.",
   "errors.tooManyRequests": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
   "settings.saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+
+  /* v1.3.9 inbound enhancements i18n */
+  "inbounds.speedLimit": "Speed Limit",
+  "inbounds.speedLimitHint": "Download speed limit in Mbps (0 = unlimited)",
+  "inbounds.notes": "Notes",
+  "inbounds.notesHint": "Operator notes (not shown to users)",
+  "inbounds.portRange": "Port Range",
+  "inbounds.portRangeHint": "End port for multi-port protocols",
+  "inbounds.listen": "Listen Address",
+  "inbounds.listenHint": "IP to bind (0.0.0.0 = all interfaces)",
+  "inbounds.clone": "Clone",
+  "inbounds.bulkEnable": "Enable All",
+  "inbounds.bulkDisable": "Disable All",
+  "inbounds.bulkDelete": "Delete All",
+  "inbounds.health.healthy": "Healthy",
+  "inbounds.health.degraded": "Degraded",
+  "inbounds.health.down": "Down",
+  "inbounds.portAvailable": "Available",
+  "inbounds.portConflict": "Port used by",
+  "inbounds.randomPort": "Random Port",
 
 };
 

@@ -518,6 +518,37 @@ export function NodeInboundsModal({
           )}
         </div>
 
+        {/* Presets */}
+        {!editing && tab === "basics" && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button type="button" onClick={() => setF({
+              ...newBlank(), tag: "vless-ws-tls", protocol: "vless", network: "ws", security: "tls", path: "/ws",
+            })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-all">
+              🌐 CDN-Ready (VLESS+WS+TLS)
+            </button>
+            <button type="button" onClick={() => setF({
+              ...newBlank(), tag: "vless-reality", protocol: "vless", network: "tcp", security: "reality",
+            })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-purple-500/30 text-purple-400 bg-purple-500/5 hover:bg-purple-500/10 transition-all">
+              🔮 Direct REALITY
+            </button>
+            <button type="button" onClick={() => setF({
+              ...newBlank(), tag: "hysteria2", protocol: "hysteria2", network: "", security: "tls",
+            })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-cyan-500/30 text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 transition-all">
+              ⚡ Hysteria2 (UDP)
+            </button>
+            <button type="button" onClick={() => setF({
+              ...newBlank(), tag: "trojan-ws-tls", protocol: "trojan", network: "ws", security: "tls", path: "/trojan",
+            })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-green-500/30 text-green-400 bg-green-500/5 hover:bg-green-500/10 transition-all">
+              🛡 Trojan+WS+TLS
+            </button>
+            <button type="button" onClick={() => setF({
+              ...newBlank(), tag: "vmess-grpc-tls", protocol: "vmess", network: "grpc", security: "tls", path: "vmessgrpc",
+            })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-blue-500/30 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10 transition-all">
+              📡 VMess+gRPC+TLS
+            </button>
+          </div>
+        )}
+
         {tab === "json" ? (
           <div className="space-y-3">
             <div className="rounded-xl bg-amber-500/5 border border-amber-500/20 px-3.5 py-2.5">
