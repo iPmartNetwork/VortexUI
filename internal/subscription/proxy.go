@@ -39,6 +39,10 @@ type Proxy struct {
 	ShortID     string
 	Fingerprint string // uTLS fingerprint, e.g. "chrome"
 
+	// ECH enables Encrypted Client Hello when the host supports it.
+	// When true, sing-box clients will attempt ECH negotiation.
+	ECH bool
+
 	// Optional Marzban-style host overrides projected from a SubHost. They are
 	// additive: a zero-value Proxy (empty ALPN, Mux=false, empty Fragment)
 	// renders byte-identically to before these fields existed, so inbounds with
@@ -46,4 +50,8 @@ type Proxy struct {
 	ALPN     []string // negotiated ALPN protocols, e.g. ["h2","http/1.1"]
 	Mux      bool     // enable client-side stream multiplexing (smux/multiplex)
 	Fragment string   // TLS-hello fragment setting "length,interval,packet"
+
+	// Padding carries the random TLS padding size range (e.g. "100-200"). When
+	// non-empty, renderers emit client-side padding to defeat length-based DPI.
+	Padding string
 }

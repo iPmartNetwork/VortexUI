@@ -305,6 +305,12 @@ func applyTLSProfile(p *subscription.Proxy, profile *domain.TLSTrickProfile) {
 		}
 		p.Fragment = size + "," + interval + "," + packets
 	}
+	if profile.PaddingEnabled && profile.PaddingSize != "" {
+		p.Padding = profile.PaddingSize
+	}
+	if profile.ECHEnabled {
+		p.ECH = true
+	}
 }
 
 // buildProxyWithHost overlays a SubHost onto the inbound's base Proxy, producing
@@ -363,6 +369,47 @@ func splitCSV(s string) []string {
 		}
 	}
 	return out
+}
+
+// ApplyISPHint applies ISP-specific anti-DPI settings to all proxies that don't
+// already carry a fragment override (i.e. no per-inbound evasion profile applied).
+// isp is the raw query-param value (e.g. "mci", "irancell", "shatel").
+func ApplyISPHint(proxies []subscription.Proxy, isp string) {
+	if isp == "" {
+		return
+	}
+	// Map short aliases to canonical ISPPreset values.
+	preset := mapISPAlias(isp)
+	profile := domain.ISPPresetDefaults(preset)
+	if !profile.Enabled {
+		return
+	}
+	for i := range proxies {
+		// Only apply ISP preset when the proxy doesn't already have fragment/mux
+		// from a per-inbound evasion profile.
+		if proxies[i].Fragment == "" && profile.FragmentEnabled {
+			applyTLSProfile(&proxies[i], &profile)
+		}
+	}
+}
+
+// mapISPAlias normalizes common short ISP names (used as query params) into the
+// canonical domain.ISPPreset constant.
+func mapISPAlias(s string) domain.ISPPreset {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "mci", "hamrah_aval", "hamrahaval":
+		return domain.ISPHamrahAval
+	case "irancell", "mtn":
+		return domain.ISPIrancell
+	case "mokhaberat", "tci", "mci_fixed":
+		return domain.ISPMokhaberat
+	case "shatel":
+		return domain.ISPShatel
+	case "asiatech":
+		return domain.ISPAsiatech
+	default:
+		return domain.ISPPreset(s)
+	}
 }
 
 // hostOf extracts the host from a "host:port" node address, tolerating a bare host.

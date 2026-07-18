@@ -736,3 +736,59 @@ func TestRenderSingboxEmbedsPackRules(t *testing.T) {
 		t.Errorf("block outbound missing; reject rule would dangle:\n%s", body)
 	}
 }
+
+// --- ECH (Encrypted Client Hello) support ---
+
+func echProxy() Proxy {
+	return Proxy{
+		Name: "ech1", Protocol: domain.ProtoVLESS, Host: "1.2.3.4", Port: 443,
+		Network: "tcp", Security: "tls", SNI: "ex.com",
+		UUID: "66666666-6666-6666-6666-666666666666",
+		ECH:  true,
+	}
+}
+
+func TestECHSingboxRendersECHBlock(t *testing.T) {
+	body, err := Render(FormatSingbox, []Proxy{echProxy()}, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Outbounds []map[string]any `json:"outbounds"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("invalid json: %v\n%s", err, body)
+	}
+	var vless map[string]any
+	for _, o := range parsed.Outbounds {
+		if o["type"] == "vless" {
+			vless = o
+		}
+	}
+	if vless == nil {
+		t.Fatal("vless outbound missing")
+	}
+	tls, _ := vless["tls"].(map[string]any)
+	if tls == nil {
+		t.Fatal("tls block missing")
+	}
+	ech, _ := tls["ech"].(map[string]any)
+	if ech == nil {
+		t.Fatal("ech block missing in tls")
+	}
+	if ech["enabled"] != true {
+		t.Errorf("ech.enabled = %v, want true", ech["enabled"])
+	}
+}
+
+func TestECHFalseDoesNotRenderECHBlock(t *testing.T) {
+	p := echProxy()
+	p.ECH = false
+	body, err := Render(FormatSingbox, []Proxy{p}, "P")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), `"ech"`) {
+		t.Errorf("ECH=false should not emit ech block:\n%s", body)
+	}
+}

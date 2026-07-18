@@ -38,7 +38,7 @@ import (
 
 // version is the panel build version. It defaults to the contents of the VERSION
 // file and is overridden at build time via -ldflags "-X main.version=...".
-var version = "1.3.7"
+var version = "1.3.8"
 
 func main() {
 	logBuf := logbuf.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}), 2000)

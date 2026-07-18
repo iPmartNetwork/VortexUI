@@ -54,6 +54,29 @@ func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule) ([
 	all = append(all, direct)
 
 	cfg := map[string]any{"outbounds": all}
+
+	// DNS-over-HTTPS: when no routing rules are provided (simple subscription),
+	// inject a DoH DNS section so clients don't leak DNS queries to ISP resolvers.
+	if len(rules) == 0 {
+		cfg["dns"] = map[string]any{
+			"servers": []map[string]any{
+				{
+					"tag":     "dns-remote",
+					"address": "https://1.1.1.1/dns-query",
+					"detour":  title,
+				},
+				{
+					"tag":     "dns-direct",
+					"address": "https://8.8.8.8/dns-query",
+					"detour":  "direct",
+				},
+			},
+			"rules": []map[string]any{
+				{"outbound": []string{"any"}, "server": "dns-remote"},
+			},
+		}
+	}
+
 	if len(rules) > 0 {
 		routeRules := singboxRules(rules, title)
 		if singboxNeedsBlock(rules) {
@@ -106,6 +129,16 @@ func singboxOutbound(p Proxy) map[string]any {
 					"sleep":   parts[1],
 				}
 			}
+		}
+		// ECH (Encrypted Client Hello) for hiding SNI from DPI.
+		if p.ECH {
+			tls["ech"] = map[string]any{
+				"enabled": true,
+			}
+		}
+		// Random padding to defeat length-based DPI fingerprinting.
+		if p.Padding != "" {
+			tls["padding_size"] = p.Padding
 		}
 		o["tls"] = tls
 	}
@@ -164,6 +197,16 @@ func singboxTransport(p Proxy) map[string]any {
 		}
 		return t
 	case "http", "h2":
+		t := map[string]any{"type": "http"}
+		if p.Path != "" {
+			t["path"] = p.Path
+		}
+		if p.HostHeader != "" {
+			t["host"] = []string{p.HostHeader}
+		}
+		return t
+	case "xhttp":
+		// XHTTP/SplitHTTP: sing-box expresses this as http transport.
 		t := map[string]any{"type": "http"}
 		if p.Path != "" {
 			t["path"] = p.Path

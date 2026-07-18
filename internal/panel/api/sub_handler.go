@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/vortexui/vortexui/internal/domain"
+	"github.com/vortexui/vortexui/internal/panel/service"
 	"github.com/vortexui/vortexui/internal/subscription"
 )
 
@@ -50,6 +51,12 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 	// safe (no token-existence oracle, unlike the 404 path above).
 	if err := h.enforceDevice(c, res.User); err != nil {
 		return err
+	}
+
+	// ISP hint: when the client (or frontend) passes ?isp=mci, auto-apply the
+	// ISP-specific TLS tricks profile to proxies that lack a per-inbound profile.
+	if ispHint := c.QueryParam("isp"); ispHint != "" {
+		service.ApplyISPHint(res.Proxies, ispHint)
 	}
 
 	format := subscription.Detect(c.Request().UserAgent())

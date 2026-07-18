@@ -171,5 +171,17 @@ func applyNetwork(base map[string]any, p Proxy) {
 			opts["host"] = []string{p.HostHeader}
 		}
 		base["h2-opts"] = opts
+	case "xhttp":
+		// XHTTP/SplitHTTP: Clash Meta expresses this as an h2 transport with
+		// custom path. Some mihomo forks support xhttp natively.
+		base["network"] = "h2"
+		opts := map[string]any{}
+		if p.Path != "" {
+			opts["path"] = p.Path
+		}
+		if p.HostHeader != "" {
+			opts["host"] = []string{p.HostHeader}
+		}
+		base["h2-opts"] = opts
 	}
 }
