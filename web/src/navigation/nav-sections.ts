@@ -104,6 +104,7 @@ export function buildNavSections(sudo: boolean): NavSection[] {
         { to: "/ip-limit", key: "nav.ipLimit", icon: Ban },
         { to: "/fingerprint", key: "nav.fingerprint", icon: FingerprintIcon },
         { to: "/doh", key: "nav.doh", icon: Wifi },
+        { to: "/connection-quality", key: "nav.connectionQuality", icon: Activity },
       ],
     },
     {

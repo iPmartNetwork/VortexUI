@@ -37,6 +37,7 @@ const LazyDeepLinks = lazy(() => import("@/pages/DeepLinks").then((m) => ({ defa
 const LazyQuotaNotifications = lazy(() => import("@/pages/QuotaNotifications").then((m) => ({ default: m.QuotaNotifications })));
 const LazyIPLimit = lazy(() => import("@/pages/IPLimit").then((m) => ({ default: m.IPLimit })));
 const LazyResellerPaymentSettings = lazy(() => import("@/pages/ResellerPaymentSettings").then((m) => ({ default: m.ResellerPaymentSettings })));
+const LazyConnectionQuality = lazy(() => import("@/pages/ConnectionQuality").then((m) => ({ default: m.ConnectionQuality })));
 // PHASE 3 Components
 const LazyPerformance = lazy(() => import("@/pages/Performance").then((m) => ({ default: m.Performance })));
 const LazySecurityHardening = lazy(() => import("@/pages/SecurityHardening").then((m) => ({ default: m.SecurityHardening })));
@@ -103,6 +104,7 @@ export function App() {
         <Route path="/migration" element={<LazyRoute component={LazyMigration} />} />
         <Route path="/probing-protection" element={<Navigate to="/evasion?tab=decoy" replace />} />
         <Route path="/ip-limit" element={<LazyRoute component={LazyIPLimit} />} />
+        <Route path="/connection-quality" element={<LazyRoute component={LazyConnectionQuality} />} />
         <Route path="/family-groups" element={<LazyRoute component={LazyFamilyGroups} />} />
         <Route path="/referrals" element={<LazyRoute component={LazyReferrals} />} />
         <Route path="/doh" element={<LazyRoute component={LazyDoHSettings} />} />

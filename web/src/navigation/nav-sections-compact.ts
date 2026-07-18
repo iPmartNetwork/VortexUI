@@ -12,6 +12,7 @@ import {
   Package,
   LifeBuoy,
   Settings as SettingsIcon,
+  Activity,
 } from "lucide-react";
 import type { NavSection } from "./nav-sections";
 
@@ -33,11 +34,18 @@ export function buildCompactNavSections(sudo: boolean): NavSection[] {
       items: [
         { to: "/inbounds", key: "nav.inboundsSubhosts", icon: Globe },
         { to: "/routing", key: "nav.smartRoutingBalancers", icon: RouteIcon },
+      ],
+    },
+    {
+      label: "nav.section.security",
+      id: "security",
+      items: [
         { to: "/evasion", key: "nav.securityAntiDpi", icon: ShieldCheck, hotDot: true },
         { to: "/ip-limit", key: "nav.ipLimit", icon: ShieldAlert },
         { to: "/fingerprint", key: "nav.fingerprint", icon: Fingerprint },
         { to: "/doh", key: "nav.doh", icon: Network },
         { to: "/sni-manager", key: "nav.sniManager", icon: Lock },
+        { to: "/connection-quality", key: "nav.connectionQuality", icon: Activity },
       ],
     },
     {
