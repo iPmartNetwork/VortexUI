@@ -103,7 +103,7 @@ function InboundListItem({
   return (
     <div className="group flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-surface/50 px-4 py-3 text-sm hover:bg-surface-2/40 hover:border-border/80 transition-all">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        {/* Protocol dot */}
+        {/* Protocol icon */}
         <div className={cn(
           "h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 border text-[10px] font-bold",
           ib.enabled
@@ -112,35 +112,31 @@ function InboundListItem({
         )}>
           {ib.protocol.slice(0, 2).toUpperCase()}
         </div>
-        {/* Info */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={cn(
-              "font-semibold text-sm truncate max-w-[400px]",
-              ib.enabled ? "text-fg" : "text-fg-muted",
-            )}>
-              {ib.tag}
-            </span>
-            <span className={cn(
-              "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
-              ib.enabled ? "border-border/60 bg-surface-2/70 text-fg-muted" : "border-border/30 bg-surface-2/40 text-fg-subtle opacity-50",
-            )}>{ib.protocol}</span>
-            {nodeMulti && (
-              <CoreBadge core={resolveInboundCore(node, ib.core)} className="scale-75" />
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs font-mono text-fg-subtle">:{ib.port}</span>
-            <span className="text-[10px] text-fg-subtle px-1.5 py-0.5 rounded bg-surface-2/50 border border-border/30">
-              {inboundTransportLabel(ib, udpNative, noTransport)}
-            </span>
-            <span className={cn(
-              "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded",
-              ib.enabled ? "text-success bg-success/10" : "text-fg-subtle bg-surface-2/50"
-            )}>
-              {ib.enabled ? "ON" : "OFF"}
-            </span>
-          </div>
+        {/* Info — single line */}
+        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+          <span className={cn(
+            "font-semibold text-sm truncate max-w-[300px]",
+            ib.enabled ? "text-fg" : "text-fg-muted",
+          )}>
+            {ib.tag}
+          </span>
+          <span className={cn(
+            "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
+            ib.enabled ? "border-border/60 bg-surface-2/70 text-fg-muted" : "border-border/30 bg-surface-2/40 text-fg-subtle opacity-50",
+          )}>{ib.protocol}</span>
+          <span className="text-xs font-mono text-fg-subtle">:{ib.port}</span>
+          <span className="text-[10px] text-fg-subtle px-1.5 py-0.5 rounded bg-surface-2/50 border border-border/30">
+            {inboundTransportLabel(ib, udpNative, noTransport)}
+          </span>
+          <span className={cn(
+            "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded",
+            ib.enabled ? "text-success bg-success/10" : "text-fg-subtle bg-surface-2/50"
+          )}>
+            {ib.enabled ? "ON" : "OFF"}
+          </span>
+          {nodeMulti && (
+            <CoreBadge core={resolveInboundCore(node, ib.core)} className="scale-75" />
+          )}
         </div>
       </div>
       {/* Actions */}
