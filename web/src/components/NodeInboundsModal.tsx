@@ -62,7 +62,7 @@ function inboundTransportLabel(
 
 const randomPort = () => String(10000 + Math.floor(Math.random() * 50000));
 
-const newBlank = () => ({ editId: "", tag: "", core: "" as CoreType | "", protocol: "vless", port: randomPort(), portEnd: "", network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "", wgPrivateKey: "", wgSubnet: "", wgMtu: "", listen: "", speedLimit: "", notes: "" });
+const newBlank = () => ({ editId: "", tag: "", core: "" as CoreType | "", protocol: "vless", port: randomPort(), portEnd: "", network: "tcp", security: "tls", sni: "", path: "", host: "", flow: "", geoAllow: "", wgPrivateKey: "", wgSubnet: "", wgMtu: "", listen: "", speedLimit: "", notes: "", hy2Obfs: "", hy2Up: "", hy2Down: "" });
 const blank = newBlank();
 
 const DEFAULT_INBOUND_TEMPLATE = {
@@ -263,6 +263,7 @@ export function NodeInboundsModal({
     setEditSnapshot(ib);
     setRealityKeys(null);
     const wg = (ib.raw?.wireguard ?? {}) as Record<string, unknown>;
+    const hy2 = (ib.raw?.hysteria2 ?? {}) as Record<string, unknown>;
     setF({
       editId: ib.id, tag: ib.tag, core: (ib.core ?? "") as CoreType | "",
       protocol: ib.protocol, port: String(ib.port),
@@ -278,6 +279,9 @@ export function NodeInboundsModal({
       speedLimit: ib.speed_limit ? String(ib.speed_limit / 125000) : "",
       portEnd: ib.port_end ? String(ib.port_end) : "",
       notes: ib.notes || "",
+      hy2Obfs: typeof hy2.obfs === "string" ? hy2.obfs : (typeof (hy2.obfs as any)?.password === "string" ? (hy2.obfs as any).password : ""),
+      hy2Up: typeof hy2.up_mbps === "number" ? String(hy2.up_mbps) : "",
+      hy2Down: typeof hy2.down_mbps === "number" ? String(hy2.down_mbps) : "",
     });
     setTab("basics");
   }
@@ -346,6 +350,13 @@ export function NodeInboundsModal({
       if (f.wgSubnet.trim()) wg.subnet = f.wgSubnet.trim();
       if (f.wgMtu.trim()) wg.mtu = Number(f.wgMtu);
       if (Object.keys(wg).length > 0) raw = { ...(raw ?? {}), wireguard: wg };
+    }
+    if (f.protocol === "hysteria2") {
+      const hy2: Record<string, unknown> = {};
+      if (f.hy2Obfs.trim()) hy2.obfs = f.hy2Obfs.trim();
+      if (f.hy2Up.trim()) hy2.up_mbps = Number(f.hy2Up);
+      if (f.hy2Down.trim()) hy2.down_mbps = Number(f.hy2Down);
+      if (Object.keys(hy2).length > 0) raw = { ...(raw ?? {}), hysteria2: hy2 };
     }
     const network = isNoTransport ? "" : f.network;
     const corePayload = f.core || undefined;
@@ -741,6 +752,36 @@ export function NodeInboundsModal({
                 </div>
                 <p className="text-[10px] text-fg-subtle bg-surface-2/40 rounded-lg px-2.5 py-1.5 border border-border/20">
                   Listens on port specified above. Peers are derived from users linked to this node.
+                </p>
+              </SectionCard>
+            )}
+
+            {/* Section: Hysteria2 */}
+            {f.protocol === "hysteria2" && (
+              <SectionCard title="Hysteria2 Settings" description="Obfuscation, bandwidth hints, and masquerade.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel label="Obfs Password" hint="Salamander obfuscation password. Leave empty to disable obfs." />
+                    <Input placeholder="e.g. myobfspassword (optional)" value={f.hy2Obfs} onChange={set("hy2Obfs")} />
+                  </div>
+                  <div>
+                    <FieldLabel label="SNI" hint="TLS Server Name (required for Hysteria2)." />
+                    <Input placeholder="e.g. example.com" value={f.sni} onChange={set("sni")} dir="ltr" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel label="Bandwidth Up (Mbps)" hint="Client upload bandwidth hint for congestion control." />
+                    <Input placeholder="e.g. 50 (0 = auto)" value={f.hy2Up} onChange={set("hy2Up")} inputMode="numeric" />
+                  </div>
+                  <div>
+                    <FieldLabel label="Bandwidth Down (Mbps)" hint="Client download bandwidth hint for congestion control." />
+                    <Input placeholder="e.g. 100 (0 = auto)" value={f.hy2Down} onChange={set("hy2Down")} inputMode="numeric" />
+                  </div>
+                </div>
+                <p className="text-[10px] text-fg-subtle leading-relaxed bg-surface-2/40 rounded-lg px-2.5 py-1.5 border border-border/20">
+                  Hysteria2 uses QUIC (UDP). TLS is mandatory — a certificate will be auto-generated if none provided.
+                  Bandwidth hints help the congestion controller adapt to your network capacity.
                 </p>
               </SectionCard>
             )}

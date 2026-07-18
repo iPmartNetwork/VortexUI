@@ -260,6 +260,20 @@ func buildProxy(u *domain.User, in domain.Inbound, host, name string) subscripti
 		p.SSMethod = u.Proxies.SSMethod
 	case domain.ProtoHysteria2:
 		p.Password = u.Proxies.TrojanPass
+		// Extract hysteria2-specific settings from inbound Raw.
+		if h2, ok := in.Raw["hysteria2"].(map[string]any); ok {
+			if obfs := hysteria2ObfsFromRaw(h2["obfs"]); obfs != "" {
+				p.Hy2Obfs = obfs
+			}
+			if up, ok := rawIntVal(h2["up_mbps"]); ok {
+				p.Hy2Up = up
+			}
+			if down, ok := rawIntVal(h2["down_mbps"]); ok {
+				p.Hy2Down = down
+			}
+		}
+		// Hysteria2 with self-signed cert needs insecure
+		p.AllowInsecure = true
 	case domain.ProtoTUIC:
 		p.UUID = u.Proxies.VLESSUUID.String()
 		p.Password = u.Proxies.TrojanPass
@@ -425,4 +439,34 @@ func first(ss []string) string {
 		return ss[0]
 	}
 	return ""
+}
+
+// hysteria2ObfsFromRaw extracts the obfuscation password from the raw inbound
+// config. The "obfs" field may be either a plain string password or a map with
+// a nested "password" key (depending on how the admin configured it).
+func hysteria2ObfsFromRaw(v any) string {
+	switch o := v.(type) {
+	case string:
+		return o
+	case map[string]any:
+		s, _ := o["password"].(string)
+		return s
+	default:
+		return ""
+	}
+}
+
+// rawIntVal coerces a JSON-decoded numeric value (which may arrive as int,
+// float64, or int64 depending on the decoder) into a plain int.
+func rawIntVal(v any) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case float64:
+		return int(n), true
+	case int64:
+		return int(n), true
+	default:
+		return 0, false
+	}
 }

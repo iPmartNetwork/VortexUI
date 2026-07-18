@@ -169,6 +169,24 @@ func singboxOutbound(p Proxy) map[string]any {
 		o["type"] = "shadowsocks"
 		o["method"] = p.SSMethod
 		o["password"] = p.Password
+	case domain.ProtoHysteria2:
+		o["type"] = "hysteria2"
+		o["password"] = p.Password
+		// Hysteria2-specific fields from Hy2Opts
+		if p.Hy2Obfs != "" {
+			o["obfs"] = map[string]any{"type": "salamander", "password": p.Hy2Obfs}
+		}
+		if p.Hy2Up > 0 {
+			o["up_mbps"] = p.Hy2Up
+		}
+		if p.Hy2Down > 0 {
+			o["down_mbps"] = p.Hy2Down
+		}
+	case domain.ProtoTUIC:
+		o["type"] = "tuic"
+		o["uuid"] = p.UUID
+		o["password"] = p.Password
+		o["congestion_control"] = "bbr"
 	default:
 		return nil
 	}

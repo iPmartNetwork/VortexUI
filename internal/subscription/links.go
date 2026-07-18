@@ -34,7 +34,7 @@ func ShareLink(p Proxy) string {
 	}
 }
 
-// hysteria2Link: hysteria2://password@host:port?sni=&insecure=1#name
+// hysteria2Link: hysteria2://password@host:port?sni=&obfs=salamander&obfs-password=&up=&down=&insecure=1#name
 func hysteria2Link(p Proxy) string {
 	q := url.Values{}
 	if p.SNI != "" {
@@ -42,6 +42,16 @@ func hysteria2Link(p Proxy) string {
 	}
 	if p.AllowInsecure {
 		q.Set("insecure", "1")
+	}
+	if p.Hy2Obfs != "" {
+		q.Set("obfs", "salamander")
+		q.Set("obfs-password", p.Hy2Obfs)
+	}
+	if p.Hy2Up > 0 {
+		q.Set("up", strconv.Itoa(p.Hy2Up))
+	}
+	if p.Hy2Down > 0 {
+		q.Set("down", strconv.Itoa(p.Hy2Down))
 	}
 	u := url.URL{Scheme: "hysteria2", User: url.User(p.Password), Host: hostPort(p.Host, p.Port), RawQuery: q.Encode(), Fragment: p.Name}
 	return u.String()

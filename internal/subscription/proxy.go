@@ -43,6 +43,11 @@ type Proxy struct {
 	// When true, sing-box clients will attempt ECH negotiation.
 	ECH bool
 
+	// Hysteria2-specific options sourced from the inbound's Raw["hysteria2"] block.
+	Hy2Obfs string // Salamander obfuscation password
+	Hy2Up   int    // upstream bandwidth hint (Mbps)
+	Hy2Down int    // downstream bandwidth hint (Mbps)
+
 	// Optional Marzban-style host overrides projected from a SubHost. They are
 	// additive: a zero-value Proxy (empty ALPN, Mux=false, empty Fragment)
 	// renders byte-identically to before these fields existed, so inbounds with
