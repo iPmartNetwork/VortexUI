@@ -100,6 +100,7 @@ func singboxOutbound(p Proxy) map[string]any {
 	}
 	o["dial_timeout"] = "5s"
 	o["tcp_fast_open"] = true
+	o["domain_strategy"] = "prefer_ipv4"
 	if p.Security == "tls" || p.Security == "reality" {
 		tls := map[string]any{"enabled": true}
 		if p.SNI != "" {
@@ -214,6 +215,9 @@ func singboxTransport(p Proxy) map[string]any {
 		if p.HostHeader != "" {
 			t["host"] = []string{p.HostHeader}
 		}
+		return t
+	case "quic":
+		t := map[string]any{"type": "quic"}
 		return t
 	default:
 		return nil

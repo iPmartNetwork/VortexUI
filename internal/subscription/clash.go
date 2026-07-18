@@ -183,5 +183,8 @@ func applyNetwork(base map[string]any, p Proxy) {
 			opts["host"] = []string{p.HostHeader}
 		}
 		base["h2-opts"] = opts
+	case "quic":
+		base["network"] = "quic"
+		base["quic-opts"] = map[string]any{"security": "none", "header": map[string]any{"type": "none"}}
 	}
 }
