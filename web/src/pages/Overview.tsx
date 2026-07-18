@@ -184,6 +184,15 @@ export function Overview() {
                   {allHealthy ? "optimally" : "in partial mode"} across{" "}
                   {totalNodes > 0 ? `${totalNodes} node${totalNodes !== 1 ? "s" : ""}` : "all nodes"}.
                   {" "}Uptime {fmtUptime(s.uptime_seconds)} · {totalConnections} live connections.
+                  {peakBucket > 0 && (
+                    <span className="inline-flex items-center gap-1.5 ms-2 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-bold">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                      </span>
+                      {formatBytes(peakBucket, false)}/min
+                    </span>
+                  )}
                 </>
               )}
             </p>
@@ -291,6 +300,26 @@ export function Overview() {
               : t("overview.acrossAccounts")
           }
         />
+      </div>
+
+      {/* ── System Health Indicators ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-surface/40 px-3 py-2.5">
+          <div className={cn("h-2.5 w-2.5 rounded-full", allHealthy ? "bg-success animate-pulse" : "bg-amber-500")} />
+          <span className="text-[11px] font-semibold text-fg-muted">Nodes: {onlineCount}/{totalNodes}</span>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-surface/40 px-3 py-2.5">
+          <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
+          <span className="text-[11px] font-semibold text-fg-muted">Connections: {totalConnections}</span>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-surface/40 px-3 py-2.5">
+          <div className={cn("h-2.5 w-2.5 rounded-full", xrayRunning ? "bg-success" : "bg-danger")} />
+          <span className="text-[11px] font-semibold text-fg-muted">Xray: {xrayRunning ? "Running" : "Stopped"}</span>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-surface/40 px-3 py-2.5">
+          <div className={cn("h-2.5 w-2.5 rounded-full", singboxRunning ? "bg-success" : "bg-danger")} />
+          <span className="text-[11px] font-semibold text-fg-muted">sing-box: {singboxRunning ? "Running" : "Stopped"}</span>
+        </div>
       </div>
 
       {/* ── Traffic chart + Protocol donut ── */}

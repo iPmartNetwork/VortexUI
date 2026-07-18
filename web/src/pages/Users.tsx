@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  User as UserIcon,
   Search,
   Plus,
   Clock,
@@ -259,8 +258,8 @@ export function Users() {
                     >
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3 min-w-[160px]">
-                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                            <UserIcon size={16} />
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/30 to-accent/20 flex items-center justify-center text-[11px] font-bold text-primary flex-shrink-0">
+                            {u.username.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <button
