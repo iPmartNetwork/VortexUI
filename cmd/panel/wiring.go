@@ -88,10 +88,21 @@ func ensureLocalNode(ctx context.Context, nodes port.NodeRepository, cfg *config
 			for i, c := range cfg.EnabledCores {
 				enabled[i] = domain.CoreType(c)
 			}
-			if n.Address != cfg.LocalNodeHost || n.Core != core || !slicesEqualCore(n.EnabledCores, enabled) {
+			needsUpdate := n.Address != cfg.LocalNodeHost || n.Core != core
+			// Only override enabled_cores when env explicitly sets multiple cores.
+			// This preserves UI-configured dual-core after restart when
+			// VORTEX_ENABLED_CORES is unset (defaults to single core).
+			if len(cfg.EnabledCores) > 1 && !slicesEqualCore(n.EnabledCores, enabled) {
+				n.EnabledCores = enabled
+				needsUpdate = true
+			} else if len(n.EnabledCores) == 0 {
+				// First-time migration: DB has no enabled_cores yet.
+				n.EnabledCores = enabled
+				needsUpdate = true
+			}
+			if needsUpdate {
 				n.Address = cfg.LocalNodeHost
 				n.Core = core
-				n.EnabledCores = enabled
 				if err := nodes.Update(ctx, n); err != nil {
 					return nil, err
 				}

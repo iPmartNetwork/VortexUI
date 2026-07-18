@@ -182,6 +182,17 @@ func singboxOutbound(p Proxy) map[string]any {
 		if p.Hy2Down > 0 {
 			o["down_mbps"] = p.Hy2Down
 		}
+		// Hysteria2 is TLS-mandatory. Force a TLS block even if Security field
+		// was not explicitly set to "tls" (e.g. older records or edge cases).
+		if _, hasTLS := o["tls"]; !hasTLS {
+			tls := map[string]any{"enabled": true, "insecure": true}
+			if p.SNI != "" {
+				tls["server_name"] = p.SNI
+			} else if p.Host != "" {
+				tls["server_name"] = p.Host
+			}
+			o["tls"] = tls
+		}
 	case domain.ProtoTUIC:
 		o["type"] = "tuic"
 		o["uuid"] = p.UUID

@@ -274,6 +274,11 @@ func buildProxy(u *domain.User, in domain.Inbound, host, name string) subscripti
 		}
 		// Hysteria2 with self-signed cert needs insecure
 		p.AllowInsecure = true
+		// Hysteria2 requires SNI for TLS handshake. Default to host when not
+		// explicitly set so clients always have a server_name for the TLS block.
+		if p.SNI == "" {
+			p.SNI = host
+		}
 	case domain.ProtoTUIC:
 		p.UUID = u.Proxies.VLESSUUID.String()
 		p.Password = u.Proxies.TrojanPass
