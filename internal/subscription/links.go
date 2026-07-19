@@ -34,9 +34,12 @@ func ShareLink(p Proxy) string {
 	}
 }
 
-// hysteria2Link: hysteria2://password@host:port?sni=&obfs=salamander&obfs-password=&up=&down=&insecure=1#name
+// hysteria2Link: hysteria2://password@host:port?security=tls&alpn=h3&sni=&obfs=salamander&obfs-password=&up=&down=&insecure=1#name
 func hysteria2Link(p Proxy) string {
 	q := url.Values{}
+	// Hysteria2 mandatory parameters (QUIC requires HTTP/3 + TLS)
+	q.Set("security", "tls")
+	q.Set("alpn", "h3")
 	if p.SNI != "" {
 		q.Set("sni", p.SNI)
 	}
