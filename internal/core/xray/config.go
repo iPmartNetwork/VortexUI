@@ -713,7 +713,9 @@ func hysteria2CertFiles(in domain.Inbound) (certPath, keyPath string) {
 	}
 
 	dir := "/etc/vortex/certs"
-	os.MkdirAll(dir, 0755)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", ""
+	}
 
 	// Sanitize tag for filename
 	safeTag := strings.ReplaceAll(in.Tag, "/", "_")
@@ -722,8 +724,12 @@ func hysteria2CertFiles(in domain.Inbound) (certPath, keyPath string) {
 	certPath = filepath.Join(dir, "hy2-"+safeTag+".crt")
 	keyPath = filepath.Join(dir, "hy2-"+safeTag+".key")
 
-	os.WriteFile(certPath, []byte(certPEM), 0600)
-	os.WriteFile(keyPath, []byte(keyPEM), 0600)
+	if err := os.WriteFile(certPath, []byte(certPEM), 0600); err != nil {
+		return "", ""
+	}
+	if err := os.WriteFile(keyPath, []byte(keyPEM), 0600); err != nil {
+		return "", ""
+	}
 
 	return certPath, keyPath
 }
