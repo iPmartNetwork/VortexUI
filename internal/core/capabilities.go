@@ -54,14 +54,15 @@ type Capability struct {
 // the renderer supports must appear here (no dead branches, no save-then-reject).
 var capabilities = map[domain.CoreType]Capability{
 	domain.CoreXray: {
-		Protocols:  []domain.Protocol{domain.ProtoVMess, domain.ProtoVLESS, domain.ProtoTrojan, domain.ProtoShadowsocks, domain.ProtoSocks, domain.ProtoHTTP, domain.ProtoDokodemo},
+		Protocols:  []domain.Protocol{domain.ProtoVMess, domain.ProtoVLESS, domain.ProtoTrojan, domain.ProtoShadowsocks, domain.ProtoSocks, domain.ProtoHTTP, domain.ProtoDokodemo, domain.ProtoHysteria2},
 		Transports: []string{"tcp", "ws", "grpc", "httpupgrade", "http", "h2", "xhttp", "kcp"},
 		Securities: []domain.Security{domain.SecurityNone, domain.SecurityTLS, domain.SecurityReality},
-		UDPNative:  nil,
+		UDPNative:  []domain.Protocol{domain.ProtoHysteria2},
 		Constraints: map[domain.Protocol]ProtocolConstraint{
-			domain.ProtoSocks:    {NoTransport: true, Securities: []domain.Security{domain.SecurityNone}},
-			domain.ProtoHTTP:     {NoTransport: true, Securities: []domain.Security{domain.SecurityNone}},
-			domain.ProtoDokodemo: {NoTransport: true, Securities: []domain.Security{domain.SecurityNone}},
+			domain.ProtoSocks:     {NoTransport: true, Securities: []domain.Security{domain.SecurityNone}},
+			domain.ProtoHTTP:      {NoTransport: true, Securities: []domain.Security{domain.SecurityNone}},
+			domain.ProtoDokodemo:  {NoTransport: true, Securities: []domain.Security{domain.SecurityNone}},
+			domain.ProtoHysteria2: {Securities: []domain.Security{domain.SecurityTLS}},
 		},
 	},
 	domain.CoreSingbox: {

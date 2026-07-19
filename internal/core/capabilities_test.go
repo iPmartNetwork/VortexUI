@@ -94,8 +94,8 @@ func TestIsUDPNative(t *testing.T) {
 	if IsUDPNative(domain.CoreSingbox, domain.ProtoVLESS) {
 		t.Fatal("singbox vless should not be UDP-native")
 	}
-	if IsUDPNative(domain.CoreXray, domain.ProtoHysteria2) {
-		t.Fatal("xray has no UDP-native protocols")
+	if !IsUDPNative(domain.CoreXray, domain.ProtoHysteria2) {
+		t.Fatal("xray hysteria2 should be UDP-native")
 	}
 }
 
@@ -115,7 +115,8 @@ func TestSkipsTransport(t *testing.T) {
 		{domain.CoreSingbox, domain.ProtoVLESS, false},
 		{domain.CoreXray, domain.ProtoSocks, true},
 		{domain.CoreXray, domain.ProtoHTTP, true},
-		{domain.CoreXray, domain.ProtoDokodemo, true}, // NoTransport
+		{domain.CoreXray, domain.ProtoDokodemo, true},  // NoTransport
+		{domain.CoreXray, domain.ProtoHysteria2, true}, // UDP-native
 		{domain.CoreXray, domain.ProtoVLESS, false},
 	}
 	for _, tc := range cases {

@@ -55,7 +55,6 @@ func TestCoreSupportsRejectsOffMatrixCombos(t *testing.T) {
 		wantErr  bool
 	}{
 		// --- Rejected: protocol not on the core ---
-		{"xray hysteria2 not a protocol", domain.CoreXray, domain.ProtoHysteria2, "tcp", domain.SecurityTLS, true},
 		{"xray tuic not a protocol", domain.CoreXray, domain.ProtoTUIC, "tcp", domain.SecurityTLS, true},
 		{"xray wireguard not a protocol", domain.CoreXray, domain.ProtoWireGuard, "tcp", domain.SecurityNone, true},
 		{"xray shadowtls not a protocol", domain.CoreXray, domain.ProtoShadowTLS, "tcp", domain.SecurityNone, true},
@@ -70,6 +69,7 @@ func TestCoreSupportsRejectsOffMatrixCombos(t *testing.T) {
 		// --- Valid: present in the matrix ---
 		{"xray vless xhttp none ok", domain.CoreXray, domain.ProtoVLESS, "xhttp", domain.SecurityNone, false},
 		{"xray vmess ws tls ok", domain.CoreXray, domain.ProtoVMess, "ws", domain.SecurityTLS, false},
+		{"xray hysteria2 tls ok", domain.CoreXray, domain.ProtoHysteria2, "", domain.SecurityTLS, false},
 		{"singbox vless quic reality ok", domain.CoreSingbox, domain.ProtoVLESS, "quic", domain.SecurityReality, false},
 		{"singbox hysteria2 udp tls ok", domain.CoreSingbox, domain.ProtoHysteria2, "udp", domain.SecurityTLS, false},
 		{"singbox anytls tcp tls ok", domain.CoreSingbox, domain.ProtoAnyTLS, "tcp", domain.SecurityTLS, false},

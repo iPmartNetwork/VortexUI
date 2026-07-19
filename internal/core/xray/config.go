@@ -322,10 +322,14 @@ func buildObservatory(balancers []domain.Balancer) *observatoryConf {
 
 // xrayProtocolName maps a domain.Protocol to the protocol name xray expects in
 // the inbound "protocol" field. Almost all protocols use their value verbatim;
-// dokodemo is the exception — its xray wire name is "dokodemo-door".
+// dokodemo is the exception — its xray wire name is "dokodemo-door", and
+// hysteria2 maps to "hysteria" (xray uses version:2 in settings to distinguish).
 func xrayProtocolName(p domain.Protocol) string {
 	if p == domain.ProtoDokodemo {
 		return "dokodemo-door"
+	}
+	if p == domain.ProtoHysteria2 {
+		return "hysteria"
 	}
 	return string(p)
 }
@@ -351,8 +355,9 @@ func (b Builder) buildInbound(in domain.Inbound, users []*domain.User) (inbound,
 	}
 	// Protocols that carry no stream transport (socks/http utility proxies) get
 	// no streamSettings block at all — their only allowed security is none, so a
-	// plain proxy with no transport layer is correct.
-	if !core.SkipsTransport(domain.CoreXray, in.Protocol) {
+	// plain proxy with no transport layer is correct. Hysteria2 is UDP-native but
+	// needs a custom streamSettings block on Xray, so it is explicitly included.
+	if !core.SkipsTransport(domain.CoreXray, in.Protocol) || in.Protocol == domain.ProtoHysteria2 {
 		st, err := streamSettings(in)
 		if err != nil {
 			return inbound{}, fmt.Errorf("inbound %s stream settings: %w", in.Tag, err)
@@ -451,6 +456,22 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 			settings["accounts"] = accounts
 		}
 		raw, err := tryRaw(settings)
+		if err != nil {
+			return nil, err
+		}
+		return raw, nil
+
+	case domain.ProtoHysteria2:
+		// Xray uses protocol "hysteria" with version:2 for Hysteria2.
+		// Clients use password-based auth (reuses trojan password).
+		clients := make([]map[string]any, 0, len(users))
+		for _, u := range users {
+			clients = append(clients, map[string]any{
+				"password": u.Proxies.TrojanPass,
+				"email":    u.ID.String(),
+			})
+		}
+		raw, err := tryRaw(map[string]any{"version": 2, "clients": clients})
 		if err != nil {
 			return nil, err
 		}
@@ -600,11 +621,63 @@ func effectiveFlow(in domain.Inbound) string {
 	return in.Flow
 }
 
+// hysteria2StreamSettings renders the Xray-specific stream settings for Hysteria2.
+// Xray uses network:"hysteria", security:"tls" with ALPN h3, and obfs in "finalmask".
+func hysteria2StreamSettings(in domain.Inbound) (json.RawMessage, error) {
+	ss := map[string]any{
+		"network":  "hysteria",
+		"security": "tls",
+	}
+
+	// TLS settings with h3 ALPN (mandatory for QUIC/HTTP3).
+	tls := map[string]any{
+		"alpn": []string{"h3"},
+	}
+	if len(in.SNI) > 0 && in.SNI[0] != "" {
+		tls["serverName"] = in.SNI[0]
+	}
+	// Certificate — use the same auto-generated cert from provisionSecurity.
+	if cert := tlsCertificate(in.Raw["tls"]); cert != nil {
+		tls["certificates"] = []any{cert}
+	}
+	ss["tlsSettings"] = tls
+
+	// Hysteria settings.
+	ss["hysteriaSettings"] = map[string]any{
+		"version":        2,
+		"udpIdleTimeout": 60,
+	}
+
+	// Obfs (Salamander) — stored in Raw["hysteria2"]["obfs"].
+	if h2, ok := in.Raw["hysteria2"].(map[string]any); ok {
+		obfsPw := ""
+		switch o := h2["obfs"].(type) {
+		case string:
+			obfsPw = o
+		case map[string]any:
+			obfsPw, _ = o["password"].(string)
+		}
+		if obfsPw != "" {
+			ss["finalmask"] = map[string]any{
+				"udp": []map[string]any{
+					{"type": "salamander", "settings": map[string]any{"password": obfsPw}},
+				},
+			}
+		}
+	}
+
+	return tryRaw(ss)
+}
+
 // streamSettings renders transport + security. Operators can override the whole
 // block via Inbound.Raw["streamSettings"] for fields the abstraction omits.
 func streamSettings(in domain.Inbound) (json.RawMessage, error) {
 	if raw, ok := in.Raw["streamSettings"]; ok {
 		return tryRaw(raw)
+	}
+	// Hysteria2 uses a completely custom streamSettings format on Xray.
+	if in.Protocol == domain.ProtoHysteria2 {
+		return hysteria2StreamSettings(in)
 	}
 	ss := map[string]any{
 		"network":  orDefault(in.Network, "tcp"),

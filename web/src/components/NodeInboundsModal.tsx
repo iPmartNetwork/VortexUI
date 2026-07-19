@@ -246,7 +246,7 @@ export function NodeInboundsModal({
   const securitiesFor = (proto: string) => cap?.protocol_securities?.[proto] ?? securities;
   const editing = f.editId !== "";
 
-  const SINGBOX_ONLY_PROTOCOLS = ["hysteria2", "tuic", "hysteria", "wireguard", "shadowtls", "anytls", "naive"];
+  const SINGBOX_ONLY_PROTOCOLS = ["tuic", "hysteria", "wireguard", "shadowtls", "anytls", "naive"];
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((s) => {
@@ -549,7 +549,7 @@ export function NodeInboundsModal({
               🔮 Direct REALITY
             </button>
             <button type="button" onClick={() => setF({
-              ...newBlank(), tag: "hysteria2", protocol: "hysteria2", network: "", security: "tls", core: "singbox" as CoreType | "",
+              ...newBlank(), tag: "hysteria2", protocol: "hysteria2", network: "", security: "tls",
             })} className="px-3 py-1.5 rounded-lg text-[11px] font-medium border border-cyan-500/30 text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 transition-all">
               ⚡ Hysteria2 (UDP)
             </button>

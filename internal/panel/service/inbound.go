@@ -157,7 +157,7 @@ type CreateInboundInput struct {
 // needsSingbox reports whether the protocol requires the sing-box engine.
 func needsSingbox(proto domain.Protocol) bool {
 	switch proto {
-	case domain.ProtoHysteria2, domain.ProtoTUIC, domain.ProtoHysteria,
+	case domain.ProtoTUIC, domain.ProtoHysteria,
 		domain.ProtoWireGuard, domain.ProtoShadowTLS, domain.ProtoAnyTLS, domain.ProtoNaive:
 		return true
 	default:

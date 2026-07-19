@@ -106,10 +106,14 @@ func TestBuilder_MatrixRendersEveryAcceptedCombo(t *testing.T) {
 						t.Fatalf("Build returned error for %s: %v", name, err)
 					}
 					// dokodemo renders under its xray WIRE name "dokodemo-door";
+					// hysteria2 renders as "hysteria" (xray uses version:2 in settings);
 					// every other protocol renders under its value verbatim.
 					want := string(proto)
 					if proto == domain.ProtoDokodemo {
 						want = "dokodemo-door"
+					}
+					if proto == domain.ProtoHysteria2 {
+						want = "hysteria"
 					}
 					assertSingleInbound(t, raw, in.Tag, want)
 				})
