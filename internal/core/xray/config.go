@@ -623,6 +623,13 @@ func effectiveFlow(in domain.Inbound) string {
 
 // hysteria2StreamSettings renders the Xray-specific stream settings for Hysteria2.
 // Xray uses network:"hysteria", security:"tls" with ALPN h3, and obfs in "finalmask".
+//
+// Certificate handling: Xray's QUIC/Hysteria2 stack works best with FILE-BASED
+// certificates (certificateFile/keyFile) rather than inline PEM arrays. When the
+// operator provides cert_file/key_file paths in Raw["tls"], those are used
+// directly. Otherwise, certificates are omitted entirely — Xray auto-generates a
+// temporary self-signed cert for QUIC connections, which matches 3x-UI's default
+// Hysteria2 behaviour.
 func hysteria2StreamSettings(in domain.Inbound) (json.RawMessage, error) {
 	ss := map[string]any{
 		"network":  "hysteria",
@@ -636,9 +643,20 @@ func hysteria2StreamSettings(in domain.Inbound) (json.RawMessage, error) {
 	if len(in.SNI) > 0 && in.SNI[0] != "" {
 		tls["serverName"] = in.SNI[0]
 	}
-	// Certificate — use the same auto-generated cert from provisionSecurity.
-	if cert := tlsCertificate(in.Raw["tls"]); cert != nil {
-		tls["certificates"] = []any{cert}
+
+	// Certificate handling: prefer file paths for QUIC compatibility.
+	// Inline PEM arrays can cause issues with Xray's QUIC TLS stack.
+	// Only include cert when file paths are explicitly provided; otherwise let
+	// Xray auto-generate a self-signed cert internally for the QUIC listener.
+	if t, ok := in.Raw["tls"].(map[string]any); ok {
+		certFile, _ := t["cert_file"].(string)
+		keyFile, _ := t["key_file"].(string)
+		if certFile != "" && keyFile != "" {
+			tls["certificates"] = []any{map[string]any{
+				"certificateFile": certFile,
+				"keyFile":         keyFile,
+			}}
+		}
 	}
 	ss["tlsSettings"] = tls
 
@@ -854,6 +872,10 @@ func tlsCertificate(v any) map[string]any {
 // TLS without a certificate) would crash the whole engine, so the builder skips
 // it instead — the rest of the config still loads. A full streamSettings
 // override is trusted as-is.
+//
+// Exception: Hysteria2 inbounds are always usable with SecurityTLS because Xray's
+// QUIC stack auto-generates a self-signed cert when none is provided. This matches
+// 3x-UI's default Hysteria2 behaviour (no certificates block → Xray handles it).
 func inboundUsable(in domain.Inbound) bool {
 	if _, ok := in.Raw["streamSettings"]; ok {
 		return true
@@ -862,6 +884,11 @@ func inboundUsable(in domain.Inbound) bool {
 	case domain.SecurityReality:
 		return reality.ParseParams(in.Raw["reality"]).PrivateKey != ""
 	case domain.SecurityTLS:
+		// Hysteria2: Xray auto-generates a self-signed cert for QUIC when no
+		// certificate material is provided, so inline certs are not required.
+		if in.Protocol == domain.ProtoHysteria2 {
+			return true
+		}
 		return tlsCertificate(in.Raw["tls"]) != nil
 	default:
 		return true
