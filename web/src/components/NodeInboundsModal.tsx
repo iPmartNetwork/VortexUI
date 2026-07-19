@@ -246,17 +246,21 @@ export function NodeInboundsModal({
   const securitiesFor = (proto: string) => cap?.protocol_securities?.[proto] ?? securities;
   const editing = f.editId !== "";
 
+  const SINGBOX_ONLY_PROTOCOLS = ["hysteria2", "tuic", "hysteria", "wireguard", "shadowtls", "anytls", "naive"];
+
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((s) => {
       const val = e.target.value;
       if (k === "protocol") {
         const allowed = securitiesFor(val);
         const security = allowed.includes(s.security) ? s.security : (allowed[0] ?? s.security);
+        // Auto-set core to singbox for sing-box-only protocols
+        const autoCore = SINGBOX_ONLY_PROTOCOLS.includes(val) ? "singbox" as CoreType | "" : s.core;
         if (noTransport.includes(val)) {
-          return { ...s, protocol: val, network: "", security };
+          return { ...s, protocol: val, network: "", security, core: autoCore };
         }
         const network = s.network && networks.includes(s.network) ? s.network : (networks[0] ?? "tcp");
-        return { ...s, protocol: val, network, security };
+        return { ...s, protocol: val, network, security, core: autoCore };
       }
       return { ...s, [k]: val };
     });

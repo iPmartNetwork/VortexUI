@@ -154,6 +154,17 @@ type CreateInboundInput struct {
 	GeoPolicy  *domain.GeoPolicy
 }
 
+// needsSingbox reports whether the protocol requires the sing-box engine.
+func needsSingbox(proto domain.Protocol) bool {
+	switch proto {
+	case domain.ProtoHysteria2, domain.ProtoTUIC, domain.ProtoHysteria,
+		domain.ProtoWireGuard, domain.ProtoShadowTLS, domain.ProtoAnyTLS, domain.ProtoNaive:
+		return true
+	default:
+		return false
+	}
+}
+
 // Create persists an inbound then resyncs its node so the core starts listening.
 // The inbound is returned even if the resync fails (it is durable; a later
 // resync reconciles), with the sync error wrapped as a warning.
@@ -165,6 +176,16 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 	if err != nil {
 		return nil, errors.New("node not found")
 	}
+
+	// Auto-enable sing-box on the node when creating a sing-box-only protocol.
+	if needsSingbox(in.Protocol) && !node.CoreEnabled(domain.CoreSingbox) {
+		node.EnabledCores = append(node.NormalizedEnabledCores(), domain.CoreSingbox)
+		if in.Core == "" {
+			in.Core = domain.CoreSingbox
+		}
+		_ = s.nodes.Update(ctx, node) // best-effort; sync will pick it up
+	}
+
 	if err := validateInboundCore(node, in.Core, in.Protocol, networkDefault(in.Protocol, in.Network), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
