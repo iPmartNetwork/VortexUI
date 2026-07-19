@@ -4,8 +4,12 @@
 package xray
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -463,12 +467,12 @@ func protocolSettings(in domain.Inbound, users []*domain.User) (json.RawMessage,
 
 	case domain.ProtoHysteria2:
 		// Xray uses protocol "hysteria" with version:2 for Hysteria2.
-		// Clients use password-based auth (reuses trojan password).
+		// Clients use "auth" field (not "password") matching 3x-UI format.
 		clients := make([]map[string]any, 0, len(users))
 		for _, u := range users {
 			clients = append(clients, map[string]any{
-				"password": u.Proxies.TrojanPass,
-				"email":    u.ID.String(),
+				"auth":  u.Proxies.TrojanPass,
+				"email": u.ID.String(),
 			})
 		}
 		raw, err := tryRaw(map[string]any{"version": 2, "clients": clients})
@@ -624,12 +628,15 @@ func effectiveFlow(in domain.Inbound) string {
 // hysteria2StreamSettings renders the Xray-specific stream settings for Hysteria2.
 // Xray uses network:"hysteria", security:"tls" with ALPN h3, and obfs in "finalmask".
 //
-// Certificate handling: Xray's QUIC/Hysteria2 stack works best with FILE-BASED
-// certificates (certificateFile/keyFile) rather than inline PEM arrays. When the
-// operator provides cert_file/key_file paths in Raw["tls"], those are used
-// directly. Otherwise, certificates are omitted entirely — Xray auto-generates a
-// temporary self-signed cert for QUIC connections, which matches 3x-UI's default
-// Hysteria2 behaviour.
+// Certificate handling: Xray's QUIC/Hysteria2 stack requires FILE-BASED
+// certificates (certificateFile/keyFile). When the operator provides cert_file/key_file
+// paths in Raw["tls"], those are used directly. When inline PEM is provided
+// (certificate/key), it is written to /etc/vortex/certs/ and referenced by path.
+// This matches the 3x-UI format exactly.
+//
+// Obfs (Salamander): ALWAYS active. If no explicit obfs password is set, a
+// deterministic password is generated from the inbound tag+ID (matching 3x-UI's
+// default behaviour where obfs is always on).
 func hysteria2StreamSettings(in domain.Inbound) (json.RawMessage, error) {
 	ss := map[string]any{
 		"network":  "hysteria",
@@ -644,19 +651,18 @@ func hysteria2StreamSettings(in domain.Inbound) (json.RawMessage, error) {
 		tls["serverName"] = in.SNI[0]
 	}
 
-	// Certificate handling: prefer file paths for QUIC compatibility.
-	// Inline PEM arrays can cause issues with Xray's QUIC TLS stack.
-	// Only include cert when file paths are explicitly provided; otherwise let
-	// Xray auto-generate a self-signed cert internally for the QUIC listener.
-	if t, ok := in.Raw["tls"].(map[string]any); ok {
-		certFile, _ := t["cert_file"].(string)
-		keyFile, _ := t["key_file"].(string)
-		if certFile != "" && keyFile != "" {
-			tls["certificates"] = []any{map[string]any{
-				"certificateFile": certFile,
-				"keyFile":         keyFile,
-			}}
-		}
+	// Certificate handling: write inline cert to file and reference by path.
+	// Xray's QUIC/Hysteria stack requires file-based certificates.
+	certFile, keyFile := hysteria2CertFiles(in)
+	if certFile != "" && keyFile != "" {
+		tls["certificates"] = []any{map[string]any{
+			"certificateFile": certFile,
+			"keyFile":         keyFile,
+			"ocspStapling":    0,
+			"oneTimeLoading":  false,
+			"usage":           "encipherment",
+			"buildChain":      false,
+		}}
 	}
 	ss["tlsSettings"] = tls
 
@@ -666,25 +672,83 @@ func hysteria2StreamSettings(in domain.Inbound) (json.RawMessage, error) {
 		"udpIdleTimeout": 60,
 	}
 
-	// Obfs (Salamander) — stored in Raw["hysteria2"]["obfs"].
-	if h2, ok := in.Raw["hysteria2"].(map[string]any); ok {
-		obfsPw := ""
-		switch o := h2["obfs"].(type) {
-		case string:
-			obfsPw = o
-		case map[string]any:
-			obfsPw, _ = o["password"].(string)
-		}
-		if obfsPw != "" {
-			ss["finalmask"] = map[string]any{
-				"udp": []map[string]any{
-					{"type": "salamander", "settings": map[string]any{"password": obfsPw}},
-				},
-			}
+	// Obfs (Salamander) — ALWAYS include. If no explicit password, generate one
+	// from the inbound tag (deterministic so it's consistent across resyncs).
+	obfsPw := hysteria2ObfsPassword(in)
+	if obfsPw != "" {
+		ss["finalmask"] = map[string]any{
+			"udp": []map[string]any{
+				{"type": "salamander", "settings": map[string]any{"password": obfsPw}},
+			},
 		}
 	}
 
 	return tryRaw(ss)
+}
+
+// hysteria2CertFiles resolves the certificate file paths for a Hysteria2 inbound.
+// If explicit file paths are provided in Raw["tls"], those are used directly.
+// If inline PEM cert/key are provided, they are written to disk at a predictable
+// path (/etc/vortex/certs/hy2-{tag}.crt/.key) and those paths are returned.
+// Returns empty strings when no certificate material is available.
+func hysteria2CertFiles(in domain.Inbound) (certPath, keyPath string) {
+	t, ok := in.Raw["tls"].(map[string]any)
+	if !ok {
+		return "", ""
+	}
+
+	// Check if file paths are already explicitly set
+	if cf, _ := t["cert_file"].(string); cf != "" {
+		kf, _ := t["key_file"].(string)
+		if kf != "" {
+			return cf, kf
+		}
+	}
+
+	// Write inline PEM to disk for QUIC compatibility
+	certPEM, _ := t["certificate"].(string)
+	keyPEM, _ := t["key"].(string)
+	if certPEM == "" || keyPEM == "" {
+		return "", ""
+	}
+
+	dir := "/etc/vortex/certs"
+	os.MkdirAll(dir, 0755)
+
+	// Sanitize tag for filename
+	safeTag := strings.ReplaceAll(in.Tag, "/", "_")
+	safeTag = strings.ReplaceAll(safeTag, " ", "_")
+
+	certPath = filepath.Join(dir, "hy2-"+safeTag+".crt")
+	keyPath = filepath.Join(dir, "hy2-"+safeTag+".key")
+
+	os.WriteFile(certPath, []byte(certPEM), 0600)
+	os.WriteFile(keyPath, []byte(keyPEM), 0600)
+
+	return certPath, keyPath
+}
+
+// hysteria2ObfsPassword returns the obfs password for the inbound.
+// If explicitly set in Raw["hysteria2"]["obfs"], uses that.
+// Otherwise generates a deterministic password from the inbound tag+ID
+// (so obfs is ALWAYS active, matching 3x-UI default behaviour).
+func hysteria2ObfsPassword(in domain.Inbound) string {
+	if h2, ok := in.Raw["hysteria2"].(map[string]any); ok {
+		switch o := h2["obfs"].(type) {
+		case string:
+			if o != "" {
+				return o
+			}
+		case map[string]any:
+			if pw, _ := o["password"].(string); pw != "" {
+				return pw
+			}
+		}
+	}
+	// Auto-generate deterministic obfs password from tag+ID.
+	// This ensures obfs is ALWAYS active (matches 3x-UI default).
+	h := sha256.Sum256([]byte("hy2obfs:" + in.Tag + ":" + in.ID.String()))
+	return hex.EncodeToString(h[:8]) // 16-char hex password
 }
 
 // streamSettings renders transport + security. Operators can override the whole

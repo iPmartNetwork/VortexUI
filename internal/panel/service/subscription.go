@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net"
 	"sort"
 	"strings"
@@ -271,6 +273,12 @@ func buildProxy(u *domain.User, in domain.Inbound, host, name string) subscripti
 			if down, ok := rawIntVal(h2["down_mbps"]); ok {
 				p.Hy2Down = down
 			}
+		}
+		// Auto-generate obfs if not explicitly set (must match server auto-gen
+		// in xray/config.go hysteria2ObfsPassword).
+		if p.Hy2Obfs == "" {
+			h := sha256.Sum256([]byte("hy2obfs:" + in.Tag + ":" + in.ID.String()))
+			p.Hy2Obfs = hex.EncodeToString(h[:8])
 		}
 		// Hysteria2 with self-signed cert needs insecure
 		p.AllowInsecure = true
