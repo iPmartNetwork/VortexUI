@@ -27,13 +27,15 @@ const defaultStaleAfter = 90 * time.Second
 // inbound's transport and the hosting node's public address, and prunes inbounds
 // on nodes known to be unhealthy so clients aren't handed dead endpoints.
 type SubscriptionService struct {
-	users      port.UserRepository
-	nodes      port.NodeRepository
-	subHosts   port.SubHostRepository
-	tlsTricks  port.TLSTricksRepository
-	packs      PackResolver
-	staleAfter time.Duration
-	now        func() time.Time
+	users          port.UserRepository
+	nodes          port.NodeRepository
+	subHosts       port.SubHostRepository
+	tlsTricks      port.TLSTricksRepository
+	protocolGroups port.ProtocolGroupRepository
+	ispProfiles    port.ISPProfileRepository
+	packs          PackResolver
+	staleAfter     time.Duration
+	now            func() time.Time
 }
 
 // PackResolver resolves the routing pack a subscription should embed. It is the
@@ -65,13 +67,25 @@ func (s *SubscriptionService) SetTLSTricks(repo port.TLSTricksRepository) {
 	s.tlsTricks = repo
 }
 
+// SetProtocolGroups wires the auto-protocol switching repositories so
+// subscription rendering can discover groups and ISP profiles to emit per-group
+// urltest/fallback outbounds. Optional: with nil repos the subscription renders
+// a single flat group as before.
+func (s *SubscriptionService) SetProtocolGroups(groups port.ProtocolGroupRepository, isp port.ISPProfileRepository) {
+	s.protocolGroups = groups
+	s.ispProfiles = isp
+}
+
 // SubResult bundles the resolved proxies with the owning user so the handler can
 // render the body and emit usage headers. Rules carries the selected routing
-// pack's rules (nil when none is selected) for Clash/sing-box embedding.
+// pack's rules (nil when none is selected) for Clash/sing-box embedding. Groups
+// carries the auto-protocol-switching groups for per-group urltest/fallback
+// rendering in Clash/sing-box.
 type SubResult struct {
 	User    *domain.User
 	Proxies []subscription.Proxy
 	Rules   []domain.RoutingRule
+	Groups  []subscription.ProtocolGroupRender
 }
 
 // Build looks up the user by token and assembles a Proxy per enabled inbound.
@@ -142,7 +156,13 @@ func (s *SubscriptionService) buildFor(ctx context.Context, user *domain.User) (
 			proxies = append(proxies, buildProxyWithHost(base, h, vars))
 		}
 	}
-	return &SubResult{User: user, Proxies: proxies, Rules: s.resolveRules(ctx, user.ID)}, nil
+
+	// Auto-protocol switching: discover groups for the user's inbounds and
+	// annotate proxies with their group membership. Build ProtocolGroupRender
+	// slices for Clash/sing-box to emit per-group urltest/fallback outbounds.
+	groups := s.resolveProtocolGroups(ctx, inbounds, proxies)
+
+	return &SubResult{User: user, Proxies: proxies, Rules: s.resolveRules(ctx, user.ID), Groups: groups}, nil
 }
 
 // resolveRules picks the routing rules to embed for a user: the user's selected
@@ -169,6 +189,110 @@ func (s *SubscriptionService) resolveRules(ctx context.Context, userID uuid.UUID
 		return nil
 	}
 	return pack.Rules
+}
+
+// resolveProtocolGroups discovers which ProtocolGroups the user's inbounds belong
+// to, annotates proxies with GroupName, and builds the ProtocolGroupRender slice
+// for renderers. It is fail-open: a nil repo or any error yields nil groups so
+// subscriptions render unchanged.
+func (s *SubscriptionService) resolveProtocolGroups(ctx context.Context, inbounds []domain.Inbound, proxies []subscription.Proxy) []subscription.ProtocolGroupRender {
+	if s.protocolGroups == nil {
+		return nil
+	}
+	// Collect enabled inbound IDs.
+	inboundIDs := make([]uuid.UUID, 0, len(inbounds))
+	for _, in := range inbounds {
+		if in.Enabled {
+			inboundIDs = append(inboundIDs, in.ID)
+		}
+	}
+	if len(inboundIDs) == 0 {
+		return nil
+	}
+
+	domainGroups, err := s.protocolGroups.GroupsForInbounds(ctx, inboundIDs)
+	if err != nil || len(domainGroups) == 0 {
+		return nil
+	}
+
+	// Build a lookup: inbound ID → proxy names (a single inbound can produce
+	// multiple proxies when SubHosts are active).
+	inboundToProxyNames := make(map[uuid.UUID][]string)
+	// Also build inbound ID → index in inbounds slice for protocol lookup.
+	inboundByID := make(map[uuid.UUID]domain.Inbound, len(inbounds))
+	for _, in := range inbounds {
+		inboundByID[in.ID] = in
+	}
+	// Map proxy name back to the inbound that generated it. We rely on the fact
+	// that buildProxy names the proxy after the node name which is stable per
+	// inbound. We'll use inbound tag matching as a fallback. The simplest
+	// approach: iterate proxies and match by inbound order since proxies are
+	// generated in inbound order.
+	idx := 0
+	for _, in := range inbounds {
+		if !in.Enabled {
+			continue
+		}
+		// Count how many proxies this inbound generated (1 or N if SubHosts exist).
+		start := idx
+		for idx < len(proxies) && idx-start < maxProxiesPerInbound(proxies, start, in) {
+			idx++
+		}
+		for i := start; i < idx; i++ {
+			inboundToProxyNames[in.ID] = append(inboundToProxyNames[in.ID], proxies[i].Name)
+		}
+	}
+
+	// Build the render groups.
+	var renderGroups []subscription.ProtocolGroupRender
+	for _, g := range domainGroups {
+		var proxyNames []string
+		// Inbounds in priority order.
+		for _, ibID := range g.InboundIDs {
+			proxyNames = append(proxyNames, inboundToProxyNames[ibID]...)
+		}
+		if len(proxyNames) == 0 {
+			continue
+		}
+		// Annotate proxies with the group name.
+		nameSet := make(map[string]bool, len(proxyNames))
+		for _, n := range proxyNames {
+			nameSet[n] = true
+		}
+		for i := range proxies {
+			if nameSet[proxies[i].Name] && proxies[i].GroupName == "" {
+				proxies[i].GroupName = g.Name
+			}
+		}
+		renderGroups = append(renderGroups, subscription.ProtocolGroupRender{
+			Name:          g.Name,
+			ProbeURL:      g.ProbeURL,
+			ProbeInterval: g.ProbeInterval,
+			ProbeTimeout:  g.ProbeTimeout,
+			MaxRetries:    g.MaxRetries,
+			ProxyNames:    proxyNames,
+		})
+	}
+	return renderGroups
+}
+
+// maxProxiesPerInbound counts how many consecutive proxies starting at 'start'
+// were generated from a single inbound, based on the proxy list structure.
+func maxProxiesPerInbound(proxies []subscription.Proxy, start int, in domain.Inbound) int {
+	// A proxy belongs to this inbound if it shares the same port and protocol.
+	// We stop as soon as we see a different (port, protocol) pair.
+	count := 0
+	for i := start; i < len(proxies); i++ {
+		if proxies[i].Port == in.Port && proxies[i].Protocol == in.Protocol {
+			count++
+		} else {
+			break
+		}
+	}
+	if count == 0 {
+		count = 1 // at least 1 proxy per enabled inbound
+	}
+	return count
 }
 
 // hostsFor batch-loads the enabled SubHosts for the user's enabled inbounds in a

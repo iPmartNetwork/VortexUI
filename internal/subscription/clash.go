@@ -1,6 +1,7 @@
 package subscription
 
 import (
+	"fmt"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -13,7 +14,7 @@ import (
 // empty the rules section is exactly the historical catch-all (`MATCH,<title>`)
 // so output stays byte-identical; when a pack supplies rules they are translated
 // to Clash rule strings followed by a MATCH fallback to the selector group.
-func renderClash(proxies []Proxy, title string, rules []domain.RoutingRule) ([]byte, error) {
+func renderClash(proxies []Proxy, title string, rules []domain.RoutingRule, groups []ProtocolGroupRender) ([]byte, error) {
 	var clashProxies []map[string]any
 	var names []string
 	for _, p := range proxies {
@@ -33,31 +34,69 @@ func renderClash(proxies []Proxy, title string, rules []domain.RoutingRule) ([]b
 		clashRuleStrings = append(clashRules(rules, title), "MATCH,"+title)
 	}
 
-	cfg := map[string]any{
-		"proxies": clashProxies,
-		"proxy-groups": []map[string]any{
-			{
-				"name":    title,
-				"type":    "select",
-				"proxies": append([]string{"♻️ Auto", "♻️ Fallback", "DIRECT"}, names...),
-			},
-			{
-				"name":      "♻️ Auto",
-				"type":      "url-test",
-				"proxies":   names,
-				"url":       "https://www.gstatic.com/generate_204",
-				"interval":  90,
-				"tolerance": 150,
-			},
-			{
-				"name":      "♻️ Fallback",
-				"type":      "fallback",
-				"proxies":   names,
-				"url":       "https://www.gstatic.com/generate_204",
-				"interval":  90,
-			},
+	// Per-group url-test proxy-groups for auto-protocol switching. Each group
+	// gets its own url-test block with probe settings from the ProtocolGroup.
+	var groupProxyGroups []map[string]any
+	var groupNames []string
+	for _, g := range groups {
+		if len(g.ProxyNames) == 0 {
+			continue
+		}
+		interval := 90
+		if g.ProbeInterval > 0 {
+			interval = g.ProbeInterval
+		}
+		probeURL := g.ProbeURL
+		if probeURL == "" {
+			probeURL = "https://www.gstatic.com/generate_204"
+		}
+		groupName := fmt.Sprintf("🔄 %s", g.Name)
+		groupProxyGroups = append(groupProxyGroups, map[string]any{
+			"name":      groupName,
+			"type":      "url-test",
+			"proxies":   g.ProxyNames,
+			"url":       probeURL,
+			"interval":  interval,
+			"tolerance": 150,
+		})
+		groupNames = append(groupNames, groupName)
+	}
+
+	// Build the selector's proxy list: groups first, then global Auto/Fallback,
+	// then DIRECT, then individual proxies.
+	selectorProxies := make([]string, 0, len(groupNames)+3+len(names))
+	selectorProxies = append(selectorProxies, groupNames...)
+	selectorProxies = append(selectorProxies, "♻️ Auto", "♻️ Fallback", "DIRECT")
+	selectorProxies = append(selectorProxies, names...)
+
+	proxyGroups := []map[string]any{
+		{
+			"name":    title,
+			"type":    "select",
+			"proxies": selectorProxies,
 		},
-		"rules": clashRuleStrings,
+		{
+			"name":      "♻️ Auto",
+			"type":      "url-test",
+			"proxies":   names,
+			"url":       "https://www.gstatic.com/generate_204",
+			"interval":  90,
+			"tolerance": 150,
+		},
+		{
+			"name":      "♻️ Fallback",
+			"type":      "fallback",
+			"proxies":   names,
+			"url":       "https://www.gstatic.com/generate_204",
+			"interval":  90,
+		},
+	}
+	proxyGroups = append(proxyGroups, groupProxyGroups...)
+
+	cfg := map[string]any{
+		"proxies":      clashProxies,
+		"proxy-groups": proxyGroups,
+		"rules":        clashRuleStrings,
 	}
 	return yaml.Marshal(cfg)
 }

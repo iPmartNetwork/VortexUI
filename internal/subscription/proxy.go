@@ -59,4 +59,9 @@ type Proxy struct {
 	// Padding carries the random TLS padding size range (e.g. "100-200"). When
 	// non-empty, renderers emit client-side padding to defeat length-based DPI.
 	Padding string
+
+	// GroupName is the ProtocolGroup this proxy belongs to (empty = ungrouped).
+	// Used by renderers to emit per-group urltest/fallback outbounds for
+	// auto-protocol switching.
+	GroupName string
 }

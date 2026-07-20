@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/vortexui/vortexui/internal/domain"
@@ -13,7 +14,7 @@ import (
 // to before; when a pack supplies rules they are translated into route.rules with
 // a route.final pointing at the selector, and a block outbound is appended only
 // if a rule rejects traffic.
-func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule) ([]byte, error) {
+func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule, groups []ProtocolGroupRender) ([]byte, error) {
 	var outbounds []map[string]any
 	var tags []string
 	for _, p := range proxies {
@@ -49,8 +50,50 @@ func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule) ([
 		"interval":  "90s",
 		"tolerance": 0,
 	}
+
+	// Per-group urltest outbounds for auto-protocol switching. Each group gets
+	// its own urltest block with probe settings from the ProtocolGroup definition.
+	// Group tags are prepended to the selector so clients see them as top-level
+	// switching options alongside the global Auto/Fallback.
+	var groupOutbounds []map[string]any
+	var groupTags []string
+	for _, g := range groups {
+		if len(g.ProxyNames) == 0 {
+			continue
+		}
+		interval := "90s"
+		if g.ProbeInterval > 0 {
+			interval = fmt.Sprintf("%ds", g.ProbeInterval)
+		}
+		probeURL := g.ProbeURL
+		if probeURL == "" {
+			probeURL = "https://www.gstatic.com/generate_204"
+		}
+		groupTag := "🔄 " + g.Name
+		groupOutbounds = append(groupOutbounds, map[string]any{
+			"type":      "urltest",
+			"tag":       groupTag,
+			"outbounds": g.ProxyNames,
+			"url":       probeURL,
+			"interval":  interval,
+			"tolerance": 150,
+		})
+		groupTags = append(groupTags, groupTag)
+	}
+
+	// Rebuild selector outbounds: groups first, then global Auto/Fallback, then
+	// individual proxies.
+	if len(groupTags) > 0 {
+		selectorOutbounds := make([]string, 0, len(groupTags)+2+len(tags))
+		selectorOutbounds = append(selectorOutbounds, groupTags...)
+		selectorOutbounds = append(selectorOutbounds, "♻️ Auto", "♻️ Fallback")
+		selectorOutbounds = append(selectorOutbounds, tags...)
+		selector["outbounds"] = selectorOutbounds
+	}
+
 	direct := map[string]any{"type": "direct", "tag": "direct"}
-	all := append([]map[string]any{selector, autoTest, fallback}, outbounds...)
+	all := append([]map[string]any{selector, autoTest, fallback}, groupOutbounds...)
+	all = append(all, outbounds...)
 	all = append(all, direct)
 
 	cfg := map[string]any{"outbounds": all}

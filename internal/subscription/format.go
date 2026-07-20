@@ -50,12 +50,28 @@ func (f Format) ContentType() string {
 	}
 }
 
+// ProtocolGroupRender carries the metadata renderers need to emit a per-group
+// urltest/fallback outbound for auto-protocol switching. It is assembled by the
+// subscription service from domain.ProtocolGroup and passed through RenderOpts.
+type ProtocolGroupRender struct {
+	Name          string // display label for the group (e.g. "DE Auto-Switch")
+	ProbeURL      string // health-check URL
+	ProbeInterval int    // seconds between probes
+	ProbeTimeout  int    // seconds before a probe is considered failed
+	MaxRetries    int    // retries before marking a proxy down
+	// ProxyNames are the Proxy.Name values belonging to this group, in priority
+	// order. Renderers use these to construct the outbound list.
+	ProxyNames []string
+}
+
 // RenderOpts carries optional, non-breaking inputs for rendering. Its zero value
-// (empty Title, nil Rules) reproduces the pre-options output byte-for-byte, so
-// Render can delegate to RenderWith without changing any existing behavior.
+// (empty Title, nil Rules, nil Groups) reproduces the pre-options output
+// byte-for-byte, so Render can delegate to RenderWith without changing any
+// existing behavior.
 type RenderOpts struct {
-	Title string               // profile/selector name; "" defaults per-renderer
-	Rules []domain.RoutingRule // client-side routing rules to embed (Clash/sing-box only)
+	Title  string               // profile/selector name; "" defaults per-renderer
+	Rules  []domain.RoutingRule // client-side routing rules to embed (Clash/sing-box only)
+	Groups []ProtocolGroupRender // auto-protocol-switching groups (Clash/sing-box only)
 }
 
 // Render produces the subscription body for the chosen format. It is preserved
@@ -72,9 +88,9 @@ func Render(f Format, proxies []Proxy, title string) ([]byte, error) {
 func RenderWith(f Format, proxies []Proxy, opts RenderOpts) ([]byte, error) {
 	switch f {
 	case FormatClash:
-		return renderClash(proxies, opts.Title, opts.Rules)
+		return renderClash(proxies, opts.Title, opts.Rules, opts.Groups)
 	case FormatSingbox:
-		return renderSingbox(proxies, opts.Title, opts.Rules)
+		return renderSingbox(proxies, opts.Title, opts.Rules, opts.Groups)
 	case FormatXray:
 		return renderXrayJSON(proxies)
 	case FormatOutline:

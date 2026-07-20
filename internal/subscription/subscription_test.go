@@ -563,7 +563,7 @@ func TestExistingFormatsUnchanged(t *testing.T) {
 		t.Errorf("FormatBase64 output diverged from renderBase64")
 	}
 
-	clashDirect, err := renderClash(ps, "VortexUI", nil)
+	clashDirect, err := renderClash(ps, "VortexUI", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -575,7 +575,7 @@ func TestExistingFormatsUnchanged(t *testing.T) {
 		t.Errorf("FormatClash output diverged from renderClash")
 	}
 
-	sbDirect, err := renderSingbox(ps, "VortexUI", nil)
+	sbDirect, err := renderSingbox(ps, "VortexUI", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

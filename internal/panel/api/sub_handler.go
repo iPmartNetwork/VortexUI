@@ -64,7 +64,7 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		format = subscription.Format(q)
 	}
 
-	body, err := subscription.RenderWith(format, res.Proxies, subscription.RenderOpts{Title: "VortexUI", Rules: res.Rules})
+	body, err := subscription.RenderWith(format, res.Proxies, subscription.RenderOpts{Title: "VortexUI", Rules: res.Rules, Groups: res.Groups})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "render failed")
 	}

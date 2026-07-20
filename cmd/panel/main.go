@@ -270,6 +270,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 
 	subSvc := service.NewSubscriptionService(users, nodes, store.SubHosts())
 	subSvc.SetTLSTricks(store.TLSTricks())
+	subSvc.SetProtocolGroups(store.ProtocolGroups(), store.ISPProfiles())
 	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	syncSvc.SetWireGuard(wgSvc)
