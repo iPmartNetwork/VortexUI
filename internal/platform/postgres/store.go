@@ -122,6 +122,15 @@ func (s *Store) IPLimits() *IPLimitRepo { return &IPLimitRepo{pool: s.pool} }
 // Pool returns the underlying pgx connection pool.
 func (s *Store) Pool() *pgxpool.Pool { return s.pool }
 
+// ProtocolGroups returns the protocol group repository.
+func (s *Store) ProtocolGroups() *ProtocolGroupRepo { return &ProtocolGroupRepo{pool: s.pool} }
+
+// ISPProfiles returns the ISP profile repository.
+func (s *Store) ISPProfiles() *ISPProfileRepo { return &ISPProfileRepo{pool: s.pool} }
+
+// SwitchEvents returns the switch event repository.
+func (s *Store) SwitchEvents() *SwitchEventRepo { return &SwitchEventRepo{pool: s.pool} }
+
 // Probing returns the probing repository.
 func (s *Store) Probing() *ProbingRepo { return &ProbingRepo{pool: s.pool} }
 
