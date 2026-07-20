@@ -24,7 +24,7 @@
 
 <sub>
 
-[Features](#-features) · [What's New](#-whats-new-in-131) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Docs](#-documentation) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+[Features](#-features) · [What's New](#-whats-new-in-140) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Docs](#-documentation) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 
 </sub>
 
@@ -84,6 +84,12 @@
 - Per-node logs streaming
 
 ### 🛡 Security & Anti-Censorship
+- **Auto-Protocol Switching** — self-healing failover between protocols
+- **Smart Config Engine** — per-ISP anti-DPI (fragment/mux/ECH/padding) by severity + time
+- **Dynamic SNI Rotation** — daily per-proxy rotation from ISP-specific domain pools
+- **Multi-CDN Routing** — clean-IP fallback (CF/Arvan/Gcore) with correct ALPN
+- **Smart Mux** — ISP-optimized (h2mux/yamux) with padding + XUDP
+- **DNS Leak Prevention** — DoH + IR-direct + plain DNS block
 - **TLS Tricks Manager** — ISP-specific profiles
 - **Active probing protection** — detect & block GFW probes
 - **Client fingerprint validator** — block curl / Go / Python
@@ -117,6 +123,48 @@
 </td>
 </tr>
 </table>
+
+---
+
+## 🆕 What's New in 1.4.0
+
+> **Auto-Protocol Switching · Smart Anti-Censorship · Self-Healing · Zero-Config Anti-DPI**
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-Protocol Switching** | Group inbounds as switching candidates; clients auto-failover between protocols via urltest/fallback |
+| **ISP Auto-Detection** | Detects ISP from client IP (MaxMind + static ranges); no `?isp=` needed |
+| **Smart Config Engine** | Per-ISP + time-of-day severity: MCI peak→aggressive fragment+mux+ECH; off-peak→light |
+| **Dynamic SNI Rotation** | 10-13 high-traffic domains per ISP, daily rotation per proxy (anti-fingerprinting) |
+| **Multi-CDN Routing** | CDN clean-IP fallback proxies (CF/Arvan/Gcore) with correct ALPN+SNI |
+| **Smart Mux** | ISP-optimized: MCI→h2mux, Irancell→yamux, TCI→h2mux stealth + padding+XUDP |
+| **Multi-Path** | ⚡ Parallel split-traffic across top 4 proxies simultaneously |
+| **DNS Leak Prevention** | DoH remote+direct, IR→direct, block plain DNS port 53 |
+| **Quality Score** | 0-100 per-proxy (protocol×transport×ISP); auto-sorted in subscription |
+| **Adaptive Ordering** | Self-healing: promotes stable protocols, demotes frequently-failed ones |
+| **Transport Obfuscation** | gRPC→`google.pubsub.v2.Publisher`, WS→`/api/v2/ws` (anti-detection) |
+| **Emergency Fallback** | 🆘 Last-resort outbound when all proxies are dead |
+| **Port Hopping** | `port_range` + `hop_interval` in share links + sing-box + Clash |
+| **Client Switch Reporting** | `POST /sub/:token/switch` — clients report protocol changes |
+| **Certificate Rotation** | Alternates LE ↔ ZeroSSL every 15 days (cert-authority fingerprint evasion) |
+
+---
+
+## 🆕 What's New in 1.3.9
+
+> **Hysteria2 complete · Protocol expansion · AI Auto-Config · Monitoring infrastructure**
+
+| Feature | Description |
+|---------|-------------|
+| **Hysteria2 Xray Renderer** | Works without sing-box — matches 3x-UI behavior exactly |
+| **QUIC Transport** | sing-box + Clash Meta rendering for QUIC-based protocols |
+| **IPv6 Dual-Stack** | `prefer_ipv4` with automatic IPv6 fallback |
+| **AI Auto-Config** | Rule-based recommendation: protocol+transport+anti-DPI per ISP and time-of-day |
+| **Smart Node Scoring** | Multi-factor quality score for intelligent load balancing |
+| **Inbound Presets** | 5 one-click templates: CDN VLESS+WS, REALITY, Hysteria2, Trojan+WS, VMess+gRPC |
+| **ISP Quality Heatmap** | 7×24 performance grid data model per ISP |
+| **Anomaly Detection** | Z-score 3σ statistical outlier detection engine |
+| **i18n Expansion** | 18 keys × 8 languages for inbound features |
 
 ---
 

@@ -6,6 +6,94 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-20
+
+Major release: **Auto-Protocol Switching** — intelligent, self-healing anti-censorship infrastructure that automatically adapts to ISP filtering conditions without tunneling.
+
+### Added — Auto-Protocol Switching (Phase 1)
+- **Protocol Groups** — logically group inbounds on a node as switching candidates with priority ordering and health-probe settings.
+- **ISP Profiles** — per-ISP protocol preference ordering (e.g., MCI prefers WS, Irancell prefers gRPC).
+- **Switch Event Recording** — track client-reported protocol switches with ISP/node/user attribution.
+- **Subscription Rendering** — per-group `urltest`/`fallback` outbounds in sing-box and Clash with custom probe settings.
+- **REST API** — full CRUD for protocol groups, ISP profiles, switch events, and aggregated summary.
+- **Notifications** — ProtocolSwitch events routed to Telegram/Webhook with source→target details.
+- **Frontend UI** — React components for group management, ISP profiles, switch summary stats.
+
+### Added — Smart Switching (Phase 2)
+- **ISP Auto-Detection** — resolves client IP to ISP (MaxMind ASN + static Iranian IP ranges) without `?isp=` parameter.
+- **Client Switch Reporting** — `POST /sub/:token/switch` public endpoint for clients to report protocol switches.
+- **Adaptive Ordering** — self-healing: promotes protocols that are stable (frequent targets), demotes those clients switch away from.
+- **Port Hopping** — `port_range` + `hop_interval` in share links, sing-box, and Clash configs.
+
+### Added — Anti-Censorship Intelligence (Phase 3)
+- **Smart Config Generator** — per-ISP severity engine (aggressive/moderate/light) based on ISP + time-of-day:
+  - MCI peak: fragment 10-50, mux, padding 100-200, ECH
+  - Irancell: small fragment 1-3, yamux, XUDP
+  - TCI/Mokhaberat: always aggressive, fragment 50-100, ECH
+  - REALITY: no fragment, daily server-name rotation from ISP-specific pool
+  - CDN: no fragment, correct ALPN, early-data enabled
+- **Multi-CDN Routing** — CDN clean-IP fallback proxies (Cloudflare/ArvanCloud/Gcore), `[CDN]` suffix endpoints with correct SNI/Host headers.
+- **REALITY Auto-Rotation** — daily deterministic ServerName rotation from per-ISP pool + ShortID rotation.
+- **Connection Resilience** — TCP keepalive 15s, TFO, WS early-data (0-RTT), fallback_delay 300ms.
+
+### Added — User Portal Enhancement (Phase 4)
+- **Protocol Switch History** — `GET /api/portal/switch-history` (7-day summary).
+- **Connection Stats** — `GET /api/portal/connection-stats` (live connections, current protocol, ISP breakdown).
+- **Portal Protocol Status** — React component with real-time stats cards and protocol breakdown chart.
+- **TLS Certificate Domain Model** — `ManagedCertificate` with ACME lifecycle (pending→active→renewal), multi-CA support.
+
+### Added — Connection Quality (Phase 5)
+- **Smart Mux** — ISP-specific multiplexing: MCI→h2mux (blends with HTTPS), Irancell→yamux (flow control), TCI→h2mux stealth.
+- **Multi-Path Outbound** — `⚡ Multi-Path` urltest with top 4 proxies for parallel split-traffic stability.
+- **DNS Leak Prevention** — DoH remote (1.1.1.1 via proxy) + DoH direct (8.8.8.8), IR domains→direct, block plain DNS (port 53).
+- **Quality Score** — 0-100 per-proxy scoring (protocol × transport × ISP compatibility), sorted descending.
+- **Dynamic SNI Rotation** — per-ISP pools (10-13 high-traffic domains), deterministic daily rotation per proxy.
+- **Transport Obfuscation** — gRPC service names → `google.pubsub.v2.Publisher`, WS paths → `/api/v2/ws`.
+- **Enhanced Probing** — 3 probe URLs (gstatic + cloudflare + firefox), ISP-tuned intervals (TCI: 30s, MCI: 45s).
+- **Emergency Fallback** — `🆘 Emergency` outbound as last resort when all proxies fail.
+- **Certificate Rotation** — alternates Let's Encrypt ↔ ZeroSSL every 15 days to evade cert-authority fingerprinting.
+
+### Changed
+- Subscription urltest interval: 90s → 60s (faster failover).
+- Fallback group uses alternate probe URL (`cp.cloudflare.com`).
+- sing-box outbounds include `tcp_keep_alive_interval`, `fallback_delay`, `idle_timeout`.
+- Clash proxies include `tfo: true` for TCP Fast Open.
+
+### Database
+- Migration `0044_protocol_groups.sql` — `protocol_groups`, `isp_profiles`, `switch_events` tables with indexes.
+
+## [1.3.9] - 2026-07-18
+
+Anti-censorship protocol expansion and advanced monitoring infrastructure.
+
+### Added — Network Protocol Expansion (Batch 3)
+- **QUIC Transport** — sing-box `quic` type rendering + Clash Meta `quic` network.
+- **IPv6 Dual-Stack** — `domain_strategy: prefer_ipv4` with IPv6 fallback on all outbounds.
+- **WireGuard Mesh Foundation** — domain model for multi-node mesh topology with CIDR allocation.
+- **Tor Bridge Mode Foundation** — domain model supporting obfs4, snowflake, meek pluggable transports.
+
+### Added — AI Auto-Config & Intelligence (Batch 2)
+- **AI Auto-Config Engine** — rule-based recommendation selecting protocol+transport+anti-DPI per ISP and time-of-day.
+- **Smart Node Scoring** — multi-factor node quality score for load balancing.
+- **Adaptive Fragment** — per-ISP fragment size/interval presets with time-aware severity.
+
+### Added — Monitoring & Observability (Batch 4)
+- **Real-time Bandwidth Tracker** — per-user sliding window bandwidth monitoring.
+- **ISP Quality Heatmap** — 7×24 hour grid data model for ISP performance visualization.
+- **Connection Path Visualization** — hop-by-hop connection path model.
+- **Distributed Tracing** — TraceSpan + Trace models for request flow analysis.
+- **Anomaly Detection** — z-score 3σ statistical engine for outlier identification.
+
+### Added — i18n & Presets (Batch 1)
+- **Internationalization** — 18 new keys across 8 languages (EN, FA, TR, AR, RU, ZH, JA, ES).
+- **Inbound Template Presets** — 5 one-click presets: CDN-Ready VLESS+WS+TLS, Direct REALITY, Hysteria2 UDP, Trojan+WS+TLS, VMess+gRPC+TLS.
+
+### Fixed
+- **Hysteria2 Xray Renderer** — works without sing-box (matches 3x-UI behavior exactly).
+- **Hysteria2 auto-enable sing-box** — creating sing-box-only inbounds auto-enables the engine.
+- **Hysteria2 TLS/cert issues** — let Xray auto-generate certs for QUIC, match 3x-UI format.
+- **Share links** — mandatory `alpn=h3` + `security=tls` for Hysteria2.
+
 ## [1.3.8] - 2026-07-17
 
 Major anti-censorship, performance, and platform enhancement release with ~30 new features across 6 development phases.
