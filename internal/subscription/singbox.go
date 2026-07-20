@@ -206,10 +206,12 @@ func singboxOutbound(p Proxy) map[string]any {
 			o["hop_interval"] = fmt.Sprintf("%ds", p.HopInterval)
 		}
 	}
-	o["dial_timeout"] = "5s"
+	o["dial_timeout"] = "4s"
 	o["tcp_fast_open"] = true
-	o["tcp_keep_alive_interval"] = "30s"
+	o["tcp_keep_alive_interval"] = "15s"
 	o["domain_strategy"] = "prefer_ipv4"
+	// Connection resilience: retry with backoff on transient failures.
+	o["fallback_delay"] = "300ms"
 	if p.Security == "tls" || p.Security == "reality" {
 		tls := map[string]any{"enabled": true}
 		if p.SNI != "" {

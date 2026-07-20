@@ -74,6 +74,10 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		service.ApplySmartMux(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)))
 		// Quality Score: compute per-proxy quality and reorder by score descending.
 		service.ComputeQualityScores(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)))
+		// Dynamic SNI: assign rotated SNIs from ISP-specific pool to REALITY proxies.
+		service.ApplyDynamicSNI(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)))
+		// Transport Optimization: obfuscate gRPC service names, fix paths, set authority headers.
+		service.ApplyTransportOptimization(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)))
 	}
 
 	format := subscription.Detect(c.Request().UserAgent())
