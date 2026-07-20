@@ -38,6 +38,7 @@ var AdminEventTypes = []Type{
 	AdminQuotaWarning,
 	SecurityProbe,
 	BackupCompleted,
+	ProtocolSwitch,
 }
 
 // BackupCompleted fires when an auto-backup finishes successfully.

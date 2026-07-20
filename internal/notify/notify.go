@@ -53,6 +53,14 @@ func describe(e events.Event) string {
 		ip, _ := e.Data["source_ip"].(string)
 		method, _ := e.Data["method"].(string)
 		return fmt.Sprintf("🛡 Probe detected: %s (%s) on %s", ip, method, e.NodeName)
+	case events.ProtocolSwitch:
+		src, _ := e.Data["source_protocol"].(string)
+		dst, _ := e.Data["target_protocol"].(string)
+		isp, _ := e.Data["isp"].(string)
+		if isp != "" {
+			return fmt.Sprintf("🔄 Protocol switch: %s → %s (ISP: %s, user: %s)", src, dst, isp, e.Username)
+		}
+		return fmt.Sprintf("🔄 Protocol switch: %s → %s (user: %s)", src, dst, e.Username)
 	default:
 		msg := e.Message
 		if msg == "" {
