@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"github.com/vortexui/vortexui/internal/domain"
@@ -55,8 +56,16 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 
 	// ISP hint: when the client (or frontend) passes ?isp=mci, auto-apply the
 	// ISP-specific TLS tricks profile to proxies that lack a per-inbound profile.
-	if ispHint := c.QueryParam("isp"); ispHint != "" {
+	// When no explicit hint is given, auto-detect ISP from the client IP.
+	ispHint := c.QueryParam("isp")
+	if ispHint == "" && h.Geo != nil {
+		ispHint = h.Geo.DetectISP(c.RealIP())
+	}
+	if ispHint != "" {
 		service.ApplyISPHint(res.Proxies, ispHint)
+		// Reorder protocol groups based on ISP-preferred protocol ordering so
+		// clients try the ISP-optimized protocol first within each group.
+		h.Sub.ReorderGroupsByISP(c.Request().Context(), res.Groups, res.Proxies, ispHint)
 	}
 
 	format := subscription.Detect(c.Request().UserAgent())
@@ -247,4 +256,63 @@ func hostOf(addr string) string {
 		return h
 	}
 	return addr
+}
+
+// --- Public switch event reporting ---
+
+type reportSwitchRequest struct {
+	SourceProtocol string `json:"source_protocol"`
+	TargetProtocol string `json:"target_protocol"`
+	NodeID         string `json:"node_id"`
+	ISP            string `json:"isp"`
+}
+
+// ReportSwitch is a public endpoint that proxy clients can hit after an
+// auto-protocol switch. Authenticated solely by the subscription token (same as
+// /sub/:token). Returns 404 for invalid tokens (no oracle). Clients report the
+// protocols they switched between; the ISP is auto-detected from the client IP
+// if not provided.
+func (h *Handlers) ReportSwitch(c echo.Context) error {
+	if h.SwitchEvents == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+	token := c.Param("token")
+	ctx := c.Request().Context()
+
+	user, err := h.Repo.GetBySubToken(ctx, token)
+	if err != nil || user == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "not found")
+	}
+
+	var req reportSwitchRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid body")
+	}
+	if req.SourceProtocol == "" || req.TargetProtocol == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "source_protocol and target_protocol required")
+	}
+
+	// Auto-detect ISP from client IP if not explicitly provided.
+	isp := req.ISP
+	if isp == "" && h.Geo != nil {
+		isp = h.Geo.DetectISP(c.RealIP())
+	}
+
+	e := &domain.SwitchEvent{
+		UserID:         user.ID,
+		SourceProtocol: req.SourceProtocol,
+		TargetProtocol: req.TargetProtocol,
+		ISP:            isp,
+	}
+	// NodeID is optional; parse if provided.
+	if req.NodeID != "" {
+		if id, perr := uuid.Parse(req.NodeID); perr == nil {
+			e.NodeID = id
+		}
+	}
+
+	if err := h.SwitchEvents.Record(ctx, e); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"ok": true})
 }

@@ -273,6 +273,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	subSvc.SetProtocolGroups(store.ProtocolGroups(), store.ISPProfiles())
 	switchEventSvc := service.NewSwitchEventService(store.SwitchEvents())
 	switchEventSvc.SetPublisher(bus)
+	subSvc.SetSwitchEvents(store.SwitchEvents())
 	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	syncSvc.SetWireGuard(wgSvc)
@@ -565,6 +566,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			SubSettings: subSettingsSvc,
 			Geo:         geoSvc,
 			Issuer:      issuer,
+			SwitchEvents: switchEventSvc,
 		},
 		APITokens:   &api.APITokenHandlers{Svc: tokenSvc},
 		Portal: &api.PortalHandlers{

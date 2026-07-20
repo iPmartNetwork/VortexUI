@@ -94,6 +94,14 @@ func transportQuery(p Proxy) url.Values {
 	if p.Fragment != "" {
 		q.Set("fragment", p.Fragment)
 	}
+	// Port hopping: encode port range and hop interval so clients can rotate
+	// within the inbound's port range at the specified interval.
+	if p.PortEnd > 0 && p.PortEnd > p.Port {
+		q.Set("port_range", strconv.Itoa(p.Port)+"-"+strconv.Itoa(p.PortEnd))
+		if p.HopInterval > 0 {
+			q.Set("hop_interval", strconv.Itoa(p.HopInterval))
+		}
+	}
 	switch p.Network {
 	case "ws":
 		if p.Path != "" {

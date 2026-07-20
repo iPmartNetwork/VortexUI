@@ -10,6 +10,7 @@ import (
 type fakeResolver struct{ country string }
 
 func (f fakeResolver) Country(string) string { return f.country }
+func (f fakeResolver) ISP(string) string     { return "" }
 
 type fakeGeoRepo struct {
 	calls   int

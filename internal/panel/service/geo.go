@@ -6,9 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// GeoResolver resolves an IP to an ISO country code. *geoip.Resolver satisfies it.
+// GeoResolver resolves an IP to an ISO country code or ISP. *geoip.Resolver satisfies it.
 type GeoResolver interface {
 	Country(ip string) string
+	ISP(ip string) string
 }
 
 // UserGeoRepository persists each user's last-known country (from sub fetches).
@@ -39,4 +40,13 @@ func (s *GeoService) RecordUserIP(ctx context.Context, userID uuid.UUID, ip stri
 		return
 	}
 	_ = s.repo.Upsert(ctx, userID, country, ip)
+}
+
+// DetectISP resolves an IP to a short ISP identifier (e.g. "mci", "irancell").
+// Returns "" when the resolver is disabled or the ISP is unknown.
+func (s *GeoService) DetectISP(ip string) string {
+	if s == nil || s.resolver == nil {
+		return ""
+	}
+	return s.resolver.ISP(ip)
 }

@@ -141,6 +141,14 @@ func singboxOutbound(p Proxy) map[string]any {
 		"server":      p.Host,
 		"server_port": p.Port,
 	}
+	// Port hopping: when a port range is defined, emit the hop fields so
+	// sing-box clients can rotate ports within the range.
+	if p.PortEnd > 0 && p.PortEnd > p.Port {
+		o["server_port_range"] = fmt.Sprintf("%d:%d", p.Port, p.PortEnd)
+		if p.HopInterval > 0 {
+			o["hop_interval"] = fmt.Sprintf("%ds", p.HopInterval)
+		}
+	}
 	o["dial_timeout"] = "5s"
 	o["tcp_fast_open"] = true
 	o["domain_strategy"] = "prefer_ipv4"

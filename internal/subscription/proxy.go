@@ -60,6 +60,11 @@ type Proxy struct {
 	// non-empty, renderers emit client-side padding to defeat length-based DPI.
 	Padding string
 
+	// Port hopping: when PortEnd > 0 the inbound listens on [Port, PortEnd] and
+	// clients rotate ports at HopInterval seconds.
+	PortEnd     int // 0 = single-port
+	HopInterval int // seconds; 0 = disabled
+
 	// GroupName is the ProtocolGroup this proxy belongs to (empty = ungrouped).
 	// Used by renderers to emit per-group urltest/fallback outbounds for
 	// auto-protocol switching.

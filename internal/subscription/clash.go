@@ -108,6 +108,13 @@ func clashProxy(p Proxy) map[string]any {
 		"port":   p.Port,
 		"udp":    true,
 	}
+	// Port hopping: Clash Meta supports "ports" field for port-range rotation.
+	if p.PortEnd > 0 && p.PortEnd > p.Port {
+		base["ports"] = fmt.Sprintf("%d-%d", p.Port, p.PortEnd)
+		if p.HopInterval > 0 {
+			base["hop-interval"] = p.HopInterval
+		}
+	}
 	tls := p.Security == "tls" || p.Security == "reality"
 
 	switch p.Protocol {
