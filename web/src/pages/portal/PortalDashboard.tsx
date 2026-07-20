@@ -10,6 +10,7 @@ import {
   Wifi,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PortalProtocolStatus } from "./PortalProtocolStatus";
 import { QRCodeSVG } from "qrcode.react";
 import { portalApi } from "./portalApi";
 import { CopyField } from "@/components/CopyField";
@@ -233,6 +234,9 @@ export function PortalDashboard() {
           </div>
         </GlassCard>
       )}
+
+      {/* Protocol Status — auto-switching activity */}
+      <PortalProtocolStatus />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-stretch">
         <GlassCard hover={false} className="!p-5 flex h-full min-h-0 flex-col">
