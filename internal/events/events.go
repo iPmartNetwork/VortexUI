@@ -34,6 +34,7 @@ const (
 	NodeAlert         Type = "node.alert"         // resource threshold crossed
 	UserQuotaWarn     Type = "user.quota_warning"  // traffic nearing data_limit
 	CertExpiring      Type = "cert.expiring"       // TLS cert expires within 7 days
+	ProtocolSwitch    Type = "protocol.switch"     // client switched protocol within a group
 )
 
 // Event is a single notification. Fields are flat and JSON-friendly so the

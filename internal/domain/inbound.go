@@ -70,6 +70,10 @@ type Inbound struct {
 	// PortEnd defines the end of a port range. When > 0, the inbound
 	// listens on ports [Port, PortEnd]. When 0, it is a single-port inbound.
 	PortEnd int `json:"port_end,omitempty"`
+	// HopInterval defines the port-hopping interval in seconds. When > 0 and
+	// PortEnd > Port, the client rotates ports within the range at this interval.
+	// Allowed values: 0 (disabled), 10, 30, 60 seconds.
+	HopInterval int `json:"hop_interval,omitempty"`
 
 	// Transport / TLS layer.
 	Network   string   `json:"network"` // tcp, ws, grpc, httpupgrade, xhttp

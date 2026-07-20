@@ -134,24 +134,25 @@ func effectiveInboundCore(existing *domain.Inbound, override *domain.CoreType) d
 
 // CreateInboundInput describes a new inbound.
 type CreateInboundInput struct {
-	NodeID     uuid.UUID
-	Tag        string
-	Core       domain.CoreType
-	Protocol   domain.Protocol
-	Listen     string
-	Port       int
-	PortEnd    int
-	Network    string
-	Security   domain.Security
-	SNI        []string
-	Path       string
-	Host       []string
-	Flow       string
-	Raw        map[string]any
-	Enabled    bool
-	SpeedLimit int64
-	Notes      string
-	GeoPolicy  *domain.GeoPolicy
+	NodeID      uuid.UUID
+	Tag         string
+	Core        domain.CoreType
+	Protocol    domain.Protocol
+	Listen      string
+	Port        int
+	PortEnd     int
+	HopInterval int
+	Network     string
+	Security    domain.Security
+	SNI         []string
+	Path        string
+	Host        []string
+	Flow        string
+	Raw         map[string]any
+	Enabled     bool
+	SpeedLimit  int64
+	Notes       string
+	GeoPolicy   *domain.GeoPolicy
 }
 
 // needsSingbox reports whether the protocol requires the sing-box engine.
@@ -163,6 +164,28 @@ func needsSingbox(proto domain.Protocol) bool {
 	default:
 		return false
 	}
+}
+
+// validateHopInterval checks hop_interval allowed values and cross-field constraint.
+func validateHopInterval(hopInterval, port, portEnd int) error {
+	if !domain.IsValidHopInterval(hopInterval) {
+		return fmt.Errorf("hop_interval must be 0, 10, 30, or 60 (got %d)", hopInterval)
+	}
+	if hopInterval > 0 && portEnd <= port {
+		return errors.New("hop_interval requires a port range (port_end > port)")
+	}
+	return nil
+}
+
+// validatePortRange checks port range constraints.
+func validatePortRange(port, portEnd int) error {
+	if portEnd > 0 && portEnd <= port {
+		return errors.New("port_end must be greater than port")
+	}
+	if portEnd > 0 && (portEnd-port) > domain.MaxPortRange {
+		return fmt.Errorf("port range must not exceed %d ports", domain.MaxPortRange)
+	}
+	return nil
 }
 
 // Create persists an inbound then resyncs its node so the core starts listening.
@@ -189,26 +212,33 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 	if err := validateInboundCore(node, in.Core, in.Protocol, networkDefault(in.Protocol, in.Network), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
+	if err := validatePortRange(in.Port, in.PortEnd); err != nil {
+		return nil, err
+	}
+	if err := validateHopInterval(in.HopInterval, in.Port, in.PortEnd); err != nil {
+		return nil, err
+	}
 	inbound := &domain.Inbound{
-		ID:         uuid.New(),
-		NodeID:     in.NodeID,
-		Tag:        in.Tag,
-		Core:       in.Core,
-		Protocol:   in.Protocol,
-		Listen:     in.Listen,
-		Port:       in.Port,
-		PortEnd:    in.PortEnd,
-		Network:    networkDefault(in.Protocol, in.Network),
-		Security:   orSec(in.Security, domain.SecurityNone),
-		SNI:        in.SNI,
-		Path:       in.Path,
-		Host:       in.Host,
-		Flow:       in.Flow,
-		Raw:        in.Raw,
-		Enabled:    in.Enabled,
-		SpeedLimit: in.SpeedLimit,
-		Notes:      in.Notes,
-		GeoPolicy:  in.GeoPolicy,
+		ID:          uuid.New(),
+		NodeID:      in.NodeID,
+		Tag:         in.Tag,
+		Core:        in.Core,
+		Protocol:    in.Protocol,
+		Listen:      in.Listen,
+		Port:        in.Port,
+		PortEnd:     in.PortEnd,
+		HopInterval: in.HopInterval,
+		Network:     networkDefault(in.Protocol, in.Network),
+		Security:    orSec(in.Security, domain.SecurityNone),
+		SNI:         in.SNI,
+		Path:        in.Path,
+		Host:        in.Host,
+		Flow:        in.Flow,
+		Raw:         in.Raw,
+		Enabled:     in.Enabled,
+		SpeedLimit:  in.SpeedLimit,
+		Notes:       in.Notes,
+		GeoPolicy:   in.GeoPolicy,
 	}
 	provisionSecurity(inbound)
 	if inbound.Enabled {
@@ -233,21 +263,22 @@ func (s *InboundService) Create(ctx context.Context, in CreateInboundInput) (*do
 // not changed here (moving an inbound between nodes is delete+create).
 // Raw is a pointer so callers can omit it to leave the stored raw block untouched.
 type UpdateInboundInput struct {
-	Listen     string
-	Port       int
-	PortEnd    int
-	Network    string
-	Security   domain.Security
-	Core       *domain.CoreType
-	SNI        []string
-	Path       string
-	Host       []string
-	Flow       string
-	Raw        *map[string]any
-	Enabled    bool
-	SpeedLimit int64
-	Notes      string
-	GeoPolicy  *domain.GeoPolicy
+	Listen      string
+	Port        int
+	PortEnd     int
+	HopInterval int
+	Network     string
+	Security    domain.Security
+	Core        *domain.CoreType
+	SNI         []string
+	Path        string
+	Host        []string
+	Flow        string
+	Raw         *map[string]any
+	Enabled     bool
+	SpeedLimit  int64
+	Notes       string
+	GeoPolicy   *domain.GeoPolicy
 }
 
 // Update applies changes to an inbound and resyncs its node so the live core
@@ -265,9 +296,16 @@ func (s *InboundService) Update(ctx context.Context, id uuid.UUID, in UpdateInbo
 	if err := validateInboundCore(node, effectiveInboundCore(existing, in.Core), existing.Protocol, networkDefault(existing.Protocol, in.Network), orSec(in.Security, domain.SecurityNone)); err != nil {
 		return nil, err
 	}
+	if err := validatePortRange(in.Port, in.PortEnd); err != nil {
+		return nil, err
+	}
+	if err := validateHopInterval(in.HopInterval, in.Port, in.PortEnd); err != nil {
+		return nil, err
+	}
 	existing.Listen = in.Listen
 	existing.Port = in.Port
 	existing.PortEnd = in.PortEnd
+	existing.HopInterval = in.HopInterval
 	existing.Network = networkDefault(existing.Protocol, in.Network)
 	existing.Security = orSec(in.Security, domain.SecurityNone)
 	existing.SNI = in.SNI
