@@ -20,6 +20,7 @@ import { InboundExpandedPanel } from "@/components/InboundExpandedPanel";
 import { GlassCard, ProtocolBadge, StatusBadge } from "@/components/veltrix";
 import { StaggerContainer } from "@/components/StaggerContainer";
 import { EmptyState } from "@/components/EmptyState";
+import { ProtocolGroupsPanel } from "@/components/ProtocolGroupsPanel";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 import { useAuth } from "@/auth/auth";
@@ -234,6 +235,16 @@ export function Inbounds() {
           </div>
         </div>
       </GlassCard>
+
+      {/* Protocol Groups — shown when a node is filtered */}
+      {nodeFilter && (() => {
+        const filteredNode = nodeList.find((n) => n.name === nodeFilter);
+        return filteredNode ? (
+          <GlassCard hover={false} className="!p-4">
+            <ProtocolGroupsPanel nodeId={filteredNode.id} />
+          </GlassCard>
+        ) : null;
+      })()}
 
       {/* Search + Filter */}
       <GlassCard hover={false} className="!p-0 overflow-x-hidden">
