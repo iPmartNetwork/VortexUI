@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -87,10 +86,10 @@ func (r *ProtocolGroupRepo) GroupsForInbounds(ctx context.Context, inboundIDs []
 	}
 	// Use jsonb_array_elements_text to expand the JSONB array and match
 	// against the provided inbound IDs. DISTINCT ensures no duplicates.
-	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
+	rows, err := r.pool.Query(ctx, `
 		SELECT DISTINCT g.id, g.node_id, g.name, g.inbound_ids, g.probe_url, g.probe_interval, g.probe_timeout, g.max_retries, g.created_at, g.updated_at
 		FROM protocol_groups g, jsonb_array_elements_text(g.inbound_ids) AS elem
-		WHERE elem::uuid = ANY($1)`), inboundIDs)
+		WHERE elem::uuid = ANY($1)`, inboundIDs)
 	if err != nil {
 		return nil, err
 	}
