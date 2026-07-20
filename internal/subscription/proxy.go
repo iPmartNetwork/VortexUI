@@ -54,6 +54,7 @@ type Proxy struct {
 	// no enabled hosts see no change.
 	ALPN     []string // negotiated ALPN protocols, e.g. ["h2","http/1.1"]
 	Mux      bool     // enable client-side stream multiplexing (smux/multiplex)
+	MuxConfig *MuxSettings // detailed mux settings (nil = use Mux bool only)
 	Fragment string   // TLS-hello fragment setting "length,interval,packet"
 
 	// Padding carries the random TLS padding size range (e.g. "100-200"). When
@@ -69,4 +70,44 @@ type Proxy struct {
 	// Used by renderers to emit per-group urltest/fallback outbounds for
 	// auto-protocol switching.
 	GroupName string
+
+	// QualityScore is a computed score (0-100) representing connection quality.
+	// Higher = better. Used for final proxy ordering in subscriptions.
+	// Factors: latency, stability (switch-away rate), ISP compatibility.
+	QualityScore int
+}
+
+// MuxSettings provides detailed multiplexing configuration for subscription
+// renderers. When set on a Proxy, renderers use these values instead of the
+// generic Mux=true behavior.
+type MuxSettings struct {
+	// Protocol: "smux" (default), "yamux", or "h2mux".
+	// - smux: lightweight, good for most scenarios
+	// - yamux: better flow control, good for unstable connections
+	// - h2mux: HTTP/2 based, blends with normal HTTPS traffic
+	Protocol string
+
+	// MaxConnections is the max number of streams multiplexed on one connection.
+	// Lower = more connections but less detectable; higher = more efficient.
+	MaxConnections int
+
+	// MinStreams: minimum idle streams to keep warm (connection pooling).
+	MinStreams int
+
+	// MaxStreams: max concurrent streams per connection.
+	MaxStreams int
+
+	// Padding adds random padding to mux frames to defeat length-based DPI.
+	Padding bool
+
+	// XUDP enables UDP-over-TCP multiplexing for protocols that need UDP
+	// (gaming, video calls, DNS) when the transport doesn't natively support UDP.
+	XUDP bool
+
+	// IdleTimeout closes idle mux connections after this duration.
+	IdleTimeout string // e.g. "30s", "60s"
+
+	// BrutalMode enables aggressive send mode (send at max speed regardless of
+	// receiver window). Good for high-latency links but uses more bandwidth.
+	BrutalMode bool
 }

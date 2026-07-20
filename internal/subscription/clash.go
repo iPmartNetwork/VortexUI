@@ -165,7 +165,28 @@ func clashProxy(p Proxy) map[string]any {
 		base["alpn"] = p.ALPN
 	}
 	if p.Mux {
-		base["smux"] = map[string]any{"enabled": true}
+		smux := map[string]any{"enabled": true}
+		if p.MuxConfig != nil {
+			if p.MuxConfig.Protocol != "" {
+				smux["protocol"] = p.MuxConfig.Protocol
+			}
+			if p.MuxConfig.MaxConnections > 0 {
+				smux["max-connections"] = p.MuxConfig.MaxConnections
+			}
+			if p.MuxConfig.MinStreams > 0 {
+				smux["min-streams"] = p.MuxConfig.MinStreams
+			}
+			if p.MuxConfig.MaxStreams > 0 {
+				smux["max-streams"] = p.MuxConfig.MaxStreams
+			}
+			if p.MuxConfig.Padding {
+				smux["padding"] = true
+			}
+			if p.MuxConfig.BrutalMode {
+				smux["brutal-opts"] = map[string]any{"enabled": true}
+			}
+		}
+		base["smux"] = smux
 	}
 	// TLS fragment: Clash Meta supports the `tls-fragment` option for anti-DPI.
 	if p.Fragment != "" && tls {

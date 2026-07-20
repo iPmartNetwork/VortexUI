@@ -69,6 +69,11 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		// Smart Config: apply per-ISP optimal anti-DPI settings (fragment, mux,
 		// padding, ECH, fingerprint) to proxies that lack a per-inbound profile.
 		service.ApplySmartProfiles(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)), domain.CDNNone)
+		// Smart Mux: apply ISP-optimized multiplexing settings (protocol, concurrency,
+		// padding, XUDP) to all proxies that have mux enabled.
+		service.ApplySmartMux(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)))
+		// Quality Score: compute per-proxy quality and reorder by score descending.
+		service.ComputeQualityScores(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)))
 	}
 
 	format := subscription.Detect(c.Request().UserAgent())

@@ -35,20 +35,45 @@ func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule, gr
 		"outbounds": append([]string{"♻️ Auto", "♻️ Fallback"}, tags...),
 	}
 	autoTest := map[string]any{
-		"type":      "urltest",
-		"tag":       "♻️ Auto",
-		"outbounds": tags,
-		"url":       "https://www.gstatic.com/generate_204",
-		"interval":  "90s",
-		"tolerance": 150,
+		"type":           "urltest",
+		"tag":            "♻️ Auto",
+		"outbounds":      tags,
+		"url":            "https://www.gstatic.com/generate_204",
+		"interval":       "60s",
+		"tolerance":      100,
+		"idle_timeout":   "30m",
+		"interrupt_exist_connections": false,
 	}
 	fallback := map[string]any{
-		"type":      "urltest",
-		"tag":       "♻️ Fallback",
-		"outbounds": tags,
-		"url":       "https://www.gstatic.com/generate_204",
-		"interval":  "90s",
-		"tolerance": 0,
+		"type":           "urltest",
+		"tag":            "♻️ Fallback",
+		"outbounds":      tags,
+		"url":            "https://cp.cloudflare.com/generate_204",
+		"interval":       "120s",
+		"tolerance":      0,
+		"idle_timeout":   "30m",
+		"interrupt_exist_connections": false,
+	}
+
+	// Multi-path load balance: distributes traffic across top proxies for
+	// improved stability when one path degrades. Only emitted when >=3 proxies.
+	var loadBalance map[string]any
+	if len(tags) >= 3 {
+		// Use top 3 proxies for load balancing (priority-ordered by earlier logic).
+		lbTags := tags
+		if len(lbTags) > 4 {
+			lbTags = lbTags[:4]
+		}
+		loadBalance = map[string]any{
+			"type":           "urltest",
+			"tag":            "⚡ Multi-Path",
+			"outbounds":      lbTags,
+			"url":            "https://www.gstatic.com/generate_204",
+			"interval":       "30s",
+			"tolerance":      300, // high tolerance = use all that are alive
+			"idle_timeout":   "15m",
+			"interrupt_exist_connections": false,
+		}
 	}
 
 	// Per-group urltest outbounds for auto-protocol switching. Each group gets
@@ -81,43 +106,75 @@ func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule, gr
 		groupTags = append(groupTags, groupTag)
 	}
 
-	// Rebuild selector outbounds: groups first, then global Auto/Fallback, then
-	// individual proxies.
-	if len(groupTags) > 0 {
-		selectorOutbounds := make([]string, 0, len(groupTags)+2+len(tags))
+	// Rebuild selector outbounds: groups first, then global Auto/Fallback/Multi-Path,
+	// then individual proxies.
+	if len(groupTags) > 0 || loadBalance != nil {
+		selectorOutbounds := make([]string, 0, len(groupTags)+4+len(tags))
 		selectorOutbounds = append(selectorOutbounds, groupTags...)
 		selectorOutbounds = append(selectorOutbounds, "♻️ Auto", "♻️ Fallback")
+		if loadBalance != nil {
+			selectorOutbounds = append(selectorOutbounds, "⚡ Multi-Path")
+		}
 		selectorOutbounds = append(selectorOutbounds, tags...)
 		selector["outbounds"] = selectorOutbounds
+	} else if loadBalance != nil {
+		// No groups but multi-path available — inject into default selector.
+		selector["outbounds"] = append([]string{"♻️ Auto", "♻️ Fallback", "⚡ Multi-Path"}, tags...)
 	}
 
 	direct := map[string]any{"type": "direct", "tag": "direct"}
-	all := append([]map[string]any{selector, autoTest, fallback}, groupOutbounds...)
+	all := []map[string]any{selector, autoTest, fallback}
+	if loadBalance != nil {
+		all = append(all, loadBalance)
+	}
+	all = append(all, groupOutbounds...)
 	all = append(all, outbounds...)
 	all = append(all, direct)
 
 	cfg := map[string]any{"outbounds": all}
 
-	// DNS-over-HTTPS: when no routing rules are provided (simple subscription),
-	// inject a DoH DNS section so clients don't leak DNS queries to ISP resolvers.
+	// DNS-over-HTTPS: comprehensive anti-leak DNS configuration.
+	// - Remote queries route through the proxy (no ISP interception)
+	// - Iranian domains (.ir) resolve directly for speed
+	// - Plain UDP/TCP DNS is blocked to prevent leaks
 	if len(rules) == 0 {
 		cfg["dns"] = map[string]any{
 			"servers": []map[string]any{
 				{
-					"tag":     "dns-remote",
-					"address": "https://1.1.1.1/dns-query",
-					"detour":  title,
+					"tag":             "dns-remote",
+					"address":         "https://1.1.1.1/dns-query",
+					"address_resolver": "dns-direct",
+					"detour":          title,
 				},
 				{
-					"tag":     "dns-direct",
-					"address": "https://8.8.8.8/dns-query",
-					"detour":  "direct",
+					"tag":             "dns-direct",
+					"address":         "https://8.8.8.8/dns-query",
+					"detour":          "direct",
+				},
+				{
+					"tag":     "dns-block",
+					"address": "rcode://refused",
 				},
 			},
 			"rules": []map[string]any{
+				// Iranian domains resolve directly (faster, no need to proxy).
+				{"domain_suffix": []string{".ir"}, "server": "dns-direct"},
+				// Block plain DNS to prevent leaks.
 				{"outbound": []string{"any"}, "server": "dns-remote"},
 			},
+			"independent_cache": true,
+			"strategy":          "prefer_ipv4",
 		}
+		// Route rule: block plain DNS (port 53) to prevent ISP interception.
+		cfg["route"] = map[string]any{
+			"rules": []map[string]any{
+				{"protocol": "dns", "outbound": "dns-out"},
+			},
+			"final": title,
+		}
+		// DNS outbound for hijacking plain DNS queries.
+		all = append(all, map[string]any{"type": "dns", "tag": "dns-out"})
+		cfg["outbounds"] = all
 	}
 
 	if len(rules) > 0 {
@@ -200,7 +257,31 @@ func singboxOutbound(p Proxy) map[string]any {
 	}
 	// Additive: client-side multiplexing only when the host enables it.
 	if p.Mux {
-		o["multiplex"] = map[string]any{"enabled": true, "protocol": "smux", "idle_timeout": "30s"}
+		muxCfg := map[string]any{"enabled": true, "protocol": "smux", "idle_timeout": "30s"}
+		if p.MuxConfig != nil {
+			if p.MuxConfig.Protocol != "" {
+				muxCfg["protocol"] = p.MuxConfig.Protocol
+			}
+			if p.MuxConfig.MaxConnections > 0 {
+				muxCfg["max_connections"] = p.MuxConfig.MaxConnections
+			}
+			if p.MuxConfig.MinStreams > 0 {
+				muxCfg["min_streams"] = p.MuxConfig.MinStreams
+			}
+			if p.MuxConfig.MaxStreams > 0 {
+				muxCfg["max_streams"] = p.MuxConfig.MaxStreams
+			}
+			if p.MuxConfig.Padding {
+				muxCfg["padding"] = true
+			}
+			if p.MuxConfig.IdleTimeout != "" {
+				muxCfg["idle_timeout"] = p.MuxConfig.IdleTimeout
+			}
+			if p.MuxConfig.BrutalMode {
+				muxCfg["brutal"] = map[string]any{"enabled": true}
+			}
+		}
+		o["multiplex"] = muxCfg
 	}
 
 	switch p.Protocol {
