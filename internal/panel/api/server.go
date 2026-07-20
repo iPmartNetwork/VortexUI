@@ -438,6 +438,8 @@ func NewRouter(d Deps) *echo.Echo {
 	portal.GET("/deeplink", d.Portal.PortalDeepLink)
 	portal.GET("/plans", d.Portal.PortalListPlans)
 	portal.GET("/payment-info", d.Portal.PortalPaymentInfo)
+	portal.GET("/switch-history", d.Portal.PortalSwitchHistory)
+	portal.GET("/connection-stats", d.Portal.PortalConnectionStats)
 	portal.GET("/tickets", d.Portal.PortalListTickets)
 	portal.POST("/tickets", d.Portal.PortalCreateTicket)
 	portal.GET("/tickets/:id", d.Portal.PortalGetTicket)

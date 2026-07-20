@@ -27,6 +27,7 @@ type PortalHandlers struct {
 	Users           *service.UserService
 	Online          DeviceCounter // optional; HWID fallback when live IP stats unavailable
 	DeepLink        *service.DeepLinkService
+	SwitchEvents    *service.SwitchEventService // optional; enables protocol switch history
 }
 
 // --- Portal Auth ---
@@ -369,4 +370,75 @@ func portalUserID(c echo.Context) uuid.UUID {
 		return claims.UserID
 	}
 	return uuid.Nil
+}
+
+// --- Protocol Switch History ---
+
+// PortalSwitchHistory returns the user's recent protocol switch events so
+// they can see which protocols their client auto-switched between.
+func (h *PortalHandlers) PortalSwitchHistory(c echo.Context) error {
+	if h.SwitchEvents == nil {
+		return c.JSON(http.StatusOK, echo.Map{"switches": []any{}, "summary": nil})
+	}
+	userID := portalUserID(c)
+	now := time.Now()
+	filter := domain.SwitchEventFilter{
+		UserID:   &userID,
+		FromTime: now.Add(-7 * 24 * time.Hour),
+		ToTime:   now,
+	}
+	summary, err := h.SwitchEvents.Summary(c.Request().Context(), filter)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "switch history failed")
+	}
+	return c.JSON(http.StatusOK, echo.Map{"summary": summary})
+}
+
+// --- Real-Time Connection Stats ---
+
+// PortalConnectionStats returns real-time connection info for the portal user:
+// active protocol, last switch time, ISP detection result, and per-protocol
+// connection quality indicators.
+func (h *PortalHandlers) PortalConnectionStats(c echo.Context) error {
+	userID := portalUserID(c)
+	resp := echo.Map{}
+
+	// Live connections count.
+	if h.Users != nil {
+		live, tracked, err := h.Users.LiveConnections(c.Request().Context(), userID)
+		if err == nil {
+			resp["live_connections"] = live
+			resp["live_tracking"] = tracked
+		}
+	}
+
+	// Recent switch activity (last 24h) to show current protocol.
+	if h.SwitchEvents != nil {
+		now := time.Now()
+		filter := domain.SwitchEventFilter{
+			UserID:   &userID,
+			FromTime: now.Add(-24 * time.Hour),
+			ToTime:   now,
+		}
+		summary, err := h.SwitchEvents.Summary(c.Request().Context(), filter)
+		if err == nil && summary != nil {
+			resp["switches_24h"] = summary.TotalSwitches
+			resp["by_protocol"] = summary.ByProtocol
+			resp["by_isp"] = summary.ByISP
+			// Determine current active protocol (most recent target).
+			if len(summary.ByProtocol) > 0 {
+				best := ""
+				bestCount := 0
+				for proto, count := range summary.ByProtocol {
+					if count > bestCount {
+						best = proto
+						bestCount = count
+					}
+				}
+				resp["current_protocol"] = best
+			}
+		}
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }

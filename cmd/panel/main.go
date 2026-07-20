@@ -573,6 +573,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Portal: portalSvc, Issuer: issuer, Admins: adminSvc,
 			ResellerPayment: resellerPaymentSvc, WalletBilling: walletBillingSvc,
 			Sub: subSvc, Traffic: traffic, Users: userSvc, Online: online, DeepLink: deepLinkSvc,
+			SwitchEvents: switchEventSvc,
 		},
 		Reality:     &api.RealityHandlers{Scanner: realitySvc},
 		CleanIP:     &api.CleanIPHandlers{Scanner: cleanIPSvc},
