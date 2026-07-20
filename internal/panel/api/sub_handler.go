@@ -78,6 +78,8 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		service.ApplyDynamicSNI(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)))
 		// Transport Optimization: obfuscate gRPC service names, fix paths, set authority headers.
 		service.ApplyTransportOptimization(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)))
+		// Probe Enhancement: ISP-optimized probe URLs and intervals for protocol groups.
+		service.ApplyProbeEnhancements(res.Groups, domain.ISPPreset(service.NormalizeISP(ispHint)))
 	}
 
 	format := subscription.Detect(c.Request().UserAgent())

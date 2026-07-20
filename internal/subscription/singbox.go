@@ -123,13 +123,22 @@ func renderSingbox(proxies []Proxy, title string, rules []domain.RoutingRule, gr
 	}
 
 	direct := map[string]any{"type": "direct", "tag": "direct"}
+	// Emergency fallback: last-resort outbound when all proxies are down.
+	// Connects directly — better than total disconnection.
+	emergency := map[string]any{
+		"type": "urltest",
+		"tag":  "🆘 Emergency",
+		"outbounds": []string{"direct"},
+		"url":  "https://cp.cloudflare.com/generate_204",
+		"interval": "300s",
+	}
 	all := []map[string]any{selector, autoTest, fallback}
 	if loadBalance != nil {
 		all = append(all, loadBalance)
 	}
 	all = append(all, groupOutbounds...)
 	all = append(all, outbounds...)
-	all = append(all, direct)
+	all = append(all, direct, emergency)
 
 	cfg := map[string]any{"outbounds": all}
 

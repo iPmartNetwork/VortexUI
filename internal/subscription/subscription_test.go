@@ -114,9 +114,9 @@ func TestRenderSingboxIsValidJSON(t *testing.T) {
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		t.Fatalf("invalid singbox json: %v\n%s", err, body)
 	}
-	// 1 selector + 1 urltest + 1 fallback + 1 multi-path + 3 proxies + 1 direct + 1 dns-out = 9 outbounds.
-	if len(parsed.Outbounds) != 9 {
-		t.Errorf("want 9 outbounds, got %d", len(parsed.Outbounds))
+	// 1 selector + 1 urltest + 1 fallback + 1 multi-path + 3 proxies + 1 direct + 1 emergency + 1 dns-out = 10 outbounds.
+	if len(parsed.Outbounds) != 10 {
+		t.Errorf("want 10 outbounds, got %d", len(parsed.Outbounds))
 	}
 	if parsed.Outbounds[0]["type"] != "selector" {
 		t.Errorf("first outbound should be selector, got %v", parsed.Outbounds[0]["type"])
