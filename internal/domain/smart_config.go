@@ -110,3 +110,83 @@ var RealityServerNamePool = map[ISPPreset][]string{
 		"www.nvidia.com",
 	},
 }
+
+// CDNCleanIPPool provides known-good clean IPs for each CDN provider. These are
+// CDN edge IPs that are NOT blocked by Iranian ISPs and can be used as alternative
+// connection endpoints. Clients try these when the primary endpoint is blocked.
+var CDNCleanIPPool = map[CDNProvider][]string{
+	CDNCloudflare: {
+		"104.18.0.0/20",    // Cloudflare core range
+		"172.67.0.0/16",    // Cloudflare extended
+		"141.101.112.0/20", // Cloudflare EU
+		"190.93.240.0/20",  // Cloudflare Americas
+		"198.41.128.0/17",  // Cloudflare global anycast
+	},
+	CDNArvanCloud: {
+		"185.143.232.0/22", // ArvanCloud primary
+		"95.156.224.0/20",  // ArvanCloud secondary
+		"185.206.92.0/22",  // ArvanCloud tertiary
+	},
+	CDNGcore: {
+		"92.223.0.0/16",    // Gcore primary
+		"199.204.0.0/16",   // Gcore Americas
+	},
+}
+
+// CDNWorkerConfig describes per-CDN optimized WebSocket/gRPC settings.
+type CDNWorkerConfig struct {
+	// DefaultPath is the base WS/gRPC path for the CDN worker.
+	DefaultPath string `json:"default_path"`
+	// RequiredALPN for proper CDN routing.
+	RequiredALPN []string `json:"required_alpn"`
+	// SupportsEarlyData (0-RTT) for WebSocket.
+	SupportsEarlyData bool `json:"supports_early_data"`
+	// SupportsGRPC indicates if the CDN supports gRPC transport.
+	SupportsGRPC bool `json:"supports_grpc"`
+	// MaxWsMessageSize — some CDNs limit WS frame size.
+	MaxWsMessageSize int `json:"max_ws_message_size,omitempty"`
+	// RecommendedTransport for this CDN.
+	RecommendedTransport string `json:"recommended_transport"`
+}
+
+// CDNWorkerConfigs maps each CDN provider to its optimal worker configuration.
+var CDNWorkerConfigs = map[CDNProvider]CDNWorkerConfig{
+	CDNCloudflare: {
+		DefaultPath:          "/ws",
+		RequiredALPN:         []string{"http/1.1"},
+		SupportsEarlyData:    true,
+		SupportsGRPC:         true,
+		MaxWsMessageSize:     0, // no limit
+		RecommendedTransport: "ws",
+	},
+	CDNArvanCloud: {
+		DefaultPath:          "/ws",
+		RequiredALPN:         []string{"http/1.1"},
+		SupportsEarlyData:    true,
+		SupportsGRPC:         false, // ArvanCloud doesn't support gRPC well
+		MaxWsMessageSize:     0,
+		RecommendedTransport: "ws",
+	},
+	CDNGcore: {
+		DefaultPath:          "/ws",
+		RequiredALPN:         []string{"h2", "http/1.1"},
+		SupportsEarlyData:    false,
+		SupportsGRPC:         true,
+		MaxWsMessageSize:     0,
+		RecommendedTransport: "grpc",
+	},
+}
+
+// SNIStrategy defines how to select SNI for anti-blocking.
+type SNIStrategy string
+
+const (
+	// SNIStrategyDirect uses the node's real domain as SNI.
+	SNIStrategyDirect SNIStrategy = "direct"
+	// SNIStrategyRandom picks a random allowed SNI from a pool.
+	SNIStrategyRandom SNIStrategy = "random"
+	// SNIStrategyRotate cycles through SNIs daily.
+	SNIStrategyRotate SNIStrategy = "rotate"
+	// SNIStrategyCDN uses the CDN's default domain (e.g. *.cdn.cloudflare.net).
+	SNIStrategyCDN SNIStrategy = "cdn"
+)

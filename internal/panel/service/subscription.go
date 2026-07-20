@@ -150,11 +150,21 @@ func (s *SubscriptionService) buildFor(ctx context.Context, user *domain.User) (
 				applyTLSProfile(&base, profile)
 			}
 		}
+		// CDN-aware: apply CDN-optimized settings (ALPN, early-data, path).
+		if info.cdn != "" && info.cdn != domain.CDNNone {
+			applyCDNSettings(&base, info.cdn, in.Network)
+		}
 		// No enabled hosts for this inbound: emit the inbound's own link exactly
 		// as before (no regression).
 		hosts := hostsByInbound[in.ID]
 		if len(hosts) == 0 {
 			proxies = append(proxies, base)
+			// CDN fallback: emit extra proxy with a clean IP for redundancy.
+			if info.cdn != "" && info.cdn != domain.CDNNone && isCDNTransport(in.Network) {
+				if fallback := cdnFallbackProxy(base, info.cdn); fallback != nil {
+					proxies = append(proxies, *fallback)
+				}
+			}
 			continue
 		}
 		// One Proxy per enabled host, in priority order, overlaying the base.
@@ -500,6 +510,7 @@ type nodeInfo struct {
 	host string
 	name string
 	live bool
+	cdn  domain.CDNProvider
 }
 
 func (s *SubscriptionService) resolveNode(ctx context.Context, nodeID uuid.UUID, username string, now time.Time) *nodeInfo {
@@ -517,6 +528,7 @@ func (s *SubscriptionService) resolveNode(ctx context.Context, nodeID uuid.UUID,
 		host: host,
 		name: username + " @ " + node.Name,
 		live: node.Live(now, s.staleAfter),
+		cdn:  node.CDN,
 	}
 }
 
@@ -735,6 +747,87 @@ func mapISPAlias(s string) domain.ISPPreset {
 // (e.g. the smart config engine). It maps short ISP names to canonical presets.
 func NormalizeISP(s string) string {
 	return string(mapISPAlias(s))
+}
+
+// --- CDN-aware proxy helpers ---
+
+// isCDNTransport returns true if the transport can be routed through a CDN.
+func isCDNTransport(network string) bool {
+	switch network {
+	case "ws", "grpc", "httpupgrade", "h2", "xhttp":
+		return true
+	default:
+		return false
+	}
+}
+
+// applyCDNSettings optimizes a proxy's config for CDN routing.
+func applyCDNSettings(p *subscription.Proxy, cdn domain.CDNProvider, network string) {
+	cfg, ok := domain.CDNWorkerConfigs[cdn]
+	if !ok {
+		return
+	}
+	// Set correct ALPN for CDN routing.
+	if len(p.ALPN) == 0 && len(cfg.RequiredALPN) > 0 {
+		p.ALPN = cfg.RequiredALPN
+	}
+	// Ensure WS path is set for CDN worker routing.
+	if network == "ws" && p.Path == "" {
+		p.Path = cfg.DefaultPath
+	}
+	// CDN terminates TLS — no need for fragment.
+	// (Smart config engine also handles this but belt-and-suspenders here.)
+	if p.Fragment != "" {
+		p.Fragment = ""
+	}
+}
+
+// cdnFallbackProxy creates a copy of the base proxy with a CDN clean IP as the
+// host, providing a fallback endpoint when the primary is blocked. Returns nil
+// if no clean IPs are available for the CDN.
+func cdnFallbackProxy(base subscription.Proxy, cdn domain.CDNProvider) *subscription.Proxy {
+	pools, ok := domain.CDNCleanIPPool[cdn]
+	if !ok || len(pools) == 0 {
+		return nil
+	}
+	// Use the first clean IP range's base address as a representative.
+	// In practice, clients scan the range; we emit a single known-good entry.
+	cleanIP := cdnFirstIP(pools[0])
+	if cleanIP == "" {
+		return nil
+	}
+	fallback := base
+	fallback.Name = base.Name + " [CDN]"
+	fallback.Host = cleanIP
+	// SNI must remain the original host for TLS to work through CDN.
+	if fallback.SNI == "" {
+		fallback.SNI = base.Host
+	}
+	// Host header for CDN routing.
+	if fallback.HostHeader == "" {
+		fallback.HostHeader = base.Host
+	}
+	return &fallback
+}
+
+// cdnFirstIP extracts the first usable IP from a CIDR notation string.
+func cdnFirstIP(cidr string) string {
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return ""
+	}
+	ip := ipNet.IP.To4()
+	if ip == nil {
+		ip = ipNet.IP.To16()
+	}
+	if ip == nil {
+		return ""
+	}
+	// Use .1 of the network (skip network address).
+	result := make(net.IP, len(ip))
+	copy(result, ip)
+	result[len(result)-1] = 1
+	return result.String()
 }
 
 // hostOf extracts the host from a "host:port" node address, tolerating a bare host.

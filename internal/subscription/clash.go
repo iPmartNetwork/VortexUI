@@ -178,6 +178,8 @@ func clashProxy(p Proxy) map[string]any {
 			}
 		}
 	}
+	// Connection resilience: TCP Fast Open reduces handshake latency.
+	base["tfo"] = true
 	return base
 }
 

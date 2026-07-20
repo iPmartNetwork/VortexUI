@@ -151,6 +151,7 @@ func singboxOutbound(p Proxy) map[string]any {
 	}
 	o["dial_timeout"] = "5s"
 	o["tcp_fast_open"] = true
+	o["tcp_keep_alive_interval"] = "30s"
 	o["domain_strategy"] = "prefer_ipv4"
 	if p.Security == "tls" || p.Security == "reality" {
 		tls := map[string]any{"enabled": true}
@@ -272,6 +273,9 @@ func singboxTransport(p Proxy) map[string]any {
 		if p.HostHeader != "" {
 			t["headers"] = map[string]any{"Host": p.HostHeader}
 		}
+		// Early-data (0-RTT) reduces connection latency; safe behind CDN.
+		t["max_early_data"] = 2048
+		t["early_data_header_name"] = "Sec-WebSocket-Protocol"
 		return t
 	case "grpc":
 		return map[string]any{"type": "grpc", "service_name": p.Path}

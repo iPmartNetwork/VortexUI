@@ -75,6 +75,11 @@ type Node struct {
 	// tunnel/CDN/relay setups where the user should connect via an intermediate.
 	Endpoint string `json:"endpoint,omitempty"`
 
+	// CDN identifies the CDN provider this node sits behind (empty = direct).
+	// When set, subscription rendering applies CDN-optimized settings (no fragment,
+	// correct ALPN, early-data) and may emit multiple clean-IP proxies.
+	CDN CDNProvider `json:"cdn,omitempty"`
+
 	// Region is a display label for dashboards (e.g. "Frankfurt, DE"). When
 	// LocationAuto is true and Region is empty, it is derived from GeoIP.
 	Region string `json:"region,omitempty"`
