@@ -271,9 +271,13 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	subSvc := service.NewSubscriptionService(users, nodes, store.SubHosts())
 	subSvc.SetTLSTricks(store.TLSTricks())
 	subSvc.SetProtocolGroups(store.ProtocolGroups(), store.ISPProfiles())
+	switchEventSvc := service.NewSwitchEventService(store.SwitchEvents())
+	switchEventSvc.SetPublisher(bus)
 	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	syncSvc.SetWireGuard(wgSvc)
+	protocolGroupSvc := service.NewProtocolGroupService(store.ProtocolGroups(), store.ISPProfiles(), store.Inbounds(), nodes, syncSvc)
+	protocolGroupSvc.SetPublisher(bus)
 	// Provisioning a user onto a node that hosts a WireGuard inbound requires a
 	// full resync (the only path that computes WG peers); wire it in.
 	userSvc.SetResyncer(syncSvc)
@@ -593,6 +597,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		Monitor:     &api.MonitorHandlers{Hub: h, Nodes: nodes, Users: users, Monitor: monitorAdapter{store.Monitor()}},
 		WalletBilling: &api.WalletBillingHandlers{Svc: walletBillingSvc},
 		PaymentConfig: &api.PaymentConfigHandlers{Svc: resellerPaymentSvc, Admins: adminSvc},
+		ProtocolGroups: &api.ProtocolGroupHandlers{Groups: protocolGroupSvc, Events: switchEventSvc},
 		Issuer:      issuer,
 		PanelAuth:   panelAuth,
 		Auth:        authSvc,

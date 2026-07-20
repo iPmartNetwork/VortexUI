@@ -45,6 +45,7 @@ type Deps struct {
 	Monitor            *MonitorHandlers
 	WalletBilling      *WalletBillingHandlers
 	PaymentConfig      *PaymentConfigHandlers
+	ProtocolGroups     *ProtocolGroupHandlers
 	Issuer             *auth.Issuer
 	PanelAuth          Authenticator
 	Auth               *service.AuthService
@@ -267,6 +268,27 @@ func NewRouter(d Deps) *echo.Echo {
 	balancers.POST("", d.Handlers.CreateBalancer, RequirePermission(d.Auth, domain.PermInboundWrite))
 	balancers.PUT("/:id", d.Handlers.UpdateBalancer, RequirePermission(d.Auth, domain.PermInboundWrite))
 	balancers.DELETE("/:id", d.Handlers.DeleteBalancer, RequirePermission(d.Auth, domain.PermInboundWrite))
+
+	// Auto-Protocol Switching: protocol groups, ISP profiles, and switch events.
+	if d.ProtocolGroups != nil {
+		pg := authed.Group("/protocol-groups")
+		pg.GET("", d.ProtocolGroups.ListProtocolGroups, RequirePermission(d.Auth, domain.PermInboundRead))
+		pg.GET("/:id", d.ProtocolGroups.GetProtocolGroup, RequirePermission(d.Auth, domain.PermInboundRead))
+		pg.POST("", d.ProtocolGroups.CreateProtocolGroup, RequirePermission(d.Auth, domain.PermInboundWrite))
+		pg.PUT("/:id", d.ProtocolGroups.UpdateProtocolGroup, RequirePermission(d.Auth, domain.PermInboundWrite))
+		pg.DELETE("/:id", d.ProtocolGroups.DeleteProtocolGroup, RequirePermission(d.Auth, domain.PermInboundWrite))
+		pg.POST("/:id/reorder", d.ProtocolGroups.ReorderInbounds, RequirePermission(d.Auth, domain.PermInboundWrite))
+
+		isp := authed.Group("/isp-profiles")
+		isp.GET("", d.ProtocolGroups.ListISPProfiles, RequirePermission(d.Auth, domain.PermInboundRead))
+		isp.POST("", d.ProtocolGroups.CreateISPProfile, RequirePermission(d.Auth, domain.PermInboundWrite))
+		isp.PUT("/:id", d.ProtocolGroups.UpdateISPProfile, RequirePermission(d.Auth, domain.PermInboundWrite))
+		isp.DELETE("/:id", d.ProtocolGroups.DeleteISPProfile, RequirePermission(d.Auth, domain.PermInboundWrite))
+
+		sw := authed.Group("/switch-events")
+		sw.POST("", d.ProtocolGroups.RecordSwitchEvent, RequirePermission(d.Auth, domain.PermInboundWrite))
+		sw.GET("/summary", d.ProtocolGroups.GetSwitchSummary, RequirePermission(d.Auth, domain.PermInboundRead))
+	}
 
 	// REALITY key generation helper for building reality inbounds.
 	authed.GET("/reality/keypair", d.Handlers.GenerateReality, RequirePermission(d.Auth, domain.PermInboundWrite))
