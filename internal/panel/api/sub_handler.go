@@ -66,6 +66,9 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		// Reorder protocol groups based on ISP-preferred protocol ordering so
 		// clients try the ISP-optimized protocol first within each group.
 		h.Sub.ReorderGroupsByISP(c.Request().Context(), res.Groups, res.Proxies, ispHint)
+		// Smart Config: apply per-ISP optimal anti-DPI settings (fragment, mux,
+		// padding, ECH, fingerprint) to proxies that lack a per-inbound profile.
+		service.ApplySmartProfiles(res.Proxies, domain.ISPPreset(service.NormalizeISP(ispHint)), domain.CDNNone)
 	}
 
 	format := subscription.Detect(c.Request().UserAgent())

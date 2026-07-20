@@ -731,6 +731,12 @@ func mapISPAlias(s string) domain.ISPPreset {
 	}
 }
 
+// NormalizeISP is the exported version of mapISPAlias for use by other packages
+// (e.g. the smart config engine). It maps short ISP names to canonical presets.
+func NormalizeISP(s string) string {
+	return string(mapISPAlias(s))
+}
+
 // hostOf extracts the host from a "host:port" node address, tolerating a bare host.
 func hostOf(addr string) string {
 	if h, _, err := net.SplitHostPort(addr); err == nil {
