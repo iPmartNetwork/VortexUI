@@ -155,10 +155,11 @@ type CreateInboundInput struct {
 	GeoPolicy   *domain.GeoPolicy
 }
 
-// needsSingbox reports whether the protocol requires the sing-box engine.
+// needsSingbox reports whether the protocol PREFERS the sing-box engine.
+// Hysteria2 can run on Xray (v1.3.9+) but sing-box has better QUIC performance.
 func needsSingbox(proto domain.Protocol) bool {
 	switch proto {
-	case domain.ProtoTUIC, domain.ProtoHysteria,
+	case domain.ProtoHysteria2, domain.ProtoTUIC, domain.ProtoHysteria,
 		domain.ProtoWireGuard, domain.ProtoShadowTLS, domain.ProtoAnyTLS, domain.ProtoNaive:
 		return true
 	default:

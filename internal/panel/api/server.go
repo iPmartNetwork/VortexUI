@@ -155,7 +155,9 @@ func NewRouter(d Deps) *echo.Echo {
 	e.GET("/sub/:token/usage", d.Handlers.SubscriptionUsage)
 	e.GET("/sub/:token/wireguard", d.Handlers.SubscribeWireGuard)
 	e.GET("/sub/:token/shop", d.Handlers.SubscriptionShop)
-	e.POST("/sub/:token/switch", d.Handlers.ReportSwitch)
+	e.POST("/sub/:token/switch", d.Handlers.ReportSwitch, RateLimit(d.Limiter, 30, time.Minute, func(c echo.Context) string {
+		return "switch:" + c.Param("token")
+	}))
 
 	// Authenticated subtree. The audit middleware records every mutating request.
 	authed := api.Group("", RequireAuth(d.PanelAuth), RequireActiveAdmin(d.Handlers.Admins), Audit(d.Audit))

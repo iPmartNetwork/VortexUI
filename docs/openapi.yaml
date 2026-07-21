@@ -306,6 +306,61 @@ components:
             additionalProperties: {type: array, items: {type: string}}
             description: allowed security layers per protocol
 
+    ProtocolGroup:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        node_id: { type: string, format: uuid }
+        name: { type: string }
+        inbound_ids:
+          type: array
+          items: { type: string, format: uuid }
+        probe_url: { type: string }
+        probe_interval: { type: integer }
+        probe_timeout: { type: integer }
+        max_retries: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    CreateProtocolGroupInput:
+      type: object
+      required: [node_id, name, inbound_ids]
+      properties:
+        node_id: { type: string, format: uuid }
+        name: { type: string }
+        inbound_ids:
+          type: array
+          items: { type: string, format: uuid }
+        probe_url: { type: string }
+        probe_interval: { type: integer }
+        probe_timeout: { type: integer }
+        max_retries: { type: integer }
+
+    RecordSwitchEventInput:
+      type: object
+      required: [user_id, node_id, source_protocol, target_protocol]
+      properties:
+        user_id: { type: string, format: uuid }
+        node_id: { type: string, format: uuid }
+        group_id: { type: string, format: uuid }
+        source_protocol: { type: string }
+        target_protocol: { type: string }
+        isp: { type: string }
+
+    SwitchSummary:
+      type: object
+      properties:
+        total_switches: { type: integer }
+        by_protocol:
+          type: object
+          additionalProperties: { type: integer }
+        by_node:
+          type: object
+          additionalProperties: { type: integer }
+        by_isp:
+          type: object
+          additionalProperties: { type: integer }
+
   responses:
     Unauthorized: {description: missing/invalid token, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
     Forbidden: {description: insufficient permission, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
@@ -1248,3 +1303,176 @@ paths:
         choices to the selected node's core.
       responses:
         "200": {description: capability matrix, content: {application/json: {schema: {$ref: '#/components/schemas/Capabilities'}}}}
+
+  /api/protocol-groups:
+    get:
+      summary: List protocol groups for a node
+      tags: [Protocol Groups]
+      parameters:
+        - name: node_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProtocolGroup'
+    post:
+      summary: Create a protocol group
+      tags: [Protocol Groups]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProtocolGroupInput'
+      responses:
+        '201':
+          description: Created
+
+  /api/protocol-groups/{id}:
+    get:
+      summary: Get a protocol group
+      tags: [Protocol Groups]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+    put:
+      summary: Update a protocol group
+      tags: [Protocol Groups]
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Delete a protocol group
+      tags: [Protocol Groups]
+      responses:
+        '204':
+          description: Deleted
+
+  /api/protocol-groups/{id}/reorder:
+    post:
+      summary: Reorder inbounds within a protocol group
+      tags: [Protocol Groups]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inbound_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Reordered
+
+  /api/isp-profiles:
+    get:
+      summary: List ISP profiles for a group
+      tags: [ISP Profiles]
+      parameters:
+        - name: group_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create an ISP profile
+      tags: [ISP Profiles]
+      responses:
+        '201':
+          description: Created
+
+  /api/isp-profiles/{id}:
+    put:
+      summary: Update an ISP profile
+      tags: [ISP Profiles]
+      responses:
+        '200':
+          description: Updated
+    delete:
+      summary: Delete an ISP profile
+      tags: [ISP Profiles]
+      responses:
+        '204':
+          description: Deleted
+
+  /api/switch-events:
+    post:
+      summary: Record a protocol switch event
+      tags: [Switch Events]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordSwitchEventInput'
+      responses:
+        '201':
+          description: Recorded
+
+  /api/switch-events/summary:
+    get:
+      summary: Get aggregated switch event summary
+      tags: [Switch Events]
+      parameters:
+        - name: node_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: user_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: isp
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwitchSummary'
+
+  /sub/{token}/switch:
+    post:
+      summary: Report a client-side protocol switch (public, sub-token auth)
+      tags: [Subscription]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source_protocol: { type: string }
+                target_protocol: { type: string }
+                node_id: { type: string, format: uuid }
+                isp: { type: string }
+              required: [source_protocol, target_protocol]
+      responses:
+        '200':
+          description: OK
