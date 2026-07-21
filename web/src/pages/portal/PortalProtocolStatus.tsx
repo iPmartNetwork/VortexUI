@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, ArrowRightLeft, Globe, Wifi } from "lucide-react";
 import { portalApi } from "./portalApi";
 import { GlassCard, StatsCard } from "@/components/veltrix";
+import { useI18n } from "@/i18n/i18n";
 
 interface SwitchSummary {
   total_switches: number;
@@ -19,6 +20,7 @@ interface ConnectionStats {
 }
 
 export function PortalProtocolStatus() {
+  const { t } = useI18n();
   const stats = useQuery({
     queryKey: ["portal-connection-stats"],
     queryFn: () => portalApi<ConnectionStats>("/api/portal/connection-stats"),
@@ -39,25 +41,25 @@ export function PortalProtocolStatus() {
       {/* Real-time Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatsCard
-          title="Live Connections"
+          title={t("portal.protocolStatus.liveConnections")}
           value={conn?.live_connections ?? "—"}
           icon={<Wifi size={18} />}
           color="green"
         />
         <StatsCard
-          title="Active Protocol"
+          title={t("portal.protocolStatus.currentProtocol")}
           value={conn?.current_protocol?.toUpperCase() ?? "—"}
           icon={<Activity size={18} />}
           color="blue"
         />
         <StatsCard
-          title="Switches (24h)"
+          title={t("portal.protocolStatus.switches24h")}
           value={conn?.switches_24h ?? 0}
           icon={<ArrowRightLeft size={18} />}
           color="orange"
         />
         <StatsCard
-          title="Week Total"
+          title={t("portal.protocolStatus.weekTotal")}
           value={summary?.total_switches ?? 0}
           icon={<Globe size={18} />}
           color="cyan"
@@ -68,13 +70,13 @@ export function PortalProtocolStatus() {
       {summary && summary.total_switches > 0 && (
         <GlassCard hover={false} className="!p-5">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle mb-3">
-            Protocol Switch Breakdown (7 days)
+            {t("portal.protocolStatus.breakdown")}
           </h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* By Protocol */}
             <div>
               <p className="text-[10px] text-fg-subtle mb-2 font-medium">
-                By Protocol
+                {t("portal.protocolStatus.byProtocol")}
               </p>
               <div className="space-y-1.5">
                 {Object.entries(summary.by_protocol ?? {})
@@ -105,7 +107,7 @@ export function PortalProtocolStatus() {
             {Object.keys(summary.by_isp ?? {}).length > 0 && (
               <div>
                 <p className="text-[10px] text-fg-subtle mb-2 font-medium">
-                  By ISP
+                  {t("portal.protocolStatus.byISP")}
                 </p>
                 <div className="space-y-1.5">
                   {Object.entries(summary.by_isp ?? {})
