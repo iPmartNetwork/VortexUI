@@ -2,7 +2,8 @@ import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import {
   Shield, Globe, Users, Server, Activity, Palette,
-  ShoppingCart, Lock, BarChart3, Layers, Wifi, Bell, Fingerprint
+  ShoppingCart, Lock, BarChart3, Layers, Wifi, Bell, Fingerprint,
+  ArrowRightLeft, Brain, Network, Shuffle, Gauge
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLang } from '../contexts/LangContext';
@@ -26,6 +27,11 @@ export default function FeaturesSection() {
     { icon: <Wifi className="w-6 h-6" />, title: t('features.federation.title'), desc: t('features.federation.desc'), color: 'from-sky-500 to-sky-700' },
     { icon: <Bell className="w-6 h-6" />, title: t('features.notifications.title'), desc: t('features.notifications.desc'), color: 'from-yellow-500 to-yellow-700' },
     { icon: <Fingerprint className="w-6 h-6" />, title: t('features.security.title'), desc: t('features.security.desc'), color: 'from-red-600 to-rose-800' },
+    { icon: <ArrowRightLeft className="w-6 h-6" />, title: t('features.autoSwitch.title'), desc: t('features.autoSwitch.desc'), color: 'from-emerald-500 to-emerald-700' },
+    { icon: <Brain className="w-6 h-6" />, title: t('features.smartConfig.title'), desc: t('features.smartConfig.desc'), color: 'from-violet-500 to-violet-700' },
+    { icon: <Network className="w-6 h-6" />, title: t('features.multiPath.title'), desc: t('features.multiPath.desc'), color: 'from-indigo-500 to-indigo-700' },
+    { icon: <Shuffle className="w-6 h-6" />, title: t('features.dynamicSNI.title'), desc: t('features.dynamicSNI.desc'), color: 'from-rose-500 to-rose-700' },
+    { icon: <Gauge className="w-6 h-6" />, title: t('features.qualityScore.title'), desc: t('features.qualityScore.desc'), color: 'from-orange-500 to-orange-700' },
   ];
 
   return (
