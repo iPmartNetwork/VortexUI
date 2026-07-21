@@ -1,107 +1,43 @@
-# 🌀 VortexUI Dokümantasyonu
+# VortexUI Dokümantasyonu
 
-<div align="center">
+**Sürüm: 1.4.0** — Otomatik Protokol Geçişi ve Sansür Karşıtı Zeka
 
-**Yeni Nesil Proxy Yönetim Paneli**
+VortexUI resmi dokümantasyonuna hoş geldiniz. VortexUI, akıllı sansür karşıtı yeteneklerle Xray ve sing-box destekleyen yeni nesil, çekirdek bağımsız bir proxy yönetim panelidir.
 
-*Kullanıcı Odaklı · Çekirdek Bağımsız · Kurumsal Hazır*
-
-[![Sürüm](https://img.shields.io/badge/sürüm-1.3.1-7c3aed?style=for-the-badge)](https://github.com/iPmartNetwork/VortexUI/releases)
-[![Lisans](https://img.shields.io/badge/lisans-MIT-green?style=for-the-badge)](https://github.com/iPmartNetwork/VortexUI/blob/master/LICENSE)
-[![Docker](https://img.shields.io/badge/docker-hazır-blue?style=for-the-badge)](https://hub.docker.com/r/ipmartnetwork/vortexui)
-
-</div>
-
----
-
-## 🚀 Hızlı Kurulum
-
-```bash
-bash <(curl -Ls https://raw.githubusercontent.com/iPmartNetwork/VortexUI/master/install.sh)
-```
-
-Tek komut. Etkileşimli kurulum. HTTPS dahil.
-
----
-
-## 📖 Dokümantasyon Haritası
+## Hızlı Navigasyon
 
 | Bölüm | Açıklama |
 |-------|----------|
-| [Giriş](01-introduction.md) | Mimari, özellik genel bakışı, karşılaştırma |
-| [Kurulum](02-installation.md) | Tek satır kurulum, Docker, yerel derleme |
-| [İlk Adımlar](03-first-steps.md) | Giriş, düğüm ekleme, inbound oluşturma, kullanıcı ekleme |
-| [Kontrol Paneli](04-dashboard.md) | Widget'lar, analizler, monitör, komut paleti |
-| [Kullanıcılar](05-user-management.md) | Yönetim, kotalar, abonelikler, portal, mağaza |
-| [Düğümler](06-node-management.md) | Kayıt, sağlık, otomatik geçiş, izleme |
-| [Ağ](07-network-policy.md) | Çıkışlar, yönlendirme paketleri, CDN zincirleri, yük dengeleyici |
-| [Güvenlik](08-security-administration.md) | RBAC, TLS hileleri, prob koruması, IP limiti |
-| [Planlar ve Ödemeler](09-plans-payments.md) | Bayi planları, ödeme yapılandırması, cüzdan |
-| [Bildirimler](10-notifications.md) | Webhook'lar, Telegram, kota uyarıları, SSE |
-| [Ayarlar](11-settings-backup.md) | Markalama, beyaz etiket, yedekleme, güncellemeler |
-| [API Referansı](12-api-reference.md) | Kimlik doğrulama, uç noktalar, OpenAPI spec |
-| [Protokoller](13-protocols-config.md) | 14 protokol, taşımalar, güvenlik katmanları |
-| [Operasyonlar](14-operations-maintenance.md) | HTTPS, Prometheus, ölçekleme, performans |
-| [Sorun Giderme](15-troubleshooting-faq.md) | Yaygın sorunlar, hata ayıklama, SSS |
+| [Giriş](01-introduction.md) | VortexUI nedir, tasarım ilkeleri |
+| [Kurulum](02-installation.md) | Ön koşullar, tek satır kurulum, Docker |
+| [İlk Adımlar](03-first-steps.md) | İlk kurulum, ilk düğüm, ilk kullanıcı |
+| [Kontrol Paneli](04-dashboard.md) | Genel bakış, istatistikler |
+| [Kullanıcı Yönetimi](05-user-management.md) | Kullanıcılar, kotalar, abonelikler |
+| [Düğüm Yönetimi](06-node-management.md) | Filo yönetimi, sağlık |
+| [Ağ Politikası](07-network-policy.md) | Yönlendirme, dengeleyiciler |
+| [Güvenlik](08-security-administration.md) | TLS hileleri, prob koruması |
+| [Planlar ve Ödemeler](09-plans-payments.md) | Ticaret, bayi, cüzdan |
+| [Bildirimler](10-notifications.md) | Webhook, Telegram |
+| [Ayarlar](11-settings-backup.md) | Yapılandırma, yedekleme |
+| [API Referansı](12-api-reference.md) | REST API dokümantasyonu |
+| [Protokoller](13-protocols-config.md) | Desteklenen protokoller |
+| [Operasyonlar](14-operations-maintenance.md) | Bakım, yükseltmeler |
+| [Sorun Giderme](15-troubleshooting-faq.md) | SSS, yaygın sorunlar |
+| [Değişiklik Günlüğü](16-changelog.md) | Sürüm geçmişi |
+| [Menü Rehberi](17-menu-usage-guide.md) | UI navigasyon rehberi |
 
----
+## v1.4.0'daki Yenilikler
 
-## ✨ Temel Özellikler
+- **Otomatik Protokol Geçişi** — kendini onaran protokol yük devretme
+- **Akıllı Yapılandırma Motoru** — ISP bazlı anti-DPI optimizasyonu
+- **Dinamik SNI Rotasyonu** — ISP'ye özel havuzlardan günlük rotasyon
+- **Multi-CDN Yönlendirme** — Cloudflare/ArvanCloud/Gcore temiz IP
+- **Akıllı Mux** — ISP optimize çoğullama (h2mux/yamux)
+- **Kalite Puanı** — proxy başına puanlama ve otomatik sıralama
+- **DNS Sızıntı Önleme** — DoH + düz DNS engelleme
+- **Acil Durum Yedek** — son çare çıkışı
 
-### 🔧 Motor ve Altyapı
-- **Çift çekirdek desteği** — Xray-core ve sing-box, düğüm başına seçim
-- **Delta trafik** — Yeniden başlatmaya dayanıklı, veri kaybı yok
-- **mTLS düğüm filosu** — Şifreli bağlantılar, otomatik yük devretme
-- **Otomatik geçiş** — Sağlıksız düğümlerden kullanıcıları taşı
-- **Federasyon** — Birden fazla panel arasında kullanıcı/düğüm senkronizasyonu
+## Bağlantılar
 
-### 🛡 Güvenlik ve Sansür Karşıtı
-- **Reality Tarayıcı** — Gecikme puanlamasıyla optimal SNI keşfi
-- **TLS Hileleri Yöneticisi** — ISP profilleri (parçalama, mux, dolgu)
-- **Prob Koruması** — GFW problarını algıla ve engelle
-- **Sahte Web Sitesi** — Denetleyicilere sahte site göster
-- **DNS-over-HTTPS** — Reklam engelleme ile yerleşik DoH
-
-### 👥 Kullanıcı Yönetimi ve Ticaret
-- **Self-servis portal** — Token ile giriş, kullanım görüntüleme, biletler
-- **Self-servis mağaza** — Çoklu ödeme yöntemleriyle bayi planları
-- **Akıllı Kota** — Kademeli hız azaltma
-- **Aile grupları** — Paylaşılan veri havuzları
-- **Referans sistemi** — Ödüllü davet kodları
-
-### 💼 Bayi Platformu
-- **Cüzdan** — Yükleme kuyruğu ile kredi sistemi
-- **Alt bayiler** — Devralınan kapsamla alt bayiler oluştur
-- **Beyaz etiket** — Özel markalama (logo, renkler, başlık)
-- **Webhook'lar** — Otomasyon için giden olaylar
-- **Politika limitleri** — Maks veri, maks süre, toplu kısıtlamalar
-
-### 🎨 Ön Uç ve UX
-- **Veltrix Cam Arayüzü** — Modern Glass tasarım sistemi
-- **Komut paleti** — Her yerde Ctrl+K araması
-- **Kontrol paneli widget'ları** — Sürükle, bırak, yeniden boyutlandır
-- **8 dil** — Farsça ve Arapça için tam RTL desteği
-- **Karanlık ve Aydınlık tema** — Yumuşak animasyonlu geçiş
-
----
-
-## 🔗 Hızlı Bağlantılar
-
-| Kaynak | Bağlantı |
-|--------|----------|
-| GitHub Deposu | [github.com/iPmartNetwork/VortexUI](https://github.com/iPmartNetwork/VortexUI) |
-| Telegram Kanalı | [@vortex_ui](https://t.me/vortex_ui) |
-| OpenAPI Spec | [openapi.yaml](https://github.com/iPmartNetwork/VortexUI/blob/master/docs/openapi.yaml) |
-| Değişiklik Günlüğü | [CHANGELOG.md](https://github.com/iPmartNetwork/VortexUI/blob/master/CHANGELOG.md) |
-| Hata Bildirimi | [GitHub Issues](https://github.com/iPmartNetwork/VortexUI/issues) |
-
----
-
-## 🌍 Diller
-
-Bu dokümantasyon şu dillerde mevcuttur:
-
-- 🇹🇷 **Türkçe** (mevcut)
-- 🇬🇧 [English](../en/README.md)
-- 🇮🇷 [فارسی](../fa/README.md)
-- 🇸🇦 [العربية](../ar/README.md)
+- [GitHub Deposu](https://github.com/iPmartNetwork/VortexUI)
+- [Telegram Kanalı](https://t.me/vortex_ui)
