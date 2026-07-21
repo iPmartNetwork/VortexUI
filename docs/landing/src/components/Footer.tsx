@@ -87,7 +87,7 @@ export default function Footer() {
             {t('footer.madeWith')} <Heart className="w-3.5 h-3.5 text-red-500" /> {t('footer.by')}
           </div>
           <div className="text-sm text-themed-faint">
-            VortexUI v1.3.1 — {t('footer.openSource')}
+            VortexUI v1.4.0 — {t('footer.openSource')}
           </div>
         </div>
       </div>

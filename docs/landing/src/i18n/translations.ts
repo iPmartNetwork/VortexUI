@@ -23,8 +23,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.telegram': 'Telegram',
 
     // Hero
-    'hero.badge.version': 'Version 1.3.1 —',
-    'hero.badge.refresh': 'Stable Enterprise Release',
+    'hero.badge.version': 'Version 1.4.0 —',
+    'hero.badge.refresh': 'Anti-Censorship Intelligence',
     'hero.title.line1': 'Next-Gen Proxy',
     'hero.title.line2': 'Management Panel',
     'hero.subtitle': 'User-centric, core-agnostic panel supporting',
@@ -49,7 +49,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'features.dualCore.title': 'Dual Core Engine',
     'features.dualCore.desc': 'Xray-core & sing-box support. Choose per node. Push delta traffic — restart-safe, never lose data.',
     'features.antiCensor.title': 'Anti-Censorship Suite',
-    'features.antiCensor.desc': 'TLS Tricks, probing protection, JA3 fingerprint validation, decoy websites, DoH, WARP+, evasion profiles.',
+    'features.antiCensor.desc': 'Smart Config Engine with per-ISP optimization. Dynamic SNI rotation, transport obfuscation, multi-CDN routing, emergency fallback — all automatic.',
     'features.nodeFleet.title': 'Intelligent Node Fleet',
     'features.nodeFleet.desc': 'Enrollment wizard, auto-migration, health diagnostics, mTLS, live monitoring, Cloudflare DNS automation.',
     'features.userCentric.title': 'User-Centric Model',
@@ -202,8 +202,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.documentation': 'مستندات',
     'nav.telegram': 'تلگرام',
 
-    'hero.badge.version': 'نسخه ۱.۳.۱ —',
-    'hero.badge.refresh': 'انتشار پایدار سازمانی',
+    'hero.badge.version': 'نسخه ۱.۴.۰ —',
+    'hero.badge.refresh': 'هوش ضد سانسور',
     'hero.title.line1': 'پنل مدیریت پروکسی',
     'hero.title.line2': 'نسل بعدی',
     'hero.subtitle': 'پنل کاربر‌محور و مستقل از هسته با پشتیبانی از',
@@ -372,8 +372,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.documentation': 'التوثيق',
     'nav.telegram': 'تلغرام',
 
-    'hero.badge.version': 'الإصدار 1.3.1 —',
-    'hero.badge.refresh': 'إصدار مؤسسي مستقر',
+    'hero.badge.version': 'الإصدار 1.4.0 —',
+    'hero.badge.refresh': 'ذكاء مكافحة الرقابة',
     'hero.title.line1': 'لوحة إدارة البروكسي',
     'hero.title.line2': 'من الجيل التالي',
     'hero.subtitle': 'لوحة تركز على المستخدم ومستقلة عن النواة تدعم',
@@ -542,8 +542,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.documentation': 'Belgeler',
     'nav.telegram': 'Telegram',
 
-    'hero.badge.version': 'Sürüm 1.3.1 —',
-    'hero.badge.refresh': 'Kararlı Kurumsal Sürüm',
+    'hero.badge.version': 'Sürüm 1.4.0 —',
+    'hero.badge.refresh': 'Sansür Karşıtı Zeka',
     'hero.title.line1': 'Yeni Nesil Proxy',
     'hero.title.line2': 'Yönetim Paneli',
     'hero.subtitle': 'Kullanıcı odaklı, çekirdek bağımsız panel,',

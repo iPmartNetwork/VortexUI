@@ -5,7 +5,7 @@
 
 site_name: VortexUI Docs
 site_url: https://ipmartnetwork.github.io/VortexUI/
-site_description: "VortexUI v1.4.0 — proxy management panel with auto-protocol switching, anti-censorship intelligence, and full i18n"
+site_description: "VortexUI v1.4.0 — Auto-Protocol Switching & Anti-Censorship Intelligence proxy management panel with Xray + sing-box dual-core support"
 site_author: ali (zeus)
 
 repo_name: iPmartNetwork/VortexUI

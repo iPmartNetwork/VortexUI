@@ -57,7 +57,7 @@ export default function Navbar() {
               <div>
                 <span className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Vortex</span>
                 <span className="text-xl font-bold bg-gradient-to-r from-vortex-500 to-cyber-400 bg-clip-text text-transparent">UI</span>
-                <span className={`hidden sm:inline ms-2 text-xs font-mono ${isDark ? 'text-white/30' : 'text-gray-400'}`}>v1.3.1</span>
+                <span className={`hidden sm:inline ms-2 text-xs font-mono ${isDark ? 'text-white/30' : 'text-gray-400'}`}>v1.4.0</span>
               </div>
             </a>
 
