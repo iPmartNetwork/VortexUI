@@ -24,7 +24,7 @@
 
 <sub>
 
-[Features](#-features) · [What's New](#-whats-new-in-140) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Docs](#-documentation) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
+[Features](#-features) · [What's New](#-whats-new-in-141) · [Screenshots](#-screenshots) · [Comparison](#-comparison) · [Quick Start](#-quick-start) · [Protocols](#-supported-protocols) · [Docs](#-documentation) · [Roadmap](#-roadmap) · [Contributing](#-contributing)
 
 </sub>
 
@@ -123,6 +123,29 @@
 </td>
 </tr>
 </table>
+
+---
+
+## 🆕 What's New in 1.4.1
+
+> **Enterprise-Grade: 14 Phases · User Templates · WireGuard Mesh · Advanced Security · CLI · PWA Portal**
+
+| Feature | Description |
+|---------|-------------|
+| **User Templates & Bulk Ops** | Reusable blueprints, bulk create 1-1000 users, clone, 10 bulk operation types with preview |
+| **HWID Device Management** | Per-user hardware ID tracking, device lock, device limit, bulk HWID reset |
+| **Format Variables** | 20+ subscription template variables ({USERNAME}, {DAYS_LEFT}, {NODE_FLAG}...) |
+| **Granular Notifications** | Scoped channels (global/admin/node), webhook with HMAC-SHA256, Telegram bot pro |
+| **Dashboard Pro** | ISP heatmap 7×24, geographic map, revenue reports, anomaly detection, daily health check |
+| **Client Templates** | User-Agent regex matching, per-app routing/DNS config, approval queue |
+| **XRay Config Management** | Validation, versioning, diff, rollback, export/import, core auto-update |
+| **WireGuard Full** | IP allocation, peer repair, QR code, per-peer MTU/DNS, site-to-site mesh |
+| **Advanced Security** | IP whitelist/ban, session management, login audit, account lockout, scoped API tokens, AES-256 field encryption |
+| **Performance** | Redis subscription cache, background job queue, cursor pagination, read replica routing, TimescaleDB |
+| **API Playground** | Embedded Swagger UI, rate limit dashboard, webhook test endpoint, SDK generation |
+| **CLI (cobra)** | `vortexui doctor\|migrate\|backup\|settings\|cleanup` subcommands |
+| **Portal Pro (PWA)** | Speed test, push notifications, connection guides, setup wizard, i18n (5 languages), dark/light themes |
+| **Install Script** | One-line Docker installer with auto-secrets, mTLS certs, health check |
 
 ---
 
