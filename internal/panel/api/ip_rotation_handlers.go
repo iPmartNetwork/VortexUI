@@ -132,7 +132,7 @@ func (h *IPRotationHandler) rotateDigitalOcean(ctx interface{ Done() <-chan stru
 
 	if resp.StatusCode >= 300 {
 		errBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("DigitalOcean API error %d: %s", resp.StatusCode, string(errBody))
+		return "", fmt.Errorf("digitalocean API error %d: %s", resp.StatusCode, string(errBody))
 	}
 
 	var result struct {
@@ -170,7 +170,7 @@ func (h *IPRotationHandler) rotateVultr(ctx interface{ Done() <-chan struct{} },
 
 	if resp.StatusCode >= 300 {
 		errBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("Vultr API error %d: %s", resp.StatusCode, string(errBody))
+		return "", fmt.Errorf("vultr API error %d: %s", resp.StatusCode, string(errBody))
 	}
 
 	var result struct {
@@ -207,7 +207,7 @@ func (h *IPRotationHandler) rotateHetzner(ctx interface{ Done() <-chan struct{} 
 
 	if resp.StatusCode >= 300 {
 		errBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("Hetzner API error %d: %s", resp.StatusCode, string(errBody))
+		return "", fmt.Errorf("hetzner API error %d: %s", resp.StatusCode, string(errBody))
 	}
 
 	var result struct {
@@ -245,7 +245,7 @@ func (h *IPRotationHandler) rotateLinode(ctx interface{ Done() <-chan struct{} }
 
 	if resp.StatusCode >= 300 {
 		errBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("Linode API error %d: %s", resp.StatusCode, string(errBody))
+		return "", fmt.Errorf("linode API error %d: %s", resp.StatusCode, string(errBody))
 	}
 
 	var result struct {
