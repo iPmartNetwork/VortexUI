@@ -65,6 +65,7 @@ type Handlers struct {
 	ShareLinks *service.ShareLinkService // optional; nil disables share link generation
 	CertStatus *service.CertStatusService // optional; nil disables cert status endpoint
 	SwitchEvents *service.SwitchEventService // optional; nil disables public switch reporting
+	DeviceSvc    *service.DeviceService        // optional; nil disables HWID-based device management
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a

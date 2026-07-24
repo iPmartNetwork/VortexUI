@@ -54,6 +54,12 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		return err
 	}
 
+	// HWID-based device management: extract HWID from X-Device-HWID header or
+	// ?hwid= query param, then enforce device_lock / device_limit and register.
+	if err := h.enforceHWID(c, res.User); err != nil {
+		return err
+	}
+
 	// ISP hint: when the client (or frontend) passes ?isp=mci, auto-apply the
 	// ISP-specific TLS tricks profile to proxies that lack a per-inbound profile.
 	// When no explicit hint is given, auto-detect ISP from the client IP.
@@ -210,6 +216,63 @@ func isBrowser(ua string) bool {
 		}
 	}
 	return false
+}
+
+// enforceHWID extracts the hardware ID from the X-Device-HWID header or the
+// ?hwid= query parameter. When present, it calls DeviceService.CheckDeviceAllowed
+// to enforce device_lock and device_limit, then registers the device. If no HWID
+// is provided, the check is skipped gracefully.
+func (h *Handlers) enforceHWID(c echo.Context, u *domain.User) error {
+	if h.DeviceSvc == nil {
+		return nil
+	}
+
+	hwid := c.Request().Header.Get("X-Device-HWID")
+	if hwid == "" {
+		hwid = c.QueryParam("hwid")
+	}
+	if hwid == "" {
+		return nil // no HWID provided, skip
+	}
+
+	// Enforce device_lock and device_limit policies.
+	if err := h.DeviceSvc.CheckDeviceAllowed(c.Request().Context(), u.ID, hwid); err != nil {
+		if errors.Is(err, service.ErrDeviceLocked) {
+			return echo.NewHTTPError(http.StatusForbidden, "device not registered and lock is enabled")
+		}
+		if errors.Is(err, service.ErrDeviceLimitExceeded) {
+			return echo.NewHTTPError(http.StatusForbidden, "device limit exceeded")
+		}
+		return nil // fail open on unexpected errors
+	}
+
+	// Derive OS hint from User-Agent for the device registration.
+	os := detectOS(c.Request().UserAgent())
+
+	// Register (upsert) the device — updates last_seen if already known.
+	_ = h.DeviceSvc.RegisterDevice(c.Request().Context(), u.ID, hwid, os)
+
+	return nil
+}
+
+// detectOS extracts a coarse OS label from the User-Agent string for device
+// registration. Falls back to "unknown" when the UA is unrecognized.
+func detectOS(ua string) string {
+	lower := strings.ToLower(ua)
+	switch {
+	case strings.Contains(lower, "windows"):
+		return "Windows"
+	case strings.Contains(lower, "android"):
+		return "Android"
+	case strings.Contains(lower, "iphone"), strings.Contains(lower, "ipad"), strings.Contains(lower, "ios"):
+		return "iOS"
+	case strings.Contains(lower, "mac"):
+		return "macOS"
+	case strings.Contains(lower, "linux"):
+		return "Linux"
+	default:
+		return "unknown"
+	}
 }
 
 // enforceDevice applies both device controls: an explicit HWID allowlist (if the

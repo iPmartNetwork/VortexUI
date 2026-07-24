@@ -713,5 +713,12 @@ func NewRouter(d Deps) *echo.Echo {
 		sec.GET("/reputation/:ip", d.SecurityHardeningHandlers.GetIPReputation)
 	}
 
+	// --- API v2 routes ---
+	v2 := e.Group("/api/v2", RequireAuth(d.PanelAuth), RequireActiveAdmin(d.Handlers.Admins), Audit(d.Audit))
+	// Subscription format template settings
+	v2sub := v2.Group("/sub-settings", RequirePermission(d.Auth, domain.PermAdminManage))
+	v2sub.GET("", d.SubSettings.GetSubSettings)
+	v2sub.PUT("", d.SubSettings.UpdateSubSettings)
+
 	return e
 }

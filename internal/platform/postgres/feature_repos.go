@@ -1659,9 +1659,9 @@ func (r *QuotaNotifyRepo) ListEvents(ctx context.Context, limit int) ([]*domain.
 type SubSettingsRepo struct{ pool *pgxpool.Pool }
 
 func (r *SubSettingsRepo) Get(ctx context.Context) (*domain.SubSettings, error) {
-	row := r.pool.QueryRow(ctx, `SELECT update_interval FROM sub_settings WHERE id = 1`)
+	row := r.pool.QueryRow(ctx, `SELECT update_interval, profile_title_template, remark_template, address_template FROM sub_settings WHERE id = 1`)
 	var s domain.SubSettings
-	if err := row.Scan(&s.UpdateInterval); err != nil {
+	if err := row.Scan(&s.UpdateInterval, &s.ProfileTitleTemplate, &s.RemarkTemplate, &s.AddressTemplate); err != nil {
 		return nil, err
 	}
 	return &s, nil
@@ -1669,10 +1669,15 @@ func (r *SubSettingsRepo) Get(ctx context.Context) (*domain.SubSettings, error) 
 
 func (r *SubSettingsRepo) Save(ctx context.Context, s *domain.SubSettings) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO sub_settings (id, update_interval, updated_at)
-		VALUES (1, $1, now())
-		ON CONFLICT (id) DO UPDATE SET update_interval = EXCLUDED.update_interval, updated_at = now()`,
-		s.UpdateInterval)
+		INSERT INTO sub_settings (id, update_interval, profile_title_template, remark_template, address_template, updated_at)
+		VALUES (1, $1, $2, $3, $4, now())
+		ON CONFLICT (id) DO UPDATE SET
+			update_interval = EXCLUDED.update_interval,
+			profile_title_template = EXCLUDED.profile_title_template,
+			remark_template = EXCLUDED.remark_template,
+			address_template = EXCLUDED.address_template,
+			updated_at = now()`,
+		s.UpdateInterval, s.ProfileTitleTemplate, s.RemarkTemplate, s.AddressTemplate)
 	return err
 }
 

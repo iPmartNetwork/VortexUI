@@ -53,6 +53,7 @@ type User struct {
 
 	// Access control
 	DeviceLimit  int      `json:"device_limit"` // 0 = unlimited; enforced via HWID/IP
+	DeviceLock   bool     `json:"device_lock"`  // when true, only pre-registered HWIDs may connect
 	AllowedHWIDs []string `json:"allowed_hwids,omitempty"`
 
 	// Notification: user's Telegram chat ID for personal alerts (expiry, limit).

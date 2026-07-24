@@ -77,6 +77,9 @@ func (s *Store) Sessions() *SessionRepoPgx { return &SessionRepoPgx{pool: s.pool
 // Migration returns the migration-event repository.
 func (s *Store) Migration() *MigrationRepo { return &MigrationRepo{pool: s.pool} }
 
+// UserTemplates returns the user template repository.
+func (s *Store) UserTemplates() *UserTemplateRepo { return &UserTemplateRepo{pool: s.pool} }
+
 // Monitor returns the live-monitor repository (traffic-derived online users).
 func (s *Store) Monitor() *MonitorRepo { return &MonitorRepo{pool: s.pool} }
 
@@ -180,3 +183,9 @@ func (s *Store) WireGuardPeers() *WireGuardPeerRepo { return &WireGuardPeerRepo{
 
 // ResellerPayment returns the per-reseller payment config repository.
 func (s *Store) ResellerPayment() *ResellerPaymentRepo { return &ResellerPaymentRepo{pool: s.pool} }
+
+// Devices returns the user device (HWID) repository.
+func (s *Store) Devices() *DeviceRepo { return &DeviceRepo{pool: s.pool} }
+
+// BulkOperations returns the bulk operation history repository.
+func (s *Store) BulkOperations() *BulkOperationRepo { return &BulkOperationRepo{pool: s.pool} }

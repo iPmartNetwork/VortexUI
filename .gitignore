@@ -38,6 +38,7 @@ Thumbs.db
 /web/dist/
 /web/scripts/missing-*.tsv
 /web/scripts/missing-*.txt
+/docs/landing/node_modules/
 
 # MkDocs build output & copied assets
 /review/site/
@@ -54,6 +55,9 @@ go.work.sum
 
 # Freebuff desktop local data (contains session tokens)
 .freebuff/
+
+# Windows reserved filenames
+nul
 
 # Python bytecode caches
 __pycache__/

@@ -13,6 +13,7 @@ import {
   LifeBuoy,
   Settings as SettingsIcon,
   Activity,
+  ArrowRightLeft,
 } from "lucide-react";
 import type { NavSection } from "./nav-sections";
 
@@ -33,6 +34,8 @@ export function buildCompactNavSections(sudo: boolean): NavSection[] {
       id: "network",
       items: [
         { to: "/inbounds", key: "nav.inboundsSubhosts", icon: Globe },
+        { to: "/inbounds?tab=groups", key: "nav.protocolGroups", icon: Network },
+        { to: "/switch-analytics", key: "nav.switchAnalytics", icon: ArrowRightLeft },
         { to: "/routing", key: "nav.smartRoutingBalancers", icon: RouteIcon },
       ],
     },
