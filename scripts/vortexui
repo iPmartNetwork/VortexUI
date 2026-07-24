@@ -213,6 +213,9 @@ c_update() {
         systemctl daemon-reload
       fi
       systemctl enable vortexui-panel 2>/dev/null || true
+      # Ensure DB and Redis containers are running before panel starts
+      $DEPS up -d
+      sleep 2
       systemctl restart vortexui-panel caddy
       echo "${g}✓ panel updated${n} — run ${b}vortexui doctor${n} to verify services, DB, and certs." ;;
     *)      $COMPOSE up -d --build
