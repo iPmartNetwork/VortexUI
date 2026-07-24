@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -158,10 +160,12 @@ func newDoctorCmd() *cobra.Command {
 			if keyFile == "" {
 				keyFile = "deploy/certs/panel.key"
 			}
-			if _, err := os.Stat(certFile); os.IsNotExist(err) {
-				doctorWarn("TLS certificate", fmt.Sprintf("%s not found, skipping", certFile))
+			cleanCert := filepath.Clean(certFile)
+			cleanKey := filepath.Clean(keyFile)
+			if _, err := os.Stat(cleanCert); os.IsNotExist(err) {
+				doctorWarn("TLS certificate", fmt.Sprintf("%s not found, skipping", cleanCert))
 			} else {
-				cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+				cert, err := tls.LoadX509KeyPair(cleanCert, cleanKey)
 				if err != nil {
 					doctorFail("TLS certificate", fmt.Sprintf("load failed: %v", err))
 					failures++
@@ -196,7 +200,7 @@ func newDoctorCmd() *cobra.Command {
 			}
 
 			// 5. Port 8080 check
-			ln, err := net.Listen("tcp", ":8080")
+			ln, err := net.Listen("tcp", "127.0.0.1:8080")
 			if err != nil {
 				// Port is in use — check if it's us by trying to reach our health endpoint
 				if strings.Contains(err.Error(), "address already in use") || strings.Contains(err.Error(), "bind") {
@@ -205,7 +209,7 @@ func newDoctorCmd() *cobra.Command {
 					doctorWarn("Port 8080", fmt.Sprintf("check failed: %v", err))
 				}
 			} else {
-				ln.Close()
+				_ = ln.Close()
 				doctorPass("Port 8080", "available")
 			}
 
@@ -263,12 +267,17 @@ func newUpdateCmd() *cobra.Command {
 
 			fmt.Printf("==> Restarting %s...\n", service)
 
+			// Validate service name to prevent command injection
+			if !regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`).MatchString(service) {
+				return fmt.Errorf("invalid service name: %s", service)
+			}
+
 			// Unmask if masked
-			isEnabled := exec.Command("systemctl", "is-enabled", service)
+			isEnabled := exec.Command("systemctl", "is-enabled", service) //nolint:gosec // service name validated above
 			out, _ := isEnabled.Output()
 			if strings.TrimSpace(string(out)) == "masked" {
 				fmt.Printf("    Service %s is masked — unmasking...\n", service)
-				unmask := exec.Command("systemctl", "unmask", service)
+				unmask := exec.Command("systemctl", "unmask", service) //nolint:gosec // service name validated above
 				unmask.Stdout = os.Stdout
 				unmask.Stderr = os.Stderr
 				if err := unmask.Run(); err != nil {
@@ -276,7 +285,7 @@ func newUpdateCmd() *cobra.Command {
 				}
 			}
 
-			restart := exec.Command("systemctl", "restart", service)
+			restart := exec.Command("systemctl", "restart", service) //nolint:gosec // service name validated above
 			restart.Stdout = os.Stdout
 			restart.Stderr = os.Stderr
 			if err := restart.Run(); err != nil {
