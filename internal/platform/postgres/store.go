@@ -208,3 +208,9 @@ func (s *Store) SubAnalytics() *SubAnalyticsRepo { return &SubAnalyticsRepo{pool
 
 // Revenue returns the revenue entries repository.
 func (s *Store) Revenue() *RevenueRepo { return &RevenueRepo{pool: s.pool} }
+
+// ClientTemplates returns the client template repository.
+func (s *Store) ClientTemplates() *ClientTemplateRepo { return &ClientTemplateRepo{pool: s.pool} }
+
+// ApprovalQueue returns the subscription approval queue repository.
+func (s *Store) ApprovalQueue() *ApprovalQueueRepo { return &ApprovalQueueRepo{pool: s.pool} }

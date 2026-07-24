@@ -93,6 +93,14 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		format = subscription.Format(q)
 	}
 
+	// Client template matching: apply custom routing/DNS/outbounds for matched client apps.
+	if h.ClientTemplateSvc != nil {
+		if tpl, err := h.ClientTemplateSvc.MatchClient(c.Request().Context(), c.Request().UserAgent()); err == nil && tpl != nil {
+			res.DNSSettings = mergeDNSSettings(res.DNSSettings, tpl.DNSSettings)
+			res.CustomOutbounds = mergeCustomOutbounds(res.CustomOutbounds, tpl.CustomOutbounds)
+		}
+	}
+
 	body, err := subscription.RenderWith(format, res.Proxies, subscription.RenderOpts{Title: "VortexUI", Rules: res.Rules, Groups: res.Groups})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "render failed")
@@ -392,4 +400,32 @@ func (h *Handlers) ReportSwitch(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	return c.JSON(http.StatusOK, echo.Map{"ok": true})
+}
+
+// --- Client template merge helpers ---
+
+// mergeDNSSettings merges template DNS settings into existing ones. Template
+// values take precedence for conflicting keys.
+func mergeDNSSettings(existing, templateDNS map[string]any) map[string]any {
+	if len(templateDNS) == 0 {
+		return existing
+	}
+	if existing == nil {
+		existing = make(map[string]any)
+	}
+	for k, v := range templateDNS {
+		existing[k] = v
+	}
+	return existing
+}
+
+// mergeCustomOutbounds appends template custom outbounds to existing ones.
+func mergeCustomOutbounds(existing, templateOutbounds []any) []any {
+	if len(templateOutbounds) == 0 {
+		return existing
+	}
+	if existing == nil {
+		existing = []any{}
+	}
+	return append(existing, templateOutbounds...)
 }

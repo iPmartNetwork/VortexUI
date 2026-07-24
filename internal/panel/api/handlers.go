@@ -66,6 +66,7 @@ type Handlers struct {
 	CertStatus *service.CertStatusService // optional; nil disables cert status endpoint
 	SwitchEvents *service.SwitchEventService // optional; nil disables public switch reporting
 	DeviceSvc    *service.DeviceService        // optional; nil disables HWID-based device management
+	ClientTemplateSvc *service.ClientTemplateService // optional; nil disables client template matching
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a

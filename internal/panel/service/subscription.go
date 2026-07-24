@@ -89,10 +89,12 @@ func (s *SubscriptionService) SetSwitchEvents(repo port.SwitchEventRepository) {
 // carries the auto-protocol-switching groups for per-group urltest/fallback
 // rendering in Clash/sing-box.
 type SubResult struct {
-	User    *domain.User
-	Proxies []subscription.Proxy
-	Rules   []domain.RoutingRule
-	Groups  []subscription.ProtocolGroupRender
+	User            *domain.User
+	Proxies         []subscription.Proxy
+	Rules           []domain.RoutingRule
+	Groups          []subscription.ProtocolGroupRender
+	DNSSettings     map[string]any // injected by client template matching
+	CustomOutbounds []any          // injected by client template matching
 }
 
 // Build looks up the user by token and assembles a Proxy per enabled inbound.
