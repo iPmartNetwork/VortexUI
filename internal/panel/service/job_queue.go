@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -109,7 +110,7 @@ func (q *JobQueue) ProcessOne(ctx context.Context) (bool, error) {
 	if !ok {
 		errMsg := fmt.Sprintf("no handler registered for job type: %s", job.JobType)
 		_ = q.store.UpdateStatus(ctx, job.ID, domain.JobStatusFailed, nil, errMsg)
-		return true, fmt.Errorf(errMsg)
+		return true, errors.New(errMsg)
 	}
 
 	q.logger.Info("processing job", "id", job.ID, "type", job.JobType, "attempt", job.Attempts+1)

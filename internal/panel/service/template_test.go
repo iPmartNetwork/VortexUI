@@ -10,13 +10,14 @@ import (
 // Property 1: Template persistence round-trip — a created template can be
 // retrieved with all fields intact.
 func TestProperty_TemplatePersistenceRoundTrip(t *testing.T) {
+	expire := int64(30 * 86400) // 30 days in seconds
 	tmpl := &domain.UserTemplate{
-		ID:            uuid.New(),
-		Name:          "test-template",
-		DataLimit:     10 * 1024 * 1024 * 1024, // 10 GB
-		ExpireDays:    30,
-		UserPrefix:    "user_",
-		ResetStrategy: "monthly",
+		ID:             uuid.New(),
+		Name:           "test-template",
+		DataLimit:      10 * 1024 * 1024 * 1024, // 10 GB
+		ExpireDuration: &expire,
+		DeviceLimit:    3,
+		ResetStrategy:  "monthly",
 	}
 
 	// Round-trip: marshal → unmarshal should preserve all fields.
@@ -26,11 +27,11 @@ func TestProperty_TemplatePersistenceRoundTrip(t *testing.T) {
 	if tmpl.DataLimit != 10*1024*1024*1024 {
 		t.Fatal("data_limit mismatch")
 	}
-	if tmpl.ExpireDays != 30 {
-		t.Fatal("expire_days mismatch")
+	if *tmpl.ExpireDuration != 30*86400 {
+		t.Fatal("expire_duration mismatch")
 	}
-	if tmpl.UserPrefix != "user_" {
-		t.Fatal("user_prefix mismatch")
+	if tmpl.DeviceLimit != 3 {
+		t.Fatal("device_limit mismatch")
 	}
 	if tmpl.ResetStrategy != "monthly" {
 		t.Fatal("reset_strategy mismatch")

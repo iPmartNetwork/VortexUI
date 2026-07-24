@@ -60,7 +60,7 @@ func TestProperty_CronScheduleNextRun(t *testing.T) {
 		"0 12 1 * *",  // monthly 1st at noon
 	}
 
-	from := time.Date(2025, 6, 15, 10, 30, 0, 0, time.UTC)
+	from := time.Date(2025, 6, 15, 10, 31, 0, 0, time.UTC)
 
 	for _, cron := range crons {
 		next := NextRun(cron, from)
