@@ -1,0 +1,16 @@
+[Unit]
+Description=VortexUI Panel
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/vortexui/panel.env
+ExecStart=/usr/local/bin/vortex-panel
+WorkingDirectory=/opt/vortexui
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target
