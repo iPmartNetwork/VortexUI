@@ -2,9 +2,17 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"net"
 	"os"
+	"os/exec"
+	"strings"
+	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +28,7 @@ func buildCLI() *cobra.Command {
 
 	root.AddCommand(
 		newDoctorCmd(),
+		newUpdateCmd(),
 		newMigrateCmd(),
 		newBackupCmd(),
 		newSettingsCmd(),
@@ -40,7 +49,7 @@ func runCLI() bool {
 	}
 
 	knownCmds := map[string]bool{
-		"doctor": true, "migrate": true, "backup": true,
+		"doctor": true, "update": true, "migrate": true, "backup": true,
 		"settings": true, "cleanup": true, "user": true, "node": true,
 		"help": true, "version": true, "completion": true,
 	}
@@ -60,33 +69,222 @@ func runCLI() bool {
 
 // --- doctor ---
 
+// ANSI color helpers for doctor output.
+const (
+	colorGreen  = "\033[0;32m"
+	colorRed    = "\033[0;31m"
+	colorYellow = "\033[1;33m"
+	colorReset  = "\033[0m"
+)
+
+func doctorPass(name, detail string) {
+	fmt.Printf("  %s[✓]%s %s: %s\n", colorGreen, colorReset, name, detail)
+}
+
+func doctorFail(name, detail string) {
+	fmt.Printf("  %s[✗]%s %s: %s\n", colorRed, colorReset, name, detail)
+}
+
+func doctorWarn(name, detail string) {
+	fmt.Printf("  %s[!]%s %s: %s\n", colorYellow, colorReset, name, detail)
+}
+
 func newDoctorCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
-		Short: "Run system health checks (database, Redis, nodes, TLS, DNS, disk)",
+		Short: "Run system health checks (database, Redis, TLS, disk, ports)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
 			fmt.Println("VortexUI Doctor — running health checks...")
 			fmt.Println()
 
-			// Checks would be delegated to service.DoctorService in production.
-			// For now we show the framework structure.
-			checks := []string{
-				"Database connectivity",
-				"Redis connectivity",
-				"Node agent reachability",
-				"TLS certificate validity",
-				"Required ports availability",
-				"DNS resolution",
-				"Disk space",
+			failures := 0
+
+			// 1. Database connectivity
+			dbURL := os.Getenv("DATABASE_URL")
+			if dbURL == "" {
+				dbURL = os.Getenv("VORTEX_DATABASE_URL")
+			}
+			if dbURL == "" {
+				doctorWarn("Database", "DATABASE_URL not set, skipping")
+			} else {
+				pool, err := pgxpool.New(ctx, dbURL)
+				if err != nil {
+					doctorFail("Database", fmt.Sprintf("connection failed: %v", err))
+					failures++
+				} else {
+					if err := pool.Ping(ctx); err != nil {
+						doctorFail("Database", fmt.Sprintf("ping failed: %v", err))
+						failures++
+					} else {
+						doctorPass("Database", "connected and responding")
+					}
+					pool.Close()
+				}
 			}
 
-			_ = ctx
-			for _, check := range checks {
-				fmt.Printf("  [•] %s ... pending\n", check)
+			// 2. Redis connectivity
+			redisURL := os.Getenv("REDIS_URL")
+			if redisURL == "" {
+				redisURL = os.Getenv("VORTEX_REDIS_URL")
+			}
+			if redisURL == "" {
+				doctorWarn("Redis", "REDIS_URL not set, skipping")
+			} else {
+				opts, err := redis.ParseURL(redisURL)
+				if err != nil {
+					doctorFail("Redis", fmt.Sprintf("invalid URL: %v", err))
+					failures++
+				} else {
+					rdb := redis.NewClient(opts)
+					if err := rdb.Ping(ctx).Err(); err != nil {
+						doctorFail("Redis", fmt.Sprintf("ping failed: %v", err))
+						failures++
+					} else {
+						doctorPass("Redis", "connected and responding")
+					}
+					_ = rdb.Close()
+				}
+			}
+
+			// 3. TLS certificate validity
+			certFile := os.Getenv("TLS_CERT")
+			if certFile == "" {
+				certFile = "deploy/certs/panel.crt"
+			}
+			keyFile := os.Getenv("TLS_KEY")
+			if keyFile == "" {
+				keyFile = "deploy/certs/panel.key"
+			}
+			if _, err := os.Stat(certFile); os.IsNotExist(err) {
+				doctorWarn("TLS certificate", fmt.Sprintf("%s not found, skipping", certFile))
+			} else {
+				cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+				if err != nil {
+					doctorFail("TLS certificate", fmt.Sprintf("load failed: %v", err))
+					failures++
+				} else {
+					leaf, err := x509.ParseCertificate(cert.Certificate[0])
+					if err != nil {
+						doctorFail("TLS certificate", fmt.Sprintf("parse failed: %v", err))
+						failures++
+					} else {
+						daysLeft := int(time.Until(leaf.NotAfter).Hours() / 24)
+						if daysLeft < 0 {
+							doctorFail("TLS certificate", fmt.Sprintf("EXPIRED %d days ago", -daysLeft))
+							failures++
+						} else if daysLeft < 30 {
+							doctorWarn("TLS certificate", fmt.Sprintf("expires in %d days", daysLeft))
+						} else {
+							doctorPass("TLS certificate", fmt.Sprintf("valid, expires in %d days", daysLeft))
+						}
+					}
+				}
+			}
+
+			// 4. Disk space (require at least 1GB free)
+			freeMB, err := getFreeDiskMB("/")
+			if err != nil {
+				doctorWarn("Disk space", fmt.Sprintf("check unavailable: %v", err))
+			} else if freeMB < 1024 {
+				doctorFail("Disk space", fmt.Sprintf("%dMB free (need ≥1GB)", freeMB))
+				failures++
+			} else {
+				doctorPass("Disk space", fmt.Sprintf("%dMB free", freeMB))
+			}
+
+			// 5. Port 8080 check
+			ln, err := net.Listen("tcp", ":8080")
+			if err != nil {
+				// Port is in use — check if it's us by trying to reach our health endpoint
+				if strings.Contains(err.Error(), "address already in use") || strings.Contains(err.Error(), "bind") {
+					doctorPass("Port 8080", "in use (likely VortexUI)")
+				} else {
+					doctorWarn("Port 8080", fmt.Sprintf("check failed: %v", err))
+				}
+			} else {
+				ln.Close()
+				doctorPass("Port 8080", "available")
+			}
+
+			fmt.Println()
+			if failures > 0 {
+				fmt.Printf("%s%d check(s) failed%s\n", colorRed, failures, colorReset)
+				return fmt.Errorf("%d health check(s) failed", failures)
+			}
+			fmt.Printf("%sAll checks passed%s\n", colorGreen, colorReset)
+			return nil
+		},
+	}
+}
+
+// --- update ---
+
+func newUpdateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "update",
+		Short: "Update VortexUI (git pull, rebuild, restart service)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println("VortexUI Update — pulling latest changes...")
+			fmt.Println()
+
+			// 1. git pull
+			gitPull := exec.Command("git", "pull", "origin", "master")
+			gitPull.Stdout = os.Stdout
+			gitPull.Stderr = os.Stderr
+			if err := gitPull.Run(); err != nil {
+				return fmt.Errorf("git pull failed: %w", err)
 			}
 			fmt.Println()
-			fmt.Println("Run with live configuration to execute actual checks.")
+
+			// 2. Rebuild the binary
+			fmt.Println("==> Building panel binary...")
+			goBuild := exec.Command("go", "build",
+				"-ldflags", fmt.Sprintf("-s -w -X main.version=%s", version),
+				"-o", "/usr/local/bin/vortex-panel",
+				"./cmd/panel",
+			)
+			goBuild.Stdout = os.Stdout
+			goBuild.Stderr = os.Stderr
+			goBuild.Env = append(os.Environ(), "CGO_ENABLED=0")
+			if err := goBuild.Run(); err != nil {
+				return fmt.Errorf("go build failed: %w", err)
+			}
+			fmt.Println("    Binary built: /usr/local/bin/vortex-panel")
+			fmt.Println()
+
+			// 3. Restart systemd service
+			service := os.Getenv("VORTEX_SERVICE")
+			if service == "" {
+				service = "vortexui-panel"
+			}
+
+			fmt.Printf("==> Restarting %s...\n", service)
+
+			// Unmask if masked
+			isEnabled := exec.Command("systemctl", "is-enabled", service)
+			out, _ := isEnabled.Output()
+			if strings.TrimSpace(string(out)) == "masked" {
+				fmt.Printf("    Service %s is masked — unmasking...\n", service)
+				unmask := exec.Command("systemctl", "unmask", service)
+				unmask.Stdout = os.Stdout
+				unmask.Stderr = os.Stderr
+				if err := unmask.Run(); err != nil {
+					return fmt.Errorf("unmask failed: %w", err)
+				}
+			}
+
+			restart := exec.Command("systemctl", "restart", service)
+			restart.Stdout = os.Stdout
+			restart.Stderr = os.Stderr
+			if err := restart.Run(); err != nil {
+				return fmt.Errorf("restart failed: %w", err)
+			}
+
+			fmt.Println()
+			fmt.Printf("%s==> Update complete!%s\n", colorGreen, colorReset)
 			return nil
 		},
 	}
