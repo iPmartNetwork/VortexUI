@@ -164,8 +164,8 @@ func (s *SecurityAdvancedService) CheckAccountLocked(ctx context.Context, adminI
 // --- Session Management ---
 
 // CreateSession creates a new admin session.
-func (s *SecurityAdvancedService) CreateSession(ctx context.Context, adminID uuid.UUID, ip, userAgent, country string) (*domain.AdminSession, error) {
-	session := &domain.AdminSession{
+func (s *SecurityAdvancedService) CreateSession(ctx context.Context, adminID uuid.UUID, ip, userAgent, country string) (*domain.SecuritySession, error) {
+	session := &domain.SecuritySession{
 		ID:        uuid.New(),
 		AdminID:   adminID,
 		IPAddress: ip,
@@ -180,7 +180,7 @@ func (s *SecurityAdvancedService) CreateSession(ctx context.Context, adminID uui
 }
 
 // ListSessions returns active sessions for an admin.
-func (s *SecurityAdvancedService) ListSessions(ctx context.Context, adminID uuid.UUID) ([]*domain.AdminSession, error) {
+func (s *SecurityAdvancedService) ListSessions(ctx context.Context, adminID uuid.UUID) ([]*domain.SecuritySession, error) {
 	return s.sessionRepo.ListByAdmin(ctx, adminID)
 }
 

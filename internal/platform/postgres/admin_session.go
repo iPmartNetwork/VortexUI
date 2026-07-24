@@ -22,7 +22,7 @@ func NewAdminSessionRepo(pool *pgxpool.Pool) *AdminSessionRepo {
 	return &AdminSessionRepo{pool: pool}
 }
 
-func (r *AdminSessionRepo) Create(ctx context.Context, session *domain.AdminSession) error {
+func (r *AdminSessionRepo) Create(ctx context.Context, session *domain.SecuritySession) error {
 	if session.CreatedAt.IsZero() {
 		session.CreatedAt = time.Now()
 	}
@@ -35,8 +35,8 @@ func (r *AdminSessionRepo) Create(ctx context.Context, session *domain.AdminSess
 	return err
 }
 
-func (r *AdminSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.AdminSession, error) {
-	var s domain.AdminSession
+func (r *AdminSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.SecuritySession, error) {
+	var s domain.SecuritySession
 	err := r.pool.QueryRow(ctx, `
 		SELECT id, admin_id, ip_address, user_agent, country, last_active, created_at, revoked
 		FROM admin_sessions
@@ -49,7 +49,7 @@ func (r *AdminSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.A
 	return &s, nil
 }
 
-func (r *AdminSessionRepo) ListByAdmin(ctx context.Context, adminID uuid.UUID) ([]*domain.AdminSession, error) {
+func (r *AdminSessionRepo) ListByAdmin(ctx context.Context, adminID uuid.UUID) ([]*domain.SecuritySession, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, admin_id, ip_address, user_agent, country, last_active, created_at, revoked
 		FROM admin_sessions
@@ -60,9 +60,9 @@ func (r *AdminSessionRepo) ListByAdmin(ctx context.Context, adminID uuid.UUID) (
 	}
 	defer rows.Close()
 
-	var sessions []*domain.AdminSession
+	var sessions []*domain.SecuritySession
 	for rows.Next() {
-		var s domain.AdminSession
+		var s domain.SecuritySession
 		if err := rows.Scan(&s.ID, &s.AdminID, &s.IPAddress, &s.UserAgent, &s.Country,
 			&s.LastActive, &s.CreatedAt, &s.Revoked); err != nil {
 			return nil, err

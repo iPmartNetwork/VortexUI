@@ -1750,6 +1750,16 @@ func (r *WireGuardPeerRepo) ListByInbound(ctx context.Context, inboundID uuid.UU
 	return out, rows.Err()
 }
 
+func (r *WireGuardPeerRepo) Update(ctx context.Context, p *domain.WireGuardPeer) error {
+	_, err := r.pool.Exec(ctx, `UPDATE wireguard_peers SET address=$3, private_key=$4, public_key=$5 WHERE inbound_id=$1 AND user_id=$2`, p.InboundID, p.UserID, p.Address, p.PrivateKey, p.PublicKey)
+	return err
+}
+
+func (r *WireGuardPeerRepo) Delete(ctx context.Context, inboundID, userID uuid.UUID) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM wireguard_peers WHERE inbound_id=$1 AND user_id=$2`, inboundID, userID)
+	return err
+}
+
 
 // --- CleanIPScanRepo ---
 

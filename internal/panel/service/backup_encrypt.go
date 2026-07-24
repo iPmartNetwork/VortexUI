@@ -151,3 +151,41 @@ func (s *BackupEncryptService) decrypt(ciphertext []byte) ([]byte, error) {
 	nonce, ct := ciphertext[:nonceSize], ciphertext[nonceSize:]
 	return aead.Open(nil, nonce, ct, nil)
 }
+
+// EncryptBackup encrypts raw bytes with a passphrase using AES-256-GCM.
+// Compatible with the backup export/import pipeline.
+func EncryptBackup(data []byte, passphrase string) ([]byte, error) {
+	key := sha256.Sum256([]byte(passphrase))
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, aead.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+	return aead.Seal(nonce, nonce, data, nil), nil
+}
+
+// DecryptBackup decrypts data encrypted by EncryptBackup.
+func DecryptBackup(data []byte, passphrase string) ([]byte, error) {
+	key := sha256.Sum256([]byte(passphrase))
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonceSize := aead.NonceSize()
+	if len(data) < nonceSize {
+		return nil, fmt.Errorf("encrypted data too short")
+	}
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	return aead.Open(nil, nonce, ciphertext, nil)
+}

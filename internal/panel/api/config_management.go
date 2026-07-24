@@ -154,7 +154,7 @@ func (h *ConfigManagementHandler) Rollback(c echo.Context) error {
 	}
 
 	// Extract admin ID from context (set by auth middleware)
-	adminID := extractAdminID(c)
+	adminID := extractAdminIDPtr(c)
 
 	version, err := h.svc.Rollback(c.Request().Context(), inboundID, req.Version, adminID)
 	if err != nil {
@@ -218,7 +218,7 @@ func (h *ConfigManagementHandler) ImportConfig(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot read body")
 	}
 
-	adminID := extractAdminID(c)
+	adminID := extractAdminIDPtr(c)
 
 	version, validErrs, err := h.svc.ImportConfig(
 		c.Request().Context(),
@@ -282,7 +282,7 @@ func (h *ConfigManagementHandler) handleRawImport(c echo.Context, body []byte) e
 	})
 }
 
-func extractAdminID(c echo.Context) *uuid.UUID {
+func extractAdminIDPtr(c echo.Context) *uuid.UUID {
 	if val := c.Get("admin_id"); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:

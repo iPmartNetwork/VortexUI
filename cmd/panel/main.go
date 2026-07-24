@@ -277,7 +277,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	switchEventSvc := service.NewSwitchEventService(store.SwitchEvents())
 	switchEventSvc.SetPublisher(bus)
 	subSvc.SetSwitchEvents(store.SwitchEvents())
-	wgSvc := service.NewWireGuardService(store.WireGuardPeers())
+	wgSvc := service.NewWireGuardService(store.WireGuardPeers(), nil)
 	syncSvc := service.NewSyncService(store.Inbounds(), users, h, store.Outbounds(), store.Routing(), store.Balancers())
 	syncSvc.SetWireGuard(wgSvc)
 	protocolGroupSvc := service.NewProtocolGroupService(store.ProtocolGroups(), store.ISPProfiles(), store.Inbounds(), nodes, syncSvc)

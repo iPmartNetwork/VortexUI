@@ -16,8 +16,8 @@ type AdminIPWhitelist struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
-// AdminSession tracks an active login session for an admin.
-type AdminSession struct {
+// SecuritySession tracks an active login session for an admin (enterprise security module).
+type SecuritySession struct {
 	ID         uuid.UUID `json:"id"`
 	AdminID    uuid.UUID `json:"admin_id"`
 	IPAddress  string    `json:"ip_address"`
