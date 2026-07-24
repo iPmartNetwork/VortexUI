@@ -189,3 +189,22 @@ func (s *Store) Devices() *DeviceRepo { return &DeviceRepo{pool: s.pool} }
 
 // BulkOperations returns the bulk operation history repository.
 func (s *Store) BulkOperations() *BulkOperationRepo { return &BulkOperationRepo{pool: s.pool} }
+
+// NotificationChannels returns the notification channel repository.
+func (s *Store) NotificationChannels() *NotificationChannelRepo {
+	return &NotificationChannelRepo{pool: s.pool}
+}
+
+// WebhookDeliveries returns the webhook delivery log repository.
+func (s *Store) WebhookDeliveries() *WebhookDeliveryRepo {
+	return &WebhookDeliveryRepo{pool: s.pool}
+}
+
+// ISPQuality returns the ISP quality metrics repository.
+func (s *Store) ISPQuality() *ISPQualityRepo { return &ISPQualityRepo{pool: s.pool} }
+
+// SubAnalytics returns the subscription analytics repository.
+func (s *Store) SubAnalytics() *SubAnalyticsRepo { return &SubAnalyticsRepo{pool: s.pool} }
+
+// Revenue returns the revenue entries repository.
+func (s *Store) Revenue() *RevenueRepo { return &RevenueRepo{pool: s.pool} }
