@@ -27,6 +27,10 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        // Content-hashed filenames for long-lived CDN caching.
+        entryFileNames: "assets/[name]-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
         manualChunks: {
           "vendor-react": ["react", "react-dom", "react-router-dom"],
           "vendor-query": ["@tanstack/react-query"],

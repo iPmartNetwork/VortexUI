@@ -111,6 +111,16 @@ type Deps struct {
 	AnomalyDetector          port.AnomalyDetector
 
 	SecurityHardeningHandlers *SecurityHandlers
+
+	// PHASE 8-14: Enterprise Feature Handlers
+	ConfigManagement *ConfigManagementHandler  // Phase 8: config validation/versioning
+	WireGuardMgmt    *WireGuardHandler         // Phase 9: WireGuard peer management
+	SecurityAdvanced *SecurityAdvancedHandler   // Phase 10: advanced security
+	Jobs             *JobsHandler              // Phase 11: background job status
+	Docs             *DocsHandler              // Phase 12: API docs / Swagger UI
+	RateLimits       *RateLimitHandler         // Phase 12: rate limit dashboard
+	WebhookTest      *WebhookTestHandler       // Phase 12: webhook test endpoint
+	PortalPro        *PortalProHandler         // Phase 14: portal pro features
 }
 
 // NewRouter builds the Echo instance with all routes and middleware mounted.
@@ -719,6 +729,44 @@ func NewRouter(d Deps) *echo.Echo {
 	v2sub := v2.Group("/sub-settings", RequirePermission(d.Auth, domain.PermAdminManage))
 	v2sub.GET("", d.SubSettings.GetSubSettings)
 	v2sub.PUT("", d.SubSettings.UpdateSubSettings)
+
+	// --- Phase 8-14: Enterprise Feature Handlers ---
+
+	// Phase 8: Config Management (validation, versioning, diff, rollback, export/import, auto-update)
+	if d.ConfigManagement != nil {
+		d.ConfigManagement.Register(v2)
+	}
+
+	// Phase 9: WireGuard Management (peers, repair, QR, mesh)
+	if d.WireGuardMgmt != nil {
+		d.WireGuardMgmt.Register(v2)
+	}
+
+	// Phase 10: Advanced Security (sessions, login audit, security audit, IP whitelist, bans, scoped tokens)
+	if d.SecurityAdvanced != nil {
+		d.SecurityAdvanced.Register(v2)
+	}
+
+	// Phase 11: Background Jobs (status polling, list)
+	if d.Jobs != nil {
+		d.Jobs.Register(v2)
+	}
+
+	// Phase 12: API Docs (Swagger UI, rate limits, webhook test)
+	if d.Docs != nil {
+		d.Docs.Register(v2)
+	}
+	if d.RateLimits != nil {
+		d.RateLimits.Register(v2)
+	}
+	if d.WebhookTest != nil {
+		d.WebhookTest.Register(v2)
+	}
+
+	// Phase 14: Portal Pro (push subscribe, speed test, guides, setup wizard)
+	if d.PortalPro != nil {
+		d.PortalPro.Register(v2)
+	}
 
 	return e
 }

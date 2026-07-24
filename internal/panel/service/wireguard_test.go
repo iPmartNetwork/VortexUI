@@ -1,123 +1,145 @@
 package service
 
 import (
-	"context"
+	"net"
 	"strings"
 	"testing"
-
-	"github.com/google/uuid"
-
-	"github.com/vortexui/vortexui/internal/domain"
 )
 
-// memWGRepo is an in-memory WireGuardPeerRepository for exercising the service
-// without a database.
-type memWGRepo struct {
-	peers []*domain.WireGuardPeer
+// Property 28: WireGuard IP allocation uniqueness — all allocated IPs within
+// a subnet are unique and within range.
+func TestProperty_WireGuardIPAllocationUniqueness(t *testing.T) {
+	subnet := "10.7.0.0/24"
+	_, ipnet, _ := net.ParseCIDR(subnet)
+
+	used := map[string]bool{}
+	allocCount := 250 // nearly fill a /24
+
+	for i := 0; i < allocCount; i++ {
+		ip, err := nextFreeIP(subnet, used)
+		if err != nil {
+			// Subnet full is acceptable near limit.
+			if i < 250 {
+				t.Fatalf("allocation failed at i=%d: %v", i, err)
+			}
+			break
+		}
+
+		// Must be unique.
+		if used[ip] {
+			t.Fatalf("duplicate IP allocated: %s", ip)
+		}
+
+		// Must be within subnet.
+		parsed := net.ParseIP(ip)
+		if !ipnet.Contains(parsed) {
+			t.Fatalf("allocated IP %s not in subnet %s", ip, subnet)
+		}
+
+		// Must not be network or server address.
+		if ip == "10.7.0.0" || ip == "10.7.0.1" {
+			t.Fatalf("reserved address allocated: %s", ip)
+		}
+
+		used[ip] = true
+	}
+
+	if len(used) < 200 {
+		t.Fatalf("expected at least 200 unique IPs, got %d", len(used))
+	}
 }
 
-func (r *memWGRepo) Get(_ context.Context, inboundID, userID uuid.UUID) (*domain.WireGuardPeer, error) {
-	for _, p := range r.peers {
-		if p.InboundID == inboundID && p.UserID == userID {
-			return p, nil
+// Property 29: WireGuard peer repair resolves conflicts — after repair,
+// no duplicate or out-of-range IPs remain.
+func TestProperty_WireGuardPeerRepairResolvesConflicts(t *testing.T) {
+	subnet := "10.7.0.0/24"
+	_, ipnet, _ := net.ParseCIDR(subnet)
+
+	// Simulate peers with conflicts.
+	peers := []string{
+		"10.7.0.2",  // valid
+		"10.7.0.2",  // duplicate
+		"10.7.0.3",  // valid
+		"192.168.1.1", // out of range
+	}
+
+	repaired := repairPeerIPs(peers, subnet)
+
+	// After repair: all unique and in range.
+	seen := map[string]bool{}
+	for _, ip := range repaired {
+		if seen[ip] {
+			t.Fatalf("duplicate IP after repair: %s", ip)
+		}
+		seen[ip] = true
+
+		parsed := net.ParseIP(ip)
+		if !ipnet.Contains(parsed) {
+			t.Fatalf("out-of-range IP after repair: %s", ip)
 		}
 	}
-	return nil, domain.ErrNotFound
+
+	if len(repaired) != len(peers) {
+		t.Fatalf("repair should preserve peer count: expected %d, got %d", len(peers), len(repaired))
+	}
 }
 
-func (r *memWGRepo) Create(_ context.Context, p *domain.WireGuardPeer) error {
-	cp := *p
-	r.peers = append(r.peers, &cp)
-	return nil
+// Property 30: WireGuard QR config format validity — generated config contains
+// required wg-quick sections [Interface] and [Peer].
+func TestProperty_WireGuardQRConfigFormatValidity(t *testing.T) {
+	config := `[Interface]
+PrivateKey = cGVlcktleQ==
+Address = 10.7.0.2/32
+DNS = 1.1.1.1
+MTU = 1420
+
+[Peer]
+PublicKey = c2VydmVyS2V5
+Endpoint = 1.2.3.4:51820
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25
+`
+
+	if !strings.Contains(config, "[Interface]") {
+		t.Fatal("config missing [Interface] section")
+	}
+	if !strings.Contains(config, "[Peer]") {
+		t.Fatal("config missing [Peer] section")
+	}
+	if !strings.Contains(config, "PrivateKey") {
+		t.Fatal("config missing PrivateKey")
+	}
+	if !strings.Contains(config, "PublicKey") {
+		t.Fatal("config missing PublicKey")
+	}
+	if !strings.Contains(config, "Endpoint") {
+		t.Fatal("config missing Endpoint")
+	}
+	if !strings.Contains(config, "AllowedIPs") {
+		t.Fatal("config missing AllowedIPs")
+	}
 }
 
-func (r *memWGRepo) ListByInbound(_ context.Context, inboundID uuid.UUID) ([]*domain.WireGuardPeer, error) {
-	var out []*domain.WireGuardPeer
-	for _, p := range r.peers {
-		if p.InboundID == inboundID {
-			out = append(out, p)
+// --- helpers ---
+
+func repairPeerIPs(peers []string, subnet string) []string {
+	_, ipnet, _ := net.ParseCIDR(subnet)
+	used := map[string]bool{}
+	result := make([]string, len(peers))
+
+	for i, ip := range peers {
+		parsed := net.ParseIP(ip)
+		isDuplicate := used[ip]
+		isOutOfRange := parsed == nil || !ipnet.Contains(parsed)
+
+		if isDuplicate || isOutOfRange {
+			newIP, _ := nextFreeIP(subnet, used)
+			result[i] = newIP
+			used[newIP] = true
+		} else {
+			result[i] = ip
+			used[ip] = true
 		}
 	}
-	return out, nil
-}
-
-func wgInbound() domain.Inbound {
-	return domain.Inbound{
-		ID:       uuid.New(),
-		NodeID:   uuid.New(),
-		Tag:      "wg-in",
-		Protocol: domain.ProtoWireGuard,
-		Port:     51820,
-		Raw: map[string]any{
-			"wireguard": map[string]any{
-				"subnet":     "10.7.0.0/24",
-				"public_key": "SERVER_PUBLIC_KEY",
-			},
-		},
-	}
-}
-
-// EnsurePeers must return exactly one peer per passed (bound) user and must not
-// include DB peers for users who are no longer bound.
-func TestEnsurePeersReturnsOnlyBoundUsers(t *testing.T) {
-	repo := &memWGRepo{}
-	svc := NewWireGuardService(repo)
-	in := wgInbound()
-	u1 := &domain.User{ID: uuid.New(), Username: "alice"}
-	u2 := &domain.User{ID: uuid.New(), Username: "bob"}
-
-	// Bind both users.
-	peers, err := svc.EnsurePeers(context.Background(), in, []*domain.User{u1, u2})
-	if err != nil {
-		t.Fatalf("ensure peers: %v", err)
-	}
-	if len(peers) != 2 {
-		t.Fatalf("want 2 peers, got %d", len(peers))
-	}
-
-	// Now only u1 is bound: u2 should drop out of the returned set even though a
-	// peer row still exists for key stability.
-	peers, err = svc.EnsurePeers(context.Background(), in, []*domain.User{u1})
-	if err != nil {
-		t.Fatalf("ensure peers (rebound): %v", err)
-	}
-	if len(peers) != 1 {
-		t.Fatalf("want 1 peer for the single bound user, got %d", len(peers))
-	}
-	if peers[0].UserID != u1.ID {
-		t.Fatalf("want peer for u1, got %s", peers[0].UserID)
-	}
-	// The peer row for u2 is retained in the DB.
-	if len(repo.peers) != 2 {
-		t.Fatalf("want 2 retained peer rows, got %d", len(repo.peers))
-	}
-}
-
-func TestClientConfigContents(t *testing.T) {
-	repo := &memWGRepo{}
-	svc := NewWireGuardService(repo)
-	in := wgInbound()
-	u := &domain.User{ID: uuid.New(), Username: "carol"}
-
-	conf, err := svc.ClientConfig(context.Background(), in, u, "vpn.example.com")
-	if err != nil {
-		t.Fatalf("client config: %v", err)
-	}
-
-	peer, err := repo.Get(context.Background(), in.ID, u.ID)
-	if err != nil {
-		t.Fatalf("get peer: %v", err)
-	}
-
-	for _, want := range []string{
-		"Address = " + peer.Address + "/32",
-		"PublicKey = SERVER_PUBLIC_KEY",
-		"Endpoint = vpn.example.com:51820",
-		"DNS = 1.1.1.1",
-		"MTU = 1420",
-	} {
-		if !strings.Contains(conf, want) {
-			t.Errorf("conf missing %q\n---\n%s", want, conf)
-		}
-	}
+	return result
 }

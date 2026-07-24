@@ -50,6 +50,9 @@ func main() {
 	defer stop()
 
 	// Subcommands run a one-shot task and exit instead of starting the server.
+	if runCLI() {
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "admin" {
 		if err := runAdmin(ctx, os.Args[2:]); err != nil {
 			log.Error("admin command failed", "err", err)

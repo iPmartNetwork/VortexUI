@@ -6,6 +6,133 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-07-24
+
+Enterprise-grade release: **14 phases** of operational, security, and scalability features for production deployments with 1000+ users.
+
+### Added — User Templates & Bulk Operations (Phases 1, 4)
+- **User Templates** — reusable blueprints for provisioning users with predefined limits, expiry, device caps, and reset strategy.
+- **Bulk Create** — generate 1-1000 users from a template in a single operation with unique usernames.
+- **Clone User** — duplicate an existing user (preserves settings, resets traffic/tokens).
+- **Advanced Bulk Operations** — 10 operation types (reset traffic, enable/disable, extend, delete, HWID reset) with filter-by-status/admin/group.
+- **Bulk Preview** — dry-run showing affected count before execution.
+- **Bulk History** — audit trail of every bulk operation with admin attribution.
+
+### Added — Subscription Intelligence (Phase 2)
+- **20+ Format Variables** — `{USERNAME}`, `{DATA_REMAINING}`, `{NODE_FLAG}`, `{DAYS_LEFT}`, etc.
+- **Profile Title Template** — customizable subscription display name.
+- **Remark Template** — per-proxy remark with variable substitution.
+- **Address Template** — dynamic host/address field templating.
+- **Outline Format** — Shadowsocks-compatible JSON output for Outline clients.
+
+### Added — HWID & Device Management (Phase 3)
+- **Hardware ID Tracking** — register device HWID + OS on subscription fetch.
+- **Device Lock** — restrict subscription to a single device.
+- **Device Limit** — configurable max concurrent devices per user.
+- **Per-User Device Panel** — view/revoke individual devices.
+- **Bulk HWID Reset** — mass-clear all device registrations.
+
+### Added — Notifications & Telegram Bot Pro (Phase 5)
+- **Granular Notification Channels** — scoped event routing (global, per-admin, per-user).
+- **Webhook Delivery** — HTTP POST with HMAC-SHA256 signature, exponential backoff retry (max 5).
+- **Custom Templates** — notification messages with format variable substitution.
+- **Extended Telegram Bot** — `/create`, `/status`, `/stats`, `/user` commands + personal user notifications.
+
+### Added — Dashboard Pro & Analytics (Phase 6)
+- **Daily Check Widget** — node health, anomaly detection, cert expiry warnings.
+- **ISP Quality Heatmap** — 7-day x 24-hour grid per ISP showing connection quality.
+- **Geographic Node Map** — world map with node locations and live status markers.
+- **Revenue Reports** — income/expense/profit per reseller with time series.
+- **Subscription Analytics** — fetch counts grouped by format, ISP, and time.
+
+### Added — Client Templates & Config Customization (Phase 7)
+- **Client Template Matching** — regex User-Agent detection to apply per-app routing/DNS/outbound configs.
+- **Subscription Approval Queue** — admin-gated subscription delivery for sensitive deployments.
+- **Live Template Preview** — render sample subscription output before applying.
+- **Host Management** — enable/disable and filter subscription hosts.
+
+### Added — XRay Config Validation & Core Management (Phase 8)
+- **Config Validator** — protocol/transport/security-aware JSON schema validation with field-level errors.
+- **Config Defaults** — generate valid starting configs for any protocol combo.
+- **Config Versioning** — every config change creates a numbered snapshot.
+- **Config Diff** — compare any two versions with added/removed/modified field tracking.
+- **Config Rollback** — one-click restore to any previous version.
+- **Config Export/Import** — JSON serialization with validation.
+- **Core Auto-Update** — fetch latest Xray/sing-box release and trigger node-side update.
+
+### Added — WireGuard Full Implementation (Phase 9)
+- **IP Allocation** — automatic next-free-IP from CIDR pool, skip network/broadcast/server.
+- **Peer Repair** — detect and fix duplicate/out-of-range IP conflicts.
+- **QR Code Generation** — wg-quick format rendered as downloadable PNG.
+- **Per-Peer MTU/DNS** — configurable per-user WireGuard settings.
+- **Mesh Networking** — site-to-site tunnels between nodes with automatic key exchange.
+- **Peer Stats** — last handshake, TX/RX bytes per peer.
+
+### Added — Advanced Security (Phase 10)
+- **Admin IP Whitelist** — CIDR-based access restriction per admin or globally.
+- **Session Management** — track active sessions with revoke/revoke-all.
+- **Login Audit Log** — every authentication attempt with IP, User-Agent, GeoIP, success/fail.
+- **Account Lockout** — N consecutive failures triggers temporary lock (configurable threshold/duration).
+- **Auto-Ban** — suspicious IPs get temporary bans after threshold exceeded.
+- **Scoped API Tokens** — fine-grained permission scopes (users:read, nodes:write, etc.).
+- **Field Encryption** — AES-256-GCM for sensitive DB fields with SHA-256 key derivation.
+- **Security Audit Log** — operation + before/after state diff for sensitive changes.
+
+### Added — Performance & Scalability (Phase 11)
+- **Subscription Cache** — Redis-backed with per-user/per-node/global invalidation.
+- **Background Job Queue** — async task processing with retry, backoff, worker loop.
+- **Cursor Pagination** — efficient keyset-based pagination for large lists.
+- **Connection Pool Config** — tunable min/max conns, idle timeout, health check.
+- **Read Replica Routing** — QueryRouter splits reads to replica, writes to primary.
+- **Content-Hashed Assets** — Vite build outputs `[name]-[hash].js` for CDN caching.
+- **TimescaleDB Hypertable** — traffic_logs with 90-day auto-retention.
+
+### Added — API Playground & Developer Experience (Phase 12)
+- **Embedded Swagger UI** — interactive API docs at `/api/v2/docs/` with try-it-out.
+- **Rate Limit Dashboard** — per-endpoint consumption stats via `GET /api/v2/rate-limits`.
+- **Webhook Test Endpoint** — `POST /api/v2/webhooks/test` for delivery verification.
+- **SDK Generation** — Makefile targets for Python, JavaScript, Go client libraries.
+- **API Versioning** — `/api/v2/` route group alongside legacy v1.
+
+### Added — Automation & CLI (Phase 13)
+- **CLI Framework** — `vortexui doctor|migrate|backup|settings|cleanup|user|node` subcommands.
+- **Doctor Service** — DB, Redis, DNS, ports, TLS, disk health checks with pass/warn/fail status.
+- **Panel Migration** — import users from Marzban, 3x-ui, PasarGuard databases.
+- **Encrypted Backups** — AES-256 + gzip with local/S3/Telegram destinations.
+- **Scheduler** — cron-based task execution (cleanup, backup, SNI rotation, custom).
+- **Auto-Cleanup** — delete expired/limited users after configurable retention period.
+- **Settings Export/Import** — YAML-based panel configuration portability.
+
+### Added — Portal Pro & UX (Phase 14)
+- **Speed Test** — per-node latency and throughput measurement from portal.
+- **Push Notifications** — Web Push API subscription + delivery.
+- **Connection Guides** — per-app setup instructions with platform icons.
+- **Setup Wizard** — interactive onboarding with completion tracking.
+- **Dynamic QR Code** — auto-refreshing subscription QR (always-fresh config).
+- **Usage Alerts** — threshold notifications at 80%, 90%, 100%.
+- **PWA Support** — installable web app with offline caching and push.
+- **i18n** — 5 languages (English, Persian, Arabic, Turkish, Russian) with RTL support.
+- **Theme System** — dark/light/system with localStorage persistence.
+
+### Changed
+- VERSION bumped to 1.4.1
+- Vite build outputs content-hashed filenames for CDN long-lived caching.
+- WireGuardPeer domain model extended with MTU, DNS, LastHandshake, TxBytes, RxBytes.
+
+### Database Migrations
+- `0045` User Templates
+- `0046` Format Variables
+- `0047` HWID Devices
+- `0048` Bulk Operations
+- `0049` Notifications
+- `0050` Dashboard Analytics
+- `0051` Client Templates
+- `0052` Config Versions
+- `0053` WireGuard Extensions + Mesh
+- `0054` Advanced Security (5 tables + scopes)
+- `0055` Performance (hypertable, cache log, background jobs)
+- `0056` Portal (push subscriptions, connection guides)
+
 ## [1.4.0] - 2026-07-20
 
 Major release: **Auto-Protocol Switching** — intelligent, self-healing anti-censorship infrastructure that automatically adapts to ISP filtering conditions without tunneling.

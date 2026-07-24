@@ -85,3 +85,24 @@ docs-wiki: ## Build MkDocs wiki (reference)
 docs-serve: ## Serve Arena docs locally (build first)
 	python review/patch_arena.py
 	python -m http.server 8000 --directory review/site
+
+# --- SDK Generation ---
+
+SDK_OUT := sdk
+
+sdk-tools: ## Install openapi-generator CLI
+	npm install -g @openapitools/openapi-generator-cli
+
+sdk-python: ## Generate Python client SDK from OpenAPI spec
+	openapi-generator-cli generate -i docs/openapi.yaml -g python -o $(SDK_OUT)/python --additional-properties=packageName=vortexui_client
+
+sdk-javascript: ## Generate JavaScript/TypeScript client SDK from OpenAPI spec
+	openapi-generator-cli generate -i docs/openapi.yaml -g typescript-axios -o $(SDK_OUT)/javascript --additional-properties=npmName=vortexui-client
+
+sdk-go: ## Generate Go client SDK from OpenAPI spec
+	openapi-generator-cli generate -i docs/openapi.yaml -g go -o $(SDK_OUT)/go --additional-properties=packageName=vortexui
+
+sdk-all: sdk-python sdk-javascript sdk-go ## Generate all client SDKs
+
+openapi: ## Regenerate OpenAPI spec from source annotations
+	go run github.com/swaggo/swag/cmd/swag@latest init -g internal/panel/api/server.go -o docs --outputTypes yaml --parseDependency --parseInternal

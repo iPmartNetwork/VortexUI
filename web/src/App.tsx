@@ -51,6 +51,20 @@ const LazyPortalPlans = lazy(() => import("@/pages/portal/PortalPlans").then((m)
 const LazyPortalTickets = lazy(() => import("@/pages/portal/PortalTickets").then((m) => ({ default: m.PortalTickets })));
 const LazyPortalReferral = lazy(() => import("@/pages/portal/PortalReferral").then((m) => ({ default: m.PortalReferral })));
 
+// Enterprise v1.4.1 Components
+const LazyTemplates = lazy(() => import("@/pages/Templates").then((m) => ({ default: m.Templates })));
+const LazyBulkOperations = lazy(() => import("@/pages/BulkOperations").then((m) => ({ default: m.BulkOperations })));
+const LazyNotifications = lazy(() => import("@/pages/Notifications").then((m) => ({ default: m.Notifications })));
+const LazyDashboardPro = lazy(() => import("@/pages/DashboardPro").then((m) => ({ default: m.DashboardPro })));
+const LazyClientTemplates = lazy(() => import("@/pages/ClientTemplates").then((m) => ({ default: m.ClientTemplates })));
+const LazyConfigManagement = lazy(() => import("@/pages/ConfigManagement").then((m) => ({ default: m.ConfigManagement })));
+const LazyWireGuard = lazy(() => import("@/pages/WireGuard").then((m) => ({ default: m.WireGuard })));
+const LazyAdvancedSecurity = lazy(() => import("@/pages/security/AdvancedSecurity").then((m) => ({ default: m.AdvancedSecurity })));
+const LazyApiDocs = lazy(() => import("@/pages/ApiDocs").then((m) => ({ default: m.ApiDocs })));
+const LazyPortalSpeedTest = lazy(() => import("@/portal/pages/SpeedTestPage").then((m) => ({ default: m.SpeedTestPage })));
+const LazyPortalGuides = lazy(() => import("@/portal/pages/GuidesPage").then((m) => ({ default: m.GuidesPage })));
+const LazyPortalSetupWizard = lazy(() => import("@/portal/pages/SetupWizardPage").then((m) => ({ default: m.SetupWizardPage })));
+
 const LazyRoute = ({ component: Component }: { component: ComponentType }) => {
   return (
     <Suspense fallback={<SkeletonPage />}>
@@ -127,6 +141,16 @@ export function App() {
         <Route path="/performance" element={<LazyRoute component={LazyPerformance} />} />
         <Route path="/security" element={<LazyRoute component={LazySecurityHardening} />} />
         <Route path="/compliance" element={<LazyRoute component={LazyCompliance} />} />
+        {/* Enterprise v1.4.1 Routes */}
+        <Route path="/templates" element={<LazyRoute component={LazyTemplates} />} />
+        <Route path="/bulk-operations" element={<LazyRoute component={LazyBulkOperations} />} />
+        <Route path="/notifications" element={<LazyRoute component={LazyNotifications} />} />
+        <Route path="/dashboard-pro" element={<LazyRoute component={LazyDashboardPro} />} />
+        <Route path="/client-templates" element={<LazyRoute component={LazyClientTemplates} />} />
+        <Route path="/config-management" element={<LazyRoute component={LazyConfigManagement} />} />
+        <Route path="/wireguard" element={<LazyRoute component={LazyWireGuard} />} />
+        <Route path="/advanced-security" element={<LazyRoute component={LazyAdvancedSecurity} />} />
+        <Route path="/api-docs" element={<LazyRoute component={LazyApiDocs} />} />
       </Route>
       <Route path="*" element={<NotFound />} />
       {/* Portal (end-user self-service) */}
@@ -136,6 +160,9 @@ export function App() {
         <Route path="/portal/plans" element={<LazyRoute component={LazyPortalPlans} />} />
         <Route path="/portal/referral" element={<LazyRoute component={LazyPortalReferral} />} />
         <Route path="/portal/tickets" element={<LazyRoute component={LazyPortalTickets} />} />
+        <Route path="/portal/speed-test" element={<LazyRoute component={LazyPortalSpeedTest} />} />
+        <Route path="/portal/guides" element={<LazyRoute component={LazyPortalGuides} />} />
+        <Route path="/portal/setup" element={<LazyRoute component={LazyPortalSetupWizard} />} />
       </Route>
     </Routes>
   );
