@@ -198,12 +198,14 @@ c_update() {
           | sed '1d;/^EOF$/q;s/^EOF$//' > /etc/systemd/system/vortexui-panel.service 2>/dev/null || true
       fi
       systemctl daemon-reload
-      systemctl enable vortexui-panel 2>/dev/null || true
-      # Unmask if masked (fixes "Unit is masked" error on update)
-      if systemctl is-enabled vortexui-panel 2>/dev/null | grep -q masked; then
+      # Unmask FIRST if masked (must happen before enable or restart)
+      local svc_state
+      svc_state="$(systemctl is-enabled vortexui-panel 2>/dev/null || true)"
+      if [ "$svc_state" = "masked" ]; then
         echo "  ${y}service was masked — unmasking...${n}"
         systemctl unmask vortexui-panel
       fi
+      systemctl enable vortexui-panel 2>/dev/null || true
       systemctl restart vortexui-panel caddy
       echo "${g}✓ panel updated${n} — run ${b}vortexui doctor${n} to verify services, DB, and certs." ;;
     *)      $COMPOSE up -d --build
