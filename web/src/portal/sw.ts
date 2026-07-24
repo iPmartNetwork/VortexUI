@@ -103,5 +103,3 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
-
-export {};

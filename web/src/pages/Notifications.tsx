@@ -8,7 +8,6 @@ import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
 import { useTitle } from "@/lib/useTitle";
-import { useI18n } from "@/i18n/i18n";
 
 // Types
 interface NotificationChannel {
@@ -70,8 +69,7 @@ const defaultForm: ChannelForm = {
 };
 
 export function Notifications() {
-  const { t } = useI18n();
-  useTitle(t("notifications.title", "Notifications"));
+  useTitle("Notifications");
   const queryClient = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
@@ -95,10 +93,10 @@ export function Notifications() {
       api("/api/v2/notifications/channels", { method: "POST", body }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-channels"] });
-      toast.success(t("notifications.created", "Channel created"));
+      toast.success("Channel created");
       resetForm();
     },
-    onError: () => toast.error(t("notifications.createFailed", "Failed to create channel")),
+    onError: () => toast.error("Failed to create channel"),
   });
 
   // Update channel
@@ -107,10 +105,10 @@ export function Notifications() {
       api(`/api/v2/notifications/channels/${id}`, { method: "PUT", body }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-channels"] });
-      toast.success(t("notifications.updated", "Channel updated"));
+      toast.success("Channel updated");
       resetForm();
     },
-    onError: () => toast.error(t("notifications.updateFailed", "Failed to update channel")),
+    onError: () => toast.error("Failed to update channel"),
   });
 
   // Delete channel
@@ -119,9 +117,9 @@ export function Notifications() {
       api(`/api/v2/notifications/channels/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-channels"] });
-      toast.success(t("notifications.deleted", "Channel deleted"));
+      toast.success("Channel deleted");
     },
-    onError: () => toast.error(t("notifications.deleteFailed", "Failed to delete channel")),
+    onError: () => toast.error("Failed to delete channel"),
   });
 
   // Test notification
@@ -131,8 +129,8 @@ export function Notifications() {
         method: "POST",
         body: { channel_id: channelId, message: "Test notification from VortexUI" },
       }),
-    onSuccess: () => toast.success(t("notifications.testSent", "Test notification sent")),
-    onError: () => toast.error(t("notifications.testFailed", "Test notification failed")),
+    onSuccess: () => toast.success("Test notification sent"),
+    onError: () => toast.error("Test notification failed"),
   });
 
   function resetForm() {
@@ -164,8 +162,8 @@ export function Notifications() {
 
   async function handleDelete(ch: NotificationChannel) {
     const ok = await confirm({
-      title: t("notifications.deleteConfirm", "Delete Channel"),
-      message: t("notifications.deleteMessage", `Delete "${ch.name}"? This cannot be undone.`),
+      title: "Delete Channel",
+      message: `Delete "${ch.name}"? This cannot be undone.`,
     });
     if (ok) deleteMutation.mutate(ch.id);
   }
@@ -193,15 +191,15 @@ export function Notifications() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">
-            {t("notifications.title", "Notifications")}
+            Notifications
           </h1>
           <p className="text-sm text-gray-400 mt-1">
-            {t("notifications.subtitle", "Manage notification channels and event routing")}
+            Manage notification channels and event routing
           </p>
         </div>
         <Button onClick={openCreate} className="gap-2">
           <Plus className="w-4 h-4" />
-          {t("notifications.addChannel", "Add Channel")}
+          Add Channel
         </Button>
       </div>
 
@@ -212,19 +210,19 @@ export function Notifications() {
         ) : channels.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>{t("notifications.empty", "No notification channels configured")}</p>
+            <p>No notification channels configured</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-left text-gray-400">
-                  <th className="py-3 px-4">{t("notifications.name", "Name")}</th>
-                  <th className="py-3 px-4">{t("notifications.type", "Type")}</th>
-                  <th className="py-3 px-4">{t("notifications.scope", "Scope")}</th>
-                  <th className="py-3 px-4">{t("notifications.events", "Events")}</th>
-                  <th className="py-3 px-4">{t("notifications.status", "Status")}</th>
-                  <th className="py-3 px-4">{t("notifications.actions", "Actions")}</th>
+                  <th className="py-3 px-4">Name</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">Scope</th>
+                  <th className="py-3 px-4">Events</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -232,7 +230,7 @@ export function Notifications() {
                   <tr key={ch.id} className="border-b border-white/5 hover:bg-white/5">
                     <td className="py-3 px-4 font-medium text-white">{ch.name}</td>
                     <td className="py-3 px-4">
-                      <Badge variant={ch.type === "telegram" ? "info" : "default"}>
+                      <Badge color={ch.type === "telegram" ? "active" : "muted"}>
                         {ch.type}
                       </Badge>
                     </td>
@@ -244,7 +242,7 @@ export function Notifications() {
                       {ch.events.length} event{ch.events.length !== 1 ? "s" : ""}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge variant={ch.enabled ? "success" : "warning"}>
+                      <Badge color={ch.enabled ? "active" : "disabled"}>
                         {ch.enabled ? "Enabled" : "Disabled"}
                       </Badge>
                     </td>
@@ -286,185 +284,182 @@ export function Notifications() {
       </GlassCard>
 
       {/* Create/Edit Modal */}
-      {showForm && (
-        <Modal
-          title={editingChannel ? t("notifications.editChannel", "Edit Channel") : t("notifications.addChannel", "Add Channel")}
-          onClose={resetForm}
-        >
-          <div className="space-y-4">
-            {/* Name */}
+      <Modal
+        open={showForm}
+        onClose={resetForm}
+        title={editingChannel ? "Edit Channel" : "Add Channel"}
+      >
+        <div className="space-y-4">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Name
+            </label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="My Notification Channel"
+            />
+          </div>
+
+          {/* Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Type
+            </label>
+            <Select
+              value={form.type}
+              onChange={(e) =>
+                setForm({ ...form, type: e.target.value as "telegram" | "webhook", config: {} })
+              }
+            >
+              <option value="telegram">Telegram</option>
+              <option value="webhook">Webhook</option>
+            </Select>
+          </div>
+
+          {/* Config - Telegram */}
+          {form.type === "telegram" && (
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
-                {t("notifications.name", "Name")}
+                Chat ID
               </label>
               <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="My Notification Channel"
+                value={form.config.chat_id ?? ""}
+                onChange={(e) =>
+                  setForm({ ...form, config: { ...form.config, chat_id: e.target.value } })
+                }
+                placeholder="-1001234567890"
               />
             </div>
+          )}
 
-            {/* Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                {t("notifications.type", "Type")}
-              </label>
-              <Select
-                value={form.type}
-                onChange={(e) =>
-                  setForm({ ...form, type: e.target.value as "telegram" | "webhook", config: {} })
-                }
-              >
-                <option value="telegram">Telegram</option>
-                <option value="webhook">Webhook</option>
-              </Select>
-            </div>
-
-            {/* Config - Telegram */}
-            {form.type === "telegram" && (
+          {/* Config - Webhook */}
+          {form.type === "webhook" && (
+            <>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Chat ID
+                  Webhook URL
                 </label>
                 <Input
-                  value={form.config.chat_id ?? ""}
+                  value={form.config.url ?? ""}
                   onChange={(e) =>
-                    setForm({ ...form, config: { ...form.config, chat_id: e.target.value } })
+                    setForm({ ...form, config: { ...form.config, url: e.target.value } })
                   }
-                  placeholder="-1001234567890"
+                  placeholder="https://example.com/webhook"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  HMAC Secret
+                </label>
+                <Input
+                  value={form.config.hmac_secret ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, config: { ...form.config, hmac_secret: e.target.value } })
+                  }
+                  placeholder="Optional HMAC secret for signing"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Scope */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Scope
+              </label>
+              <Select
+                value={form.scope_type}
+                onChange={(e) => setForm({ ...form, scope_type: e.target.value })}
+              >
+                {SCOPE_TYPES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            {form.scope_type !== "global" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Scope ID
+                </label>
+                <Input
+                  value={form.scope_id}
+                  onChange={(e) => setForm({ ...form, scope_id: e.target.value })}
+                  placeholder="node-id or admin-id"
                 />
               </div>
             )}
+          </div>
 
-            {/* Config - Webhook */}
-            {form.type === "webhook" && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Webhook URL
-                  </label>
-                  <Input
-                    value={form.config.url ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, config: { ...form.config, url: e.target.value } })
-                    }
-                    placeholder="https://example.com/webhook"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    HMAC Secret
-                  </label>
-                  <Input
-                    value={form.config.hmac_secret ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, config: { ...form.config, hmac_secret: e.target.value } })
-                    }
-                    placeholder="Optional HMAC secret for signing"
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Scope */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  {t("notifications.scope", "Scope")}
-                </label>
-                <Select
-                  value={form.scope_type}
-                  onChange={(e) => setForm({ ...form, scope_type: e.target.value })}
-                >
-                  {SCOPE_TYPES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              {form.scope_type !== "global" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Scope ID
-                  </label>
-                  <Input
-                    value={form.scope_id}
-                    onChange={(e) => setForm({ ...form, scope_id: e.target.value })}
-                    placeholder="node-id or admin-id"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Event types */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                {t("notifications.events", "Events")}
-              </label>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                {EVENT_TYPES.map((event) => (
-                  <label
-                    key={event}
-                    className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.events.includes(event)}
-                      onChange={() => toggleEvent(event)}
-                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
-                    />
-                    {event.replace(/_/g, " ")}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Template */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                {t("notifications.template", "Template")}
-              </label>
-              <textarea
-                value={form.template}
-                onChange={(e) => setForm({ ...form, template: e.target.value })}
-                className="w-full rounded-lg border border-white/10 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-                rows={3}
-                placeholder="{EVENT}: {USERNAME} - {MESSAGE}"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Available variables: {"{EVENT}"}, {"{USERNAME}"}, {"{NODE_NAME}"}, {"{MESSAGE}"}
-              </p>
-            </div>
-
-            {/* Enabled */}
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.enabled}
-                onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-                className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
-              />
-              {t("notifications.enabled", "Enabled")}
+          {/* Event types */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Events
             </label>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="ghost" onClick={resetForm}>
-                {t("common.cancel", "Cancel")}
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!form.name || createMutation.isPending || updateMutation.isPending}
-              >
-                {editingChannel
-                  ? t("common.save", "Save")
-                  : t("common.create", "Create")}
-              </Button>
+            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              {EVENT_TYPES.map((event) => (
+                <label
+                  key={event}
+                  className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={form.events.includes(event)}
+                    onChange={() => toggleEvent(event)}
+                    className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+                  />
+                  {event.replace(/_/g, " ")}
+                </label>
+              ))}
             </div>
           </div>
-        </Modal>
-      )}
+
+          {/* Template */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Template
+            </label>
+            <textarea
+              value={form.template}
+              onChange={(e) => setForm({ ...form, template: e.target.value })}
+              className="w-full rounded-lg border border-white/10 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+              rows={3}
+              placeholder="{EVENT}: {USERNAME} - {MESSAGE}"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Available variables: {"{EVENT}"}, {"{USERNAME}"}, {"{NODE_NAME}"}, {"{MESSAGE}"}
+            </p>
+          </div>
+
+          {/* Enabled */}
+          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.enabled}
+              onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+              className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500"
+            />
+            Enabled
+          </label>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={resetForm}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!form.name || createMutation.isPending || updateMutation.isPending}
+            >
+              {editingChannel ? "Save" : "Create"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

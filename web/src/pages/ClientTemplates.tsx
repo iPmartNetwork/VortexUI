@@ -8,7 +8,6 @@ import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
 import { useTitle } from "@/lib/useTitle";
-import { useI18n } from "@/i18n/i18n";
 
 // Types
 interface ClientTemplate {
@@ -44,6 +43,18 @@ interface TemplateForm {
   enabled: boolean;
 }
 
+interface TemplatesResponse {
+  templates: ClientTemplate[];
+}
+
+interface ApprovalsResponse {
+  approvals: SubscriptionApproval[];
+}
+
+interface PreviewResponse {
+  preview: string;
+}
+
 const defaultForm: TemplateForm = {
   name: "",
   client_pattern: "",
@@ -55,8 +66,7 @@ const defaultForm: TemplateForm = {
 };
 
 export function ClientTemplates() {
-  const { t } = useI18n();
-  useTitle(t("clientTemplates.title", "Client Templates"));
+  useTitle("Client Templates");
   const queryClient = useQueryClient();
   const toast = useToast();
   const confirm = useConfirm();
@@ -72,16 +82,16 @@ export function ClientTemplates() {
   const { data: templates = [] } = useQuery<ClientTemplate[]>({
     queryKey: ["client-templates"],
     queryFn: async () => {
-      const res = await api.get("/api/v2/client-templates");
-      return res.data.templates;
+      const res = await api<TemplatesResponse>("/api/v2/client-templates");
+      return res.templates;
     },
   });
 
   const { data: approvals = [] } = useQuery<SubscriptionApproval[]>({
     queryKey: ["approvals"],
     queryFn: async () => {
-      const res = await api.get("/api/v2/approvals");
-      return res.data.approvals;
+      const res = await api<ApprovalsResponse>("/api/v2/approvals");
+      return res.approvals;
     },
     enabled: activeTab === "approvals",
   });
@@ -89,14 +99,17 @@ export function ClientTemplates() {
   // --- Mutations ---
   const createMutation = useMutation({
     mutationFn: async (data: TemplateForm) => {
-      return api.post("/api/v2/client-templates", {
-        name: data.name,
-        client_pattern: data.client_pattern,
-        routing_rules: JSON.parse(data.routing_rules),
-        dns_settings: JSON.parse(data.dns_settings),
-        custom_outbounds: JSON.parse(data.custom_outbounds),
-        priority: data.priority,
-        enabled: data.enabled,
+      return api("/api/v2/client-templates", {
+        method: "POST",
+        body: {
+          name: data.name,
+          client_pattern: data.client_pattern,
+          routing_rules: JSON.parse(data.routing_rules),
+          dns_settings: JSON.parse(data.dns_settings),
+          custom_outbounds: JSON.parse(data.custom_outbounds),
+          priority: data.priority,
+          enabled: data.enabled,
+        },
       });
     },
     onSuccess: () => {
@@ -109,14 +122,17 @@ export function ClientTemplates() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TemplateForm }) => {
-      return api.put(`/api/v2/client-templates/${id}`, {
-        name: data.name,
-        client_pattern: data.client_pattern,
-        routing_rules: JSON.parse(data.routing_rules),
-        dns_settings: JSON.parse(data.dns_settings),
-        custom_outbounds: JSON.parse(data.custom_outbounds),
-        priority: data.priority,
-        enabled: data.enabled,
+      return api(`/api/v2/client-templates/${id}`, {
+        method: "PUT",
+        body: {
+          name: data.name,
+          client_pattern: data.client_pattern,
+          routing_rules: JSON.parse(data.routing_rules),
+          dns_settings: JSON.parse(data.dns_settings),
+          custom_outbounds: JSON.parse(data.custom_outbounds),
+          priority: data.priority,
+          enabled: data.enabled,
+        },
       });
     },
     onSuccess: () => {
@@ -128,7 +144,8 @@ export function ClientTemplates() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/v2/client-templates/${id}`),
+    mutationFn: (id: string) =>
+      api(`/api/v2/client-templates/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-templates"] });
       toast.success("Template deleted");
@@ -137,7 +154,8 @@ export function ClientTemplates() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/api/v2/approvals/${id}/approve`),
+    mutationFn: (id: string) =>
+      api(`/api/v2/approvals/${id}/approve`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
       toast.success("Request approved");
@@ -146,7 +164,8 @@ export function ClientTemplates() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/api/v2/approvals/${id}/reject`),
+    mutationFn: (id: string) =>
+      api(`/api/v2/approvals/${id}/reject`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
       toast.success("Request rejected");
@@ -156,8 +175,11 @@ export function ClientTemplates() {
 
   const previewMutation = useMutation({
     mutationFn: async (template: string) => {
-      const res = await api.post("/api/v2/templates/preview", { template });
-      return res.data.preview as string;
+      const res = await api<PreviewResponse>("/api/v2/templates/preview", {
+        method: "POST",
+        body: { template },
+      });
+      return res.preview;
     },
     onSuccess: (result) => setPreviewResult(result),
     onError: () => toast.error("Preview failed"),
@@ -193,7 +215,7 @@ export function ClientTemplates() {
   }
 
   async function handleDelete(id: string) {
-    const ok = await confirm.show("Delete this template?");
+    const ok = await confirm({ title: "Delete this template?" });
     if (ok) deleteMutation.mutate(id);
   }
 
@@ -251,7 +273,7 @@ export function ClientTemplates() {
                     </td>
                     <td className="p-2">{tpl.priority}</td>
                     <td className="p-2">
-                      <Badge variant={tpl.enabled ? "success" : "secondary"}>
+                      <Badge color={tpl.enabled ? "active" : "disabled"}>
                         {tpl.enabled ? "Enabled" : "Disabled"}
                       </Badge>
                     </td>
@@ -352,93 +374,92 @@ export function ClientTemplates() {
       )}
 
       {/* Create/Edit Modal */}
-      {showForm && (
-        <Modal
-          title={editingTemplate ? "Edit Template" : "New Client Template"}
-          onClose={closeForm}
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm mb-1">Name</label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g., Clash Pro Settings"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm mb-1">Client Pattern (regex)</label>
-              <Input
-                value={form.client_pattern}
-                onChange={(e) => setForm({ ...form, client_pattern: e.target.value })}
-                placeholder="e.g., clash|mihomo"
-              />
-              <p className="text-xs text-white/40 mt-1">
-                Regex matched against User-Agent (case-insensitive)
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm mb-1">Priority</label>
-              <Input
-                type="number"
-                value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm mb-1">Routing Rules (JSON)</label>
-              <textarea
-                className="w-full h-24 bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono resize-y"
-                value={form.routing_rules}
-                onChange={(e) => setForm({ ...form, routing_rules: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm mb-1">DNS Settings (JSON)</label>
-              <textarea
-                className="w-full h-24 bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono resize-y"
-                value={form.dns_settings}
-                onChange={(e) => setForm({ ...form, dns_settings: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm mb-1">Custom Outbounds (JSON)</label>
-              <textarea
-                className="w-full h-24 bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono resize-y"
-                value={form.custom_outbounds}
-                onChange={(e) => setForm({ ...form, custom_outbounds: e.target.value })}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="enabled"
-                checked={form.enabled}
-                onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-                className="rounded"
-              />
-              <label htmlFor="enabled" className="text-sm">
-                Enabled
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" onClick={closeForm}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit}>
-                {editingTemplate ? "Update" : "Create"}
-              </Button>
-            </div>
+      <Modal
+        open={showForm}
+        onClose={closeForm}
+        title={editingTemplate ? "Edit Template" : "New Client Template"}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm mb-1">Name</label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="e.g., Clash Pro Settings"
+            />
           </div>
-        </Modal>
-      )}
+
+          <div>
+            <label className="block text-sm mb-1">Client Pattern (regex)</label>
+            <Input
+              value={form.client_pattern}
+              onChange={(e) => setForm({ ...form, client_pattern: e.target.value })}
+              placeholder="e.g., clash|mihomo"
+            />
+            <p className="text-xs text-white/40 mt-1">
+              Regex matched against User-Agent (case-insensitive)
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Priority</label>
+            <Input
+              type="number"
+              value={form.priority}
+              onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Routing Rules (JSON)</label>
+            <textarea
+              className="w-full h-24 bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono resize-y"
+              value={form.routing_rules}
+              onChange={(e) => setForm({ ...form, routing_rules: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">DNS Settings (JSON)</label>
+            <textarea
+              className="w-full h-24 bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono resize-y"
+              value={form.dns_settings}
+              onChange={(e) => setForm({ ...form, dns_settings: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Custom Outbounds (JSON)</label>
+            <textarea
+              className="w-full h-24 bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono resize-y"
+              value={form.custom_outbounds}
+              onChange={(e) => setForm({ ...form, custom_outbounds: e.target.value })}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="enabled"
+              checked={form.enabled}
+              onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+              className="rounded"
+            />
+            <label htmlFor="enabled" className="text-sm">
+              Enabled
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={closeForm}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit}>
+              {editingTemplate ? "Update" : "Create"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

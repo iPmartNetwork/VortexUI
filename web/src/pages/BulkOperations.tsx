@@ -7,7 +7,6 @@ import { GlassCard } from "@/components/veltrix";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useTitle } from "@/lib/useTitle";
-import { useI18n } from "@/i18n/i18n";
 
 // Types
 interface BulkFilter {
@@ -81,8 +80,7 @@ const OPERATION_CATEGORIES = [
 const USER_STATUSES = ["active", "limited", "expired", "disabled", "on_hold"];
 
 export function BulkOperations() {
-  const { t } = useI18n();
-  useTitle(t("bulk.title", "Bulk Operations"));
+  useTitle("Bulk Operations");
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const toast = useToast();
@@ -163,7 +161,7 @@ export function BulkOperations() {
   return (
     <div className="space-y-6 animate-page-enter">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-fg">{t("bulk.title", "Bulk Operations")}</h1>
+        <h1 className="text-2xl font-bold text-fg">Bulk Operations</h1>
       </div>
 
       {/* Tabs */}
@@ -175,7 +173,7 @@ export function BulkOperations() {
           }`}
         >
           <Play size={16} />
-          {t("bulk.operations", "Operations")}
+          Operations
         </button>
         <button
           onClick={() => setActiveTab("history")}
@@ -184,7 +182,7 @@ export function BulkOperations() {
           }`}
         >
           <History size={16} />
-          {t("bulk.history", "History")}
+          History
         </button>
       </div>
 
@@ -192,7 +190,7 @@ export function BulkOperations() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Operation Selection */}
           <GlassCard className="lg:col-span-2 space-y-4 p-6">
-            <h2 className="text-lg font-semibold text-fg">{t("bulk.selectOperation", "Select Operation")}</h2>
+            <h2 className="text-lg font-semibold text-fg">Select Operation</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {OPERATION_CATEGORIES.map((cat) => (
                 <div key={cat.label} className="space-y-2">
@@ -223,7 +221,7 @@ export function BulkOperations() {
             {/* Parameters */}
             {operationType && (
               <div className="space-y-3 border-t border-border pt-4">
-                <h3 className="text-sm font-medium text-fg">{t("bulk.parameters", "Parameters")}</h3>
+                <h3 className="text-sm font-medium text-fg">Parameters</h3>
                 {(operationType === "add_expire_days" || operationType === "sub_expire_days") && (
                   <div>
                     <label className="text-xs text-fg-muted">Days</label>
@@ -255,9 +253,12 @@ export function BulkOperations() {
                   <Select
                     value={(parameters.status as string) || ""}
                     onChange={(e) => updateParam("status", e.target.value)}
-                    options={USER_STATUSES.map((s) => ({ value: s, label: s }))}
-                    placeholder="Select target status"
-                  />
+                  >
+                    <option value="" disabled>Select target status</option>
+                    {USER_STATUSES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </Select>
                 )}
               </div>
             )}
@@ -265,7 +266,7 @@ export function BulkOperations() {
 
           {/* Filters Panel */}
           <GlassCard className="space-y-4 p-6">
-            <h2 className="text-lg font-semibold text-fg">{t("bulk.filters", "Filters")}</h2>
+            <h2 className="text-lg font-semibold text-fg">Filters</h2>
 
             <div className="space-y-3">
               <div>
@@ -305,7 +306,7 @@ export function BulkOperations() {
                 onClick={() => previewMutation.mutate()}
                 disabled={!operationType || previewMutation.isPending}
                 className="w-full"
-                variant="secondary"
+                variant="outline"
               >
                 <Eye size={16} className="mr-2" />
                 {previewMutation.isPending ? "Previewing..." : "Preview"}
@@ -336,9 +337,9 @@ export function BulkOperations() {
 
       {activeTab === "history" && (
         <GlassCard className="p-6">
-          <h2 className="mb-4 text-lg font-semibold text-fg">{t("bulk.historyTitle", "Operation History")}</h2>
+          <h2 className="mb-4 text-lg font-semibold text-fg">Operation History</h2>
           {historyLoading ? (
-            <div className="py-8 text-center text-fg-muted">{t("common.loading", "Loading...")}</div>
+            <div className="py-8 text-center text-fg-muted">Loading...</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -370,7 +371,7 @@ export function BulkOperations() {
                   {(!historyData?.operations || historyData.operations.length === 0) && (
                     <tr>
                       <td colSpan={4} className="py-8 text-center text-fg-muted">
-                        {t("bulk.noHistory", "No operations recorded yet.")}
+                        No operations recorded yet.
                       </td>
                     </tr>
                   )}
