@@ -151,7 +151,12 @@ c_stop() {
 c_restart() {
   case "$MODE" in
     node)   systemctl restart vortexui-node ;;
-    native) systemctl restart vortexui-panel caddy ;;
+    native)
+      if systemctl is-enabled vortexui-panel 2>/dev/null | grep -q masked; then
+        echo "  ${y}service was masked — unmasking...${n}"
+        systemctl unmask vortexui-panel
+      fi
+      systemctl restart vortexui-panel caddy ;;
     *)      $COMPOSE restart "$@" ;;
   esac
 }
@@ -194,6 +199,11 @@ c_update() {
       fi
       systemctl daemon-reload
       systemctl enable vortexui-panel 2>/dev/null || true
+      # Unmask if masked (fixes "Unit is masked" error on update)
+      if systemctl is-enabled vortexui-panel 2>/dev/null | grep -q masked; then
+        echo "  ${y}service was masked — unmasking...${n}"
+        systemctl unmask vortexui-panel
+      fi
       systemctl restart vortexui-panel caddy
       echo "${g}✓ panel updated${n} — run ${b}vortexui doctor${n} to verify services, DB, and certs." ;;
     *)      $COMPOSE up -d --build
