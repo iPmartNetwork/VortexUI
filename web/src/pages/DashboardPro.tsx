@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity, AlertTriangle, Globe, TrendingUp, Zap,
   Server, Shield, RefreshCw, MapPin, DollarSign, BarChart3,
@@ -8,6 +8,7 @@ import { api } from "@/api/client";
 import { Button, Select } from "@/components/ui";
 import { GlassCard, StatsCard } from "@/components/veltrix";
 import { ProtocolDonutChart, type ProtocolSlice } from "@/components/veltrix/ProtocolDonutChart";
+import { useToast } from "@/components/toast";
 import { useTitle } from "@/lib/useTitle";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +86,8 @@ interface SubAnalyticsReport {
 
 export function DashboardPro() {
   useTitle("Dashboard Pro");
+  const toast = useToast();
+  const qc = useQueryClient();
   const [ispName, setIspName] = useState("MCI");
   const [range, setRange] = useState("30d");
 
@@ -176,10 +179,10 @@ export function DashboardPro() {
           <Zap size={14} className="text-primary" /> Quick Actions
         </h3>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => api('/api/v2/dashboard/actions/refresh-nodes', { method: 'POST' }).then(() => window.location.reload())}><RefreshCw size={12} /> Refresh Nodes</Button>
-          <Button variant="outline" size="sm" onClick={() => api('/api/v2/dashboard/actions/restart-cores', { method: 'POST' })}><Server size={12} /> Restart Cores</Button>
-          <Button variant="outline" size="sm" onClick={() => api('/api/v2/dashboard/actions/check-certs', { method: 'POST' })}><Shield size={12} /> Check Certs</Button>
-          <Button variant="outline" size="sm" onClick={() => api('/api/v2/dashboard/actions/update-geo', { method: 'POST' })}><Globe size={12} /> Update Geo</Button>
+          <Button variant="outline" size="sm" onClick={async () => { await api('/api/v2/dashboard/actions/refresh-nodes', { method: 'POST' }); toast.success("Nodes refreshed"); qc.invalidateQueries({ queryKey: ["dashboard-pro"] }); }}><RefreshCw size={12} /> Refresh Nodes</Button>
+          <Button variant="outline" size="sm" onClick={async () => { await api('/api/v2/dashboard/actions/restart-cores', { method: 'POST' }); toast.success("Restart signal sent"); }}><Server size={12} /> Restart Cores</Button>
+          <Button variant="outline" size="sm" onClick={async () => { await api('/api/v2/dashboard/actions/check-certs', { method: 'POST' }); toast.success("Certificates valid"); }}><Shield size={12} /> Check Certs</Button>
+          <Button variant="outline" size="sm" onClick={async () => { await api('/api/v2/dashboard/actions/update-geo', { method: 'POST' }); toast.success("Geo data updated"); }}><Globe size={12} /> Update Geo</Button>
         </div>
       </GlassCard>
 
@@ -343,39 +346,42 @@ function GeoNodeMap({ nodes }: { nodes: GeoNode[] }) {
     return <div className="h-48 flex items-center justify-center text-xs text-fg-subtle">No node data available</div>;
   }
 
-  return (
-    <div className="relative rounded-xl bg-surface-2/30 p-4 overflow-hidden h-56">
-      {/* Simplified world SVG */}
-      <svg viewBox="0 0 1000 500" className="w-full h-auto opacity-20" preserveAspectRatio="xMidYMid">
-        <ellipse cx="250" cy="200" rx="120" ry="100" fill="hsl(var(--fg-subtle))" opacity="0.3" />
-        <ellipse cx="520" cy="180" rx="130" ry="120" fill="hsl(var(--fg-subtle))" opacity="0.3" />
-        <ellipse cx="750" cy="230" rx="100" ry="90" fill="hsl(var(--fg-subtle))" opacity="0.3" />
-        <ellipse cx="200" cy="350" rx="60" ry="80" fill="hsl(var(--fg-subtle))" opacity="0.3" />
-        <ellipse cx="530" cy="380" rx="50" ry="50" fill="hsl(var(--fg-subtle))" opacity="0.3" />
-        <ellipse cx="830" cy="380" rx="70" ry="50" fill="hsl(var(--fg-subtle))" opacity="0.3" />
-      </svg>
+  // Convert lat/lng to x/y on a 1000x500 Mercator-like projection
+  function toXY(lat: number, lng: number): [number, number] {
+    const x = ((lng + 180) / 360) * 1000;
+    const y = ((90 - lat) / 180) * 500;
+    return [x, y];
+  }
 
-      {/* Node markers */}
-      <svg viewBox="0 0 1000 500" className="absolute inset-0 w-full h-full p-4" preserveAspectRatio="xMidYMid">
-        {nodes.map((node, i) => {
-          // Distribute nodes evenly if no real coordinates
-          const x = node.lng !== 0 ? ((node.lng + 180) / 360) * 1000 : 200 + (i * 120) % 700;
-          const y = node.lat !== 0 ? ((90 - node.lat) / 180) * 500 : 150 + (i * 80) % 300;
+  return (
+    <div className="relative rounded-xl bg-surface-2/30 overflow-hidden" style={{ height: 220 }}>
+      <svg viewBox="0 0 1000 500" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+        {/* Simplified world land masses */}
+        <path d="M165,120 Q200,100 240,110 L260,130 Q280,140 270,160 L250,180 Q230,190 210,180 L180,160 Q160,140 165,120Z" fill="hsl(var(--fg-subtle))" opacity="0.15" />
+        <path d="M240,250 Q260,230 280,240 L290,280 Q280,320 260,340 L240,330 Q220,300 230,270Z" fill="hsl(var(--fg-subtle))" opacity="0.15" />
+        <path d="M450,80 Q520,60 580,80 L620,100 Q650,120 640,150 L610,180 Q580,200 540,190 L500,170 Q460,150 450,120Z" fill="hsl(var(--fg-subtle))" opacity="0.15" />
+        <path d="M440,140 Q480,130 520,140 L550,160 Q570,180 560,210 L530,240 Q500,250 470,240 L450,220 Q430,190 440,160Z" fill="hsl(var(--fg-subtle))" opacity="0.15" />
+        <path d="M560,160 Q600,140 650,150 L680,170 Q700,190 690,220 L660,240 Q630,250 600,240 L570,220 Q550,190 560,160Z" fill="hsl(var(--fg-subtle))" opacity="0.15" />
+        <path d="M700,150 Q750,130 800,140 L840,160 Q870,180 860,210 L830,240 Q800,260 760,250 L730,230 Q700,200 700,170Z" fill="hsl(var(--fg-subtle))" opacity="0.15" />
+        <path d="M750,300 Q790,280 830,290 L860,320 Q880,350 860,380 L830,390 Q800,400 770,380 L750,350 Q740,320 750,300Z" fill="hsl(var(--fg-subtle))" opacity="0.15" />
+
+        {/* Node markers */}
+        {nodes.map((node) => {
+          const [x, y] = toXY(node.lat, node.lng);
           const isOnline = node.status === "online";
+          const color = isOnline ? "hsl(var(--primary))" : "hsl(var(--destructive))";
           return (
             <g key={node.node_id}>
-              <circle
-                cx={x} cy={y} r={12}
-                fill={isOnline ? "hsl(var(--primary))" : "hsl(var(--destructive))"}
-                opacity={0.2}
-              />
-              <circle
-                cx={x} cy={y} r={6}
-                fill={isOnline ? "hsl(var(--primary))" : "hsl(var(--destructive))"}
-                opacity={0.8}
-                className={isOnline ? "animate-pulse" : ""}
-              />
-              <text x={x} y={y + 20} textAnchor="middle" fontSize="10" fill="hsl(var(--fg-muted))">
+              {/* Pulse ring for online nodes */}
+              {isOnline && (
+                <circle cx={x} cy={y} r={14} fill="none" stroke={color} strokeWidth="1.5" opacity="0.4" className="animate-ping" style={{ transformOrigin: `${x}px ${y}px`, animationDuration: '2s' }} />
+              )}
+              {/* Outer glow */}
+              <circle cx={x} cy={y} r={10} fill={color} opacity={0.2} />
+              {/* Pin dot */}
+              <circle cx={x} cy={y} r={5} fill={color} stroke="white" strokeWidth="1.5" />
+              {/* Label */}
+              <text x={x} y={y + 18} textAnchor="middle" fontSize="9" fontWeight="600" fill="hsl(var(--fg))">
                 {node.name}
               </text>
             </g>
@@ -383,11 +389,11 @@ function GeoNodeMap({ nodes }: { nodes: GeoNode[] }) {
         })}
       </svg>
 
-      {/* Status legend */}
-      <div className="absolute bottom-3 start-3 flex items-center gap-3 text-[10px] text-fg-subtle">
-        <div className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> Online</div>
-        <div className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-destructive" /> Offline</div>
-        <span className="ml-2">{nodes.length} nodes</span>
+      {/* Legend */}
+      <div className="absolute bottom-2 left-3 flex items-center gap-3 text-[10px] text-fg-subtle bg-bg/70 backdrop-blur-sm rounded-lg px-2 py-1">
+        <div className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-primary" /> Online</div>
+        <div className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-destructive" /> Offline</div>
+        <span>{nodes.length} nodes</span>
       </div>
     </div>
   );

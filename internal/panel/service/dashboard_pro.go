@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -147,7 +148,6 @@ func (s *DashboardProService) GeoMap(ctx context.Context) ([]*domain.GeoNode, er
 	var geoNodes []*domain.GeoNode
 	for _, n := range nodes {
 		status := "offline"
-		// Use live status from Hub if available
 		nodeStatus := n.Status
 		if s.hub != nil {
 			if liveStatus, _, _, ok := s.hub.Live(n.ID); ok {
@@ -158,16 +158,82 @@ func (s *DashboardProService) GeoMap(ctx context.Context) ([]*domain.GeoNode, er
 			status = "online"
 		}
 
+		lat, lng := resolveNodeLocation(n)
 		geoNodes = append(geoNodes, &domain.GeoNode{
 			NodeID: n.ID,
 			Name:   n.Name,
-			Lat:    0,
-			Lng:    0,
+			Lat:    lat,
+			Lng:    lng,
 			Status: status,
 		})
 	}
 
 	return geoNodes, nil
+}
+
+// resolveNodeLocation determines geographic coordinates for a node.
+// It checks the node's CountryCode, Region, Address, and Name fields
+// for known country/city patterns.
+func resolveNodeLocation(n *domain.Node) (float64, float64) {
+	// Map known country codes / names to coordinates
+	locations := map[string][2]float64{
+		"ir":            {35.6892, 51.3890},  // Tehran, Iran
+		"iran":          {35.6892, 51.3890},
+		"local":         {35.6892, 51.3890},  // Local = Iran
+		"fr":            {48.8566, 2.3522},   // Paris, France
+		"france":        {48.8566, 2.3522},
+		"us":            {37.7749, -122.4194}, // San Francisco, US
+		"usa":           {37.7749, -122.4194},
+		"united states": {37.7749, -122.4194},
+		"de":            {52.5200, 13.4050},  // Berlin, Germany
+		"germany":       {52.5200, 13.4050},
+		"nl":            {52.3676, 4.9041},   // Amsterdam, Netherlands
+		"uk":            {51.5074, -0.1278},  // London, UK
+		"gb":            {51.5074, -0.1278},
+		"fi":            {60.1699, 24.9384},  // Helsinki, Finland
+		"se":            {59.3293, 18.0686},  // Stockholm, Sweden
+		"tr":            {41.0082, 28.9784},  // Istanbul, Turkey
+		"ae":            {25.2048, 55.2708},  // Dubai, UAE
+		"sg":            {1.3521, 103.8198},  // Singapore
+		"jp":            {35.6762, 139.6503}, // Tokyo, Japan
+		"ca":            {43.6532, -79.3832}, // Toronto, Canada
+		"au":            {-33.8688, 151.2093}, // Sydney, Australia
+	}
+
+	// Try country code first (most reliable)
+	if n.CountryCode != "" {
+		code := strings.ToLower(n.CountryCode)
+		if loc, ok := locations[code]; ok {
+			return loc[0], loc[1]
+		}
+	}
+
+	// Try node name (lowercase)
+	name := strings.ToLower(n.Name)
+	if loc, ok := locations[name]; ok {
+		return loc[0], loc[1]
+	}
+
+	// Try region field
+	if n.Region != "" {
+		region := strings.ToLower(n.Region)
+		for key, loc := range locations {
+			if strings.Contains(region, key) {
+				return loc[0], loc[1]
+			}
+		}
+	}
+
+	// Try node address
+	addr := strings.ToLower(n.Address)
+	for key, loc := range locations {
+		if strings.Contains(addr, key) {
+			return loc[0], loc[1]
+		}
+	}
+
+	// Default: Tehran, Iran
+	return 35.0, 51.0
 }
 
 // Revenue returns an aggregated revenue report for the given time range.
