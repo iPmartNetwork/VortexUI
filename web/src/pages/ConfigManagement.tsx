@@ -31,6 +31,12 @@ export function ConfigManagement() {
   const [diffData, setDiffData] = useState<ConfigDiff | null>(null);
   const [vForm, setVForm] = useState({ protocol: "vless", network: "tcp", security: "reality", config: "{}" });
 
+  const { data: inboundsData, isLoading: inboundsLoading } = useQuery({
+    queryKey: ["inbounds-list"],
+    queryFn: () => api<{ inbounds: any[] }>("/api/inbounds"),
+  });
+  const inboundsList = inboundsData?.inbounds ?? [];
+
   const { data: versions } = useQuery({
     queryKey: ["config-versions", selectedInbound],
     queryFn: () => api<ConfigVersion[]>(`/api/v2/inbounds/${selectedInbound}/versions`),
@@ -72,8 +78,15 @@ export function ConfigManagement() {
       <h1 className="text-2xl font-bold">Config Management</h1>
 
       <GlassCard className="p-4">
-        <label className="block text-sm font-medium mb-2">Inbound ID</label>
-        <Input placeholder="UUID" value={selectedInbound} onChange={(e) => setSelectedInbound(e.target.value)} />
+        <label className="block text-sm font-medium mb-2">Select Inbound</label>
+        {inboundsLoading ? <p className="text-sm text-fg-muted">Loading...</p> : (
+          <select className="field input-surface w-full" value={selectedInbound} onChange={(e) => setSelectedInbound(e.target.value)}>
+            <option value="">— Select an inbound —</option>
+            {inboundsList?.map((ib: any) => (
+              <option key={ib.id} value={ib.id}>{ib.tag || ib.id} ({ib.protocol})</option>
+            ))}
+          </select>
+        )}
       </GlassCard>
 
       {selectedInbound && (

@@ -25,6 +25,12 @@ export function WireGuard() {
   const [showSettings, setShowSettings] = useState<WGPeer|null>(null);
   const [tab, setTab] = useState<"peers"|"mesh">("peers");
 
+  const { data: inboundsData } = useQuery({
+    queryKey: ["inbounds-list"],
+    queryFn: () => api<{ inbounds: any[] }>("/api/inbounds"),
+  });
+  const inboundsList = inboundsData?.inbounds ?? [];
+
   const { data: peers } = useQuery({ queryKey: ["wg-peers", inbound], queryFn: () => api<WGPeer[]>(`/api/v2/wireguard/${inbound}/peers`), enabled: !!inbound });
   const { data: meshes } = useQuery({ queryKey: ["wg-meshes"], queryFn: () => api<WGMesh[]>("/api/v2/wireguard/mesh") });
 
@@ -50,7 +56,21 @@ export function WireGuard() {
         <>
           <GlassCard className="p-4">
             <div className="flex items-center gap-4">
-              <div className="flex-1"><Input placeholder="Inbound UUID" value={inbound} onChange={(e) => setInbound(e.target.value)} /></div>
+              <div className="flex-1">
+                <select className="field input-surface w-full" value={inbound} onChange={(e) => setInbound(e.target.value)}>
+                  <option value="">— Select WireGuard inbound —</option>
+                  {inboundsList?.filter((ib: any) => ib.protocol === "wireguard").map((ib: any) => (
+                    <option key={ib.id} value={ib.id}>{ib.tag || ib.id}</option>
+                  ))}
+                  {inboundsList?.filter((ib: any) => ib.protocol !== "wireguard").length > 0 && (
+                    <optgroup label="Other inbounds">
+                      {inboundsList?.filter((ib: any) => ib.protocol !== "wireguard").map((ib: any) => (
+                        <option key={ib.id} value={ib.id}>{ib.tag || ib.id} ({ib.protocol})</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
               {inbound && <Button variant="outline" onClick={async () => { if (await confirm({ title: "Repair peers?" })) repairMut.mutate(); }}><Wrench className="w-4 h-4 mr-1" />Repair</Button>}
             </div>
           </GlassCard>
