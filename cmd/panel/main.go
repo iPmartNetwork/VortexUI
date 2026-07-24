@@ -552,6 +552,9 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	dashProSvc.SetHub(h)
 	dashProHandler := api.NewDashboardProHandler(dashProSvc)
 
+	// Iran Bridge Tunnels
+	tunnelHandler := api.NewTunnelHandlers("")
+
 	// Anti-censorship features
 	awgHandler := api.NewAWGHandler()
 	reachHandler := api.NewReachabilityHandler()
@@ -669,6 +672,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		AnomalyDetector: anomalyDetector,
 		SecurityHardeningHandlers: securityHandlers,
 		DashboardPro: dashProHandler,
+		Tunnels:      tunnelHandler,
 		AWG:          awgHandler,
 		Reachability: reachHandler,
 		GeoExits:     geoExitHandler,

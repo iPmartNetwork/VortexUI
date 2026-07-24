@@ -122,6 +122,7 @@ type Deps struct {
 	WebhookTest      *WebhookTestHandler       // Phase 12: webhook test endpoint
 	PortalPro        *PortalProHandler         // Phase 14: portal pro features
 	DashboardPro *DashboardProHandler      // Dashboard Pro (analytics, heatmap, revenue)
+	Tunnels      *TunnelHandlers           // Iran Bridge Tunnels
 
 	// Anti-censorship features
 	AWG          *AWGHandler          // AmneziaWG obfuscated WireGuard
@@ -778,6 +779,11 @@ func NewRouter(d Deps) *echo.Echo {
 	// Dashboard Pro (daily check, ISP heatmap, geo map, revenue, sub analytics)
 	if d.DashboardPro != nil {
 		d.DashboardPro.Register(v2)
+	}
+
+	// Iran Bridge Tunnels
+	if d.Tunnels != nil {
+		d.Tunnels.Register(authed)
 	}
 
 	// Anti-censorship features
