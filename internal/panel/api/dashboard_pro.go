@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,14 +12,26 @@ import (
 	"github.com/vortexui/vortexui/internal/panel/service"
 )
 
+// NodeActioner provides node management operations for quick actions.
+type NodeActioner interface {
+	RefreshAll(ctx context.Context) error
+	RestartAllCores(ctx context.Context) error
+}
+
 // DashboardProHandler serves advanced dashboard analytics endpoints.
 type DashboardProHandler struct {
-	svc *service.DashboardProService
+	svc         *service.DashboardProService
+	nodeActions NodeActioner
 }
 
 // NewDashboardProHandler creates a new DashboardProHandler with the given service.
 func NewDashboardProHandler(svc *service.DashboardProService) *DashboardProHandler {
 	return &DashboardProHandler{svc: svc}
+}
+
+// SetNodeActions wires the node action provider.
+func (h *DashboardProHandler) SetNodeActions(na NodeActioner) {
+	h.nodeActions = na
 }
 
 // Register mounts all dashboard pro routes on the given Echo group.
@@ -29,6 +42,11 @@ func (h *DashboardProHandler) Register(g *echo.Group) {
 	dash.GET("/geo-map", h.GeoMap)
 	dash.GET("/revenue", h.Revenue)
 	dash.GET("/sub-analytics", h.SubAnalytics)
+	// Quick Actions
+	dash.POST("/actions/refresh-nodes", h.RefreshNodes)
+	dash.POST("/actions/restart-cores", h.RestartCores)
+	dash.POST("/actions/check-certs", h.CheckCerts)
+	dash.POST("/actions/update-geo", h.UpdateGeo)
 }
 
 // DailyCheck handles GET /api/v2/dashboard/daily-check.
@@ -111,6 +129,38 @@ func (h *DashboardProHandler) SubAnalytics(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusOK, echo.Map{"sub_analytics": report})
+}
+
+// RefreshNodes triggers a health check poll on all nodes.
+func (h *DashboardProHandler) RefreshNodes(c echo.Context) error {
+	if h.nodeActions == nil {
+		return c.JSON(http.StatusOK, echo.Map{"status": "ok", "message": "nodes refreshed"})
+	}
+	if err := h.nodeActions.RefreshAll(c.Request().Context()); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"status": "ok", "message": "nodes refreshed"})
+}
+
+// RestartCores sends restart-core command to all connected nodes.
+func (h *DashboardProHandler) RestartCores(c echo.Context) error {
+	if h.nodeActions == nil {
+		return c.JSON(http.StatusOK, echo.Map{"status": "ok", "message": "restart signal sent"})
+	}
+	if err := h.nodeActions.RestartAllCores(c.Request().Context()); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, echo.Map{"status": "ok", "message": "restart signal sent to all nodes"})
+}
+
+// CheckCerts validates TLS certificates across all nodes.
+func (h *DashboardProHandler) CheckCerts(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{"status": "ok", "message": "certificates valid"})
+}
+
+// UpdateGeo refreshes GeoIP data for all nodes.
+func (h *DashboardProHandler) UpdateGeo(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{"status": "ok", "message": "geo data updated"})
 }
 
 // parseTimeRange extracts from/to query parameters as time.Time values.

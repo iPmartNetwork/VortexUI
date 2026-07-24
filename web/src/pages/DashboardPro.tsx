@@ -176,10 +176,10 @@ export function DashboardPro() {
           <Zap size={14} className="text-primary" /> Quick Actions
         </h3>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm"><RefreshCw size={12} /> Refresh Nodes</Button>
-          <Button variant="outline" size="sm"><Server size={12} /> Restart Cores</Button>
-          <Button variant="outline" size="sm"><Shield size={12} /> Check Certs</Button>
-          <Button variant="outline" size="sm"><Globe size={12} /> Update Geo</Button>
+          <Button variant="outline" size="sm" onClick={() => api('/api/v2/dashboard/actions/refresh-nodes', { method: 'POST' }).then(() => window.location.reload())}><RefreshCw size={12} /> Refresh Nodes</Button>
+          <Button variant="outline" size="sm" onClick={() => api('/api/v2/dashboard/actions/restart-cores', { method: 'POST' })}><Server size={12} /> Restart Cores</Button>
+          <Button variant="outline" size="sm" onClick={() => api('/api/v2/dashboard/actions/check-certs', { method: 'POST' })}><Shield size={12} /> Check Certs</Button>
+          <Button variant="outline" size="sm" onClick={() => api('/api/v2/dashboard/actions/update-geo', { method: 'POST' })}><Globe size={12} /> Update Geo</Button>
         </div>
       </GlassCard>
 
