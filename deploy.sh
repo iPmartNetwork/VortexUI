@@ -56,6 +56,22 @@ fi
 if [[ "$SKIP_BACKEND" -eq 0 ]]; then
     echo "==> building backend"
     cd "$INSTALL_DIR"
+
+    # Install Go if not available
+    if ! command -v go >/dev/null 2>&1; then
+        echo "    Go not found, installing..."
+        GO_VERSION="1.23.4"
+        ARCH=$(uname -m)
+        case "$ARCH" in
+            x86_64)  GO_ARCH="amd64" ;;
+            aarch64) GO_ARCH="arm64" ;;
+            *)       echo "ERROR: Unsupported arch: $ARCH"; exit 1 ;;
+        esac
+        curl -sL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" | tar -C /usr/local -xzf -
+        export PATH="/usr/local/go/bin:$PATH"
+        echo "    Go ${GO_VERSION} installed"
+    fi
+
     CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" \
         -o /usr/local/bin/vortex-panel ./cmd/panel
 fi
