@@ -15,12 +15,13 @@ CREATE INDEX idx_isp_quality_metrics_isp_date ON isp_quality_metrics (isp_name, 
 
 -- Subscription analytics: tracks subscription fetch events for format/ISP/time analysis.
 CREATE TABLE subscription_analytics (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID NOT NULL DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL,
     format_type TEXT NOT NULL,
     isp_name    TEXT NOT NULL DEFAULT '',
     client_app  TEXT NOT NULL DEFAULT '',
-    fetched_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    fetched_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (id, fetched_at)
 );
 
 -- Convert to TimescaleDB hypertable for efficient time-series queries.
