@@ -552,6 +552,12 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	dashProSvc.SetHub(h)
 	dashProHandler := api.NewDashboardProHandler(dashProSvc)
 
+	// Anti-censorship features
+	awgHandler := api.NewAWGHandler()
+	reachHandler := api.NewReachabilityHandler()
+	geoExitHandler := api.NewGeoExitHandler()
+	ipRotHandler := api.NewIPRotationHandler()
+
 	router := api.NewRouter(api.Deps{
 		Version: version,
 		Handlers: &api.Handlers{
@@ -663,6 +669,10 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		AnomalyDetector: anomalyDetector,
 		SecurityHardeningHandlers: securityHandlers,
 		DashboardPro: dashProHandler,
+		AWG:          awgHandler,
+		Reachability: reachHandler,
+		GeoExits:     geoExitHandler,
+		IPRotation:   ipRotHandler,
 	})
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: router, ReadHeaderTimeout: 10 * time.Second}

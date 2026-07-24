@@ -122,6 +122,12 @@ type Deps struct {
 	WebhookTest      *WebhookTestHandler       // Phase 12: webhook test endpoint
 	PortalPro        *PortalProHandler         // Phase 14: portal pro features
 	DashboardPro *DashboardProHandler      // Dashboard Pro (analytics, heatmap, revenue)
+
+	// Anti-censorship features
+	AWG          *AWGHandler          // AmneziaWG obfuscated WireGuard
+	Reachability *ReachabilityHandler // Iran TCP reachability check
+	GeoExits     *GeoExitHandler      // Psiphon/Tor geo exits
+	IPRotation   *IPRotationHandler   // Cloud IP rotation
 }
 
 // NewRouter builds the Echo instance with all routes and middleware mounted.
@@ -772,6 +778,20 @@ func NewRouter(d Deps) *echo.Echo {
 	// Dashboard Pro (daily check, ISP heatmap, geo map, revenue, sub analytics)
 	if d.DashboardPro != nil {
 		d.DashboardPro.Register(v2)
+	}
+
+	// Anti-censorship features
+	if d.AWG != nil {
+		d.AWG.Register(v2)
+	}
+	if d.Reachability != nil {
+		d.Reachability.Register(v2)
+	}
+	if d.GeoExits != nil {
+		d.GeoExits.Register(v2)
+	}
+	if d.IPRotation != nil {
+		d.IPRotation.Register(v2)
 	}
 
 	return e
