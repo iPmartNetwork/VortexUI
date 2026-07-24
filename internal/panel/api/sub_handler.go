@@ -112,6 +112,12 @@ func (h *Handlers) Subscribe(c echo.Context) error {
 		h.Geo.RecordUserIP(c.Request().Context(), res.User.ID, c.RealIP())
 	}
 
+	// Track subscription fetch for analytics (Dashboard Pro).
+	if h.SubAnalytics != nil {
+		clientApp := subscription.DetectClientApp(c.Request().UserAgent())
+		go h.SubAnalytics.Record(context.WithoutCancel(c.Request().Context()), res.User.ID, string(format), ispHint, clientApp)
+	}
+
 	// Cache subscription output for 60s to reduce DB pressure on rapid client polls.
 	c.Response().Header().Set("Cache-Control", "private, max-age=60")
 	c.Response().Header().Set("X-Subscription-Cached", "false")

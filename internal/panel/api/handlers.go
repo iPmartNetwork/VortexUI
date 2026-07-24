@@ -67,6 +67,7 @@ type Handlers struct {
 	SwitchEvents *service.SwitchEventService // optional; nil disables public switch reporting
 	DeviceSvc    *service.DeviceService        // optional; nil disables HWID-based device management
 	ClientTemplateSvc *service.ClientTemplateService // optional; nil disables client template matching
+	SubAnalytics      port.SubscriptionAnalyticsRepository // optional; nil disables tracking
 }
 
 // DeviceLimiter caps the number of distinct devices a user may use within a

@@ -575,6 +575,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 			Geo:         geoSvc,
 			Issuer:      issuer,
 			SwitchEvents: switchEventSvc,
+			SubAnalytics: store.SubAnalytics(),
 		},
 		APITokens:   &api.APITokenHandlers{Svc: tokenSvc},
 		Portal: &api.PortalHandlers{
