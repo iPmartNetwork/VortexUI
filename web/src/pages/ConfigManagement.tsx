@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Download, RotateCcw, CheckCircle, GitCompare } from "lucide-react";
 import { api } from "@/api/client";
-import { Button, Input, Badge } from "@/components/ui";
+import { useInboundsFleet } from "@/api/hooks";
+import { Button, Badge } from "@/components/ui";
 import { GlassCard } from "@/components/veltrix";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
@@ -31,11 +32,8 @@ export function ConfigManagement() {
   const [diffData, setDiffData] = useState<ConfigDiff | null>(null);
   const [vForm, setVForm] = useState({ protocol: "vless", network: "tcp", security: "reality", config: "{}" });
 
-  const { data: inboundsData, isLoading: inboundsLoading } = useQuery({
-    queryKey: ["inbounds-list"],
-    queryFn: () => api<{ inbounds: any[] }>("/api/inbounds"),
-  });
-  const inboundsList = inboundsData?.inbounds ?? [];
+  const { data: inboundsFleet, isLoading: inboundsLoading } = useInboundsFleet();
+  const inboundsList = inboundsFleet?.inbounds ?? [];
 
   const { data: versions } = useQuery({
     queryKey: ["config-versions", selectedInbound],
@@ -82,7 +80,7 @@ export function ConfigManagement() {
         {inboundsLoading ? <p className="text-sm text-fg-muted">Loading...</p> : (
           <select className="field input-surface w-full" value={selectedInbound} onChange={(e) => setSelectedInbound(e.target.value)}>
             <option value="">— Select an inbound —</option>
-            {inboundsList?.map((ib: any) => (
+            {inboundsList.map((ib) => (
               <option key={ib.id} value={ib.id}>{ib.tag || ib.id} ({ib.protocol})</option>
             ))}
           </select>
