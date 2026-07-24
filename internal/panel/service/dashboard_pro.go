@@ -10,6 +10,12 @@ import (
 	"github.com/vortexui/vortexui/internal/panel/port"
 )
 
+// NodeLiveStatus provides live node status from the Hub.
+// The hub.Hub type satisfies this interface.
+type NodeLiveStatus interface {
+	Live(id uuid.UUID) (domain.NodeStatus, domain.NodeHealth, domain.NodeDiagnostics, bool)
+}
+
 // DashboardProService provides advanced dashboard analytics including daily
 // checks, ISP heatmaps, geographic node visualization, revenue reporting,
 // and subscription analytics.
@@ -19,6 +25,7 @@ type DashboardProService struct {
 	ispQuality   port.ISPQualityRepository
 	subAnalytics port.SubscriptionAnalyticsRepository
 	revenue      port.RevenueRepository
+	hub          NodeLiveStatus // optional; enriches node status with live data
 }
 
 // NewDashboardProService constructs a DashboardProService with all required
@@ -39,6 +46,11 @@ func NewDashboardProService(
 	}
 }
 
+// SetHub attaches the live node status provider (Hub) after construction.
+func (s *DashboardProService) SetHub(h NodeLiveStatus) {
+	s.hub = h
+}
+
 // DailyCheck aggregates the morning daily-check data: node health, traffic
 // anomalies, certificate status, and diagnostic cards for actionable issues.
 func (s *DashboardProService) DailyCheck(ctx context.Context) (*domain.DailyCheckWidget, error) {
@@ -55,14 +67,22 @@ func (s *DashboardProService) DailyCheck(ctx context.Context) (*domain.DailyChec
 
 	now := time.Now()
 	for _, n := range nodes {
-		if n.Status == domain.NodeConnected {
+		// Use live status from Hub if available
+		status := n.Status
+		if s.hub != nil {
+			if liveStatus, _, _, ok := s.hub.Live(n.ID); ok {
+				status = liveStatus
+			}
+		}
+
+		if status == domain.NodeConnected {
 			widget.NodesOnline++
 		} else {
 			offlineNodes = append(offlineNodes, n)
 		}
 
 		// Check for stale nodes (no heartbeat in 5 minutes) as traffic anomaly signal.
-		if n.LastSeen != nil && now.Sub(*n.LastSeen) > 5*time.Minute && n.Status == domain.NodeConnected {
+		if n.LastSeen != nil && now.Sub(*n.LastSeen) > 5*time.Minute && status == domain.NodeConnected {
 			widget.TrafficAnomaly = true
 		}
 	}
@@ -127,14 +147,21 @@ func (s *DashboardProService) GeoMap(ctx context.Context) ([]*domain.GeoNode, er
 	var geoNodes []*domain.GeoNode
 	for _, n := range nodes {
 		status := "offline"
-		if n.Status == domain.NodeConnected {
+		// Use live status from Hub if available
+		nodeStatus := n.Status
+		if s.hub != nil {
+			if liveStatus, _, _, ok := s.hub.Live(n.ID); ok {
+				nodeStatus = liveStatus
+			}
+		}
+		if nodeStatus == domain.NodeConnected {
 			status = "online"
 		}
 
 		geoNodes = append(geoNodes, &domain.GeoNode{
 			NodeID: n.ID,
 			Name:   n.Name,
-			Lat:    0, // populated from GeoIP resolution if available
+			Lat:    0,
 			Lng:    0,
 			Status: status,
 		})

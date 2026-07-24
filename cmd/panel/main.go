@@ -549,6 +549,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 
 	// Dashboard Pro (analytics, heatmap, revenue, subscription analytics)
 	dashProSvc := service.NewDashboardProService(nodes, users, store.ISPQuality(), store.SubAnalytics(), store.Revenue())
+	dashProSvc.SetHub(h)
 	dashProHandler := api.NewDashboardProHandler(dashProSvc)
 
 	router := api.NewRouter(api.Deps{
