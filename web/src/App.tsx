@@ -61,6 +61,7 @@ const LazyConfigManagement = lazy(() => import("@/pages/ConfigManagement").then(
 const LazyWireGuard = lazy(() => import("@/pages/WireGuard").then((m) => ({ default: m.WireGuard })));
 const LazyAdvancedSecurity = lazy(() => import("@/pages/security/AdvancedSecurity").then((m) => ({ default: m.AdvancedSecurity })));
 const LazyApiDocs = lazy(() => import("@/pages/ApiDocs").then((m) => ({ default: m.ApiDocs })));
+const LazyTunnels = lazy(() => import("@/pages/Tunnels").then((m) => ({ default: m.Tunnels })));
 const LazyPortalSpeedTest = lazy(() => import("@/portal/pages/SpeedTestPage").then((m) => ({ default: m.SpeedTestPage })));
 const LazyPortalGuides = lazy(() => import("@/portal/pages/GuidesPage").then((m) => ({ default: m.GuidesPage })));
 const LazyPortalSetupWizard = lazy(() => import("@/portal/pages/SetupWizardPage").then((m) => ({ default: m.SetupWizardPage })));
@@ -113,6 +114,7 @@ export function App() {
         <Route path="/clean-ip" element={<Navigate to="/evasion?tab=cleanip" replace />} />
         <Route path="/smart-quota" element={<LazyRoute component={LazySmartQuota} />} />
         <Route path="/relay-chains" element={<LazyRoute component={LazyRelayChains} />} />
+        <Route path="/tunnels" element={<LazyRoute component={LazyTunnels} />} />
         <Route path="/decoy-website" element={<Navigate to="/evasion?tab=decoy" replace />} />
         <Route path="/analytics" element={<LazyRoute component={LazyAnalytics} />} />
         <Route path="/tickets" element={<LazyRoute component={LazyTickets} />} />

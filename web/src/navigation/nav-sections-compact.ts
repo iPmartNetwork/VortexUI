@@ -23,6 +23,7 @@ import {
   BookOpen,
   Smartphone,
   Gauge,
+  Cable,
 } from "lucide-react";
 import type { NavSection } from "./nav-sections";
 
@@ -49,6 +50,7 @@ export function buildCompactNavSections(sudo: boolean): NavSection[] {
         { to: "/wireguard", key: "nav.wireguard", icon: Lock },
         { to: "/switch-analytics", key: "nav.switchAnalytics", icon: ArrowRightLeft },
         { to: "/routing", key: "nav.smartRoutingBalancers", icon: RouteIcon },
+        { to: "/tunnels", key: "nav.tunnels", icon: Cable },
       ],
     },
     {
