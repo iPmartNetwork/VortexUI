@@ -57,11 +57,6 @@ type getDefaultsParams struct {
 	Security string `query:"security"`
 }
 
-type diffParams struct {
-	OldVersion int `query:"old_version"`
-	NewVersion int `query:"new_version"`
-}
-
 type rollbackRequest struct {
 	Version int    `json:"version"`
 	Comment string `json:"comment,omitempty"`

@@ -135,7 +135,6 @@ func (s *TemplateService) BulkCreate(ctx context.Context, templateID uuid.UUID, 
 			// ExpireDuration is set: compute expire_at from now.
 			exp := now.Add(time.Duration(*tmpl.ExpireDuration) * time.Second)
 			expireAt = &exp
-			status = domain.UserStatusActive
 		}
 
 		aid := adminID

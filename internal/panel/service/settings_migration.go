@@ -45,7 +45,7 @@ func (s *SettingsMigrationService) ExportToFile(ctx context.Context, settings *P
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0600)
 }
 
 // Import reads and validates YAML settings.

@@ -300,9 +300,6 @@ func (v *ConfigValidator) validateSecurity(security domain.Security, config map[
 			}
 		}
 	case domain.SecurityReality:
-		if pk, _ := config["publicKey"].(string); pk == "" {
-			// publicKey can be empty during creation (auto-generated), skip validation
-		}
 		if sid, _ := config["shortId"].(string); sid != "" {
 			if len(sid) > 16 {
 				errs = append(errs, domain.ConfigValidationError{Field: "shortId", Message: "shortId must be at most 16 hex characters"})

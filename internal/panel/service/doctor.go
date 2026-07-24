@@ -86,7 +86,7 @@ func (d *DoctorService) checkDatabase(ctx context.Context) DoctorCheck {
 		check.Message = fmt.Sprintf("cannot reach database: %v", err)
 		return check
 	}
-	conn.Close()
+	_ = conn.Close()
 
 	check.Status = "pass"
 	check.Latency = time.Since(start).String()
@@ -110,7 +110,7 @@ func (d *DoctorService) checkRedis(ctx context.Context) DoctorCheck {
 		check.Message = fmt.Sprintf("cannot reach Redis: %v", err)
 		return check
 	}
-	conn.Close()
+	_ = conn.Close()
 
 	check.Status = "pass"
 	check.Latency = time.Since(start).String()
@@ -144,7 +144,7 @@ func (d *DoctorService) checkPorts(ctx context.Context) []DoctorCheck {
 			check.Status = "warn"
 			check.Message = fmt.Sprintf("port %d already in use (expected if panel is running)", port)
 		} else {
-			ln.Close()
+			_ = ln.Close()
 			check.Status = "pass"
 			check.Message = "port available"
 		}
@@ -169,7 +169,7 @@ func (d *DoctorService) checkTLS(ctx context.Context) []DoctorCheck {
 		}
 
 		state := conn.ConnectionState()
-		conn.Close()
+		_ = conn.Close()
 
 		if len(state.PeerCertificates) > 0 {
 			cert := state.PeerCertificates[0]
@@ -200,8 +200,8 @@ func (d *DoctorService) checkDisk(ctx context.Context) DoctorCheck {
 		check.Message = fmt.Sprintf("cannot write to temp: %v", err)
 		return check
 	}
-	f.Close()
-	os.Remove(f.Name())
+	_ = f.Close()
+	_ = os.Remove(f.Name())
 
 	check.Status = "pass"
 	check.Message = "disk writable"

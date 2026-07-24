@@ -97,7 +97,7 @@ func (s *BackupEncryptService) RestoreBackup(ctx context.Context, encrypted []by
 	if err != nil {
 		return nil, fmt.Errorf("open gzip: %w", err)
 	}
-	defer gr.Close()
+	defer gr.Close() //nolint:errcheck
 
 	jsonData, err := io.ReadAll(gr)
 	if err != nil {

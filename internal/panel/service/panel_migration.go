@@ -47,7 +47,7 @@ func (s *PanelMigrationService) Migrate(ctx context.Context, source MigrationSou
 	if err != nil {
 		return nil, fmt.Errorf("connect to source: %w", err)
 	}
-	defer db.Close()
+	defer db.Close() //nolint:errcheck
 
 	if err := db.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("ping source: %w", err)
@@ -75,7 +75,7 @@ func (s *PanelMigrationService) migrateMarzban(ctx context.Context, db *sql.DB, 
 	if err != nil {
 		return nil, fmt.Errorf("query marzban users: %w", err)
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 
 	for rows.Next() {
 		var username, uuidStr, status string
@@ -103,7 +103,7 @@ func (s *PanelMigrationService) migrate3XUI(ctx context.Context, db *sql.DB, res
 	if err != nil {
 		return nil, fmt.Errorf("query 3x-ui clients: %w", err)
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 
 	for rows.Next() {
 		var id int
@@ -132,7 +132,7 @@ func (s *PanelMigrationService) migratePasarGuard(ctx context.Context, db *sql.D
 	if err != nil {
 		return nil, fmt.Errorf("query pasarguard users: %w", err)
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 
 	for rows.Next() {
 		var username, status string

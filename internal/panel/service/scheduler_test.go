@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -30,7 +31,7 @@ func TestProperty_BackupEncryptionRoundTrip(t *testing.T) {
 		"settings": map[string]any{"panel_name": "Test"},
 	}
 
-	encrypted, err := svc.CreateBackup(nil, original)
+	encrypted, err := svc.CreateBackup(context.Background(), original)
 	if err != nil {
 		t.Fatalf("create backup: %v", err)
 	}
@@ -38,7 +39,7 @@ func TestProperty_BackupEncryptionRoundTrip(t *testing.T) {
 		t.Fatal("encrypted backup should not be empty")
 	}
 
-	restored, err := svc.RestoreBackup(nil, encrypted)
+	restored, err := svc.RestoreBackup(context.Background(), encrypted)
 	if err != nil {
 		t.Fatalf("restore backup: %v", err)
 	}
@@ -109,12 +110,12 @@ func TestProperty_SettingsExportImportRoundTrip(t *testing.T) {
 		Security: map[string]any{"jwt_secret": "redacted"},
 	}
 
-	data, err := svc.Export(nil, original)
+	data, err := svc.Export(context.Background(), original)
 	if err != nil {
 		t.Fatalf("export: %v", err)
 	}
 
-	imported, err := svc.Import(nil, data)
+	imported, err := svc.Import(context.Background(), data)
 	if err != nil {
 		t.Fatalf("import: %v", err)
 	}
