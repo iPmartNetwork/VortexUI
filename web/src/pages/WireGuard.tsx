@@ -57,7 +57,7 @@ export function WireGuard() {
   });
 
   // AWG queries
-  const { data: awgData } = useQuery({ queryKey: ["awg-config"], queryFn: () => api<{ config: any; presets: any }>("/api/v2/awg/config") });
+  useQuery({ queryKey: ["awg-config"], queryFn: () => api<{ config: any; presets: any }>("/api/v2/awg/config") });
   const awgMut = useMutation({ mutationFn: (body: any) => api("/api/v2/awg/config", { method: "PUT", body }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["awg-config"] }); toast.success("AWG config saved"); } });
 
   return (

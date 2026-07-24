@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, Info, Plus, Trash2, Wifi, WifiOff, Cable } from "lucide-react";
+import { Copy, Info, Plus, Trash2, WifiOff, Cable } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
@@ -142,7 +142,7 @@ export function Tunnels() {
             <div className="flex items-center gap-2 pt-1">
               <Button
                 size="sm"
-                variant="secondary"
+                variant="outline"
                 onClick={() => generateBridgeCommand(tunnel.id)}
               >
                 <Copy size={12} /> {t("tunnels.bridgeCmd")}
@@ -183,7 +183,7 @@ export function Tunnels() {
                 <Copy size={14} />
               </button>
             </div>
-            <Button variant="secondary" onClick={() => setBridgeCmd(null)} className="w-full">
+            <Button variant="outline" onClick={() => setBridgeCmd(null)} className="w-full">
               {t("common.close")}
             </Button>
           </div>
@@ -235,47 +235,55 @@ function CreateTunnelModal({ open, onClose }: { open: boolean; onClose: () => vo
   return (
     <Modal open={open} onClose={onClose} title={t("tunnels.addTunnel")}>
       <form onSubmit={submit} className="space-y-4">
-        <Select
-          label={t("tunnels.backend")}
-          value={backend}
-          onChange={(e) => setBackend(e.target.value)}
-          options={BACKENDS}
-        />
-        <Input
-          label={t("tunnels.port")}
-          type="number"
-          min={1}
-          max={65535}
-          value={port}
-          onChange={(e) => setPort(e.target.value)}
-          required
-        />
-        <Select
-          label={t("tunnels.transport")}
-          value={transport}
-          onChange={(e) => setTransport(e.target.value)}
-          options={TRANSPORTS}
-        />
-        <Input
-          label={t("tunnels.secret")}
-          placeholder="shared-secret-key"
-          value={secret}
-          onChange={(e) => setSecret(e.target.value)}
-        />
-        <Input
-          label={t("tunnels.nodeIP")}
-          placeholder="Kharej (node) server IP"
-          value={nodeIP}
-          onChange={(e) => setNodeIP(e.target.value)}
-        />
-        <Input
-          label={t("tunnels.iranIP")}
-          placeholder="Iran VPS IP"
-          value={iranIP}
-          onChange={(e) => setIranIP(e.target.value)}
-        />
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-fg">{t("tunnels.backend")}</label>
+          <Select value={backend} onChange={(e) => setBackend(e.target.value)}>
+            {BACKENDS.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-fg">{t("tunnels.port")}</label>
+          <Input
+            type="number"
+            min={1}
+            max={65535}
+            value={port}
+            onChange={(e) => setPort(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-fg">{t("tunnels.transport")}</label>
+          <Select value={transport} onChange={(e) => setTransport(e.target.value)}>
+            {TRANSPORTS.map((tr) => <option key={tr.value} value={tr.value}>{tr.label}</option>)}
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-fg">{t("tunnels.secret")}</label>
+          <Input
+            placeholder="shared-secret-key"
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-fg">{t("tunnels.nodeIP")}</label>
+          <Input
+            placeholder="Kharej (node) server IP"
+            value={nodeIP}
+            onChange={(e) => setNodeIP(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-fg">{t("tunnels.iranIP")}</label>
+          <Input
+            placeholder="Iran VPS IP"
+            value={iranIP}
+            onChange={(e) => setIranIP(e.target.value)}
+          />
+        </div>
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? t("common.saving") : t("tunnels.addTunnel")}
+          {loading ? "Saving…" : t("tunnels.addTunnel")}
         </Button>
       </form>
     </Modal>
