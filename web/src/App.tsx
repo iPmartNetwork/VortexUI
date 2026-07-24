@@ -62,6 +62,8 @@ const LazyWireGuard = lazy(() => import("@/pages/WireGuard").then((m) => ({ defa
 const LazyAdvancedSecurity = lazy(() => import("@/pages/security/AdvancedSecurity").then((m) => ({ default: m.AdvancedSecurity })));
 const LazyApiDocs = lazy(() => import("@/pages/ApiDocs").then((m) => ({ default: m.ApiDocs })));
 const LazyTunnels = lazy(() => import("@/pages/Tunnels").then((m) => ({ default: m.Tunnels })));
+const LazyGeoExits = lazy(() => import("@/pages/GeoExits").then((m) => ({ default: m.GeoExits })));
+const LazyIPRotation = lazy(() => import("@/pages/IPRotation").then((m) => ({ default: m.IPRotation })));
 const LazyPortalSpeedTest = lazy(() => import("@/portal/pages/SpeedTestPage").then((m) => ({ default: m.SpeedTestPage })));
 const LazyPortalGuides = lazy(() => import("@/portal/pages/GuidesPage").then((m) => ({ default: m.GuidesPage })));
 const LazyPortalSetupWizard = lazy(() => import("@/portal/pages/SetupWizardPage").then((m) => ({ default: m.SetupWizardPage })));
@@ -152,6 +154,8 @@ export function App() {
         <Route path="/config-management" element={<LazyRoute component={LazyConfigManagement} />} />
         <Route path="/wireguard" element={<LazyRoute component={LazyWireGuard} />} />
         <Route path="/advanced-security" element={<LazyRoute component={LazyAdvancedSecurity} />} />
+        <Route path="/geo-exits" element={<LazyRoute component={LazyGeoExits} />} />
+        <Route path="/ip-rotation" element={<LazyRoute component={LazyIPRotation} />} />
         <Route path="/api-docs" element={<LazyRoute component={LazyApiDocs} />} />
       </Route>
       <Route path="*" element={<NotFound />} />

@@ -24,6 +24,7 @@ import {
   Smartphone,
   Gauge,
   Cable,
+  RefreshCw,
 } from "lucide-react";
 import type { NavSection } from "./nav-sections";
 
@@ -64,6 +65,8 @@ export function buildCompactNavSections(sudo: boolean): NavSection[] {
         { to: "/doh", key: "nav.doh", icon: Network },
         { to: "/sni-manager", key: "nav.sniManager", icon: Lock },
         { to: "/connection-quality", key: "nav.connectionQuality", icon: Activity },
+        { to: "/geo-exits", key: "nav.geoExits", icon: Globe },
+        { to: "/ip-rotation", key: "nav.ipRotation", icon: RefreshCw },
       ],
     },
     {

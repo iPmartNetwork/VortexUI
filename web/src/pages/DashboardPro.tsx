@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity, AlertTriangle, Globe, TrendingUp, Zap,
-  Server, Shield, RefreshCw, MapPin, DollarSign, BarChart3,
+  Server, Shield, RefreshCw, MapPin, DollarSign, BarChart3, Wifi,
 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Select } from "@/components/ui";
@@ -183,6 +183,15 @@ export function DashboardPro() {
           <Button variant="outline" size="sm" onClick={async () => { await api('/api/v2/dashboard/actions/restart-cores', { method: 'POST' }); toast.success("Restart signal sent"); }}><Server size={12} /> Restart Cores</Button>
           <Button variant="outline" size="sm" onClick={async () => { await api('/api/v2/dashboard/actions/check-certs', { method: 'POST' }); toast.success("Certificates valid"); }}><Shield size={12} /> Check Certs</Button>
           <Button variant="outline" size="sm" onClick={async () => { await api('/api/v2/dashboard/actions/update-geo', { method: 'POST' }); toast.success("Geo data updated"); }}><Globe size={12} /> Update Geo</Button>
+          <Button variant="outline" size="sm" onClick={async () => {
+            const host = prompt("Enter server IP or domain to check:");
+            if (!host) return;
+            const port = prompt("Port (default 443):", "443");
+            try {
+              const res = await api<{ verdict: string; ok: number; total: number }>("/api/v2/reachability/check", { method: "POST", body: { host, port: parseInt(port || "443") } });
+              toast.success(`Iran reachability: ${res.verdict} (${res.ok}/${res.total} nodes)`);
+            } catch { toast.error("Check failed"); }
+          }}><Wifi size={12} /> Iran Check</Button>
         </div>
       </GlassCard>
 

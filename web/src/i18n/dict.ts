@@ -474,6 +474,8 @@ const en = {
   "nav.section.system": "System",
   "nav.section.monitoring": "Monitoring & Compliance",
   "nav.connectionQuality": "Connection Quality",
+  "nav.geoExits": "Geo Exits",
+  "nav.ipRotation": "IP Rotation",
 
   "monitor.title": "Live Monitor",
   "monitor.subtitle": "Real-time view of every active proxy connection across your fleet, refreshing every few seconds.",
@@ -1730,6 +1732,8 @@ const fa: Record<string, string> = {
   "nav.deepLinks": "دیپ‌لینک‌ها",
   "nav.familyGroups": "گروه‌های خانوادگی",
   "nav.connectionQuality": "کیفیت اتصال",
+  "nav.geoExits": "خروجی‌های جغرافیایی",
+  "nav.ipRotation": "چرخش IP",
 
   "nav.section.dashboard": "داشبورد",
   "nav.section.users": "کاربران و صورتحساب",

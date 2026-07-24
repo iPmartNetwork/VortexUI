@@ -1,0 +1,22 @@
+{
+  "name": "nova-node-agent",
+  "version": "1.2.0",
+  "description": "Nova VPS node agent: SQLite-backed admin API and xray traffic bridge.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "nova-agent": "bin/nova-agent.mjs"
+  },
+  "scripts": {
+    "start": "node bin/nova-agent.mjs",
+    "test": "node --test",
+    "build": "node build.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.5.0",
+    "terser": "^5.49.0"
+  }
+}

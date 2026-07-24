@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Shield, Network, Settings, Wrench } from "lucide-react";
+
 import { api } from "@/api/client";
 import { useInboundsFleet } from "@/api/hooks";
 import { Button, Input, Badge } from "@/components/ui";
@@ -24,7 +25,20 @@ export function WireGuard() {
   const confirm = useConfirm();
   const [inbound, setInbound] = useState("");
   const [showSettings, setShowSettings] = useState<WGPeer|null>(null);
-  const [tab, setTab] = useState<"peers"|"mesh">("peers");
+  const [tab, setTab] = useState<"peers"|"mesh"|"awg">("peers");
+
+  // AWG state
+  const [awgEnabled, setAwgEnabled] = useState(false);
+  const [awgPreset, setAwgPreset] = useState("medium");
+  const [awgJc, setAwgJc] = useState(5);
+  const [awgJmin, setAwgJmin] = useState(100);
+  const [awgJmax, setAwgJmax] = useState(1500);
+  const [awgS1, setAwgS1] = useState(30);
+  const [awgS2, setAwgS2] = useState(60);
+  const [awgH1, setAwgH1] = useState(5);
+  const [awgH2, setAwgH2] = useState(10);
+  const [awgH3, setAwgH3] = useState(15);
+  const [awgH4, setAwgH4] = useState(20);
 
   const { data: inboundsFleet } = useInboundsFleet();
   const inboundsList = inboundsFleet?.inbounds ?? [];
@@ -42,12 +56,17 @@ export function WireGuard() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["wg-peers", inbound] }); setShowSettings(null); toast.success("Updated"); },
   });
 
+  // AWG queries
+  const { data: awgData } = useQuery({ queryKey: ["awg-config"], queryFn: () => api<{ config: any; presets: any }>("/api/v2/awg/config") });
+  const awgMut = useMutation({ mutationFn: (body: any) => api("/api/v2/awg/config", { method: "PUT", body }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["awg-config"] }); toast.success("AWG config saved"); } });
+
   return (
     <div className="space-y-6 p-6">
       <h1 className="text-2xl font-bold flex items-center gap-2"><Shield className="w-6 h-6" />WireGuard</h1>
       <div className="flex gap-2 border-b border-border pb-2">
         <Button variant={tab==="peers"?"primary":"ghost"} size="sm" onClick={()=>setTab("peers")}>Peers</Button>
         <Button variant={tab==="mesh"?"primary":"ghost"} size="sm" onClick={()=>setTab("mesh")}><Network className="w-4 h-4 mr-1"/>Mesh</Button>
+        <Button variant={tab==="awg"?"primary":"ghost"} size="sm" onClick={()=>setTab("awg")}><Shield className="w-4 h-4 mr-1"/>AWG</Button>
       </div>
 
       {tab === "peers" && (
@@ -100,6 +119,40 @@ export function WireGuard() {
               <span className="ml-2 text-xs text-fg-muted">{m.peers?.length || 0} nodes</span>
             </div>
           )) : <p className="text-fg-muted text-sm">No mesh networks.</p>}
+        </GlassCard>
+      )}
+
+      {tab === "awg" && (
+        <GlassCard className="p-4 space-y-4">
+          <h2 className="text-lg font-semibold">AmneziaWG (Obfuscated WireGuard)</h2>
+          <p className="text-sm text-fg-muted">DPI-resistant WireGuard with junk packet injection</p>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium">Enabled</label>
+            <input type="checkbox" checked={awgEnabled} onChange={(e) => setAwgEnabled(e.target.checked)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Preset</label>
+            <select className="field input-surface w-full mt-1" value={awgPreset} onChange={(e) => setAwgPreset(e.target.value)}>
+              <option value="light">Light</option>
+              <option value="medium">Medium (recommended)</option>
+              <option value="heavy">Heavy</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          {awgPreset === "custom" && (
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className="text-xs font-medium">Jc</label><Input type="number" value={awgJc} onChange={(e) => setAwgJc(+e.target.value)} /></div>
+              <div><label className="text-xs font-medium">Jmin</label><Input type="number" value={awgJmin} onChange={(e) => setAwgJmin(+e.target.value)} /></div>
+              <div><label className="text-xs font-medium">Jmax</label><Input type="number" value={awgJmax} onChange={(e) => setAwgJmax(+e.target.value)} /></div>
+              <div><label className="text-xs font-medium">S1</label><Input type="number" value={awgS1} onChange={(e) => setAwgS1(+e.target.value)} /></div>
+              <div><label className="text-xs font-medium">S2</label><Input type="number" value={awgS2} onChange={(e) => setAwgS2(+e.target.value)} /></div>
+              <div><label className="text-xs font-medium">H1</label><Input type="number" value={awgH1} onChange={(e) => setAwgH1(+e.target.value)} /></div>
+              <div><label className="text-xs font-medium">H2</label><Input type="number" value={awgH2} onChange={(e) => setAwgH2(+e.target.value)} /></div>
+              <div><label className="text-xs font-medium">H3</label><Input type="number" value={awgH3} onChange={(e) => setAwgH3(+e.target.value)} /></div>
+              <div><label className="text-xs font-medium">H4</label><Input type="number" value={awgH4} onChange={(e) => setAwgH4(+e.target.value)} /></div>
+            </div>
+          )}
+          <Button onClick={() => awgMut.mutate({ enabled: awgEnabled, preset: awgPreset, jc: awgJc, jmin: awgJmin, jmax: awgJmax, s1: awgS1, s2: awgS2, h1: awgH1, h2: awgH2, h3: awgH3, h4: awgH4 })}>Save AWG Config</Button>
         </GlassCard>
       )}
 
