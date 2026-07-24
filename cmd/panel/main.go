@@ -547,6 +547,10 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 	// Initialize security handlers
 	securityHandlers := api.NewSecurityHandlers(threatRepo, policyRepo, threatDetector, anomalyDetector, log)
 
+	// Dashboard Pro (analytics, heatmap, revenue, subscription analytics)
+	dashProSvc := service.NewDashboardProService(nodes, users, store.ISPQuality(), store.SubAnalytics(), store.Revenue())
+	dashProHandler := api.NewDashboardProHandler(dashProSvc)
+
 	router := api.NewRouter(api.Deps{
 		Version: version,
 		Handlers: &api.Handlers{
@@ -656,6 +660,7 @@ func run(ctx context.Context, log *slog.Logger, logBuf *logbuf.Handler, cfg *con
 		ThreatDetector: threatDetector,
 		AnomalyDetector: anomalyDetector,
 		SecurityHardeningHandlers: securityHandlers,
+		DashboardPro: dashProHandler,
 	})
 
 	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: router, ReadHeaderTimeout: 10 * time.Second}

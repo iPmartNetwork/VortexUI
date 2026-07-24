@@ -121,6 +121,7 @@ type Deps struct {
 	RateLimits       *RateLimitHandler         // Phase 12: rate limit dashboard
 	WebhookTest      *WebhookTestHandler       // Phase 12: webhook test endpoint
 	PortalPro        *PortalProHandler         // Phase 14: portal pro features
+	DashboardPro *DashboardProHandler      // Dashboard Pro (analytics, heatmap, revenue)
 }
 
 // NewRouter builds the Echo instance with all routes and middleware mounted.
@@ -766,6 +767,11 @@ func NewRouter(d Deps) *echo.Echo {
 	// Phase 14: Portal Pro (push subscribe, speed test, guides, setup wizard)
 	if d.PortalPro != nil {
 		d.PortalPro.Register(v2)
+	}
+
+	// Dashboard Pro (daily check, ISP heatmap, geo map, revenue, sub analytics)
+	if d.DashboardPro != nil {
+		d.DashboardPro.Register(v2)
 	}
 
 	return e
