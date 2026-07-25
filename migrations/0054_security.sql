@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS ip_ban_list (
     UNIQUE (ip_address)
 );
 
-CREATE INDEX IF NOT EXISTS idx_ip_ban_active ON ip_ban_list (ip_address) WHERE expires_at IS NULL OR expires_at > now();
+CREATE INDEX IF NOT EXISTS idx_ip_ban_active ON ip_ban_list (ip_address, expires_at);
 
 -- Add scopes to API tokens for fine-grained access control.
 ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS scopes TEXT[] NOT NULL DEFAULT '{}';
