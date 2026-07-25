@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
     revoked     BOOLEAN NOT NULL DEFAULT false
 );
 
+-- Ensure revoked column exists (may be missing from earlier migration)
+ALTER TABLE admin_sessions ADD COLUMN IF NOT EXISTS revoked BOOLEAN NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin ON admin_sessions (admin_id, revoked);
 
 -- Login audit log: every authentication attempt.
