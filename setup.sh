@@ -299,8 +299,34 @@ generate_secrets() {
         sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgres://vortex:${DB_PASSWORD}@postgres:5432/vortex?sslmode=disable|" "$INSTALL_DIR/.env"
 
         log "Secrets generated and saved to .env"
+
+        # Also create deploy/.env for Docker Compose
+        if [[ ! -f "$INSTALL_DIR/deploy/.env" ]]; then
+            log "Generating deploy/.env for Docker Compose..."
+            cat > "$INSTALL_DIR/deploy/.env" <<DEOF
+JWT_SECRET=${JWT_SECRET}
+DB_PASSWORD=${DB_PASSWORD}
+LOCAL_NODE_HOST=$(curl -sf https://api.ipify.org || hostname -I | awk '{print $1}')
+CORE=xray
+DEOF
+            log "deploy/.env created"
+        fi
     else
         log "Existing .env found, keeping current configuration"
+
+        # Ensure deploy/.env exists even if root .env already existed
+        if [[ ! -f "$INSTALL_DIR/deploy/.env" ]]; then
+            log "Generating deploy/.env from existing secrets..."
+            JWT_SECRET=$(grep '^JWT_SECRET=' "$INSTALL_DIR/.env" 2>/dev/null | cut -d= -f2- || openssl rand -hex 32)
+            DB_PASSWORD=$(grep '^POSTGRES_PASSWORD=' "$INSTALL_DIR/.env" 2>/dev/null | cut -d= -f2- || openssl rand -base64 16 | tr -d '=/+')
+            cat > "$INSTALL_DIR/deploy/.env" <<DEOF
+JWT_SECRET=${JWT_SECRET:-$(openssl rand -hex 32)}
+DB_PASSWORD=${DB_PASSWORD:-vortex}
+LOCAL_NODE_HOST=$(curl -sf https://api.ipify.org || hostname -I | awk '{print $1}')
+CORE=xray
+DEOF
+            log "deploy/.env created"
+        fi
     fi
 }
 
