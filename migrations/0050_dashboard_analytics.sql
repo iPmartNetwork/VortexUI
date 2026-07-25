@@ -1,7 +1,7 @@
 -- +goose Up
 
 -- ISP quality metrics: stores hourly quality scores per ISP for heatmap visualization.
-CREATE TABLE isp_quality_metrics (
+CREATE TABLE IF NOT EXISTS isp_quality_metrics (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     isp_name    TEXT NOT NULL,
     hour        INT NOT NULL CHECK (hour >= 0 AND hour <= 23),
@@ -11,10 +11,10 @@ CREATE TABLE isp_quality_metrics (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_isp_quality_metrics_isp_date ON isp_quality_metrics (isp_name, sample_date);
+CREATE INDEX IF NOT EXISTS idx_isp_quality_metrics_isp_date ON isp_quality_metrics (isp_name, sample_date);
 
 -- Subscription analytics: tracks subscription fetch events for format/ISP/time analysis.
-CREATE TABLE subscription_analytics (
+CREATE TABLE IF NOT EXISTS subscription_analytics (
     id          UUID NOT NULL DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL,
     format_type TEXT NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE subscription_analytics (
 SELECT create_hypertable('subscription_analytics', 'fetched_at', if_not_exists => TRUE);
 
 -- Revenue entries: tracks income and expenses per admin for financial reporting.
-CREATE TABLE revenue_entries (
+CREATE TABLE IF NOT EXISTS revenue_entries (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id    UUID NOT NULL,
     type        TEXT NOT NULL CHECK (type IN ('income', 'expense')),
@@ -37,7 +37,7 @@ CREATE TABLE revenue_entries (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_revenue_entries_admin_created ON revenue_entries (admin_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_revenue_entries_admin_created ON revenue_entries (admin_id, created_at DESC);
 
 -- +goose Down
 DROP TABLE IF EXISTS revenue_entries;

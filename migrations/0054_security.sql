@@ -1,7 +1,7 @@
 -- +goose Up
 
 -- Admin IP whitelist: restrict panel access to specific IPs/CIDRs.
-CREATE TABLE admin_ip_whitelist (
+CREATE TABLE IF NOT EXISTS admin_ip_whitelist (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id    UUID REFERENCES admins(id) ON DELETE CASCADE,
     cidr        TEXT NOT NULL,
@@ -9,10 +9,10 @@ CREATE TABLE admin_ip_whitelist (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_ip_whitelist_admin ON admin_ip_whitelist (admin_id);
+CREATE INDEX IF NOT EXISTS idx_ip_whitelist_admin ON admin_ip_whitelist (admin_id);
 
 -- Admin sessions: track active login sessions.
-CREATE TABLE admin_sessions (
+CREATE TABLE IF NOT EXISTS admin_sessions (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id    UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
     ip_address  TEXT NOT NULL,
@@ -23,10 +23,10 @@ CREATE TABLE admin_sessions (
     revoked     BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE INDEX idx_admin_sessions_admin ON admin_sessions (admin_id, revoked);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin ON admin_sessions (admin_id, revoked);
 
 -- Login audit log: every authentication attempt.
-CREATE TABLE login_audit_log (
+CREATE TABLE IF NOT EXISTS login_audit_log (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id    UUID REFERENCES admins(id) ON DELETE SET NULL,
     username    TEXT NOT NULL,
@@ -38,11 +38,11 @@ CREATE TABLE login_audit_log (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_login_audit_admin ON login_audit_log (admin_id, created_at DESC);
-CREATE INDEX idx_login_audit_ip ON login_audit_log (ip_address, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_login_audit_admin ON login_audit_log (admin_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_login_audit_ip ON login_audit_log (ip_address, created_at DESC);
 
 -- Security audit log: sensitive operation tracking.
-CREATE TABLE security_audit_log (
+CREATE TABLE IF NOT EXISTS security_audit_log (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id    UUID REFERENCES admins(id) ON DELETE SET NULL,
     operation   TEXT NOT NULL,
@@ -53,11 +53,11 @@ CREATE TABLE security_audit_log (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_security_audit_admin ON security_audit_log (admin_id, created_at DESC);
-CREATE INDEX idx_security_audit_operation ON security_audit_log (operation, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_security_audit_admin ON security_audit_log (admin_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_security_audit_operation ON security_audit_log (operation, created_at DESC);
 
 -- IP ban list: temporary or permanent bans for suspicious IPs.
-CREATE TABLE ip_ban_list (
+CREATE TABLE IF NOT EXISTS ip_ban_list (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ip_address  TEXT NOT NULL,
     reason      TEXT NOT NULL DEFAULT '',
@@ -66,7 +66,7 @@ CREATE TABLE ip_ban_list (
     UNIQUE (ip_address)
 );
 
-CREATE INDEX idx_ip_ban_active ON ip_ban_list (ip_address) WHERE expires_at IS NULL OR expires_at > now();
+CREATE INDEX IF NOT EXISTS idx_ip_ban_active ON ip_ban_list (ip_address) WHERE expires_at IS NULL OR expires_at > now();
 
 -- Add scopes to API tokens for fine-grained access control.
 ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS scopes TEXT[] NOT NULL DEFAULT '{}';
