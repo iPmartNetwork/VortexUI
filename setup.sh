@@ -389,6 +389,52 @@ deploy_docker() {
     start_docker_stack
 }
 
+create_admin_account() {
+    echo ""
+    echo -e "  ${CYAN}Create your admin account:${NC}"
+    echo ""
+    read -r -p "  Admin username: " ADMIN_USER
+    while [[ -z "$ADMIN_USER" ]]; do
+        echo -e "  ${RED}Username cannot be empty${NC}"
+        read -r -p "  Admin username: " ADMIN_USER
+    done
+    
+    read -r -s -p "  Admin password: " ADMIN_PASS
+    echo ""
+    while [[ ${#ADMIN_PASS} -lt 6 ]]; do
+        echo -e "  ${RED}Password must be at least 6 characters${NC}"
+        read -r -s -p "  Admin password: " ADMIN_PASS
+        echo ""
+    done
+    
+    echo ""
+    log "Creating admin account..."
+    
+    if [[ "$MODE" == "docker" ]]; then
+        # Wait for panel to be fully ready
+        for i in {1..10}; do
+            if docker compose -f deploy/compose.yml exec -T panel panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>/dev/null; then
+                log "Admin account '$ADMIN_USER' created successfully!"
+                return 0
+            fi
+            sleep 3
+        done
+        warn "Could not create admin automatically. Create it manually:"
+        echo -e "  docker compose -f ${INSTALL_DIR}/deploy/compose.yml exec panel panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
+    else
+        # Native mode: panel binary is at /usr/local/bin/vortex-panel
+        if [[ -f /etc/vortexui/panel.env ]]; then
+            set -a; source /etc/vortexui/panel.env; set +a
+        fi
+        if vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>/dev/null; then
+            log "Admin account '$ADMIN_USER' created successfully!"
+            return 0
+        fi
+        warn "Could not create admin automatically. Create it manually:"
+        echo -e "  vortex-panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
+    fi
+}
+
 print_docker_success() {
     PUBLIC_IP=$(curl -sf https://api.ipify.org || hostname -I | awk '{print $1}')
 
@@ -406,9 +452,8 @@ print_docker_success() {
     echo -e "  ${BLUE}Config:${NC}       ${INSTALL_DIR}/.env"
     echo -e "  ${BLUE}Logs:${NC}         docker compose -f ${INSTALL_DIR}/deploy/compose.yml logs -f"
     echo ""
-    if [[ "${IS_UPDATE:-0}" -eq 0 ]]; then
-    echo -e "  ${YELLOW}First run:${NC} Create an admin account:"
-    echo -e "    cd ${INSTALL_DIR} && docker compose -f deploy/compose.yml exec panel ./panel admin create"
+    if [[ -n "${ADMIN_USER:-}" ]]; then
+    echo -e "  ${YELLOW}Admin:${NC}       ${ADMIN_USER}"
     echo ""
     fi
     echo -e "  ${CYAN}Commands:${NC}"
@@ -694,6 +739,7 @@ case "$MODE" in
         deploy_docker
         setup_ssl
         doctor_check "Post-deploy"
+        create_admin_account
         print_docker_success
         if [[ -n "$USER_DOMAIN" ]]; then
             echo -e "  ${GREEN}HTTPS:${NC}    https://${USER_DOMAIN}"
@@ -703,6 +749,7 @@ case "$MODE" in
         deploy_systemd
         setup_ssl
         doctor_check "Post-deploy"
+        create_admin_account
         print_systemd_success
         if [[ -n "$USER_DOMAIN" ]]; then
             echo -e "  ${GREEN}HTTPS:${NC}    https://${USER_DOMAIN}"
