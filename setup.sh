@@ -24,6 +24,7 @@ SKIP_BACKEND=0
 SKIP_FRONTEND=0
 SKIP_MIGRATE=0
 USER_DOMAIN=""
+WEB_PORT="80"
 INSTALL_TYPE=""
 
 # Colors
@@ -310,6 +311,7 @@ JWT_SECRET=${JWT_SECRET}
 DB_PASSWORD=${DB_PASSWORD}
 LOCAL_NODE_HOST=$(curl -sf https://api.ipify.org || hostname -I | awk '{print $1}')
 CORE=xray
+SITE_ADDRESS=${USER_DOMAIN:-:${WEB_PORT:-80}}
 DEOF
             log "deploy/.env created"
         fi
@@ -326,6 +328,7 @@ JWT_SECRET=${JWT_SECRET:-$(openssl rand -hex 32)}
 DB_PASSWORD=${DB_PASSWORD:-vortex}
 LOCAL_NODE_HOST=$(curl -sf https://api.ipify.org || hostname -I | awk '{print $1}')
 CORE=xray
+SITE_ADDRESS=${USER_DOMAIN:-:${WEB_PORT:-80}}
 DEOF
             log "deploy/.env created"
         fi
@@ -447,7 +450,11 @@ print_docker_success() {
     fi
     echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo -e "  ${BLUE}Panel URL:${NC}    http://${PUBLIC_IP}:8080"
+    if [[ -n "${USER_DOMAIN:-}" ]]; then
+        echo -e "  ${BLUE}Panel URL:${NC}    https://${USER_DOMAIN}"
+    else
+        echo -e "  ${BLUE}Panel URL:${NC}    http://${PUBLIC_IP}:${WEB_PORT:-80}"
+    fi
     echo -e "  ${BLUE}Install Dir:${NC}  ${INSTALL_DIR}"
     echo -e "  ${BLUE}Config:${NC}       ${INSTALL_DIR}/.env"
     echo -e "  ${BLUE}Logs:${NC}         docker compose -f ${INSTALL_DIR}/deploy/compose.yml logs -f"
@@ -576,6 +583,15 @@ ask_domain() {
     echo ""
     read -r -p "  Domain: " USER_DOMAIN
     USER_DOMAIN="${USER_DOMAIN:-}"
+}
+
+ask_web_port() {
+    echo ""
+    echo -e "  ${CYAN}Web panel port (default 80):${NC}"
+    echo -e "  ${BLUE}Change if port 80 is used by VPN configs. Common alternatives: 8080, 2086, 2095${NC}"
+    echo ""
+    read -r -p "  Port [80]: " WEB_PORT
+    WEB_PORT="${WEB_PORT:-80}"
 }
 
 setup_ssl() {
@@ -730,6 +746,7 @@ if [[ -z "$MODE" ]]; then
 fi
 
 ask_domain
+ask_web_port
 
 # Pre-flight doctor check
 doctor_check "Pre-flight"
