@@ -1,27 +1,30 @@
 -- +goose Up
 
--- Convert traffic_logs to hypertable with 90-day retention (requires TimescaleDB extension).
--- If TimescaleDB is not available, these statements are no-ops wrapped in DO blocks.
-DO $$
+-- Convert traffic_logs to hypertable (requires TimescaleDB extension).
+-- +goose StatementBegin
+DO $body$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
-        PERFORM create_hypertable('traffic_logs', 'created_at', if_not_exists => TRUE, migrate_data => TRUE);
-        PERFORM add_retention_policy('traffic_logs', INTERVAL '90 days', if_not_exists => TRUE);
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'traffic_logs') THEN
+            PERFORM create_hypertable('traffic_logs', 'created_at', if_not_exists => TRUE, migrate_data => TRUE);
+            PERFORM add_retention_policy('traffic_logs', INTERVAL '90 days', if_not_exists => TRUE);
+        END IF;
     END IF;
-END $$;
+END $body$;
+-- +goose StatementEnd
 
 -- Cache invalidation log for subscription cache management.
-CREATE TABLE cache_invalidation_log (
+CREATE TABLE IF NOT EXISTS cache_invalidation_log (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cache_key   TEXT NOT NULL,
     reason      TEXT NOT NULL DEFAULT '',
     invalidated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_cache_invalidation_key ON cache_invalidation_log (cache_key, invalidated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cache_invalidation_key ON cache_invalidation_log (cache_key, invalidated_at DESC);
 
 -- Background job queue for async operations.
-CREATE TABLE background_jobs (
+CREATE TABLE IF NOT EXISTS background_jobs (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_type    TEXT NOT NULL,
     payload     JSONB NOT NULL DEFAULT '{}',
@@ -36,8 +39,8 @@ CREATE TABLE background_jobs (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_background_jobs_pending ON background_jobs (run_after) WHERE status = 'pending';
-CREATE INDEX idx_background_jobs_status ON background_jobs (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_background_jobs_pending ON background_jobs (run_after) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_background_jobs_status ON background_jobs (status, created_at DESC);
 
 -- +goose Down
 DROP TABLE IF EXISTS background_jobs;
