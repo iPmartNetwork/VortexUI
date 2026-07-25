@@ -8,7 +8,7 @@
 #   ACME_EMAIL    you@example.com     → optional, for Let's Encrypt notices
 
 {
-	email {$ACME_EMAIL}
+	email {$ACME_EMAIL:admin@localhost}
 }
 
 {$SITE_ADDRESS::80} {
