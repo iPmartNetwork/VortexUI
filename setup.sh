@@ -23,6 +23,8 @@ MODE=""
 SKIP_BACKEND=0
 SKIP_FRONTEND=0
 SKIP_MIGRATE=0
+USER_DOMAIN=""
+INSTALL_TYPE=""
 
 # Colors
 RED='\033[0;31m'
@@ -493,12 +495,196 @@ print_systemd_success() {
     echo ""
 }
 
+# --- Interactive Wizard ---
+
+ask_install_type() {
+    echo ""
+    echo -e "  ${CYAN}What would you like to install?${NC}"
+    echo -e "   ${BLUE}1)${NC} Panel  (control plane + web UI + local node)"
+    echo -e "   ${BLUE}2)${NC} Node   (remote node agent only)"
+    echo ""
+    read -r -p "  Choose [1/2]: " INSTALL_TYPE
+    case "$INSTALL_TYPE" in
+        2) INSTALL_TYPE="node" ;;
+        *) INSTALL_TYPE="panel" ;;
+    esac
+}
+
+ask_deploy_method() {
+    echo ""
+    echo -e "  ${CYAN}Deploy method:${NC}"
+    echo -e "   ${BLUE}1)${NC} Docker Compose  ${GREEN}(recommended)${NC}"
+    echo -e "   ${BLUE}2)${NC} Native (systemd + build from source)"
+    echo ""
+    read -r -p "  Choose [1/2]: " DEPLOY_METHOD
+    case "$DEPLOY_METHOD" in
+        2) MODE="systemd" ;;
+        *) MODE="docker" ;;
+    esac
+}
+
+ask_domain() {
+    echo ""
+    echo -e "  ${CYAN}Domain for SSL (optional):${NC}"
+    echo -e "  ${BLUE}Enter your domain (e.g. panel.example.com) for automatic HTTPS.${NC}"
+    echo -e "  ${BLUE}Leave empty to use IP address with HTTP only.${NC}"
+    echo ""
+    read -r -p "  Domain: " USER_DOMAIN
+    USER_DOMAIN="${USER_DOMAIN:-}"
+}
+
+setup_ssl() {
+    if [[ -z "$USER_DOMAIN" ]]; then
+        log "No domain specified — using HTTP on port 8080"
+        return
+    fi
+
+    log "Setting up SSL for $USER_DOMAIN..."
+
+    # Install Caddy if not present
+    if ! command -v caddy &>/dev/null; then
+        log "Installing Caddy..."
+        apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl 2>/dev/null || true
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+        apt-get update -qq && apt-get install -y -qq caddy
+    fi
+
+    # Write Caddyfile
+    mkdir -p /etc/caddy
+    cat > /etc/caddy/Caddyfile <<CADDYEOF
+${USER_DOMAIN} {
+    encode gzip
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /sub/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle {
+        root * /var/www/vortexui
+        try_files {path} /index.html
+        file_server
+    }
+}
+CADDYEOF
+
+    systemctl enable caddy 2>/dev/null || true
+    systemctl restart caddy
+    log "SSL configured for ${USER_DOMAIN} (auto Let's Encrypt)"
+}
+
+install_node() {
+    log "Installing VortexUI Node Agent..."
+    
+    echo ""
+    echo -e "  ${CYAN}Panel address (where this node connects to):${NC}"
+    read -r -p "  Panel host (e.g. panel.example.com or IP): " PANEL_HOST
+    
+    echo ""
+    echo -e "  ${CYAN}Node enrollment token:${NC}"
+    echo -e "  ${BLUE}Get this from Panel → Nodes → Node Enrollment Bundle${NC}"
+    read -r -p "  Paste enrollment bundle (base64): " ENROLL_BUNDLE
+    
+    # Create directories
+    mkdir -p /etc/vortexui/certs
+    
+    # Decode enrollment bundle (ca.crt + node.crt + node.key)
+    if [[ -n "$ENROLL_BUNDLE" ]]; then
+        echo "$ENROLL_BUNDLE" | base64 -d | tar -xzf - -C /etc/vortexui/certs/
+        log "Certificates extracted to /etc/vortexui/certs/"
+    fi
+    
+    # Download node binary
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64)  ARCH_DL="amd64" ;;
+        aarch64) ARCH_DL="arm64" ;;
+        *) error "Unsupported architecture: $ARCH" ;;
+    esac
+    
+    log "Downloading node agent..."
+    local rel
+    rel=$(curl -fsSL https://api.github.com/repos/iPmartNetwork/VortexUI/releases/latest 2>/dev/null \
+        | grep -oE '"tag_name": *"v[0-9.]+"' | head -1 | grep -oE 'v[0-9.]+' || echo "v${VERSION}")
+    
+    if curl -fL -o /usr/local/bin/vortex-node \
+        "https://github.com/iPmartNetwork/VortexUI/releases/download/${rel}/vortexui-node-linux-${ARCH_DL}" 2>/dev/null; then
+        chmod +x /usr/local/bin/vortex-node
+        log "Node binary installed"
+    else
+        # Fallback: build from source
+        if command -v go &>/dev/null || [[ -x /usr/local/go/bin/go ]]; then
+            export PATH="$PATH:/usr/local/go/bin"
+            log "Building node from source..."
+            git clone --depth 1 "$REPO_URL" /tmp/vortexui-src 2>/dev/null || true
+            (cd /tmp/vortexui-src && go build -o /usr/local/bin/vortex-node ./cmd/node)
+            rm -rf /tmp/vortexui-src
+        else
+            error "Cannot install node: no release binary and Go is not installed"
+        fi
+    fi
+    
+    # Write node.env
+    cat > /etc/vortexui/node.env <<NEOF
+VORTEX_PANEL_ADDR=${PANEL_HOST}:50051
+VORTEX_TLS_CERT=/etc/vortexui/certs/node.crt
+VORTEX_TLS_KEY=/etc/vortexui/certs/node.key
+VORTEX_TLS_CA=/etc/vortexui/certs/ca.crt
+VORTEX_CORE=xray
+VORTEX_CORE_BIN=/usr/local/bin/xray
+NEOF
+    
+    # Create systemd service
+    cat > /etc/systemd/system/vortexui-node.service <<SEOF
+[Unit]
+Description=VortexUI Node Agent
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/vortexui/node.env
+ExecStart=/usr/local/bin/vortex-node
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SEOF
+    
+    systemctl daemon-reload
+    systemctl enable --now vortexui-node
+    
+    echo ""
+    echo -e "${GREEN}╔══════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║     VortexUI Node Agent installed!              ║${NC}"
+    echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${BLUE}Panel:${NC}    ${PANEL_HOST}"
+    echo -e "  ${BLUE}Service:${NC}  systemctl status vortexui-node"
+    echo -e "  ${BLUE}Logs:${NC}     journalctl -u vortexui-node -f"
+    echo ""
+}
+
 # --- Main ---
 
 parse_args "$@"
 header
 check_root
-detect_mode
+
+# If mode already set via flags, skip wizard
+if [[ -z "$MODE" ]]; then
+    ask_install_type
+    
+    if [[ "$INSTALL_TYPE" == "node" ]]; then
+        install_node
+        exit 0
+    fi
+    
+    ask_deploy_method
+fi
+
+ask_domain
 
 # Pre-flight doctor check
 doctor_check "Pre-flight"
@@ -506,13 +692,21 @@ doctor_check "Pre-flight"
 case "$MODE" in
     docker)
         deploy_docker
+        setup_ssl
         doctor_check "Post-deploy"
         print_docker_success
+        if [[ -n "$USER_DOMAIN" ]]; then
+            echo -e "  ${GREEN}HTTPS:${NC}    https://${USER_DOMAIN}"
+        fi
         ;;
     systemd)
         deploy_systemd
+        setup_ssl
         doctor_check "Post-deploy"
         print_systemd_success
+        if [[ -n "$USER_DOMAIN" ]]; then
+            echo -e "  ${GREEN}HTTPS:${NC}    https://${USER_DOMAIN}"
+        fi
         ;;
     *)
         error "Unknown mode: $MODE"
