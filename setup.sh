@@ -362,7 +362,7 @@ start_docker_stack() {
     cd "$INSTALL_DIR"
 
     log "Applying database migrations..."
-    docker compose -f deploy/compose.yml up -d postgres redis
+    docker compose -f deploy/compose.yml up -d db redis
     sleep 3
     docker compose -f deploy/compose.yml run --rm panel ./panel doctor || true
 
