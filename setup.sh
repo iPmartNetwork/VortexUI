@@ -394,7 +394,9 @@ deploy_docker() {
 
 create_admin_account() {
     echo ""
-    echo -e "  ${CYAN}Create your admin account:${NC}"
+    echo -e "  ${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "  ${CYAN}  Create your admin account${NC}"
+    echo -e "  ${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     read -r -p "  Admin username: " ADMIN_USER
     while [[ -z "$ADMIN_USER" ]]; do
@@ -412,61 +414,87 @@ create_admin_account() {
     
     echo ""
     log "Creating admin account..."
+
+    local created=0
     
     if [[ "$MODE" == "docker" ]]; then
-        # Wait for panel to be fully ready
-        for i in {1..10}; do
-            if docker compose -f deploy/compose.yml exec -T panel panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>/dev/null; then
-                log "Admin account '$ADMIN_USER' created successfully!"
-                return 0
+        # Docker: exec into running container
+        cd "$INSTALL_DIR"
+        for attempt in {1..20}; do
+            log "  Attempt $attempt/20 — waiting for panel container..."
+            if docker compose -f deploy/compose.yml exec -T panel panel admin create \
+                --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>&1 | tee /tmp/admin_create.log; then
+                if grep -qi "created\|success\|already" /tmp/admin_create.log 2>/dev/null; then
+                    created=1
+                    break
+                fi
             fi
             sleep 3
         done
-        warn "Could not create admin automatically. Create it manually:"
-        echo -e "  docker compose -f ${INSTALL_DIR}/deploy/compose.yml exec panel panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
     else
-        # Native mode: create admin via /api/admin/init (panel must be running)
-        if ! curl -sf http://127.0.0.1:8080/api/health &>/dev/null; then
-            warn "Panel is not running — cannot create admin now."
-            warn "After fixing the panel, run:"
-            echo -e "  source /etc/vortexui/panel.env && vortex-panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
-            return 1
+        # Native: try multiple methods
+        
+        # Method 1: API call (if panel is running)
+        for attempt in {1..20}; do
+            if curl -sf http://127.0.0.1:8080/api/health &>/dev/null; then
+                log "  Panel is up — creating admin via API..."
+                local http_code
+                http_code=$(curl -s -o /tmp/admin_response.txt -w "%{http_code}" \
+                    -X POST http://127.0.0.1:8080/api/admin/init \
+                    -H "Content-Type: application/json" \
+                    -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}")
+                
+                if [[ "$http_code" == "201" ]]; then
+                    created=1
+                    break
+                elif [[ "$http_code" == "403" ]]; then
+                    log "  Admin already exists."
+                    created=1
+                    break
+                fi
+                # API failed, try CLI
+                break
+            fi
+            log "  Attempt $attempt/20 — waiting for panel..."
+            sleep 3
+        done
+        
+        # Method 2: CLI binary with explicit env
+        if [[ "$created" -eq 0 ]]; then
+            log "  Trying CLI method..."
+            export VORTEX_DATABASE_URL="postgres://vortex:vortex@127.0.0.1:5432/vortex?sslmode=disable"
+            export VORTEX_JWT_SECRET=$(grep '^VORTEX_JWT_SECRET=' /etc/vortexui/panel.env 2>/dev/null | cut -d= -f2-)
+            if [[ -z "$VORTEX_JWT_SECRET" ]]; then
+                export VORTEX_JWT_SECRET=$(openssl rand -hex 32)
+            fi
+            export VORTEX_REDIS_URL="redis://127.0.0.1:6379/0"
+            export VORTEX_TLS_CERT="/opt/vortexui/deploy/certs/panel.crt"
+            export VORTEX_TLS_KEY="/opt/vortexui/deploy/certs/panel.key"
+            export VORTEX_TLS_CA="/opt/vortexui/deploy/certs/ca.crt"
+            
+            if /usr/local/bin/vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>&1; then
+                created=1
+            fi
         fi
-
-        log "Creating admin via API..."
-        local http_code
-        http_code=$(curl -s -o /tmp/admin_response.txt -w "%{http_code}" -X POST http://127.0.0.1:8080/api/admin/init \
-            -H "Content-Type: application/json" \
-            -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}")
-
-        if [[ "$http_code" == "201" ]]; then
-            log "Admin account '$ADMIN_USER' created successfully!"
-            rm -f /tmp/admin_response.txt
-            return 0
-        elif [[ "$http_code" == "403" ]]; then
-            log "Admin already exists — you can login with existing credentials."
-            rm -f /tmp/admin_response.txt
-            return 0
+    fi
+    
+    rm -f /tmp/admin_create.log /tmp/admin_response.txt
+    
+    if [[ "$created" -eq 1 ]]; then
+        echo ""
+        echo -e "  ${GREEN}✓ Admin account '${ADMIN_USER}' created successfully!${NC}"
+        echo ""
+    else
+        echo ""
+        echo -e "  ${YELLOW}⚠ Could not create admin automatically.${NC}"
+        echo -e "  ${YELLOW}  After installation, run:${NC}"
+        echo ""
+        if [[ "$MODE" == "docker" ]]; then
+            echo -e "  cd ${INSTALL_DIR} && docker compose -f deploy/compose.yml exec panel panel admin create --username ${ADMIN_USER} --password YOUR_PASS --sudo"
         else
-            warn "Admin creation returned HTTP $http_code:"
-            cat /tmp/admin_response.txt 2>/dev/null
-            echo ""
-            rm -f /tmp/admin_response.txt
+            echo -e "  source /etc/vortexui/panel.env && vortex-panel admin create --username ${ADMIN_USER} --password YOUR_PASS --sudo"
         fi
-
-        # Fallback: CLI
-        log "Trying CLI fallback..."
-        source /etc/vortexui/panel.env 2>/dev/null || true
-        export VORTEX_DATABASE_URL="${VORTEX_DATABASE_URL:-postgres://vortex:vortex@127.0.0.1:5432/vortex?sslmode=disable}"
-        export VORTEX_JWT_SECRET="${VORTEX_JWT_SECRET:-$(openssl rand -hex 32)}"
-
-        if /usr/local/bin/vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo; then
-            log "Admin account '$ADMIN_USER' created successfully!"
-            return 0
-        else
-            warn "Admin creation failed. After panel starts, run:"
-            echo -e "  source /etc/vortexui/panel.env && vortex-panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
-        fi
+        echo ""
     fi
 }
 
