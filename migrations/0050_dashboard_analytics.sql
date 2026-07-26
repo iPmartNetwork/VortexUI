@@ -24,8 +24,15 @@ CREATE TABLE IF NOT EXISTS subscription_analytics (
     PRIMARY KEY (id, fetched_at)
 );
 
--- Convert to TimescaleDB hypertable for efficient time-series queries.
-SELECT create_hypertable('subscription_analytics', 'fetched_at', if_not_exists => TRUE);
+-- Convert to TimescaleDB hypertable if extension is available (skip on plain PostgreSQL).
+-- +goose StatementBegin
+DO $body$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
+        PERFORM create_hypertable('subscription_analytics', 'fetched_at', if_not_exists => TRUE);
+    END IF;
+END $body$;
+-- +goose StatementEnd
 
 -- Revenue entries: tracks income and expenses per admin for financial reporting.
 CREATE TABLE IF NOT EXISTS revenue_entries (
