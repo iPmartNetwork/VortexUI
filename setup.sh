@@ -494,6 +494,14 @@ deploy_systemd() {
     # Frontend
     if [[ "$SKIP_FRONTEND" -eq 0 ]]; then
         echo "==> building frontend"
+
+        # Install Node.js if npm not available
+        if ! command -v npm >/dev/null 2>&1; then
+            echo "    Node.js not found, installing..."
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
+            apt-get install -y -qq nodejs >/dev/null 2>&1
+        fi
+
         cd "$INSTALL_DIR/web"
         npm install --prefer-offline
         npm run build
@@ -512,6 +520,16 @@ deploy_systemd() {
     if [[ "$SKIP_BACKEND" -eq 0 ]]; then
         echo "==> building backend"
         cd "$INSTALL_DIR"
+
+        # Install Go if not available
+        if ! command -v go >/dev/null 2>&1 && ! [[ -x /usr/local/go/bin/go ]]; then
+            echo "    Go not found, installing..."
+            GO_VERSION="1.23.4"
+            GOARCH=$(uname -m); case "$GOARCH" in x86_64) GOARCH="amd64";; aarch64) GOARCH="arm64";; esac
+            curl -sL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" | tar -C /usr/local -xzf -
+        fi
+        export PATH="$PATH:/usr/local/go/bin"
+
         CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" \
             -o /usr/local/bin/vortex-panel ./cmd/panel
     fi
