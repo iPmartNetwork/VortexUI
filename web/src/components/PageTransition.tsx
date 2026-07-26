@@ -1,15 +1,60 @@
-import { useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
-/**
- * Wraps page content with a CSS-based fade+slide transition.
- * Uses key={pathname} to trigger re-mount animation on route changes.
- * No external deps needed — pure CSS animation.
- */
-export function PageTransition({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
+interface PageTransitionProps {
+  children: React.ReactNode;
+  className?: string;
+  /** Direction-aware slide. Default "up" */
+  direction?: "up" | "down" | "left" | "right" | "none";
+}
+
+const variants = {
+  up: {
+    initial: { opacity: 0, y: 12 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -8 },
+  },
+  down: {
+    initial: { opacity: 0, y: -12 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: 8 },
+  },
+  left: {
+    initial: { opacity: 0, x: 12 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -8 },
+  },
+  right: {
+    initial: { opacity: 0, x: -12 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: 8 },
+  },
+  none: {
+    initial: { opacity: 1 },
+    animate: { opacity: 1 },
+    exit: { opacity: 1 },
+  },
+};
+
+export function PageTransition({
+  children,
+  className,
+  direction = "up",
+}: PageTransitionProps) {
+  const v = variants[direction];
+
   return (
-    <div key={location.pathname} className="animate-page-enter">
+    <motion.div
+      initial={v.initial}
+      animate={v.animate}
+      exit={v.exit}
+      transition={{
+        duration: 0.3,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+      className={cn(className)}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }

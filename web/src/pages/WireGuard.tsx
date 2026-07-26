@@ -5,7 +5,7 @@ import { Shield, Network, Settings, Wrench } from "lucide-react";
 import { api } from "@/api/client";
 import { useInboundsFleet } from "@/api/hooks";
 import { Button, Input, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
@@ -71,7 +71,7 @@ export function WireGuard() {
 
       {tab === "peers" && (
         <>
-          <GlassCard className="p-4">
+          <GlassCard glow className="p-4">
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <select className="field input-surface w-full" value={inbound} onChange={(e) => setInbound(e.target.value)}>
@@ -92,7 +92,7 @@ export function WireGuard() {
             </div>
           </GlassCard>
           {inbound && peers && peers.length > 0 && (
-            <GlassCard className="p-4">
+            <GlassCard glow className="p-4">
               <table className="w-full text-sm">
                 <thead><tr className="border-b"><th className="text-left py-2 px-3">IP</th><th className="text-left py-2 px-3">Key</th><th className="text-left py-2 px-3">MTU</th><th className="text-left py-2 px-3">TX/RX</th><th className="text-right py-2 px-3">Actions</th></tr></thead>
                 <tbody>{peers.map((p) => (
@@ -111,7 +111,7 @@ export function WireGuard() {
       )}
 
       {tab === "mesh" && (
-        <GlassCard className="p-4">
+        <GlassCard glow className="p-4">
           <h2 className="text-lg font-semibold mb-3">Mesh Networks</h2>
           {meshes && meshes.length > 0 ? meshes.map((m) => (
             <div key={m.id} className="border border-border rounded-xl p-3 mb-2">
@@ -123,7 +123,7 @@ export function WireGuard() {
       )}
 
       {tab === "awg" && (
-        <GlassCard className="p-4 space-y-4">
+        <GlassCard glow className="p-4 space-y-4">
           <h2 className="text-lg font-semibold">AmneziaWG (Obfuscated WireGuard)</h2>
           <p className="text-sm text-fg-muted">DPI-resistant WireGuard with junk packet injection</p>
           <div className="flex items-center gap-3">

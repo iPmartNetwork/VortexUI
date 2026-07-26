@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpen, BarChart3, ExternalLink } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useTitle } from "@/lib/useTitle";
 import { useI18n } from "@/i18n/i18n";
 
@@ -30,7 +30,7 @@ export function ApiDocs() {
       </div>
 
       {tab === "docs" && (
-        <GlassCard className="p-6 space-y-4">
+        <GlassCard glow className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">Swagger UI</h2>
           <p className="text-fg-muted">Interactive API docs with Try-it-out.</p>
           <div className="flex gap-3">
@@ -45,7 +45,7 @@ export function ApiDocs() {
       )}
 
       {tab === "rate-limits" && (
-        <GlassCard className="p-4 space-y-4">
+        <GlassCard glow className="p-4 space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2"><BarChart3 className="w-5 h-5"/>Rate Limit Dashboard</h2>
           {rateLimits && rateLimits.length > 0 ? (
             <table className="w-full text-sm">

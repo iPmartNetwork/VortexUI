@@ -13,12 +13,14 @@ import {
   Moon,
   Sun,
   Globe,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/auth/auth";
 import { useTheme } from "@/theme/theme";
 import { useI18n } from "@/i18n/i18n";
 import { LANG_OPTIONS } from "@/i18n/lang-options";
 import { cn } from "@/lib/utils";
+
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -56,6 +58,7 @@ export function Login() {
     }
   }
 
+  // Enhanced particle canvas
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -64,7 +67,15 @@ export function Login() {
     if (!ctx) return;
 
     let animationId: number;
-    let particles: { x: number; y: number; vx: number; vy: number; r: number; alpha: number }[] = [];
+    let particles: {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      r: number;
+      alpha: number;
+      hue: number;
+    }[] = [];
 
     function resize() {
       if (!canvas) return;
@@ -74,16 +85,19 @@ export function Login() {
     resize();
     window.addEventListener("resize", resize);
 
-    // Create particles
-    const count = Math.min(40, Math.floor((canvas.width * canvas.height) / 30000));
+    const count = Math.min(
+      50,
+      Math.floor((canvas.width * canvas.height) / 25000),
+    );
     for (let i = 0; i < count; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        r: Math.random() * 2 + 0.5,
-        alpha: Math.random() * 0.3 + 0.05,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: Math.random() * 2.5 + 0.5,
+        alpha: Math.random() * 0.4 + 0.05,
+        hue: 190 + Math.random() * 60, // blue-cyan range
       });
     }
 
@@ -92,7 +106,6 @@ export function Login() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const isDark = document.documentElement.classList.contains("dark");
-      const color = isDark ? "56, 189, 248" : "99, 102, 241";
 
       for (const p of particles) {
         p.x += p.vx;
@@ -102,7 +115,7 @@ export function Login() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${color}, ${p.alpha})`;
+        ctx.fillStyle = `hsla(${p.hue}, 80%, ${isDark ? 65 : 55}%, ${p.alpha})`;
         ctx.fill();
       }
 
@@ -112,11 +125,12 @@ export function Login() {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 150) {
+          if (dist < 180) {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `rgba(${color}, ${0.06 * (1 - dist / 150)})`;
+            const alpha = 0.04 * (1 - dist / 180);
+            ctx.strokeStyle = `hsla(${isDark ? 198 : 239}, 80%, 60%, ${alpha})`;
             ctx.stroke();
           }
         }
@@ -139,34 +153,51 @@ export function Login() {
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none z-0"
       />
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-30%] start-[20%] w-[500px] h-[500px] rounded-full bg-primary/[0.07] blur-[120px]" />
-        <div className="absolute bottom-[-20%] end-[15%] w-[400px] h-[400px] rounded-full bg-accent/[0.06] blur-[100px]" />
-      </div>
-      <div className="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none" />
 
+      {/* Glowing orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-25%] start-[15%] w-[600px] h-[600px] rounded-full bg-primary/[0.06] blur-[150px] animate-pulse-slow" />
+        <div className="absolute bottom-[-20%] end-[10%] w-[500px] h-[500px] rounded-full bg-accent/[0.05] blur-[120px] animate-pulse-slow" style={{ animationDelay: "-2s" }} />
+        <div className="absolute top-[40%] start-[60%] w-[300px] h-[300px] rounded-full bg-success/[0.03] blur-[100px] animate-pulse-slow" style={{ animationDelay: "-3s" }} />
+      </div>
+
+      {/* Animated dot overlay */}
+      <div className="absolute inset-0 bg-dot-pattern-sm animate-pattern-drift-slow opacity-20 pointer-events-none" />
+
+      {/* Top right controls */}
       <div className="absolute end-5 top-5 flex gap-1.5 z-20">
-        <button
+        <motion.button
           type="button"
           onClick={toggle}
           aria-label="theme"
-          className="grid h-9 w-9 place-items-center rounded-xl text-fg-muted transition hover:bg-surface-2/60 hover:text-fg"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="grid h-9 w-9 place-items-center rounded-xl text-fg-muted transition hover:bg-surface-2/60 hover:text-fg border border-transparent hover:border-border/50"
         >
-          {resolved === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
+          {resolved === "dark" ? (
+            <Sun size={17} />
+          ) : (
+            <Moon size={17} />
+          )}
+        </motion.button>
         <div className="relative">
-          <button
+          <motion.button
             type="button"
             onClick={() => setLangOpen(!langOpen)}
-            className="grid h-9 w-9 place-items-center rounded-xl text-fg-muted transition hover:bg-surface-2/60 hover:text-fg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="grid h-9 w-9 place-items-center rounded-xl text-fg-muted transition hover:bg-surface-2/60 hover:text-fg border border-transparent hover:border-border/50"
             aria-label="Language"
           >
             <Globe size={17} />
-          </button>
+          </motion.button>
           {langOpen && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setLangOpen(false)} />
-              <div className="absolute end-0 top-full z-50 mt-2 w-36 rounded-xl border border-border/60 bg-bg-elevated/95 p-1 shadow-xl backdrop-blur-xl animate-scale-in">
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setLangOpen(false)}
+              />
+              <div className="absolute end-0 top-full z-50 mt-2 w-36 rounded-xl border border-border/50 bg-bg-elevated/95 p-1 shadow-xl backdrop-blur-xl animate-scale-in">
                 {LANG_OPTIONS.map((l) => (
                   <button
                     key={l.code}
@@ -182,7 +213,9 @@ export function Login() {
                         : "text-fg-muted hover:bg-surface-2/60 hover:text-fg",
                     )}
                   >
-                    <span className="w-5 text-[10px] font-bold text-fg-subtle">{l.code.toUpperCase()}</span>
+                    <span className="w-5 text-[10px] font-bold text-fg-subtle">
+                      {l.code.toUpperCase()}
+                    </span>
                     {l.label}
                   </button>
                 ))}
@@ -192,41 +225,70 @@ export function Login() {
         </div>
       </div>
 
+      {/* Center card */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="relative z-10 w-full max-w-[420px]"
       >
         <div className="text-center mb-10">
-          <motion.h1
-            initial={{ opacity: 0, scale: 0.95 }}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.05, duration: 0.4 }}
-            className="text-3xl font-black tracking-tight"
+            transition={{ delay: 0.05, duration: 0.5 }}
+            className="inline-flex items-center justify-center gap-3"
           >
-            <span className="text-fg">Vortex</span>
-            <span className="grad-text">UI</span>
-          </motion.h1>
+            {/* Logo icon */}
+            <div className="h-12 w-12 rounded-2xl grad-bg flex items-center justify-center shadow-glow">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-primary-fg"
+              >
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+            </div>
+            <div className="text-start">
+              <h1 className="text-3xl font-black tracking-tight leading-none">
+                <span className="text-fg">Vortex</span>
+                <span className="grad-text">UI</span>
+              </h1>
+            </div>
+          </motion.div>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.15 }}
-            className="text-[13px] text-fg-muted mt-2 tracking-wide"
+            transition={{ delay: 0.2 }}
+            className="text-[13px] text-fg-muted mt-3 tracking-wide"
           >
             {t("login.panelSubtitle")}
           </motion.p>
         </div>
 
-        <div className="rounded-2xl bg-bg-elevated border border-border p-7 shadow-xl space-y-6">
-          <div className="flex rounded-xl p-1 bg-surface-2/80 border border-border/60">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="glass-plus rounded-2xl p-8 space-y-6"
+        >
+          {/* Tab selector */}
+          <div className="flex rounded-xl p-1 bg-surface-2/60 border border-border/50">
             <button
               type="button"
               onClick={() => setAuthMode("admin")}
               className={cn(
                 "flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-200 flex items-center justify-center gap-2",
                 authMode === "admin"
-                  ? "bg-bg-elevated text-fg shadow-sm border border-border/80"
+                  ? "bg-bg-elevated text-fg shadow-sm border border-border/70"
                   : "text-fg-muted hover:text-fg",
               )}
             >
@@ -239,7 +301,7 @@ export function Login() {
               className={cn(
                 "flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all duration-200 flex items-center justify-center gap-2",
                 authMode === "token"
-                  ? "bg-bg-elevated text-fg shadow-sm border border-border/80"
+                  ? "bg-bg-elevated text-fg shadow-sm border border-border/70"
                   : "text-fg-muted hover:text-fg",
               )}
             >
@@ -251,32 +313,44 @@ export function Login() {
           <form onSubmit={submit} className="space-y-5">
             {authMode === "admin" ? (
               <>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-fg-muted">{t("login.username")}</label>
+                {/* Username */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-fg-muted">
+                    {t("login.username")}
+                  </label>
                   <div className="relative">
-                    <User size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-fg-subtle" />
+                    <User
+                      size={16}
+                      className="absolute start-3.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none"
+                    />
                     <input
                       type="text"
                       required
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       autoFocus
-                      className="w-full h-11 rounded-xl border border-border ps-10 pe-4 text-sm text-fg placeholder:text-fg-subtle/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all input-surface"
+                      className="w-full h-11 rounded-xl border border-border/70 ps-10 pe-4 text-sm text-fg placeholder:text-fg-subtle/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all input-surface"
                       placeholder={t("login.username")}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-fg-muted">{t("login.password")}</label>
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-fg-muted">
+                    {t("login.password")}
+                  </label>
                   <div className="relative">
-                    <Lock size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-fg-subtle" />
+                    <Lock
+                      size={16}
+                      className="absolute start-3.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none"
+                    />
                     <input
                       type={showPassword ? "text" : "password"}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full h-11 rounded-xl border border-border ps-10 pe-11 text-sm text-fg placeholder:text-fg-subtle/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all input-surface"
+                      className="w-full h-11 rounded-xl border border-border/70 ps-10 pe-11 text-sm text-fg placeholder:text-fg-subtle/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all input-surface"
                       placeholder={t("login.password")}
                     />
                     <button
@@ -284,21 +358,31 @@ export function Login() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute end-3.5 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg transition-colors"
                     >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {showPassword ? (
+                        <EyeOff size={16} />
+                      ) : (
+                        <Eye size={16} />
+                      )}
                     </button>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-fg-muted">{t("login.totp")}</label>
+                {/* 2FA */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-fg-muted">
+                    {t("login.totp")}
+                  </label>
                   <div className="relative">
-                    <ShieldCheck size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-fg-subtle" />
+                    <ShieldCheck
+                      size={16}
+                      className="absolute start-3.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none"
+                    />
                     <input
                       type="text"
                       value={totp}
                       onChange={(e) => setTotp(e.target.value)}
                       inputMode="numeric"
-                      className="w-full h-11 rounded-xl border border-border ps-10 pe-4 text-sm text-fg placeholder:text-fg-subtle/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all input-surface"
+                      className="w-full h-11 rounded-xl border border-border/70 ps-10 pe-4 text-sm text-fg placeholder:text-fg-subtle/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all input-surface"
                       placeholder={t("login.totp")}
                     />
                   </div>
@@ -312,18 +396,26 @@ export function Login() {
               </div>
             )}
 
+            {/* Error */}
             {error && (
-              <div className="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2">
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border border-danger/20 bg-danger/8 px-3 py-2"
+              >
                 <p className="text-sm font-medium text-danger">{error}</p>
-              </div>
+              </motion.div>
             )}
 
+            {/* Footer */}
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-success font-medium flex items-center gap-1">
-                <ShieldCheck size={12} /> {t("login.secureConnection")}
+                <ShieldCheck size={12} />
+                {t("login.secureConnection")}
               </span>
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={busy}
@@ -337,14 +429,22 @@ export function Login() {
               ) : (
                 <>
                   <span>
-                    {authMode === "admin" ? t("login.submit") : t("login.goPortal")}
+                    {authMode === "admin"
+                      ? t("login.submit")
+                      : t("login.goPortal")}
                   </span>
                   <ArrowRight size={16} />
                 </>
               )}
             </button>
           </form>
-        </div>
+        </motion.div>
+
+        {/* Footer */}
+        <p className="text-center mt-6 text-[10px] text-fg-subtle flex items-center justify-center gap-1">
+          <Sparkles size={10} />
+          VortexUI Next-Gen Core Engine
+        </p>
       </motion.div>
     </div>
   );

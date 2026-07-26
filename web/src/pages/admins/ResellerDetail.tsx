@@ -10,14 +10,14 @@ import { setToken } from "@/api/client";
 import { useAuth } from "@/auth/auth";
 import { mergeResellerSettings, RESELLER_SETTING_KEYS, type ResellerSettingKey } from "@/auth/permissions";
 import { Badge, Button } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { EditAdminModal } from "@/components/EditAdminModal";
 import { WalletTopUpModal } from "@/components/WalletTopUpModal";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import type { TKey } from "@/i18n/dict";
 import { useTitle } from "@/lib/useTitle";
-import { formatBytes, pct } from "@/lib/utils";
+import { cn, formatBytes, pct } from "@/lib/utils";
 
 const SETTING_LABEL_KEYS: Record<ResellerSettingKey, TKey> = {
   appearance: "settings.adminsSection.settingAppearance",
@@ -39,18 +39,32 @@ function QuotaBar({ label, used, limit, format = "number" }: { label: string; us
   const displayUsed = format === "bytes" ? formatBytes(used, false) : String(used);
   const displayLimit = unlimited ? "∞" : format === "bytes" ? formatBytes(limit, false) : String(limit);
   const p = unlimited ? 0 : pct(used, limit);
+  const barColor = p >= 90 ? "bg-danger" : p >= 75 ? "bg-warning" : "bg-primary";
   return (
-    <GlassCard className="space-y-3">
+    <GlassCard className="space-y-3" glow>
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium text-fg">{label}</span>
-        <span className="text-fg-muted">{displayUsed} / {displayLimit}</span>
+        <span className="text-fg-muted tabular-nums">{displayUsed} / {displayLimit}</span>
       </div>
       {!unlimited && (
-        <div className="h-2 rounded-full bg-surface-2">
+        <div className="relative h-2 rounded-full bg-surface-3/50 overflow-hidden border border-border/30">
           <div
-            className={`h-full rounded-full transition-all ${p >= 90 ? "bg-danger" : p >= 75 ? "bg-warning" : "bg-primary"}`}
+            className={cn("h-full rounded-full transition-all duration-700 shadow-sm", barColor)}
             style={{ width: `${Math.min(p, 100)}%` }}
           />
+          {/* Glow overlay */}
+          <div
+            className={cn("absolute inset-0 rounded-full opacity-20 blur-sm", barColor)}
+            style={{ width: `${Math.min(p, 100)}%` }}
+          />
+        </div>
+      )}
+      {!unlimited && (
+        <div className="flex justify-between text-[10px] text-fg-subtle">
+          <span>{p.toFixed(0)}% used</span>
+          <span className={p >= 90 ? "text-danger" : p >= 75 ? "text-warning" : "text-success"}>
+            {p >= 90 ? "Critical" : p >= 75 ? "Warning" : "Healthy"}
+          </span>
         </div>
       )}
     </GlassCard>

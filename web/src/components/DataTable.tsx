@@ -99,7 +99,7 @@ export function DataTable<T extends Record<string, any>>({
             onChange={e => { setSearch(e.target.value); setPage(0); }}
             className="max-w-xs"
           />
-          <span className="text-xs text-fg-subtle">{filtered.length} results</span>
+          <span className="text-xs text-fg-subtle tabular-nums">{filtered.length} results</span>
         </div>
       )}
 

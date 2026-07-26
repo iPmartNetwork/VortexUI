@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { Button, Input } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";

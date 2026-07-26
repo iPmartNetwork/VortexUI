@@ -12,7 +12,7 @@ import { api } from "@/api/client";
 import { useConfirmTOTP, useDisableTOTP, useSetupTOTP } from "@/api/admin-hooks";
 import { useExportBackup, useRestoreBackup, useExportUserBackup, useRestoreUserBackup, useBackupManifest, useAPITokens, useCreateAPIToken, useDeleteAPIToken } from "@/api/policy-hooks";
 import { Button, Input, Switch } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useTheme } from "@/theme/theme";
@@ -129,8 +129,10 @@ function PanelBlock({ title, description, children }: {
 function ThemeChip({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
     <button type="button" onClick={onClick} className={cn(
-      "flex flex-1 flex-col items-center gap-1.5 rounded-xl border py-3 text-xs font-medium transition-all",
-      active ? "border-primary/50 bg-primary/10 text-primary" : "border-border/50 bg-surface-2/30 text-fg-muted hover:bg-surface-2/60 hover:text-fg",
+      "flex flex-1 flex-col items-center gap-1.5 rounded-xl border py-3 text-xs font-medium transition-all duration-200",
+      active
+        ? "border-primary/50 bg-primary/10 text-primary shadow-cyber"
+        : "border-border/50 bg-surface-2/30 text-fg-muted hover:bg-surface-2/60 hover:text-fg hover:border-border-strong",
     )}>
       {icon}
       {label}
@@ -152,8 +154,10 @@ const LANGS: { code: Lang; label: string; flag: string }[] = [
 function LangChip({ active, onClick, flag, label }: { active: boolean; onClick: () => void; flag: string; label: string }) {
   return (
     <button type="button" onClick={onClick} className={cn(
-      "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all",
-      active ? "border-primary/50 bg-primary/10 text-primary" : "border-border/50 bg-surface-2/30 text-fg-muted hover:bg-surface-2/60 hover:text-fg",
+      "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-200",
+      active
+        ? "border-primary/50 bg-primary/10 text-primary shadow-cyber"
+        : "border-border/50 bg-surface-2/30 text-fg-muted hover:bg-surface-2/60 hover:text-fg hover:border-border-strong",
     )}>
       <span className="text-base leading-none">{flag}</span>
       {label}

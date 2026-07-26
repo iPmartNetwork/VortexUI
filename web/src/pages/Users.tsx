@@ -16,7 +16,7 @@ import { useDeleteUser, useUsers } from "@/api/hooks";
 import type { User, UserStatus } from "@/api/types";
 import { Button } from "@/components/ui";
 import { Pagination } from "@/components/Pagination";
-import { GlassCard, ProtocolBadge, StatusBadge } from "@/components/veltrix";
+import { GlassCard, ProtocolBadge, StatusBadge } from "@/components/vortexui";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 import { CreateUserModal } from "@/components/CreateUserModal";
@@ -158,18 +158,23 @@ export function Users() {
 
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-fg tracking-tight">{t("users.managementTitle")}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-fg tracking-tight">{t("users.managementTitle")}</h1>
+            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary border border-primary/20">
+              {total} {t("users.totalUsers")}
+            </span>
+          </div>
           <p className="text-sm text-fg-muted mt-1">
-            {total} {t("users.totalUsers")}
+            {t("users.showingOf").replace("{count}", String(showing)).replace("{total}", String(total))}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {canWrite && (
             <>
-              <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => setImportOpen(true)}>
+              <Button variant="glass" size="sm" className="hidden sm:inline-flex" onClick={() => setImportOpen(true)}>
                 <Download size={14} /> {t("users.import")}
               </Button>
-              <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => setBulkOpen(true)}>
+              <Button variant="glass" size="sm" className="hidden sm:inline-flex" onClick={() => setBulkOpen(true)}>
                 <Layers size={14} /> {t("users.bulk")}
               </Button>
             </>
@@ -180,7 +185,7 @@ export function Users() {
         </div>
       </div>
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
+      <GlassCard className="!p-0 overflow-hidden" glow>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 border-b border-border/40">
           <div className="relative flex-1 max-w-md">
             <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-fg-subtle" />
@@ -324,7 +329,15 @@ export function Users() {
                             <MoreVertical size={16} />
                           </button>
                           {menuUserId === u.id && (
-                            <div className="absolute end-0 top-full mt-1 z-20 min-w-[160px] rounded-lg border border-border/60 bg-surface shadow-lg py-1 text-xs">
+                            <div
+                              className={cn(
+                                "absolute end-0 z-20 min-w-[160px] rounded-lg border border-border/60 bg-surface shadow-lg py-1 text-xs",
+                                // Flip upward if this row is in the last 4 of the page
+                                users.length - i <= 4
+                                  ? "bottom-full mb-1"
+                                  : "top-full mt-1",
+                              )}
+                            >
                               <MenuAction icon={<QrCode size={14} />} onClick={() => { setSubbing(u); setMenuUserId(null); }}>
                                 {t("users.subscription")}
                               </MenuAction>

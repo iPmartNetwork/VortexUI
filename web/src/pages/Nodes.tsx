@@ -19,7 +19,7 @@ import { CreateNodeModal, diagColor, diagLabel, phaseLabel } from "@/components/
 import { EditNodeModal } from "@/components/EditNodeModal";
 import { NodeInboundsModal } from "@/components/NodeInboundsModal";
 import { NodeLogsModal } from "@/components/NodeLogsModal";
-import { CoreBadge, GlassCard, StatusBadge } from "@/components/veltrix";
+import { CoreBadge, GlassCard, StatusBadge } from "@/components/vortexui";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
@@ -117,15 +117,6 @@ function MetricBar({ icon, label, value }: { icon: React.ReactNode; label: strin
         {v.toFixed(0)}%
       </span>
     </div>
-  );
-}
-
-function SummaryStat({ value, label, color }: { value: number; label: string; color: string }) {
-  return (
-    <GlassCard hover={false} className="!p-3.5 text-center">
-      <p className={cn("text-2xl font-black tabular-nums leading-none", color)}>{value}</p>
-      <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">{label}</p>
-    </GlassCard>
   );
 }
 
@@ -265,9 +256,14 @@ export function Nodes() {
 
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-fg tracking-tight">{t("nodes.managementTitle")}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-fg tracking-tight">{t("nodes.managementTitle")}</h1>
+            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary border border-primary/20">
+              {nodes.length} {t("nodes.registeredNodes")}
+            </span>
+          </div>
           <p className="text-sm text-fg-muted mt-1">
-            {nodes.length} {t("nodes.registeredNodes")}
+            Fleet monitoring & management
           </p>
         </div>
         {canManage && (
@@ -279,10 +275,34 @@ export function Nodes() {
 
       {/* Fleet summary — active / warning / offline / total users at a glance */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <SummaryStat value={summary.active} label={t("nodes.filterOnline")} color="text-success" />
-        <SummaryStat value={summary.warning} label={t("nodes.filterWarning")} color="text-warning" />
-        <SummaryStat value={summary.offline} label={t("nodes.filterOffline")} color="text-danger" />
-        <SummaryStat value={summary.users} label={t("nodes.users")} color="text-primary" />
+        <GlassCard className="!p-3.5 text-center" glow>
+          <p className="text-2xl font-black tabular-nums leading-none text-success">{summary.active}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">{t("nodes.filterOnline")}</p>
+          <div className="mt-2 h-1 rounded-full bg-surface-3 overflow-hidden">
+            <div className="h-full rounded-full bg-success transition-all" style={{ width: `${nodes.length > 0 ? (summary.active / nodes.length) * 100 : 0}%` }} />
+          </div>
+        </GlassCard>
+        <GlassCard className="!p-3.5 text-center" glow>
+          <p className="text-2xl font-black tabular-nums leading-none text-warning">{summary.warning}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">{t("nodes.filterWarning")}</p>
+          <div className="mt-2 h-1 rounded-full bg-surface-3 overflow-hidden">
+            <div className="h-full rounded-full bg-warning transition-all" style={{ width: `${nodes.length > 0 ? (summary.warning / nodes.length) * 100 : 0}%` }} />
+          </div>
+        </GlassCard>
+        <GlassCard className="!p-3.5 text-center" glow>
+          <p className="text-2xl font-black tabular-nums leading-none text-danger">{summary.offline}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">{t("nodes.filterOffline")}</p>
+          <div className="mt-2 h-1 rounded-full bg-surface-3 overflow-hidden">
+            <div className="h-full rounded-full bg-danger transition-all" style={{ width: `${nodes.length > 0 ? (summary.offline / nodes.length) * 100 : 0}%` }} />
+          </div>
+        </GlassCard>
+        <GlassCard className="!p-3.5 text-center" glow>
+          <p className="text-2xl font-black tabular-nums leading-none text-primary">{summary.users}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">{t("nodes.users")}</p>
+          <div className="mt-2 h-1 rounded-full bg-surface-3 overflow-hidden">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${nodes.length > 0 ? (summary.users / Math.max(...nodes.map(n => n.users_count ?? 0), 1)) * 100 : 0}%` }} />
+          </div>
+        </GlassCard>
       </div>
 
       <div className="flex flex-wrap items-center gap-1">

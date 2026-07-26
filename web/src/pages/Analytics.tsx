@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Download, Globe2, TrendingUp, Users, BarChart3 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Select } from "@/components/ui";
-import { GlassCard, StatsCard } from "@/components/veltrix";
+import { GlassCard, StatsCard } from "@/components/vortexui";
+import { PeakHoursChart } from "@/components/Charts";
 import { formatBytes } from "@/lib/utils";
 import { useI18n } from "@/i18n/i18n";
 import { EmptyState } from "@/components/EmptyState";
@@ -94,7 +95,7 @@ export function Analytics() {
             <StatsCard title={t("analytics.countries")} value={data.geo_breakdown?.length ?? 0} icon={<Globe2 size={18} />} color="purple" />
           </div>
 
-          <GlassCard hover={false} className="!p-0 overflow-hidden">
+          <GlassCard glow className="!p-0 overflow-hidden">
             <div className="px-4 pt-4">
               <h3 className="text-sm font-bold text-fg">{t("analytics.byCountry")}</h3>
             </div>
@@ -123,7 +124,7 @@ export function Analytics() {
           </GlassCard>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <GlassCard hover={false} className="!p-0 overflow-hidden">
+            <GlassCard glow className="!p-0 overflow-hidden">
               <div className="px-4 pt-4 flex items-center gap-2">
                 <Users size={14} className="text-primary" />
                 <h3 className="text-sm font-bold text-fg">{t("analytics.topUsers")}</h3>
@@ -150,24 +151,9 @@ export function Analytics() {
               </div>
             </GlassCard>
 
-            <GlassCard hover={false} className="!p-4 space-y-3">
+            <GlassCard glow className="!p-4 space-y-3">
               <h3 className="text-sm font-bold text-fg">{t("analytics.peakHours")}</h3>
-              <div className="flex items-end gap-1 h-40">
-                {data.peak_hours?.map((p) => {
-                  const maxBytes = Math.max(...(data.peak_hours?.map((h) => h.bytes_total) ?? [1]));
-                  const height = maxBytes > 0 ? (p.bytes_total / maxBytes) * 100 : 0;
-                  return (
-                    <div key={p.hour} className="flex-1 flex flex-col items-center gap-1.5 group">
-                      <div
-                        className="w-full rounded-t-md bg-gradient-to-t from-primary/70 to-primary transition-all group-hover:from-primary group-hover:to-primary/80"
-                        style={{ height: `${height}%`, minHeight: "2px" }}
-                        title={`${p.hour}:00 — ${formatBytes(p.bytes_total, false)}`}
-                      />
-                      <span className="text-[9px] text-fg-subtle tabular-nums">{p.hour}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              <PeakHoursChart data={data.peak_hours ?? []} />
             </GlassCard>
           </div>
         </>

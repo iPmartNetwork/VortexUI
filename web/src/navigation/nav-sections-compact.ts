@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import type { NavSection } from "./nav-sections";
 
-/** Compact sidebar groups matching the Veltrix / Arena command-tower mock. */
+/** Compact sidebar groups matching the VortexUI / Arena command-tower mock. */
 export function buildCompactNavSections(sudo: boolean): NavSection[] {
   return [
     {

@@ -4,7 +4,7 @@ import { Info, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Badge, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
 import { useI18n } from "@/i18n/i18n";
@@ -47,7 +47,7 @@ export function SNIManager() {
         </p>
       </div>
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-fg">{t("sni.domains")}</h3>
           <Button size="sm" onClick={() => setAddDomainOpen(true)}>
@@ -79,7 +79,7 @@ export function SNIManager() {
         </div>
       </GlassCard>
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-fg">{t("sni.certificates")}</h3>
           <Button size="sm" onClick={() => setAddCertOpen(true)}>

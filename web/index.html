@@ -9,8 +9,19 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Preload Inter fallback weights for fastest load -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=Orbitron:wght@700;900&family=Vazirmatn:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap"
+    />
+    <!-- Preload critical route chunks for instant navigation -->
+    <link rel="modulepreload" href="/src/pages/Overview.tsx" />
+    <link rel="modulepreload" href="/src/pages/Users.tsx" />
+    <link rel="modulepreload" href="/src/pages/Nodes.tsx" />
+    <link rel="modulepreload" href="/src/pages/Inbounds.tsx" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,200..800&family=Orbitron:wght@600;700;900&family=Vazirmatn:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>

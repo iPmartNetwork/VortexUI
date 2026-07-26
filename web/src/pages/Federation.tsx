@@ -4,7 +4,7 @@ import { Info, Plus, Trash2 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Badge } from "@/components/ui";
 import { Modal } from "@/components/Modal";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
@@ -56,7 +56,7 @@ export function Federation() {
       </div>
 
       {cfg && (
-        <GlassCard hover={false} className="!p-5 space-y-3">
+        <GlassCard glow className="!p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-fg">Config</h3>
             <label className="flex items-center gap-2 text-sm text-fg">
@@ -76,7 +76,7 @@ export function Federation() {
         </GlassCard>
       )}
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-fg">{t("federation.peers")}</h3>
           <Button size="sm" onClick={() => setAddOpen(true)}>
@@ -101,7 +101,7 @@ export function Federation() {
         </div>
       </GlassCard>
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <h3 className="text-sm font-bold text-fg">{t("federation.syncEvents")}</h3>
         <div className="space-y-2 max-h-[200px] overflow-y-auto">
           {eventsData?.events?.map((e) => (

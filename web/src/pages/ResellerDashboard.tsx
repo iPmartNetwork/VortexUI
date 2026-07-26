@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { exportResellerUsersCsv, useResellerDashboard } from "@/api/quota-hooks";
 import { useAuth } from "@/auth/auth";
 import { Badge, Button } from "@/components/ui";
-import { GlassCard, StatsCard } from "@/components/veltrix";
+import { GlassCard, StatsCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";

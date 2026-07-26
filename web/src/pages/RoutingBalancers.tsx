@@ -33,7 +33,7 @@ import type { BalancerFleetRow } from "@/api/types";
 import { Badge, Button, Input, Select, Switch } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { NodePicker } from "@/components/NodePicker";
-import { GlassCard, StatusBadge } from "@/components/veltrix";
+import { GlassCard, StatusBadge } from "@/components/vortexui";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, FileText, Trash2, Pencil, Users, Search } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, PageHeader, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { EmptyState } from "@/components/EmptyState";
 import { Modal } from "@/components/Modal";
 import { useTitle } from "@/lib/useTitle";
@@ -138,7 +138,7 @@ export function TemplateListPage() {
       </PageHeader>
 
       {/* Search */}
-      <GlassCard hover={false} className="!p-4">
+      <GlassCard glow className="!p-4">
         <div className="relative">
           <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" />
           <Input
@@ -152,7 +152,7 @@ export function TemplateListPage() {
 
       {/* Loading */}
       {templates.isLoading && (
-        <GlassCard hover={false} className="!p-8">
+        <GlassCard glow className="!p-8">
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="flex items-center gap-4 animate-shimmer bg-gradient-to-r from-surface-2/40 via-surface-2/80 to-surface-2/40 bg-[length:200%_100%] rounded-xl h-16" />
@@ -175,7 +175,7 @@ export function TemplateListPage() {
 
       {/* Template table */}
       {!templates.isLoading && filtered.length > 0 && (
-        <GlassCard hover={false} className="!p-0 overflow-hidden">
+        <GlassCard glow className="!p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

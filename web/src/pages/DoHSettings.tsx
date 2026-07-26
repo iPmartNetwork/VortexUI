@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Info, ShieldCheck } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Badge } from "@/components/ui";
-import { GlassCard, StatsCard } from "@/components/veltrix";
+import { GlassCard, StatsCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";

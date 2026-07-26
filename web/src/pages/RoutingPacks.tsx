@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n/i18n";
 // This module only exports the shared PackEditor/ApplyModal dialogs used by
 // RoutingBalancers.tsx (the live "/routing" page). There is no standalone
 // RoutingPacks page/route anymore — the list UI lives inline in
-// RoutingBalancers.tsx's RoutingPacksTab, styled with the Veltrix components.
+// RoutingBalancers.tsx's RoutingPacksTab, styled with the VortexUI components.
 
 const csv = (s: string) => (s ? s.split(",").map((x) => x.trim()).filter(Boolean) : []);
 

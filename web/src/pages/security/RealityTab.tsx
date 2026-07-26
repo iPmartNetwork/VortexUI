@@ -4,7 +4,7 @@ import { Play, Sparkles } from "lucide-react";
 import { api } from "@/api/client";
 import { useInboundsFleet, useUpdateInbound, inboundToUpdateInput, type InboundFleetRow } from "@/api/hooks";
 import { Badge, Button, Input, Select } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { cn } from "@/lib/utils";
@@ -111,7 +111,7 @@ export function RealityTab() {
         </Button>
       </div>
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Select value={nodeId} onChange={(e) => setNodeId(e.target.value)}>
             <option value="">{t("security.reality.selectNode")}</option>
@@ -136,7 +136,7 @@ export function RealityTab() {
       </GlassCard>
 
       {results.length > 0 && (
-        <GlassCard hover={false} className="!p-0 overflow-hidden">
+        <GlassCard glow className="!p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

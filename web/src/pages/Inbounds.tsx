@@ -17,7 +17,7 @@ import { NodeInboundsModal } from "@/components/NodeInboundsModal";
 import { SubHostsModal } from "@/components/SubHostsModal";
 import { InboundBulkBar } from "@/components/InboundBulkBar";
 import { InboundExpandedPanel } from "@/components/InboundExpandedPanel";
-import { GlassCard, ProtocolBadge, StatusBadge } from "@/components/veltrix";
+import { GlassCard, ProtocolBadge, StatusBadge } from "@/components/vortexui";
 import { StaggerContainer } from "@/components/StaggerContainer";
 import { EmptyState } from "@/components/EmptyState";
 import { ProtocolGroupsPanel } from "@/components/ProtocolGroupsPanel";
@@ -47,15 +47,6 @@ function securityLabel(s?: string): string {
   if (!s || s === "none") return "none";
   if (s === "inbound_default") return "default";
   return s;
-}
-
-function StatBox({ value, label, color }: { value: number | string; label: string; color: string }) {
-  return (
-    <div className="rounded-2xl bg-bg-elevated border border-border p-4 transition-all duration-200 hover:shadow-md">
-      <p className={cn("text-2xl font-black tabular-nums leading-none", color)}>{value}</p>
-      <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">{label}</p>
-    </div>
-  );
 }
 
 function ProtocolBar({ proto, count, total }: { proto: string; count: number; total: number }) {
@@ -196,7 +187,12 @@ export function Inbounds() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-fg tracking-tight">Inbounds & Hosts</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-fg tracking-tight">Inbounds & Hosts</h1>
+            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary border border-primary/20">
+              {stats.total} INBOUNDS
+            </span>
+          </div>
           <p className="text-sm text-fg-muted mt-1">
             {stats.total} inbound{stats.total !== 1 ? "s" : ""} across {stats.nodes} node{stats.nodes !== 1 ? "s" : ""}
           </p>
@@ -215,10 +211,28 @@ export function Inbounds() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatBox value={stats.total} label="Total" color="text-fg" />
-        <StatBox value={stats.active} label="Active" color="text-success" />
-        <StatBox value={stats.nodes} label="Nodes" color="text-primary" />
-        <StatBox value={stats.protocols} label="Protocols" color="text-accent" />
+        <GlassCard className="!p-4" glow>
+          <p className="text-2xl font-black tabular-nums leading-none text-fg">{stats.total}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">Total</p>
+          <div className="mt-2 h-1 rounded-full bg-surface-3 overflow-hidden">
+            <div className="h-full rounded-full bg-fg/60" style={{ width: '100%' }} />
+          </div>
+        </GlassCard>
+        <GlassCard className="!p-4" glow>
+          <p className="text-2xl font-black tabular-nums leading-none text-success">{stats.active}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">Active</p>
+          <div className="mt-2 h-1 rounded-full bg-surface-3 overflow-hidden">
+            <div className="h-full rounded-full bg-success transition-all" style={{ width: `${stats.total > 0 ? (stats.active / stats.total) * 100 : 0}%` }} />
+          </div>
+        </GlassCard>
+        <GlassCard className="!p-4" glow>
+          <p className="text-2xl font-black tabular-nums leading-none text-primary">{stats.nodes}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">Nodes</p>
+        </GlassCard>
+        <GlassCard className="!p-4" glow>
+          <p className="text-2xl font-black tabular-nums leading-none text-accent">{stats.protocols}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-1.5">Protocols</p>
+        </GlassCard>
       </div>
 
       {/* Info box */}

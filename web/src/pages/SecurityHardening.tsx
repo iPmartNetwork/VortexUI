@@ -9,7 +9,7 @@ import {
     useComplianceValidation,
 } from "@/api/security-hooks";
 import { Button, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useTitle } from "@/lib/useTitle";
 import { useAuth } from "@/auth/auth";
 
@@ -51,7 +51,7 @@ export function SecurityHardening() {
             {/* Security Score & Status */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {score.data && (
-                    <GlassCard className="p-6">
+                    <GlassCard glow className="p-6">
                         <div className="flex items-start justify-between">
                             <div>
                                 <h2 className="text-lg font-semibold text-fg mb-4">Overall Score</h2>
@@ -158,7 +158,7 @@ export function SecurityHardening() {
             </div>
 
             {/* Security Threats */}
-            <GlassCard className="p-6">
+            <GlassCard glow className="p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold text-fg flex items-center gap-2">
                         <AlertTriangle className="w-5 h-5 text-orange-500" />
@@ -229,7 +229,7 @@ export function SecurityHardening() {
 
             {/* Security Policy */}
             {policy.data && (
-                <GlassCard className="p-6">
+                <GlassCard glow className="p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-fg">Security Policy</h2>
                         {canWrite && (
@@ -278,7 +278,7 @@ export function SecurityHardening() {
 
             {/* Compliance Status */}
             {compliance.data && (
-                <GlassCard className="p-6">
+                <GlassCard glow className="p-6">
                     <h2 className="text-lg font-semibold text-fg mb-4">
                         Compliance Status
                     </h2>

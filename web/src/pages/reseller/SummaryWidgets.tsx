@@ -4,7 +4,7 @@ import { useAccountQuota } from "@/api/quota-hooks";
 import { useAccountWallet } from "@/api/reseller-hooks";
 import { useBillingSettings } from "@/api/wallet-billing-hooks";
 import { Button } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useI18n } from "@/i18n/i18n";
 import { formatBytes } from "@/lib/utils";
 import { configuredCryptoCoins } from "@/lib/crypto-currencies";
@@ -38,7 +38,7 @@ export function SummaryWidgets({ onDeposit }: { onDeposit: () => void }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <GlassCard hover={false} className="!p-4 space-y-2">
+      <GlassCard glow className="!p-4 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-fg-subtle uppercase tracking-wide">{t("reseller.widgetWallet")}</span>
           <Wallet size={16} className="text-primary" />
@@ -54,7 +54,7 @@ export function SummaryWidgets({ onDeposit }: { onDeposit: () => void }) {
         </p>
       </GlassCard>
 
-      <GlassCard hover={false} className="!p-4 space-y-2">
+      <GlassCard glow className="!p-4 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-fg-subtle uppercase tracking-wide">{t("reseller.widgetCrypto")}</span>
           <Coins size={16} className="text-warning" />
@@ -63,7 +63,7 @@ export function SummaryWidgets({ onDeposit }: { onDeposit: () => void }) {
         <p className="text-[11px] text-fg-muted font-mono">{cryptoLabel}</p>
       </GlassCard>
 
-      <GlassCard hover={false} className="!p-4 space-y-2">
+      <GlassCard glow className="!p-4 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-fg-subtle uppercase tracking-wide">{t("reseller.widgetUsers")}</span>
           <Users size={16} className="text-accent" />
@@ -79,7 +79,7 @@ export function SummaryWidgets({ onDeposit }: { onDeposit: () => void }) {
         )}
       </GlassCard>
 
-      <GlassCard hover={false} className="!p-4 flex flex-col justify-between gap-3">
+      <GlassCard glow className="!p-4 flex flex-col justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-fg-subtle uppercase tracking-wide">{t("reseller.widgetQuick")}</p>
           <p className="text-sm text-fg-muted mt-1">{t("reseller.widgetQuickDesc")}</p>

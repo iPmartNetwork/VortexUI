@@ -1,5 +1,5 @@
 import { CheckCircle, AlertCircle } from "lucide-react";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useTitle } from "@/lib/useTitle";
 
 export function Compliance() {
@@ -49,7 +49,7 @@ export function Compliance() {
 
             {/* Overall Status */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <GlassCard className="p-6 lg:col-span-2">
+                <GlassCard glow className="p-6 lg:col-span-2">
                     <div className="flex items-start justify-between">
                         <div>
                             <h2 className="text-lg font-semibold text-fg mb-2">Overall Compliance</h2>
@@ -82,7 +82,7 @@ export function Compliance() {
                     </div>
                 </GlassCard>
 
-                <GlassCard className="p-6">
+                <GlassCard glow className="p-6">
                     <div>
                         <p className="text-xs text-fg-secondary uppercase tracking-wide mb-2">Status Summary</p>
                         <div className="space-y-2">
@@ -104,7 +104,7 @@ export function Compliance() {
             </div>
 
             {/* Detailed Compliance Items */}
-            <GlassCard className="p-6">
+            <GlassCard glow className="p-6">
                 <h2 className="text-lg font-semibold text-fg mb-4">Compliance Checklist</h2>
                 <div className="space-y-3">
                     {complianceData.compliant &&
@@ -137,7 +137,7 @@ export function Compliance() {
 
             {/* Issues */}
             {complianceData.issues && complianceData.issues.length > 0 && (
-                <GlassCard className="p-6 border-l-4 border-red-500">
+                <GlassCard glow className="p-6 border-l-4 border-red-500">
                     <h2 className="text-lg font-semibold text-fg mb-4 flex items-center gap-2">
                         <AlertCircle className="w-5 h-5 text-red-500" />
                         Issues Detected
@@ -154,7 +154,7 @@ export function Compliance() {
 
             {/* Security Policy Status */}
             {policyData && (
-                <GlassCard className="p-6">
+                <GlassCard glow className="p-6">
                     <h2 className="text-lg font-semibold text-fg mb-4 flex items-center gap-2">
                         Security Policies
                     </h2>
@@ -198,7 +198,7 @@ export function Compliance() {
             )}
 
             {/* Recommendations */}
-            <GlassCard className="p-6 bg-blue-500/10 border-blue-500/20">
+            <GlassCard glow className="p-6 bg-blue-500/10 border-blue-500/20">
                 <h2 className="text-lg font-semibold text-fg mb-3 flex items-center gap-2">
                     <CheckCircle className="w-5 h-5 text-blue-500" />
                     Recommendations

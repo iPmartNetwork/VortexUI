@@ -4,7 +4,7 @@ import { Info, Plus, Trash2 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Badge, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
@@ -57,7 +57,7 @@ export function Fingerprint() {
       </div>
 
       {policy && (
-        <GlassCard hover={false} className="!p-5 space-y-3">
+        <GlassCard glow className="!p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-fg">{t("fingerprint.policy")}</h3>
             <label className="flex items-center gap-2 text-sm text-fg">
@@ -83,7 +83,7 @@ export function Fingerprint() {
         </GlassCard>
       )}
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-fg">{t("fingerprint.rules")}</h3>
           <Button size="sm" onClick={() => setAddOpen(true)}>
@@ -108,7 +108,7 @@ export function Fingerprint() {
         </div>
       </GlassCard>
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <h3 className="text-sm font-bold text-fg">{t("fingerprint.recentEvents")}</h3>
         <div className="space-y-2 max-h-[250px] overflow-y-auto">
           {eventsData?.events?.slice(0, 20).map((e) => (

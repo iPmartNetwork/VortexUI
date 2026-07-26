@@ -1,9 +1,10 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui";
 import type { LucideIcon } from "lucide-react";
+import { Inbox } from "lucide-react";
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
   description?: string;
   action?: {
@@ -14,12 +15,8 @@ interface EmptyStateProps {
   compact?: boolean;
 }
 
-/**
- * Empty state placeholder with icon, message, and optional CTA.
- * Used across all pages when data arrays are empty.
- */
 export function EmptyState({
-  icon: Icon,
+  icon: Icon = Inbox,
   title,
   description,
   action,
@@ -30,23 +27,21 @@ export function EmptyState({
     <div
       className={cn(
         "flex flex-col items-center justify-center text-center animate-fade-in",
-        compact ? "py-8" : "py-16",
+        compact ? "py-10" : "py-20",
         className,
       )}
     >
-      <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-surface-2/80 border border-border/50">
-        <Icon size={26} className="text-fg-subtle/60" />
+      <div className="mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-surface-2/60 border border-border/40">
+        <Icon size={28} className="text-fg-subtle/50" />
       </div>
       <h3 className="text-sm font-semibold text-fg">{title}</h3>
       {description && (
-        <p className="mt-1 max-w-sm text-xs text-fg-muted leading-relaxed">{description}</p>
+        <p className="mt-1 max-w-sm text-xs text-fg-muted leading-relaxed">
+          {description}
+        </p>
       )}
       {action && (
-        <Button
-          onClick={action.onClick}
-          className="mt-4"
-          variant="outline"
-        >
+        <Button onClick={action.onClick} variant="glass" className="mt-5">
           {action.label}
         </Button>
       )}

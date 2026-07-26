@@ -9,7 +9,7 @@ import {
   type WalletPackage,
 } from "@/api/wallet-billing-hooks";
 import { Button, Input, Select } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { CardToCardInfo } from "@/components/CardToCardInfo";
 import { CryptoAddressEditor } from "@/components/CryptoCurrencySelector";
 import { WalletRechargeSection } from "@/components/WalletRechargeSection";
@@ -100,7 +100,7 @@ export function WalletTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <GlassCard hover={false} className="!p-5 space-y-4">
+        <GlassCard glow className="!p-5 space-y-4">
           <div>
             <h2 className="text-sm font-bold text-fg">{t("reseller.topUpTitle")}</h2>
             <p className="text-xs text-fg-muted mt-0.5">{t("reseller.topUpDesc")}</p>
@@ -144,7 +144,7 @@ export function WalletTab() {
           </Button>
         </GlassCard>
 
-        <GlassCard hover={false} className="!p-5 space-y-3">
+        <GlassCard glow className="!p-5 space-y-3">
           <h2 className="text-sm font-bold text-fg">{t("reseller.ledgerTitle")}</h2>
           <div className="space-y-2 max-h-[280px] overflow-y-auto">
             {ledger.slice(0, 12).map((e) => {
@@ -166,7 +166,7 @@ export function WalletTab() {
         </GlassCard>
       </div>
 
-      <GlassCard hover={false} className="!p-5">
+      <GlassCard glow className="!p-5">
         <button
           type="button"
           className="text-sm font-bold text-fg mb-3"
@@ -186,7 +186,7 @@ export function WalletTab() {
         )}
       </GlassCard>
 
-      <GlassCard hover={false} className="!p-5">
+      <GlassCard glow className="!p-5">
         <h2 className="text-sm font-bold text-fg mb-3">{t("reseller.packagesSection")}</h2>
         <WalletRechargeSection />
       </GlassCard>

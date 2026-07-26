@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { Button, Input, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useTitle } from "@/lib/useTitle";
 import { useI18n } from "@/i18n/i18n";
@@ -38,7 +38,7 @@ export function QuotaNotifications() {
       </div>
 
       {cfg && (
-        <GlassCard hover={false} className="!p-5 space-y-4">
+        <GlassCard glow className="!p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-fg">{t("quotaNotify.settings")}</h3>
             <label className="flex items-center gap-2 text-sm text-fg">
@@ -67,7 +67,7 @@ export function QuotaNotifications() {
         </GlassCard>
       )}
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <h3 className="text-sm font-bold text-fg">{t("quotaNotify.recent")}</h3>
         <div className="space-y-2 max-h-[300px] overflow-y-auto">
           {eventsData?.events?.map((e) => (

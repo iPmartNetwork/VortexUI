@@ -36,7 +36,7 @@ export default defineConfig({
           "vendor-react": ["react", "react-dom", "react-router-dom"],
           "vendor-query": ["@tanstack/react-query"],
           "vendor-motion": ["framer-motion"],
-          "vendor-charts": ["qrcode.react"],
+          "vendor-charts": ["recharts", "qrcode.react"],
         },
       },
     },

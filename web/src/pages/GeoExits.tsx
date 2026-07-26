@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Globe, Plus, Trash2 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useTitle } from "@/lib/useTitle";
 
@@ -29,7 +29,7 @@ export function GeoExits() {
       <h1 className="text-2xl font-bold flex items-center gap-2"><Globe className="w-6 h-6" />Geo Exits (Tor / Psiphon)</h1>
       <p className="text-sm text-fg-muted">Route traffic through specific countries using Tor or Psiphon exit nodes. Useful when direct routes are blocked.</p>
 
-      <GlassCard className="p-4 space-y-3">
+      <GlassCard glow className="p-4 space-y-3">
         <h3 className="font-semibold">Add Exit</h3>
         <div className="flex gap-3 items-end flex-wrap">
           <div>
@@ -50,7 +50,7 @@ export function GeoExits() {
         </div>
       </GlassCard>
 
-      <GlassCard className="p-4">
+      <GlassCard glow className="p-4">
         <h3 className="font-semibold mb-3">Active Exits</h3>
         {(data?.exits ?? []).length === 0 ? <p className="text-sm text-fg-muted">No geo exits configured.</p> : (
           <div className="space-y-2">

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Gift } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Badge, Select } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { formatBytes } from "@/lib/utils";
 import { useTitle } from "@/lib/useTitle";
@@ -87,7 +87,7 @@ export function Referrals() {
       </div>
 
       {config && (
-        <GlassCard hover={false} className="!p-5 space-y-4">
+        <GlassCard glow className="!p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-fg">{t("referral.settings")}</h3>
             <label className="flex items-center gap-2 text-sm text-fg">
@@ -126,7 +126,7 @@ export function Referrals() {
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <GlassCard hover={false} className="!p-4 space-y-3">
+        <GlassCard glow className="!p-4 space-y-3">
           <h3 className="text-sm font-bold text-fg">{t("referral.codesTitle")} ({codesData?.codes?.length ?? 0})</h3>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {codesData?.codes?.map((c) => (
@@ -144,7 +144,7 @@ export function Referrals() {
           </div>
         </GlassCard>
 
-        <GlassCard hover={false} className="!p-4 space-y-3">
+        <GlassCard glow className="!p-4 space-y-3">
           <h3 className="text-sm font-bold text-fg flex items-center gap-1.5"><Gift size={14} className="text-primary" /> {t("referral.recent")}</h3>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {eventsData?.events?.map((e) => (

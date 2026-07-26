@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Smartphone, Trash2 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 
@@ -70,7 +70,7 @@ export function DevicePanel({ userId }: DevicePanelProps) {
 
   if (devices.length === 0) {
     return (
-      <GlassCard className="p-6">
+      <GlassCard glow className="p-6">
         <div className="flex flex-col items-center gap-2 py-6 text-fg-muted">
           <Smartphone size={32} className="opacity-50" />
           <p className="text-sm">No devices registered</p>
@@ -80,7 +80,7 @@ export function DevicePanel({ userId }: DevicePanelProps) {
   }
 
   return (
-    <GlassCard className="overflow-hidden">
+    <GlassCard glow className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>

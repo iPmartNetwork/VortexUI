@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useInView } from "@/lib/useInView";
 import {
   Users, Wifi, Zap, Server, ArrowUpRight,
   Power, RotateCcw, Tag, Shield, Radio, Gauge, TrendingUp,
+  ArrowDown, ArrowUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -13,15 +15,18 @@ import { useAccountQuota } from "@/api/quota-hooks";
 import { useNodes, useVersion } from "@/api/hooks";
 import { useAuth } from "@/auth/auth";
 import { Card } from "@/components/ui";
-import { TrafficSeriesChart } from "@/components/TrafficSeriesChart";
+import { useLiveTraffic } from "@/hooks/useLiveTraffic";
+import { LiveIndicator } from "@/components/LiveIndicator";
+import { LiveTrafficAreaChart } from "@/components/Charts";
 import {
   GlassCard, StatsCard, StatusBadge,
   ProtocolDonutChart, formatDailyBandwidth,
-} from "@/components/veltrix";
+} from "@/components/vortexui";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { cn, formatBytes } from "@/lib/utils";
+import { cn, formatBytes, formatSpeed } from "@/lib/utils";
+import { SystemGauges } from "@/components/SystemGauges";
 
 function fmtUptime(sec: number): string {
   const d = Math.floor(sec / 86400);
@@ -37,6 +42,28 @@ function daysUntil(iso: string | null): string {
   const d = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
   if (d < 0) return "expired";
   return `${d}d`;
+}
+
+/* ── SpeedLabel — animated real-time speed display ── */
+function SpeedLabel({ value, color }: { value: number; color: string }) {
+  const display = value < 0.5
+    ? "—"
+    : value >= 1_000_000_000
+      ? `${(value / 1_000_000_000).toFixed(2)} GB/s`
+      : value >= 1_000_000
+        ? `${(value / 1_000_000).toFixed(2)} MB/s`
+        : value >= 1_000
+          ? `${(value / 1_000).toFixed(1)} KB/s`
+          : `${value.toFixed(0)} B/s`;
+
+  return (
+    <span
+      className="text-lg font-black tabular-nums transition-all duration-300"
+      style={{ color }}
+    >
+      {display}
+    </span>
+  );
 }
 
 function CoreCard({ name, version, running, onStop, onRestart }: {
@@ -72,6 +99,8 @@ function CoreCard({ name, version, running, onStop, onRestart }: {
 export function Overview() {
   useTitle("Overview");
   const { sudo } = useAuth();
+  const statsRef = useRef<HTMLDivElement>(null);
+  const statsInView = useInView(statsRef, { once: true });
   const accountQuota = useAccountQuota();
   const { data, isLoading: overviewLoading } = useOverview();
   const sys = useSystem();
@@ -80,6 +109,7 @@ export function Overview() {
   const { t } = useI18n();
   const [trafficRange, setTrafficRange] = useState<TrafficRange>("24h");
   const trafficSeries = useTrafficSeries(trafficRange);
+  const liveTraffic = useLiveTraffic(trafficRange);
 
   const u = data?.users;
   const onlineCount = data?.nodes.online ?? 0;
@@ -95,6 +125,7 @@ export function Overview() {
   const peakBucket = trafficPoints.length
     ? Math.max(...trafficPoints.map((p) => p.up + p.down))
     : 0;
+  const livePeak = liveTraffic.peakBandwidth;
 
   const nodesList = nodesQ.data?.nodes ?? [];
   const xrayNode = nodesList.find((n) => n.core === "xray");
@@ -148,7 +179,7 @@ export function Overview() {
         {/* decorative blobs */}
         <div className="absolute top-0 end-0 w-72 h-72 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 start-0 w-56 h-56 rounded-full bg-accent/8 blur-3xl pointer-events-none" />
-        <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
+        <div className="absolute inset-0 bg-dot-pattern animate-pattern-drift opacity-25 pointer-events-none" />
 
         <div className="relative z-10 flex flex-col xl:flex-row xl:items-start justify-between gap-6">
           {/* Left — title block */}
@@ -253,8 +284,14 @@ export function Overview() {
         </Card>
       )}
 
-      {/* ── Stat Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* ── Live Stat Cards — stagger wave on scroll ── */}
+      <motion.div
+        ref={statsRef}
+        initial={{ opacity: 0, y: 0 }}
+        animate={statsInView ? { opacity: 1 } : { opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+      >
         <StatsCard
           title={t("overview.totalSubscriptions")}
           value={overviewLoading ? "—" : <AnimatedCounter value={totalUsers} />}
@@ -263,6 +300,10 @@ export function Overview() {
           color="cyan"
           delay={0.05}
           subLabel={`${(byStatus.active ?? 0).toLocaleString()} ${t("overview.activeShort")}`}
+          sparkline={liveTraffic.chartPoints.slice(-20).map(p => p.down)}
+          sparkColor="#22D3EE"
+          live
+          inView={statsInView}
         />
         <StatsCard
           title={t("overview.nodeFleetOnline")}
@@ -273,6 +314,10 @@ export function Overview() {
           color="green"
           delay={0.1}
           subLabel={standbyNodes > 0 ? `${standbyNodes} ${t("overview.standby")}` : undefined}
+          sparkline={liveTraffic.chartPoints.slice(-20).map(p => p.up)}
+          sparkColor="#10B981"
+          live
+          inView={statsInView}
         />
         <StatsCard
           title={t("overview.dailyBandwidth")}
@@ -282,10 +327,18 @@ export function Overview() {
           color="purple"
           delay={0.15}
           subLabel={
-            peakBucket > 0
-              ? `Peak ${formatBytes(peakBucket, false)}/min`
-              : undefined
+            liveTraffic.speedLabel !== "Idle"
+              ? `${liveTraffic.speedLabel} live`
+              : peakBucket > 0
+                ? `Peak ${formatBytes(peakBucket, false)}/min`
+                : undefined
           }
+          sparkline={liveTraffic.chartPoints.slice(-30).map(p => p.down + p.up)}
+          sparkColor="#8B5CF6"
+          progress={liveTraffic.peakBandwidth > 0 ? Math.min(100, (liveTraffic.speedDelta / liveTraffic.peakBandwidth) * 100) : 0}
+          progressColor={liveTraffic.speedDelta > liveTraffic.peakBandwidth * 0.75 ? "danger" : liveTraffic.speedDelta > liveTraffic.peakBandwidth * 0.5 ? "warning" : "success"}
+          live
+          inView={statsInView}
         />
         <StatsCard
           title={t("overview.activeSessions")}
@@ -299,8 +352,12 @@ export function Overview() {
               ? `Across ${(byStatus.active ?? 0)} accounts`
               : t("overview.acrossAccounts")
           }
+          sparkline={liveTraffic.chartPoints.slice(-20).map(p => p.down + p.up)}
+          sparkColor="#3B82F6"
+          live
+          inView={statsInView}
         />
-      </div>
+      </motion.div>
 
       {/* ── System Health Indicators ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -331,13 +388,10 @@ export function Overview() {
               <h3 className="text-sm font-bold text-fg flex items-center gap-2">
                 <TrendingUp size={16} className="text-primary" />
                 {t("overview.liveTrafficStream")}
-                <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-green-500/20 to-green-600/20 px-2 py-0.5 text-[7px] font-black uppercase tracking-wider text-green-400 border border-green-500/30">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
-                  </span>
-                  LIVE
-                </span>
+                <LiveIndicator
+                  status={liveTraffic.connectionStatus}
+                  speedLabel={liveTraffic.speedLabel}
+                />
               </h3>
               <p className="text-[10px] text-fg-muted/70">{t("overview.trafficDeltaHint")}</p>
             </div>
@@ -363,26 +417,108 @@ export function Overview() {
             <div className="h-48 animate-pulse rounded-xl bg-gradient-to-br from-surface-2/50 to-surface-3/30" />
           ) : (
             <div className="relative">
-              <TrafficSeriesChart points={trafficSeries.data?.points ?? []} />
+              <LiveTrafficAreaChart
+                livePoints={liveTraffic.chartPoints}
+                downSpeed={liveTraffic.currentDownSpeed}
+                upSpeed={liveTraffic.currentUpSpeed}
+              />
               <div className="absolute inset-0 pointer-events-none rounded-lg bg-gradient-to-t from-primary/[0.02] to-transparent opacity-0 hover:opacity-100 transition-opacity" />
             </div>
           )}
-          {/* Summary stats */}
-          {trafficPoints.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/30">
-              <div className="p-2.5 rounded-lg bg-blue-500/8 border border-blue-500/20">
-                <p className="text-[9px] text-fg-muted/70 font-semibold uppercase">Upload</p>
-                <p className="text-sm font-bold text-blue-400 mt-0.5">{formatBytes(trafficPoints.reduce((s, p) => s + p.up, 0), false)}</p>
+          {/* Live Speed & Summary stats */}
+          {(liveTraffic.chartPoints.length > 0 || trafficPoints.length > 0) && (
+            <>
+              {/* Live speed bar — real-time animated speeds */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20 p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[9px] font-bold text-blue-400/80 uppercase tracking-wider flex items-center gap-1">
+                      <ArrowDown size={10} /> Download
+                    </span>
+                    <span className="text-[9px] text-blue-400/60 tabular-nums">
+                      {liveTraffic.totalDown > 0 ? (
+                        <>{formatBytes(liveTraffic.totalDown, false)} total</>
+                      ) : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <SpeedLabel value={liveTraffic.currentDownSpeed} color="#0EA5E9" />
+                    <span className="text-[10px] text-blue-400/50 font-mono">current</span>
+                  </div>
+                  {/* Mini animated bar */}
+                  <div className="mt-1.5 h-1 rounded-full bg-blue-500/10 overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-blue-400 to-cyan-400"
+                      animate={{
+                        width: `${Math.min(100, (liveTraffic.currentDownSpeed / (liveTraffic.peakBandwidth || 1)) * 100)}%`,
+                      }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                </div>
+
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-500/10 to-purple-500/5 border border-purple-500/20 p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[9px] font-bold text-purple-400/80 uppercase tracking-wider flex items-center gap-1">
+                      <ArrowUp size={10} /> Upload
+                    </span>
+                    <span className="text-[9px] text-purple-400/60 tabular-nums">
+                      {liveTraffic.totalUp > 0 ? (
+                        <>{formatBytes(liveTraffic.totalUp, false)} total</>
+                      ) : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <SpeedLabel value={liveTraffic.currentUpSpeed} color="#6366F1" />
+                    <span className="text-[10px] text-purple-400/50 font-mono">current</span>
+                  </div>
+                  {/* Mini animated bar */}
+                  <div className="mt-1.5 h-1 rounded-full bg-purple-500/10 overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-purple-400 to-indigo-400"
+                      animate={{
+                        width: `${Math.min(100, (liveTraffic.currentUpSpeed / (liveTraffic.peakBandwidth || 1)) * 100)}%`,
+                      }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="p-2.5 rounded-lg bg-cyan-500/8 border border-cyan-500/20">
-                <p className="text-[9px] text-fg-muted/70 font-semibold uppercase">Download</p>
-                <p className="text-sm font-bold text-cyan-400 mt-0.5">{formatBytes(trafficPoints.reduce((s, p) => s + p.down, 0), false)}</p>
+
+              {/* Summary triple */}
+              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/30">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/8 to-blue-500/5 border border-cyan-500/20">
+                  <p className="text-[9px] text-fg-muted/70 font-semibold uppercase flex items-center gap-1">
+                    <ArrowDown size={10} /> Down
+                  </p>
+                  <p className="text-base font-black text-cyan-400 mt-0.5 tabular-nums">
+                    {liveTraffic.totalDown > 0
+                      ? formatBytes(liveTraffic.totalDown, false)
+                      : formatBytes(trafficPoints.reduce((s, p) => s + p.down, 0), false)}
+                  </p>
+                </div>
+                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/8 to-indigo-500/5 border border-purple-500/20">
+                  <p className="text-[9px] text-fg-muted/70 font-semibold uppercase flex items-center gap-1">
+                    <ArrowUp size={10} /> Up
+                  </p>
+                  <p className="text-base font-black text-purple-400 mt-0.5 tabular-nums">
+                    {liveTraffic.totalUp > 0
+                      ? formatBytes(liveTraffic.totalUp, false)
+                      : formatBytes(trafficPoints.reduce((s, p) => s + p.up, 0), false)}
+                  </p>
+                </div>
+                <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/8 to-orange-500/5 border border-amber-500/20">
+                  <p className="text-[9px] text-fg-muted/70 font-semibold uppercase flex items-center gap-1">
+                    <Zap size={10} /> Peak
+                  </p>
+                  <p className="text-base font-black text-amber-400 mt-0.5 tabular-nums">
+                    {livePeak > 0
+                      ? formatSpeed(livePeak)
+                      : formatBytes(peakBucket, false) + ("/min")}
+                  </p>
+                </div>
               </div>
-              <div className="p-2.5 rounded-lg bg-purple-500/8 border border-purple-500/20">
-                <p className="text-[9px] text-fg-muted/70 font-semibold uppercase">Peak/min</p>
-                <p className="text-sm font-bold text-purple-400 mt-0.5">{formatBytes(peakBucket, false)}</p>
-              </div>
-            </div>
+            </>
           )}
         </GlassCard>
 
@@ -571,6 +707,9 @@ export function Overview() {
           )}
         </GlassCard>
       </div>
+
+      {/* ── System Gauges ── */}
+      <SystemGauges />
 
       {/* ── Core Engine Controls ── */}
       {(xrayNode || singboxNode) && (

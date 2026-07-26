@@ -13,7 +13,7 @@ import {
 } from "@/api/reseller-hooks";
 import { useAuth } from "@/auth/auth";
 import { Badge, Button, Input } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { WalletTopUpModal } from "@/components/WalletTopUpModal";
 import { WalletRechargeSection } from "@/components/WalletRechargeSection";
 import { useToast } from "@/components/toast";

@@ -1,7 +1,7 @@
 import { AlertCircle, Activity } from "lucide-react";
 import { usePerformanceHealth, useSlowQueries, useQueryStats, usePerformanceAlerts } from "@/api/security-hooks";
 import { Button } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useTitle } from "@/lib/useTitle";
 
 export function Performance() {
@@ -22,7 +22,7 @@ export function Performance() {
             {/* Performance Metrics */}
             {health.data && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <GlassCard className="p-4">
+                    <GlassCard glow className="p-4">
                         <p className="text-xs text-fg-secondary uppercase tracking-wide">Cache Hit Rate</p>
                         <p className="text-2xl font-bold text-fg mt-1">{(health.data.cache.hit_rate * 100).toFixed(1)}%</p>
                         <div className="h-1.5 bg-fg/10 rounded mt-2">
@@ -33,19 +33,19 @@ export function Performance() {
                         </div>
                     </GlassCard>
 
-                    <GlassCard className="p-4">
+                    <GlassCard glow className="p-4">
                         <p className="text-xs text-fg-secondary uppercase tracking-wide">Avg Query Time</p>
                         <p className="text-2xl font-bold text-fg mt-1">{health.data.avg_query_time_ms.toFixed(0)}ms</p>
                         <p className="text-xs text-fg-secondary mt-2">per database query</p>
                     </GlassCard>
 
-                    <GlassCard className="p-4">
+                    <GlassCard glow className="p-4">
                         <p className="text-xs text-fg-secondary uppercase tracking-wide">Active Connections</p>
                         <p className="text-2xl font-bold text-fg mt-1">{health.data.connections_active}</p>
                         <p className="text-xs text-fg-secondary mt-2">current sessions</p>
                     </GlassCard>
 
-                    <GlassCard className="p-4">
+                    <GlassCard glow className="p-4">
                         <p className="text-xs text-fg-secondary uppercase tracking-wide">Slow Queries (1h)</p>
                         <p className="text-2xl font-bold text-orange-500 mt-1">{health.data.slow_queries_last_hour}</p>
                         <p className="text-xs text-fg-secondary mt-2">above threshold</p>
@@ -55,7 +55,7 @@ export function Performance() {
 
             {/* Cache Status */}
             {health.data?.cache && (
-                <GlassCard className="p-6">
+                <GlassCard glow className="p-6">
                     <h2 className="text-lg font-semibold text-fg mb-4">Cache Status</h2>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div className="p-3 rounded-lg bg-fg/5">
@@ -80,7 +80,7 @@ export function Performance() {
 
             {/* Query Statistics */}
             {stats.data && (
-                <GlassCard className="p-6">
+                <GlassCard glow className="p-6">
                     <h2 className="text-lg font-semibold text-fg mb-4">Query Statistics</h2>
                     <div className="space-y-2">
                         <div className="flex items-center justify-between p-3 border-l-4 border-blue-500 bg-blue-500/5 rounded">
@@ -105,7 +105,7 @@ export function Performance() {
 
             {/* Slow Queries */}
             {slowQueries.data?.queries && slowQueries.data.queries.length > 0 && (
-                <GlassCard className="p-6">
+                <GlassCard glow className="p-6">
                     <h2 className="text-lg font-semibold text-fg mb-4">Slow Queries</h2>
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                         {slowQueries.data.queries.map((q: any, idx: number) => (
@@ -134,7 +134,7 @@ export function Performance() {
 
             {/* Performance Alerts */}
             {alerts.data?.alerts && alerts.data.alerts.length > 0 && (
-                <GlassCard className="p-6 border-l-4 border-orange-500">
+                <GlassCard glow className="p-6 border-l-4 border-orange-500">
                     <h2 className="text-lg font-semibold text-fg mb-4 flex items-center gap-2">
                         <AlertCircle className="w-5 h-5 text-orange-500" />
                         Performance Alerts ({alerts.data.alerts.length})
@@ -156,7 +156,7 @@ export function Performance() {
             )}
 
             {/* System Recommendation */}
-            <GlassCard className="p-6 bg-green-500/10 border-green-500/20">
+            <GlassCard glow className="p-6 bg-green-500/10 border-green-500/20">
                 <h2 className="text-lg font-semibold text-fg mb-3 flex items-center gap-2">
                     <Activity className="w-5 h-5 text-green-500" />
                     System Status: Optimal

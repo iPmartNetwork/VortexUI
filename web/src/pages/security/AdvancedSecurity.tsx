@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Shield, Key, Globe, Clock, AlertTriangle, Trash2, Plus, Ban, Activity } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
@@ -55,7 +55,7 @@ export function AdvancedSecurity() {
       </div>
 
       {tab === "sessions" && (
-        <GlassCard className="p-4 space-y-4">
+        <GlassCard glow className="p-4 space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Active Sessions</h2><Button variant="destructive" size="sm" onClick={async()=>{if(await confirm({title:"Revoke all?"}))revokeAllMut.mutate()}}>Revoke All</Button></div>
           {sessions && sessions.length > 0 ? (
             <table className="w-full text-sm"><thead><tr className="border-b"><th className="text-left py-2 px-3">IP</th><th className="text-left py-2 px-3">Country</th><th className="text-left py-2 px-3">Last Active</th><th className="text-left py-2 px-3">Status</th><th className="text-right py-2 px-3">Act</th></tr></thead>
@@ -67,7 +67,7 @@ export function AdvancedSecurity() {
       )}
 
       {tab === "login" && (
-        <GlassCard className="p-4 space-y-4">
+        <GlassCard glow className="p-4 space-y-4">
           <h2 className="text-lg font-semibold">Login Audit</h2>
           {logins && logins.length > 0 ? (
             <table className="w-full text-sm"><thead><tr className="border-b"><th className="text-left py-2 px-3">User</th><th className="text-left py-2 px-3">IP</th><th className="text-left py-2 px-3">Result</th><th className="text-left py-2 px-3">Time</th></tr></thead>
@@ -79,7 +79,7 @@ export function AdvancedSecurity() {
       )}
 
       {tab === "audit" && (
-        <GlassCard className="p-4 space-y-4">
+        <GlassCard glow className="p-4 space-y-4">
           <h2 className="text-lg font-semibold">Security Audit</h2>
           {audits && audits.length > 0 ? (
             <table className="w-full text-sm"><thead><tr className="border-b"><th className="text-left py-2 px-3">Operation</th><th className="text-left py-2 px-3">Resource</th><th className="text-left py-2 px-3">IP</th><th className="text-left py-2 px-3">Time</th></tr></thead>
@@ -91,7 +91,7 @@ export function AdvancedSecurity() {
       )}
 
       {tab === "whitelist" && (
-        <GlassCard className="p-4 space-y-4">
+        <GlassCard glow className="p-4 space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">IP Whitelist</h2><Button size="sm" onClick={()=>setShowWL(true)}><Plus className="w-4 h-4 mr-1"/>Add</Button></div>
           {whitelist && whitelist.length > 0 ? whitelist.map((e)=>(
             <div key={e.id} className="flex items-center justify-between border border-border rounded-xl p-3"><div><span className="font-mono">{e.cidr}</span>{e.description&&<span className="ml-2 text-sm text-fg-muted">{e.description}</span>}</div><Button variant="ghost" size="sm" onClick={()=>delWL.mutate(e.id)}><Trash2 className="w-3 h-3"/></Button></div>
@@ -100,7 +100,7 @@ export function AdvancedSecurity() {
       )}
 
       {tab === "bans" && (
-        <GlassCard className="p-4 space-y-4">
+        <GlassCard glow className="p-4 space-y-4">
           <h2 className="text-lg font-semibold">IP Bans</h2>
           {bans && bans.length > 0 ? bans.map((b)=>(
             <div key={b.id} className="flex items-center justify-between border border-border rounded-xl p-3"><div><span className="font-mono">{b.ip_address}</span><span className="ml-2 text-sm text-fg-muted">{b.reason}</span>{b.expires_at&&<span className="ml-2 text-xs text-fg-muted">Exp: {new Date(b.expires_at).toLocaleString()}</span>}</div><Button variant="ghost" size="sm" onClick={()=>delBan.mutate(b.id)}><Trash2 className="w-3 h-3"/></Button></div>
@@ -109,7 +109,7 @@ export function AdvancedSecurity() {
       )}
 
       {tab === "tokens" && (
-        <GlassCard className="p-4 space-y-4">
+        <GlassCard glow className="p-4 space-y-4">
           <h2 className="text-lg font-semibold">Scoped API Tokens</h2>
           <p className="text-fg-muted text-sm">Create tokens with restricted scopes for integrations.</p>
         </GlassCard>

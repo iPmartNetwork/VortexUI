@@ -1,5 +1,5 @@
 import { Wifi, Globe, BarChart3 } from "lucide-react";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useTitle } from "@/lib/useTitle";
 
 export function ConnectionQuality() {
@@ -14,7 +14,7 @@ export function ConnectionQuality() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <GlassCard className="!p-4 space-y-2">
+        <GlassCard glow className="!p-4 space-y-2">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
               <BarChart3 size={16} />
@@ -27,7 +27,7 @@ export function ConnectionQuality() {
           </div>
         </GlassCard>
 
-        <GlassCard className="!p-4 space-y-2">
+        <GlassCard glow className="!p-4 space-y-2">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400">
               <Wifi size={16} />
@@ -40,7 +40,7 @@ export function ConnectionQuality() {
           </div>
         </GlassCard>
 
-        <GlassCard className="!p-4 space-y-2">
+        <GlassCard glow className="!p-4 space-y-2">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
               <Globe size={16} />

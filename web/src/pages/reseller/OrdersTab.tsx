@@ -11,7 +11,7 @@ import {
 } from "@/api/wallet-billing-hooks";
 import { Badge, Button, Input } from "@/components/ui";
 import { Modal } from "@/components/Modal";
-import { GlassCard, StatusBadge } from "@/components/veltrix";
+import { GlassCard, StatusBadge } from "@/components/vortexui";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
@@ -142,7 +142,7 @@ export function OrdersTab() {
         )}
       </div>
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
+      <GlassCard glow className="!p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, Globe, Shield } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Select, Switch } from "@/components/ui";
-import { GlassCard, StatusBadge } from "@/components/veltrix";
+import { GlassCard, StatusBadge } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useAuth } from "@/auth/auth";
@@ -127,7 +127,7 @@ export function DecoyProbingTab() {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {canProbing && policy && (
-        <GlassCard hover={false} className="!p-5 space-y-4">
+        <GlassCard glow className="!p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="h-10 w-10 rounded-xl bg-danger/10 text-danger flex items-center justify-center flex-shrink-0">
@@ -204,13 +204,13 @@ export function DecoyProbingTab() {
       )}
 
       {!canProbing && (
-        <GlassCard hover={false} className="!p-5">
+        <GlassCard glow className="!p-5">
           <p className="text-sm text-fg-muted">{t("security.decoy.noProbingPerm")}</p>
         </GlassCard>
       )}
 
       {canDecoy && (
-        <GlassCard hover={false} className="!p-5 space-y-4">
+        <GlassCard glow className="!p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="h-10 w-10 rounded-xl bg-success/10 text-success flex items-center justify-center flex-shrink-0">
@@ -254,7 +254,7 @@ export function DecoyProbingTab() {
       )}
 
       {!canDecoy && (
-        <GlassCard hover={false} className="!p-5">
+        <GlassCard glow className="!p-5">
           <p className="text-sm text-fg-muted">{t("security.decoy.noDecoyPerm")}</p>
         </GlassCard>
       )}

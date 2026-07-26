@@ -4,7 +4,7 @@ import { Plus, Trash2, Users } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Badge } from "@/components/ui";
 import { Modal } from "@/components/Modal";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
 import { formatBytes } from "@/lib/utils";

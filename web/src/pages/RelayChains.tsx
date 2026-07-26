@@ -4,7 +4,7 @@ import { ArrowRight, Info, Plus, Trash2, Waypoints } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
-import { GlassCard, StatusBadge } from "@/components/veltrix";
+import { GlassCard, StatusBadge } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
 import { useI18n } from "@/i18n/i18n";

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, Copy, Users } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
@@ -99,7 +99,7 @@ export function Templates() {
         <Button onClick={() => { setEditing(null); setForm(defaultForm); setShowForm(true); }}><Plus className="w-4 h-4 mr-1" />Create</Button>
       </div>
 
-      <GlassCard className="p-4">
+      <GlassCard glow className="p-4">
         {isLoading ? <p className="text-fg-muted">Loading...</p> : templates && templates.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

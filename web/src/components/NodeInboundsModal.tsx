@@ -10,7 +10,7 @@ import { useToast } from "./toast";
 import { useAuth } from "@/auth/auth";
 import type { CoreType } from "@/lib/coreTypes";
 import { isMultiCore, resolveInboundCore } from "@/lib/coreTypes";
-import { CoreBadge } from "@/components/veltrix/CoreBadge";
+import { CoreBadge } from "@/components/vortexui/CoreBadge";
 import { cn } from "@/lib/utils";
 import { PortConflictIndicator } from "./PortConflictIndicator";
 

@@ -10,7 +10,7 @@ import {
   type CleanIPScan,
 } from "@/api/hooks";
 import { Badge, Button, Input, Select } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import type { TKey } from "@/i18n/dict";
@@ -205,7 +205,7 @@ export function CleanIPTab() {
         </div>
       </div>
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Input placeholder={t("cleanip.port")} value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric" />
           <Button variant="outline" size="sm" onClick={loadPreset}>{t("cleanip.preset")}</Button>
@@ -227,7 +227,7 @@ export function CleanIPTab() {
         )}
       </GlassCard>
 
-      <GlassCard hover={false} className="!p-4 space-y-3">
+      <GlassCard glow className="!p-4 space-y-3">
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-full bg-primary/15 flex items-center justify-center text-primary flex-shrink-0">
             <Clock size={14} />

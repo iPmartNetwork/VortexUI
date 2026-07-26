@@ -7,7 +7,7 @@ import { useResellerQuotaUsage } from "@/api/quota-hooks";
 import { setToken } from "@/api/client";
 import { useAuth } from "@/auth/auth";
 import { Badge, Button } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { CreateAdminModal } from "@/components/CreateAdminModal";
 import { EditAdminModal } from "@/components/EditAdminModal";
 import { WalletTopUpModal } from "@/components/WalletTopUpModal";
@@ -108,12 +108,18 @@ export function AdminsListTab(_props: { embedded?: boolean }) {
       )}
 
       <div className="flex justify-end">
-        <Button onClick={() => setAdminOpen(true)}><Plus size={14} /> {t("reseller.admins.newAdmin")}</Button>
+        <Button onClick={() => setAdminOpen(true)} variant="glass"><Plus size={14} /> {t("reseller.admins.newAdmin")}</Button>
       </div>
 
       {usageList.length > 0 && (
-        <GlassCard hover={false} className="!p-0 overflow-hidden">
-          <div className="border-b border-border/40 px-5 py-3 text-sm font-bold text-fg">{t("reseller.admins.quotaUsage")}</div>
+        <GlassCard className="!p-0 overflow-hidden" glow>
+          <div className="flex items-center justify-between border-b border-border/40 px-5 py-3">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_6px] shadow-success/50" />
+              <span className="text-sm font-bold text-fg">{t("reseller.admins.quotaUsage")}</span>
+            </div>
+            <span className="text-[10px] text-fg-subtle tabular-nums">{usageList.length} resellers</span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -129,7 +135,7 @@ export function AdminsListTab(_props: { embedded?: boolean }) {
               </thead>
               <tbody className="divide-y divide-border/20">
                 {usageList.map((u) => (
-                  <tr key={u.admin_id} className="hover:bg-surface-2/40">
+                  <tr key={u.admin_id} className="hover:bg-surface-2/40 transition-colors duration-150">
                     <td className="px-5 py-3 font-medium">
                       <Link
                         to={`/settings/admins/${u.admin_id}`}

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CreditCard, History, Search, Receipt } from "lucide-react";
 import { api } from "@/api/client";
 import { Input, Select } from "@/components/ui";
-import { GlassCard, StatsCard, StatusBadge } from "@/components/veltrix";
+import { GlassCard, StatsCard, StatusBadge } from "@/components/vortexui";
 import { useI18n } from "@/i18n/i18n";
 import { EmptyState } from "@/components/EmptyState";
 import { useTitle } from "@/lib/useTitle";
@@ -85,7 +85,7 @@ export function Orders() {
         </Select>
       </div>
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
+      <GlassCard glow className="!p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

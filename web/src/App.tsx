@@ -1,11 +1,22 @@
-import { Suspense, lazy, type ComponentType } from "react";
+import { Suspense, lazy, type ComponentType, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "@/auth/auth";
 import { Layout } from "@/components/Layout";
 import { Login } from "@/pages/Login";
-import { Overview } from "@/pages/Overview";
-import { SkeletonPage } from "@/components/Skeleton";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SplashScreen } from "@/components/SplashScreen";
+import {
+  SkeletonPage,
+  SkeletonListPage,
+  SkeletonDetailPage,
+  SkeletonDashboardPage,
+  SkeletonAnalyticsPage,
+  SkeletonPortalPage,
+  SkeletonFormPage,
+} from "@/components/Skeleton";
 
+const LazyOverview = lazy(() => import("@/pages/Overview").then((m) => ({ default: m.Overview })));
 const LazyUsers = lazy(() => import("@/pages/Users").then((m) => ({ default: m.Users })));
 const LazyUserDetail = lazy(() => import("@/pages/UserDetail").then((m) => ({ default: m.UserDetail })));
 const LazyNodes = lazy(() => import("@/pages/Nodes").then((m) => ({ default: m.Nodes })));
@@ -68,11 +79,53 @@ const LazyPortalSpeedTest = lazy(() => import("@/portal/pages/SpeedTestPage").th
 const LazyPortalGuides = lazy(() => import("@/portal/pages/GuidesPage").then((m) => ({ default: m.GuidesPage })));
 const LazyPortalSetupWizard = lazy(() => import("@/portal/pages/SetupWizardPage").then((m) => ({ default: m.SetupWizardPage })));
 
-const LazyRoute = ({ component: Component }: { component: ComponentType }) => {
+// ─── Page transition animation ──────────────────────────────────
+const pageVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 },
+};
+
+// ─── LazyRoute with custom skeleton support ─────────────────────
+type SkeletonType =
+  | "default"
+  | "list"
+  | "detail"
+  | "dashboard"
+  | "analytics"
+  | "portal"
+  | "form";
+
+const skeletonComponents: Record<SkeletonType, ComponentType> = {
+  default: SkeletonPage,
+  list: SkeletonListPage,
+  detail: SkeletonDetailPage,
+  dashboard: SkeletonDashboardPage,
+  analytics: SkeletonAnalyticsPage,
+  portal: SkeletonPortalPage,
+  form: SkeletonFormPage,
+};
+
+const LazyRoute = ({
+  component: Component,
+  skeleton = "default",
+}: {
+  component: ComponentType;
+  skeleton?: SkeletonType;
+}) => {
+  const SkeletonComponent = skeletonComponents[skeleton];
   return (
-    <Suspense fallback={<SkeletonPage />}>
-      <Component />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<SkeletonComponent />}>
+        <motion.div
+          variants={pageVariants}
+          initial="hidden"
+          animate="visible"
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Component />
+        </motion.div>
+      </Suspense>
+    </ErrorBoundary>
   );
 };
 
@@ -83,6 +136,13 @@ function Protected({ children }: { children: React.ReactNode }) {
 }
 
 export function App() {
+  const [splashDone, setSplashDone] = useState(false);
+
+  // Show splash during initial load (handles auth timing internally)
+  if (!splashDone) {
+    return <SplashScreen onFinish={() => setSplashDone(true)} />;
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -93,82 +153,108 @@ export function App() {
           </Protected>
         }
       >
-        <Route path="/overview" element={<Overview />} />
-        <Route path="/users" element={<LazyRoute component={LazyUsers} />} />
-        <Route path="/users/:id" element={<LazyRoute component={LazyUserDetail} />} />
-        <Route path="/reseller-dashboard" element={<LazyRoute component={LazyResellerDashboard} />} />
-        <Route path="/reseller-account" element={<LazyRoute component={LazyResellerAccount} />} />
+        {/* Dashboard / Overview */}
+        <Route path="/overview" element={<LazyRoute component={LazyOverview} skeleton="dashboard" />} />
+
+        {/* List pages */}
+        <Route path="/users" element={<LazyRoute component={LazyUsers} skeleton="list" />} />
+        <Route path="/nodes" element={<LazyRoute component={LazyNodes} skeleton="list" />} />
+        <Route path="/inbounds" element={<LazyRoute component={LazyInbounds} skeleton="list" />} />
+        <Route path="/tickets" element={<LazyRoute component={LazyTickets} skeleton="list" />} />
+        <Route path="/monitor" element={<LazyRoute component={LazyMonitor} skeleton="list" />} />
+        <Route path="/orders" element={<LazyRoute component={LazyOrders} skeleton="list" />} />
+        <Route path="/audit" element={<LazyRoute component={LazyAudit} skeleton="list" />} />
+        <Route path="/logs" element={<LazyRoute component={LazyLogs} skeleton="list" />} />
+        <Route path="/migration" element={<LazyRoute component={LazyMigration} skeleton="list" />} />
+        <Route path="/family-groups" element={<LazyRoute component={LazyFamilyGroups} skeleton="list" />} />
+        <Route path="/referrals" element={<LazyRoute component={LazyReferrals} skeleton="list" />} />
+        <Route path="/ip-limit" element={<LazyRoute component={LazyIPLimit} skeleton="list" />} />
+        <Route path="/connection-quality" element={<LazyRoute component={LazyConnectionQuality} skeleton="list" />} />
+        <Route path="/switch-analytics" element={<LazyRoute component={LazySwitchAnalytics} skeleton="list" />} />
+        <Route path="/quota-notifications" element={<LazyRoute component={LazyQuotaNotifications} skeleton="list" />} />
+        <Route path="/templates" element={<LazyRoute component={LazyTemplates} skeleton="list" />} />
+        <Route path="/bulk-operations" element={<LazyRoute component={LazyBulkOperations} skeleton="list" />} />
+        <Route path="/notifications" element={<LazyRoute component={LazyNotifications} skeleton="list" />} />
+        <Route path="/client-templates" element={<LazyRoute component={LazyClientTemplates} skeleton="list" />} />
+
+        {/* Detail pages */}
+        <Route path="/users/:id" element={<LazyRoute component={LazyUserDetail} skeleton="detail" />} />
+        <Route path="/settings/admins/:id" element={<LazyRoute component={LazyResellerDetail} skeleton="detail" />} />
+
+        {/* Analytics pages */}
+        <Route path="/analytics" element={<LazyRoute component={LazyAnalytics} skeleton="analytics" />} />
+        <Route path="/dashboard-pro" element={<LazyRoute component={LazyDashboardPro} skeleton="analytics" />} />
+
+        {/* Form/Config pages */}
+        <Route path="/doh" element={<LazyRoute component={LazyDoHSettings} skeleton="form" />} />
+        <Route path="/sni-manager" element={<LazyRoute component={LazySNIManager} skeleton="form" />} />
+        <Route path="/fingerprint" element={<LazyRoute component={LazyFingerprint} skeleton="form" />} />
+        <Route path="/federation" element={<LazyRoute component={LazyFederation} skeleton="form" />} />
+        <Route path="/deep-links" element={<LazyRoute component={LazyDeepLinks} skeleton="form" />} />
+        <Route path="/config-management" element={<LazyRoute component={LazyConfigManagement} skeleton="form" />} />
+        <Route path="/wireguard" element={<LazyRoute component={LazyWireGuard} skeleton="form" />} />
+        <Route path="/api-docs" element={<LazyRoute component={LazyApiDocs} skeleton="form" />} />
+        <Route path="/tunnels" element={<LazyRoute component={LazyTunnels} skeleton="form" />} />
+        <Route path="/geo-exits" element={<LazyRoute component={LazyGeoExits} skeleton="form" />} />
+        <Route path="/ip-rotation" element={<LazyRoute component={LazyIPRotation} skeleton="form" />} />
+        <Route path="/advanced-security" element={<LazyRoute component={LazyAdvancedSecurity} skeleton="form" />} />
+
+        {/* Routing (complex hybrid) */}
+        <Route path="/routing" element={<LazyRoute component={LazyRoutingBalancers} skeleton="list" />} />
+        <Route path="/routing/node-rules" element={<LazyRoute component={LazyRouting} skeleton="list" />} />
+
+        {/* Reseller */}
+        <Route path="/reseller-dashboard" element={<LazyRoute component={LazyResellerDashboard} skeleton="dashboard" />} />
+        <Route path="/reseller-account" element={<LazyRoute component={LazyResellerAccount} skeleton="detail" />} />
+        <Route path="/reseller-quota-alerts" element={<LazyRoute component={LazyResellerQuotaAlerts} skeleton="list" />} />
+        <Route path="/reseller-payment" element={<LazyRoute component={LazyResellerPaymentSettings} skeleton="form" />} />
         <Route path="/my-quota" element={<Navigate to="/reseller-dashboard" replace />} />
-        <Route path="/nodes" element={<LazyRoute component={LazyNodes} />} />
-        <Route path="/inbounds" element={<LazyRoute component={LazyInbounds} />} />
+
+        {/* Wallet & Billing */}
+        <Route path="/wallet-billing" element={<LazyRoute component={LazyResellerPlatform} skeleton="list" />} />
+
+        {/* Security (complex page with sub-tabs) */}
+        <Route path="/evasion" element={<LazyRoute component={LazySecuritySuite} skeleton="list" />} />
+        <Route path="/reality-scanner" element={<Navigate to="/evasion?tab=reality" replace />} />
+        <Route path="/clean-ip" element={<Navigate to="/evasion?tab=cleanip" replace />} />
+        <Route path="/decoy-website" element={<Navigate to="/evasion?tab=decoy" replace />} />
+        <Route path="/probing-protection" element={<Navigate to="/evasion?tab=decoy" replace />} />
+        <Route path="/tls-tricks" element={<Navigate to="/evasion?tab=tls" replace />} />
+
+        {/* Phase 3 */}
+        <Route path="/performance" element={<LazyRoute component={LazyPerformance} skeleton="dashboard" />} />
+        <Route path="/security" element={<LazyRoute component={LazySecurityHardening} skeleton="detail" />} />
+        <Route path="/compliance" element={<LazyRoute component={LazyCompliance} skeleton="detail" />} />
+
+        {/* Other */}
+        <Route path="/smart-quota" element={<LazyRoute component={LazySmartQuota} skeleton="dashboard" />} />
+        <Route path="/relay-chains" element={<LazyRoute component={LazyRelayChains} skeleton="list" />} />
+
+        {/* Redirected routes */}
         <Route path="/outbounds" element={<Navigate to="/routing?tab=outbounds" replace />} />
-        <Route path="/routing" element={<LazyRoute component={LazyRoutingBalancers} />} />
-        <Route path="/routing/node-rules" element={<LazyRoute component={LazyRouting} />} />
         <Route path="/routing-packs" element={<Navigate to="/routing?tab=packs" replace />} />
         <Route path="/balancers" element={<Navigate to="/routing?tab=balancers" replace />} />
         <Route path="/admins" element={<Navigate to="/settings?tab=admins" replace />} />
         <Route path="/plans" element={<Navigate to="/wallet-billing?tab=plans" replace />} />
-        <Route path="/wallet-billing" element={<LazyRoute component={LazyResellerPlatform} />} />
-        <Route path="/orders" element={<LazyRoute component={LazyOrders} />} />
-        <Route path="/evasion" element={<LazyRoute component={LazySecuritySuite} />} />
-        <Route path="/monitor" element={<LazyRoute component={LazyMonitor} />} />
-        <Route path="/reality-scanner" element={<Navigate to="/evasion?tab=reality" replace />} />
-        <Route path="/clean-ip" element={<Navigate to="/evasion?tab=cleanip" replace />} />
-        <Route path="/smart-quota" element={<LazyRoute component={LazySmartQuota} />} />
-        <Route path="/relay-chains" element={<LazyRoute component={LazyRelayChains} />} />
-        <Route path="/tunnels" element={<LazyRoute component={LazyTunnels} />} />
-        <Route path="/decoy-website" element={<Navigate to="/evasion?tab=decoy" replace />} />
-        <Route path="/analytics" element={<LazyRoute component={LazyAnalytics} />} />
-        <Route path="/tickets" element={<LazyRoute component={LazyTickets} />} />
-        <Route path="/migration" element={<LazyRoute component={LazyMigration} />} />
-        <Route path="/probing-protection" element={<Navigate to="/evasion?tab=decoy" replace />} />
-        <Route path="/ip-limit" element={<LazyRoute component={LazyIPLimit} />} />
-        <Route path="/connection-quality" element={<LazyRoute component={LazyConnectionQuality} />} />
-        <Route path="/switch-analytics" element={<LazyRoute component={LazySwitchAnalytics} />} />
-        <Route path="/family-groups" element={<LazyRoute component={LazyFamilyGroups} />} />
-        <Route path="/referrals" element={<LazyRoute component={LazyReferrals} />} />
-        <Route path="/doh" element={<LazyRoute component={LazyDoHSettings} />} />
-        <Route path="/sni-manager" element={<LazyRoute component={LazySNIManager} />} />
-        <Route path="/tls-tricks" element={<Navigate to="/evasion?tab=tls" replace />} />
-        <Route path="/fingerprint" element={<LazyRoute component={LazyFingerprint} />} />
-        <Route path="/federation" element={<LazyRoute component={LazyFederation} />} />
-        <Route path="/deep-links" element={<LazyRoute component={LazyDeepLinks} />} />
-        <Route path="/quota-notifications" element={<LazyRoute component={LazyQuotaNotifications} />} />
-        <Route path="/reseller-quota-alerts" element={<LazyRoute component={LazyResellerQuotaAlerts} />} />
-        <Route path="/reseller-payment" element={<LazyRoute component={LazyResellerPaymentSettings} />} />
         <Route path="/pending-orders" element={<Navigate to="/wallet-billing?tab=orders" replace />} />
-        <Route path="/audit" element={<LazyRoute component={LazyAudit} />} />
-        <Route path="/logs" element={<LazyRoute component={LazyLogs} />} />
-        <Route path="/settings" element={<LazyRoute component={LazySettings} />} />
-        <Route path="/settings/admins/:id" element={<LazyRoute component={LazyResellerDetail} />} />
+
+        {/* Settings */}
+        <Route path="/settings" element={<LazyRoute component={LazySettings} skeleton="form" />} />
+
         {/* PHASE 3 Routes */}
-        <Route path="/performance" element={<LazyRoute component={LazyPerformance} />} />
-        <Route path="/security" element={<LazyRoute component={LazySecurityHardening} />} />
-        <Route path="/compliance" element={<LazyRoute component={LazyCompliance} />} />
         {/* Enterprise v1.4.1 Routes */}
-        <Route path="/templates" element={<LazyRoute component={LazyTemplates} />} />
-        <Route path="/bulk-operations" element={<LazyRoute component={LazyBulkOperations} />} />
-        <Route path="/notifications" element={<LazyRoute component={LazyNotifications} />} />
-        <Route path="/dashboard-pro" element={<LazyRoute component={LazyDashboardPro} />} />
-        <Route path="/client-templates" element={<LazyRoute component={LazyClientTemplates} />} />
-        <Route path="/config-management" element={<LazyRoute component={LazyConfigManagement} />} />
-        <Route path="/wireguard" element={<LazyRoute component={LazyWireGuard} />} />
-        <Route path="/advanced-security" element={<LazyRoute component={LazyAdvancedSecurity} />} />
-        <Route path="/geo-exits" element={<LazyRoute component={LazyGeoExits} />} />
-        <Route path="/ip-rotation" element={<LazyRoute component={LazyIPRotation} />} />
-        <Route path="/api-docs" element={<LazyRoute component={LazyApiDocs} />} />
       </Route>
       <Route path="*" element={<NotFound />} />
       {/* Portal (end-user self-service) */}
-      <Route path="/portal/login" element={<LazyRoute component={LazyPortalLogin} />} />
-      <Route element={<LazyRoute component={LazyPortalLayout} />}>
-        <Route path="/portal/dashboard" element={<LazyRoute component={LazyPortalDashboard} />} />
-        <Route path="/portal/plans" element={<LazyRoute component={LazyPortalPlans} />} />
-        <Route path="/portal/referral" element={<LazyRoute component={LazyPortalReferral} />} />
-        <Route path="/portal/tickets" element={<LazyRoute component={LazyPortalTickets} />} />
-        <Route path="/portal/speed-test" element={<LazyRoute component={LazyPortalSpeedTest} />} />
-        <Route path="/portal/guides" element={<LazyRoute component={LazyPortalGuides} />} />
-        <Route path="/portal/setup" element={<LazyRoute component={LazyPortalSetupWizard} />} />
+      <Route path="/portal/login" element={<LazyRoute component={LazyPortalLogin} skeleton="portal" />} />
+      <Route element={<LazyRoute component={LazyPortalLayout} skeleton="portal" />}>
+        <Route path="/portal/dashboard" element={<LazyRoute component={LazyPortalDashboard} skeleton="portal" />} />
+        <Route path="/portal/plans" element={<LazyRoute component={LazyPortalPlans} skeleton="portal" />} />
+        <Route path="/portal/referral" element={<LazyRoute component={LazyPortalReferral} skeleton="portal" />} />
+        <Route path="/portal/tickets" element={<LazyRoute component={LazyPortalTickets} skeleton="portal" />} />
+        <Route path="/portal/speed-test" element={<LazyRoute component={LazyPortalSpeedTest} skeleton="portal" />} />
+        <Route path="/portal/guides" element={<LazyRoute component={LazyPortalGuides} skeleton="portal" />} />
+        <Route path="/portal/setup" element={<LazyRoute component={LazyPortalSetupWizard} skeleton="portal" />} />
       </Route>
     </Routes>
   );

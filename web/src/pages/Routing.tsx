@@ -3,7 +3,7 @@ import { Plus, Trash2, Pencil, Waypoints } from "lucide-react";
 import { routingHooks } from "@/api/policy-hooks";
 import type { RoutingRule } from "@/api/types";
 import { Badge, Button, Input, Select } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { Modal } from "@/components/Modal";
 import { NodePicker } from "@/components/NodePicker";
 import { useConfirm } from "@/components/confirm";
@@ -80,7 +80,7 @@ export function Routing() {
         </div>
       </div>
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
+      <GlassCard glow className="!p-0 overflow-hidden">
         <div className="divide-y divide-border/20">
           {sorted.map((r) => (
             <div key={r.id} className="flex items-center justify-between gap-2 px-5 py-3 text-sm hover:bg-surface-2/40">

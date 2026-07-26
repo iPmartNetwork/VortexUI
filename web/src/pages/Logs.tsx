@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Terminal } from "lucide-react";
 import { useLogs } from "@/api/policy-hooks";
 import { Select } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 
@@ -34,7 +34,7 @@ export function Logs() {
         </Select>
       </div>
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
+      <GlassCard glow className="!p-0 overflow-hidden">
         <div className="flex items-center gap-2 border-b border-border/40 bg-surface-2/30 px-4 py-2.5">
           <Terminal size={13} className="text-fg-subtle" />
           <span className="text-[11px] font-semibold text-fg-subtle uppercase tracking-wide">Panel Log Stream</span>

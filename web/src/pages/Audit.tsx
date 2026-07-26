@@ -1,7 +1,7 @@
 import { History, ScrollText } from "lucide-react";
 import { useAudit } from "@/api/policy-hooks";
 import { EmptyState } from "@/components/EmptyState";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 
@@ -20,7 +20,7 @@ export function Audit() {
         <p className="text-sm text-fg-muted mt-1">{t("audit.subtitle")}</p>
       </div>
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
+      <GlassCard glow className="!p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

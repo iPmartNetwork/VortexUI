@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useTitle } from "@/lib/useTitle";
 
@@ -30,7 +30,7 @@ export function IPRotation() {
       <p className="text-sm text-fg-muted">Rotate your server IP via cloud provider API when current IP gets blocked.</p>
 
       {detect && (
-        <GlassCard className="p-4">
+        <GlassCard glow className="p-4">
           <h3 className="font-semibold mb-2">Current Server</h3>
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div><span className="text-fg-muted">IP:</span> <strong>{detect.ip}</strong></div>
@@ -40,7 +40,7 @@ export function IPRotation() {
         </GlassCard>
       )}
 
-      <GlassCard className="p-4 space-y-4">
+      <GlassCard glow className="p-4 space-y-4">
         <h3 className="font-semibold">Rotate IP</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>

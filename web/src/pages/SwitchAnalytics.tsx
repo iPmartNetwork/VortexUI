@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowRightLeft, Globe, Server, TrendingUp } from "lucide-react";
-import { GlassCard, StatsCard } from "@/components/veltrix";
+import { GlassCard, StatsCard } from "@/components/vortexui";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 import { EmptyState } from "@/components/EmptyState";
@@ -36,7 +36,7 @@ export function SwitchAnalytics() {
       </div>
 
       {/* Filters */}
-      <GlassCard hover={false} className="!p-4">
+      <GlassCard glow className="!p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="text-[10px] font-medium text-fg-subtle uppercase tracking-wider mb-1 block">
@@ -115,7 +115,7 @@ export function SwitchAnalytics() {
       {data && data.total_switches > 0 && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* By Protocol */}
-          <GlassCard hover={false} className="!p-5">
+          <GlassCard glow className="!p-5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle mb-3">
               {t("switchAnalytics.byProtocol")}
             </h3>
@@ -144,7 +144,7 @@ export function SwitchAnalytics() {
           </GlassCard>
 
           {/* By ISP */}
-          <GlassCard hover={false} className="!p-5">
+          <GlassCard glow className="!p-5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle mb-3">
               {t("switchAnalytics.byISP")}
             </h3>
@@ -173,7 +173,7 @@ export function SwitchAnalytics() {
           </GlassCard>
 
           {/* By Node */}
-          <GlassCard hover={false} className="!p-5">
+          <GlassCard glow className="!p-5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle mb-3">
               {t("switchAnalytics.byNode")}
             </h3>
@@ -194,7 +194,7 @@ export function SwitchAnalytics() {
 
           {/* Top Switch Pairs */}
           {data.top_switch_pairs && data.top_switch_pairs.length > 0 && (
-            <GlassCard hover={false} className="!p-5">
+            <GlassCard glow className="!p-5">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle mb-3">
                 {t("switchAnalytics.topPairs")}
               </h3>

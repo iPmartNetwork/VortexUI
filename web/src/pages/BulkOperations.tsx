@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play, Eye, History, Users, Calendar, Database, Settings, Shield, Wifi } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Select, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useTitle } from "@/lib/useTitle";
@@ -189,7 +189,7 @@ export function BulkOperations() {
       {activeTab === "operations" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Operation Selection */}
-          <GlassCard className="lg:col-span-2 space-y-4 p-6">
+          <GlassCard glow className="lg:col-span-2 space-y-4 p-6">
             <h2 className="text-lg font-semibold text-fg">Select Operation</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {OPERATION_CATEGORIES.map((cat) => (
@@ -265,7 +265,7 @@ export function BulkOperations() {
           </GlassCard>
 
           {/* Filters Panel */}
-          <GlassCard className="space-y-4 p-6">
+          <GlassCard glow className="space-y-4 p-6">
             <h2 className="text-lg font-semibold text-fg">Filters</h2>
 
             <div className="space-y-3">
@@ -336,7 +336,7 @@ export function BulkOperations() {
       )}
 
       {activeTab === "history" && (
-        <GlassCard className="p-6">
+        <GlassCard glow className="p-6">
           <h2 className="mb-4 text-lg font-semibold text-fg">Operation History</h2>
           {historyLoading ? (
             <div className="py-8 text-center text-fg-muted">Loading...</div>

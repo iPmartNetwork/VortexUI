@@ -5,7 +5,7 @@ import { api } from "@/api/client";
 import { useAuth } from "@/auth/auth";
 import { Badge, Button, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useConfirm } from "@/components/confirm";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";

@@ -29,7 +29,7 @@ const staggerContainerSource = readFileSync(
   "utf-8",
 );
 const glassCardSource = readFileSync(
-  path.resolve(__dirname, "./veltrix/GlassCard.tsx"),
+  path.resolve(__dirname, "./vortexui/GlassCard.tsx"),
   "utf-8",
 );
 

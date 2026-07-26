@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link2 } from "lucide-react";
 import { api } from "@/api/client";
 import { Button, Input } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useTitle } from "@/lib/useTitle";
 import { useI18n } from "@/i18n/i18n";
@@ -44,7 +44,7 @@ export function DeepLinks() {
       </div>
 
       {cfg && (
-        <GlassCard hover={false} className="!p-5 space-y-4">
+        <GlassCard glow className="!p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-fg">{t("deepLink.config")}</h3>
             <label className="flex items-center gap-2 text-sm text-fg">
@@ -63,7 +63,7 @@ export function DeepLinks() {
         </GlassCard>
       )}
 
-      <GlassCard hover={false} className="!p-5 space-y-3">
+      <GlassCard glow className="!p-5 space-y-3">
         <h3 className="text-sm font-bold text-fg flex items-center gap-1.5"><Link2 size={14} className="text-primary" /> {t("deepLink.testTitle")}</h3>
         <div className="flex gap-2">
           <Input placeholder={t("deepLink.subToken")} value={testToken} onChange={(e) => setTestToken(e.target.value)} className="flex-1" />

@@ -4,7 +4,7 @@ import { RefreshCw, Download, RotateCcw, CheckCircle, GitCompare } from "lucide-
 import { api } from "@/api/client";
 import { useInboundsFleet } from "@/api/hooks";
 import { Button, Badge } from "@/components/ui";
-import { GlassCard } from "@/components/veltrix";
+import { GlassCard } from "@/components/vortexui";
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/toast";
 import { useConfirm } from "@/components/confirm";
@@ -75,7 +75,7 @@ export function ConfigManagement() {
     <div className="space-y-6 p-6">
       <h1 className="text-2xl font-bold">Config Management</h1>
 
-      <GlassCard className="p-4">
+      <GlassCard glow className="p-4">
         <label className="block text-sm font-medium mb-2">Select Inbound</label>
         {inboundsLoading ? <p className="text-sm text-fg-muted">Loading...</p> : (
           <select className="field input-surface w-full" value={selectedInbound} onChange={(e) => setSelectedInbound(e.target.value)}>
@@ -89,7 +89,7 @@ export function ConfigManagement() {
 
       {selectedInbound && (
         <>
-          <GlassCard className="p-4 space-y-4">
+          <GlassCard glow className="p-4 space-y-4">
             <h2 className="text-lg font-semibold flex items-center gap-2"><CheckCircle className="w-5 h-5" />Validate</h2>
             <div className="grid grid-cols-3 gap-4">
               <select className="field input-surface" value={vForm.protocol} onChange={(e) => setVForm((f) => ({ ...f, protocol: e.target.value }))}>{protocols.map((p) => <option key={p} value={p}>{p}</option>)}</select>
@@ -108,7 +108,7 @@ export function ConfigManagement() {
             )}
           </GlassCard>
 
-          <GlassCard className="p-4 space-y-4">
+          <GlassCard glow className="p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Versions</h2>
               <Button variant="outline" size="sm" onClick={() => window.open(`/api/v2/inbounds/${selectedInbound}/export`)}><Download className="w-4 h-4 mr-1" />Export</Button>

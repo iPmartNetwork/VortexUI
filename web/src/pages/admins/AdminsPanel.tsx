@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router-dom";
-import { Shield, Users, UserCog } from "lucide-react";
+import { motion } from "framer-motion";
+import { Shield, Users, UserCog, Sparkles } from "lucide-react";
 import { useI18n } from "@/i18n/i18n";
 import type { TKey } from "@/i18n/dict";
 import { cn } from "@/lib/utils";
@@ -9,10 +10,25 @@ import { AccessSettingsTab } from "@/pages/admins/AccessSettingsTab";
 
 export type AdminsSection = "list" | "roles" | "access";
 
-const SECTIONS: { id: AdminsSection; icon: typeof Users; labelKey: TKey }[] = [
-  { id: "list", icon: Users, labelKey: "settings.adminsSection.list" },
-  { id: "roles", icon: Shield, labelKey: "settings.adminsSection.roles" },
-  { id: "access", icon: UserCog, labelKey: "settings.adminsSection.access" },
+const SECTIONS: { id: AdminsSection; icon: typeof Users; labelKey: TKey; descKey?: TKey }[] = [
+  {
+    id: "list",
+    icon: Users,
+    labelKey: "settings.adminsSection.list",
+    descKey: "settings.adminsSection.list",
+  },
+  {
+    id: "roles",
+    icon: Shield,
+    labelKey: "settings.adminsSection.roles",
+    descKey: "settings.adminsSection.rolesDesc",
+  },
+  {
+    id: "access",
+    icon: UserCog,
+    labelKey: "settings.adminsSection.access",
+    descKey: "settings.adminsSection.accessDesc",
+  },
 ];
 
 function parseSection(raw: string | null): AdminsSection {
@@ -33,32 +49,66 @@ export function AdminsPanel({ embedded = false }: { embedded?: boolean }) {
     setSearchParams(params, { replace: true });
   }
 
+  const currentSection = SECTIONS.find((s) => s.id === section)!;
+
   return (
     <div className={embedded ? "space-y-5" : "space-y-6 animate-page-enter"}>
       {!embedded && (
-        <h1 className="text-2xl font-bold tracking-tight">{t("reseller.admins.pageTitle")}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight text-fg">
+            {t("reseller.admins.pageTitle")}
+          </h1>
+          <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary border border-primary/20">
+            <Sparkles size={10} /> MANAGEMENT
+          </span>
+        </div>
       )}
 
-      <div className="flex flex-wrap rounded-xl border border-border/70 bg-surface-2/50 p-0.5 gap-0.5">
-        {SECTIONS.map(({ id, icon: Icon, labelKey }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setSection(id)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap",
-              section === id ? "bg-primary text-primary-fg shadow-sm" : "text-fg-muted hover:text-fg",
-            )}
-          >
-            <Icon size={14} />
-            {t(labelKey)}
-          </button>
-        ))}
+      {/* Cyber Section Switcher */}
+      <div className="glass rounded-2xl p-1.5">
+        <div className="flex flex-wrap gap-1">
+          {SECTIONS.map(({ id, icon: Icon, labelKey }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setSection(id)}
+              className={cn(
+                "relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200",
+                section === id
+                  ? "bg-primary text-primary-fg shadow-cyber"
+                  : "text-fg-muted hover:text-fg hover:bg-surface-2/40",
+              )}
+            >
+              {section === id && (
+                <motion.div
+                  layoutId="active-section"
+                  className="absolute inset-0 rounded-xl bg-primary"
+                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                />
+              )}
+              <Icon size={14} className="relative z-10" />
+              <span className="relative z-10">{t(labelKey)}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {section === "list" && <AdminsListTab embedded={embedded} />}
-      {section === "roles" && <RolesTab />}
-      {section === "access" && <AccessSettingsTab />}
+      {/* Section Description */}
+      <p className="text-xs text-fg-muted -mt-3">
+        {t(currentSection.descKey ?? currentSection.labelKey)}
+      </p>
+
+      {/* Content with fade transition */}
+      <motion.div
+        key={section}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {section === "list" && <AdminsListTab embedded={embedded} />}
+        {section === "roles" && <RolesTab />}
+        {section === "access" && <AccessSettingsTab />}
+      </motion.div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Send, X, Ticket as TicketIcon } from "lucide-react";
 import { api } from "@/api/client";
 import { Badge, Button } from "@/components/ui";
-import { GlassCard, StatusBadge } from "@/components/veltrix";
+import { GlassCard, StatusBadge } from "@/components/vortexui";
 import { useToast } from "@/components/toast";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
@@ -161,7 +161,7 @@ export function Tickets() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,340px)_1fr] xl:grid-cols-[360px_1fr] min-h-[520px]">
         {/* Left: ticket list */}
-        <GlassCard hover={false} className="!p-0 flex flex-col overflow-hidden">
+        <GlassCard glow className="!p-0 flex flex-col overflow-hidden">
           <div className="flex flex-wrap gap-1 p-3 border-b border-border/40 bg-surface-2/30">
             {filters.map((f) => (
               <button
@@ -209,7 +209,7 @@ export function Tickets() {
         </GlassCard>
 
         {/* Right: detail + chat */}
-        <GlassCard hover={false} className="!p-0 flex flex-col overflow-hidden min-h-[480px]">
+        <GlassCard glow className="!p-0 flex flex-col overflow-hidden min-h-[480px]">
           {!selectedId ? (
             <div className="flex-1 flex items-center justify-center text-sm text-fg-muted p-8">
               {t("tickets.selectOne")}

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, Globe, Radio, Users, Wifi } from "lucide-react";
 import { api } from "@/api/client";
 import { Badge } from "@/components/ui";
-import { GlassCard, StatsCard } from "@/components/veltrix";
+import { GlassCard, StatsCard } from "@/components/vortexui";
 import { useI18n } from "@/i18n/i18n";
 import { useTitle } from "@/lib/useTitle";
 
@@ -83,7 +83,7 @@ export function Monitor() {
         />
       </div>
 
-      <GlassCard hover={false} className="!p-0 overflow-hidden">
+      <GlassCard glow className="!p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

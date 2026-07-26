@@ -6,7 +6,7 @@ import { useUserUsage, useRoutingPacks, useUserRoutingPack, useSetUserRoutingPac
 import { useResetUser, useRevokeSub, useUserSub, useUserOnline, useUserOnlineIPs } from "@/api/policy-hooks";
 import type { User } from "@/api/types";
 import { Badge, Button, Select } from "@/components/ui";
-import { GlassCard, StatsCard } from "@/components/veltrix";
+import { GlassCard, StatsCard } from "@/components/vortexui";
 import { UsageChart } from "@/components/UsageChart";
 import { CopyField } from "@/components/CopyField";
 import { useConfirm } from "@/components/confirm";
@@ -98,14 +98,14 @@ export function UserDetail() {
         <StatsCard title={t("userDetail.devices")} value={`${on?.active_devices ?? 0} / ${user.device_limit || "∞"}`} icon={<Smartphone size={18} />} color="cyan" />
       </div>
 
-      <GlassCard hover={false} className="!p-5">
+      <GlassCard glow className="!p-5">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-fg-subtle">{t("userDetail.traffic7d")}</h3>
         {usage.isLoading && <div className="h-40 animate-pulse rounded-lg bg-surface-2/50" />}
         {usage.data && <UsageChart points={usage.data.points} />}
       </GlassCard>
 
       {onlineIPs.data?.tracking && (
-        <GlassCard hover={false} className="!p-5">
+        <GlassCard glow className="!p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">{t("userDetail.onlineIPs")}</h3>
             {(() => {
@@ -138,7 +138,7 @@ export function UserDetail() {
       <RoutingPackSelector userId={id ?? null} />
 
       {d && (
-        <GlassCard hover={false} className="!p-5 space-y-4">
+        <GlassCard glow className="!p-5 space-y-4">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">{t("userDetail.subscription")}</h3>
           <div className="flex flex-col items-center gap-4 sm:flex-row">
             <div className="rounded-xl bg-white p-3">
@@ -182,7 +182,7 @@ function RoutingPackSelector({ userId }: { userId: string | null }) {
   }
 
   return (
-    <GlassCard hover={false} className="!p-5 space-y-3">
+    <GlassCard glow className="!p-5 space-y-3">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">{t("userDetail.routingPack")}</h3>
       <p className="text-xs text-fg-muted">{t("userDetail.routingPackHint")}</p>
       <Select
