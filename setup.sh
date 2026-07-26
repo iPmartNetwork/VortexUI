@@ -425,11 +425,10 @@ create_admin_account() {
         warn "Could not create admin automatically. Create it manually:"
         echo -e "  docker compose -f ${INSTALL_DIR}/deploy/compose.yml exec panel panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
     else
-        # Native mode: panel binary is at /usr/local/bin/vortex-panel
-        # Wait for panel to be ready (it needs DB connection)
+        # Native mode: wait for panel health endpoint, then create admin via API call
         log "Waiting for panel to be ready..."
         local ready=0
-        for i in {1..15}; do
+        for i in {1..30}; do
             if curl -sf http://127.0.0.1:8080/api/health &>/dev/null; then
                 ready=1
                 break
@@ -438,17 +437,40 @@ create_admin_account() {
         done
 
         if [[ "$ready" -eq 1 ]]; then
-            # Source env and create admin
+            # Create admin via direct HTTP API call (most reliable method)
+            local response
+            response=$(curl -sf -X POST http://127.0.0.1:8080/api/admin/init \
+                -H "Content-Type: application/json" \
+                -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}" 2>&1) || true
+
+            if echo "$response" | grep -qi "created\|success\|token"; then
+                log "Admin account '$ADMIN_USER' created successfully!"
+                return 0
+            fi
+
+            # Fallback: try the CLI binary with env sourced
             if [[ -f /etc/vortexui/panel.env ]]; then
                 set -a; source /etc/vortexui/panel.env; set +a
             fi
+            export VORTEX_DATABASE_URL="${VORTEX_DATABASE_URL:-postgres://vortex:vortex@127.0.0.1:5432/vortex?sslmode=disable}"
+            
             if /usr/local/bin/vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>&1; then
                 log "Admin account '$ADMIN_USER' created successfully!"
                 return 0
             fi
         fi
-        warn "Could not create admin automatically. Create it manually after panel starts:"
-        echo -e "  source /etc/vortexui/panel.env && vortex-panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
+
+        # Final fallback: create a script that runs on next boot
+        cat > /opt/vortexui/create-admin.sh <<ADMINEOF
+#!/bin/bash
+source /etc/vortexui/panel.env 2>/dev/null
+export VORTEX_DATABASE_URL="\${VORTEX_DATABASE_URL:-postgres://vortex:vortex@127.0.0.1:5432/vortex?sslmode=disable}"
+/usr/local/bin/vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo && rm -f /opt/vortexui/create-admin.sh
+ADMINEOF
+        chmod +x /opt/vortexui/create-admin.sh
+
+        warn "Admin account will be created when panel starts. If it doesn't work, run:"
+        echo -e "  bash /opt/vortexui/create-admin.sh"
     fi
 }
 
