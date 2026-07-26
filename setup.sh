@@ -573,6 +573,27 @@ deploy_systemd() {
             -o /usr/local/bin/vortex-panel ./cmd/panel
     fi
 
+    # Install proxy core binaries (xray + sing-box)
+    if [[ ! -x /usr/local/bin/xray ]]; then
+        echo "==> installing xray-core"
+        local XARCH=$(uname -m); case "$XARCH" in x86_64) XARCH="64";; aarch64) XARCH="arm64-v8a";; esac
+        curl -sL "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-${XARCH}.zip" -o /tmp/xray.zip
+        unzip -o /tmp/xray.zip xray -d /usr/local/bin/ >/dev/null 2>&1
+        chmod +x /usr/local/bin/xray
+        rm -f /tmp/xray.zip
+    fi
+
+    if [[ ! -x /usr/local/bin/sing-box ]]; then
+        echo "==> installing sing-box"
+        local SARCH=$(uname -m); case "$SARCH" in x86_64) SARCH="amd64";; aarch64) SARCH="arm64";; esac
+        local SB_VER=$(curl -sL "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | grep -oP '"tag_name": "v\K[^"]+' || echo "1.10.7")
+        curl -sL "https://github.com/SagerNet/sing-box/releases/download/v${SB_VER}/sing-box-${SB_VER}-linux-${SARCH}.tar.gz" -o /tmp/singbox.tar.gz
+        tar -xzf /tmp/singbox.tar.gz -C /tmp/ 2>/dev/null
+        cp /tmp/sing-box-*/sing-box /usr/local/bin/sing-box 2>/dev/null || find /tmp -name "sing-box" -type f -exec cp {} /usr/local/bin/sing-box \;
+        chmod +x /usr/local/bin/sing-box
+        rm -rf /tmp/singbox.tar.gz /tmp/sing-box-*
+    fi
+
     # Ensure service file exists
     if [[ ! -f "/etc/systemd/system/${SERVICE}.service" ]]; then
         echo "==> creating systemd service"
