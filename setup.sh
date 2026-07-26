@@ -425,52 +425,48 @@ create_admin_account() {
         warn "Could not create admin automatically. Create it manually:"
         echo -e "  docker compose -f ${INSTALL_DIR}/deploy/compose.yml exec panel panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
     else
-        # Native mode: wait for panel health endpoint, then create admin via API call
-        log "Waiting for panel to be ready..."
-        local ready=0
-        for i in {1..30}; do
-            if curl -sf http://127.0.0.1:8080/api/health &>/dev/null; then
-                ready=1
-                break
-            fi
-            sleep 2
-        done
-
-        if [[ "$ready" -eq 1 ]]; then
-            # Create admin via direct HTTP API call (most reliable method)
-            local response
-            response=$(curl -sf -X POST http://127.0.0.1:8080/api/admin/init \
-                -H "Content-Type: application/json" \
-                -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}" 2>&1) || true
-
-            if echo "$response" | grep -qi "created\|success\|token"; then
-                log "Admin account '$ADMIN_USER' created successfully!"
-                return 0
-            fi
-
-            # Fallback: try the CLI binary with env sourced
-            if [[ -f /etc/vortexui/panel.env ]]; then
-                set -a; source /etc/vortexui/panel.env; set +a
-            fi
-            export VORTEX_DATABASE_URL="${VORTEX_DATABASE_URL:-postgres://vortex:vortex@127.0.0.1:5432/vortex?sslmode=disable}"
-            
-            if /usr/local/bin/vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>&1; then
-                log "Admin account '$ADMIN_USER' created successfully!"
-                return 0
-            fi
+        # Native mode: create admin via /api/admin/init (panel must be running)
+        if ! curl -sf http://127.0.0.1:8080/api/health &>/dev/null; then
+            warn "Panel is not running — cannot create admin now."
+            warn "After fixing the panel, run:"
+            echo -e "  source /etc/vortexui/panel.env && vortex-panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
+            return 1
         fi
 
-        # Final fallback: create a script that runs on next boot
-        cat > /opt/vortexui/create-admin.sh <<ADMINEOF
-#!/bin/bash
-source /etc/vortexui/panel.env 2>/dev/null
-export VORTEX_DATABASE_URL="\${VORTEX_DATABASE_URL:-postgres://vortex:vortex@127.0.0.1:5432/vortex?sslmode=disable}"
-/usr/local/bin/vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo && rm -f /opt/vortexui/create-admin.sh
-ADMINEOF
-        chmod +x /opt/vortexui/create-admin.sh
+        log "Creating admin via API..."
+        local http_code
+        http_code=$(curl -s -o /tmp/admin_response.txt -w "%{http_code}" -X POST http://127.0.0.1:8080/api/admin/init \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}")
 
-        warn "Admin account will be created when panel starts. If it doesn't work, run:"
-        echo -e "  bash /opt/vortexui/create-admin.sh"
+        if [[ "$http_code" == "201" ]]; then
+            log "Admin account '$ADMIN_USER' created successfully!"
+            rm -f /tmp/admin_response.txt
+            return 0
+        elif [[ "$http_code" == "403" ]]; then
+            log "Admin already exists — you can login with existing credentials."
+            rm -f /tmp/admin_response.txt
+            return 0
+        else
+            warn "Admin creation returned HTTP $http_code:"
+            cat /tmp/admin_response.txt 2>/dev/null
+            echo ""
+            rm -f /tmp/admin_response.txt
+        fi
+
+        # Fallback: CLI
+        log "Trying CLI fallback..."
+        source /etc/vortexui/panel.env 2>/dev/null || true
+        export VORTEX_DATABASE_URL="${VORTEX_DATABASE_URL:-postgres://vortex:vortex@127.0.0.1:5432/vortex?sslmode=disable}"
+        export VORTEX_JWT_SECRET="${VORTEX_JWT_SECRET:-$(openssl rand -hex 32)}"
+
+        if /usr/local/bin/vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo; then
+            log "Admin account '$ADMIN_USER' created successfully!"
+            return 0
+        else
+            warn "Admin creation failed. After panel starts, run:"
+            echo -e "  source /etc/vortexui/panel.env && vortex-panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
+        fi
     fi
 }
 
@@ -658,6 +654,16 @@ ENVEOF
         sleep 2
     fi
 
+    # Verify PostgreSQL is accepting connections
+    log "Verifying database connection..."
+    for i in {1..10}; do
+        if pg_isready -h 127.0.0.1 -p 5432 -U vortex &>/dev/null || sudo -u postgres psql -c "SELECT 1;" &>/dev/null; then
+            pass "PostgreSQL ready"
+            break
+        fi
+        sleep 2
+    done
+
     # Unmask service if masked, then restart
     echo "==> restarting $SERVICE"
     if systemctl is-enabled "$SERVICE" 2>/dev/null | grep -q "masked"; then
@@ -668,9 +674,18 @@ ENVEOF
     systemctl enable "$SERVICE" 2>/dev/null || true
     systemctl restart "$SERVICE"
 
-    # Wait for panel to start
+    # Wait for panel health endpoint (up to 60 seconds)
     echo "==> waiting for panel to start..."
-    sleep 5
+    for i in {1..30}; do
+        if curl -sf http://127.0.0.1:8080/api/health &>/dev/null; then
+            log "Panel is ready!"
+            break
+        fi
+        if [[ $i -eq 30 ]]; then
+            warn "Panel did not start within 60 seconds. Check: journalctl -u $SERVICE"
+        fi
+        sleep 2
+    done
 
     # Caddy
     if systemctl is-active --quiet caddy 2>/dev/null; then
@@ -689,7 +704,7 @@ print_systemd_success() {
         echo -e "  ${BLUE}Frontend assets:${NC}"
         ls -la "$WEB_ROOT"/assets/ 2>/dev/null | head -5
     fi
-    echo -e "  ${BLUE}Panel binary:${NC} $(vortex-panel --version 2>/dev/null || echo '/usr/local/bin/vortex-panel')"
+    echo -e "  ${BLUE}Panel binary:${NC} /usr/local/bin/vortex-panel (v${VERSION})"
     echo -e "  ${BLUE}Service:${NC}      systemctl status $SERVICE"
     echo -e "  ${BLUE}Update:${NC}       sudo ./setup.sh --systemd"
     if [[ -n "${USER_DOMAIN:-}" ]]; then
