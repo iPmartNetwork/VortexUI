@@ -156,6 +156,7 @@ func NewRouter(d Deps) *echo.Echo {
 	api := e.Group("/api")
 	api.GET("/health", func(c echo.Context) error { return c.JSON(200, echo.Map{"status": "ok"}) })
 	api.GET("/version", d.Handlers.GetVersion) // Panel build version (public, no auth needed)
+	api.POST("/admin/init", d.Handlers.InitAdmin) // First-time admin setup (only works when no admins exist)
 
 	// Prometheus metrics endpoint (unauthenticated for scraper access)
 	if d.PrometheusExporter != nil {

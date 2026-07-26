@@ -973,3 +973,44 @@ func (h *Handlers) enforceResellerPolicy(c echo.Context, dataLimit int64, expire
 	}
 	return nil
 }
+
+// InitAdmin creates the first sudo admin. It only works when the admin table is
+// empty — after the first admin is created, this endpoint returns 403.
+func (h *Handlers) InitAdmin(c echo.Context) error {
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := c.Bind(&req); err != nil || req.Username == "" || req.Password == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "username and password are required")
+	}
+	if len(req.Password) < 6 {
+		return echo.NewHTTPError(http.StatusBadRequest, "password must be at least 6 characters")
+	}
+
+	ctx := c.Request().Context()
+
+	// Check if any admin already exists
+	admins, err := h.Admins.List(ctx)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "database error")
+	}
+	if len(admins) > 0 {
+		return echo.NewHTTPError(http.StatusForbidden, "admin already exists — use login instead")
+	}
+
+	// Create the first sudo admin
+	_, _, err = h.Admins.Create(ctx, service.CreateAdminInput{
+		Username: req.Username,
+		Password: req.Password,
+		Sudo:     true,
+	})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create admin: "+err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, echo.Map{
+		"message":  "admin created successfully",
+		"username": req.Username,
+	})
+}
