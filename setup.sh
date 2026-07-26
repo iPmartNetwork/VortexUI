@@ -537,12 +537,71 @@ deploy_systemd() {
             -o /usr/local/bin/vortex-panel ./cmd/panel
     fi
 
+    # Ensure service file exists
+    if [[ ! -f "/etc/systemd/system/${SERVICE}.service" ]]; then
+        echo "==> creating systemd service"
+        cat > "/etc/systemd/system/${SERVICE}.service" <<SVCEOF
+[Unit]
+Description=VortexUI Panel
+After=network.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/vortexui/panel.env
+ExecStart=/usr/local/bin/vortex-panel
+WorkingDirectory=/opt/vortexui
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+        systemctl daemon-reload
+    fi
+
+    # Create panel.env if not exists
+    if [[ ! -f /etc/vortexui/panel.env ]]; then
+        mkdir -p /etc/vortexui
+        PUBLIC_IP=$(curl -sf https://api.ipify.org || hostname -I | awk '{print $1}')
+        cat > /etc/vortexui/panel.env <<ENVEOF
+VORTEX_HTTP_ADDR=:8080
+VORTEX_GRPC_ADDR=:50051
+VORTEX_DATABASE_URL=postgres://vortex:vortex@127.0.0.1:5432/vortex?sslmode=disable
+VORTEX_REDIS_URL=redis://127.0.0.1:6379/0
+VORTEX_JWT_SECRET=$(openssl rand -hex 32)
+VORTEX_JWT_TTL=1h
+VORTEX_TLS_CERT=/opt/vortexui/deploy/certs/panel.crt
+VORTEX_TLS_KEY=/opt/vortexui/deploy/certs/panel.key
+VORTEX_TLS_CA=/opt/vortexui/deploy/certs/ca.crt
+VORTEX_LOCAL_NODE=true
+VORTEX_LOCAL_NODE_NAME=local
+VORTEX_LOCAL_NODE_HOST=${PUBLIC_IP}
+VORTEX_CORE=xray
+VORTEX_ENABLED_CORES=xray,singbox
+VORTEX_CORE_BIN=/usr/local/bin/xray
+VORTEX_CORE_CONFIG=/etc/vortex/local-core.json
+VORTEX_CORE_API_PORT=10085
+ENVEOF
+        mkdir -p /etc/vortex
+        echo "==> panel.env created at /etc/vortexui/panel.env"
+    fi
+
+    # Ensure PostgreSQL and Redis are running (via docker-compose deps or system packages)
+    if [[ -f "$INSTALL_DIR/docker-compose.yml" ]]; then
+        echo "==> starting database dependencies"
+        docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d 2>/dev/null || true
+        sleep 3
+    fi
+
     # Unmask service if masked, then restart
     echo "==> restarting $SERVICE"
     if systemctl is-enabled "$SERVICE" 2>/dev/null | grep -q "masked"; then
         log "Service $SERVICE is masked — unmasking..."
         systemctl unmask "$SERVICE"
     fi
+    systemctl enable "$SERVICE" 2>/dev/null || true
     systemctl restart "$SERVICE"
 
     # Caddy
