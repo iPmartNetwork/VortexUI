@@ -426,15 +426,29 @@ create_admin_account() {
         echo -e "  docker compose -f ${INSTALL_DIR}/deploy/compose.yml exec panel panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
     else
         # Native mode: panel binary is at /usr/local/bin/vortex-panel
-        if [[ -f /etc/vortexui/panel.env ]]; then
-            set -a; source /etc/vortexui/panel.env; set +a
+        # Wait for panel to be ready (it needs DB connection)
+        log "Waiting for panel to be ready..."
+        local ready=0
+        for i in {1..15}; do
+            if curl -sf http://127.0.0.1:8080/api/health &>/dev/null; then
+                ready=1
+                break
+            fi
+            sleep 2
+        done
+
+        if [[ "$ready" -eq 1 ]]; then
+            # Source env and create admin
+            if [[ -f /etc/vortexui/panel.env ]]; then
+                set -a; source /etc/vortexui/panel.env; set +a
+            fi
+            if /usr/local/bin/vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>&1; then
+                log "Admin account '$ADMIN_USER' created successfully!"
+                return 0
+            fi
         fi
-        if vortex-panel admin create --username "$ADMIN_USER" --password "$ADMIN_PASS" --sudo 2>/dev/null; then
-            log "Admin account '$ADMIN_USER' created successfully!"
-            return 0
-        fi
-        warn "Could not create admin automatically. Create it manually:"
-        echo -e "  vortex-panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
+        warn "Could not create admin automatically. Create it manually after panel starts:"
+        echo -e "  source /etc/vortexui/panel.env && vortex-panel admin create --username $ADMIN_USER --password YOUR_PASS --sudo"
     fi
 }
 
@@ -451,7 +465,11 @@ print_docker_success() {
     echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
     echo ""
     if [[ -n "${USER_DOMAIN:-}" ]]; then
-        echo -e "  ${BLUE}Panel URL:${NC}    https://${USER_DOMAIN}"
+        if [[ "${WEB_PORT:-443}" != "80" && "${WEB_PORT:-443}" != "443" ]]; then
+            echo -e "  ${BLUE}Panel URL:${NC}    https://${USER_DOMAIN}:${WEB_PORT}"
+        else
+            echo -e "  ${BLUE}Panel URL:${NC}    https://${USER_DOMAIN}"
+        fi
     else
         echo -e "  ${BLUE}Panel URL:${NC}    http://${PUBLIC_IP}:${WEB_PORT:-80}"
     fi
@@ -624,6 +642,20 @@ print_systemd_success() {
     echo -e "  ${BLUE}Panel binary:${NC} $(vortex-panel --version 2>/dev/null || echo '/usr/local/bin/vortex-panel')"
     echo -e "  ${BLUE}Service:${NC}      systemctl status $SERVICE"
     echo -e "  ${BLUE}Update:${NC}       sudo ./setup.sh --systemd"
+    if [[ -n "${USER_DOMAIN:-}" ]]; then
+        if [[ "${WEB_PORT:-443}" != "80" && "${WEB_PORT:-443}" != "443" ]]; then
+            echo -e "  ${BLUE}Panel URL:${NC}    https://${USER_DOMAIN}:${WEB_PORT}"
+        else
+            echo -e "  ${BLUE}Panel URL:${NC}    https://${USER_DOMAIN}"
+        fi
+    else
+        local PUBLIC_IP
+        PUBLIC_IP=$(curl -sf https://api.ipify.org || hostname -I | awk '{print $1}')
+        echo -e "  ${BLUE}Panel URL:${NC}    http://${PUBLIC_IP}:${WEB_PORT:-80}"
+    fi
+    if [[ -n "${ADMIN_USER:-}" ]]; then
+        echo -e "  ${YELLOW}Admin:${NC}        ${ADMIN_USER}"
+    fi
     echo ""
 }
 
@@ -691,15 +723,24 @@ setup_ssl() {
         apt-get update -qq && apt-get install -y -qq caddy
     fi
 
+    # Determine the site address for Caddy
+    local SITE_ADDR="${USER_DOMAIN}"
+    if [[ "${WEB_PORT:-80}" != "80" && "${WEB_PORT:-443}" != "443" ]]; then
+        SITE_ADDR="${USER_DOMAIN}:${WEB_PORT}"
+    fi
+
     # Write Caddyfile
     mkdir -p /etc/caddy
     cat > /etc/caddy/Caddyfile <<CADDYEOF
-${USER_DOMAIN} {
+${SITE_ADDR} {
     encode gzip
     handle /api/* {
         reverse_proxy 127.0.0.1:8080
     }
     handle /sub/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle /health {
         reverse_proxy 127.0.0.1:8080
     }
     handle {
