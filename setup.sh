@@ -628,11 +628,34 @@ ENVEOF
         echo "==> panel.env created at /etc/vortexui/panel.env"
     fi
 
-    # Ensure PostgreSQL and Redis are running (via docker-compose deps or system packages)
-    if [[ -f "$INSTALL_DIR/docker-compose.yml" ]]; then
-        echo "==> starting database dependencies"
+    # Ensure PostgreSQL and Redis are running
+    echo "==> setting up database dependencies"
+    if command -v docker &>/dev/null && [[ -f "$INSTALL_DIR/docker-compose.yml" ]]; then
+        # Use Docker for DB/Redis (preferred - includes TimescaleDB)
         docker compose -f "$INSTALL_DIR/docker-compose.yml" up -d 2>/dev/null || true
-        sleep 3
+        sleep 5
+    else
+        # Install system PostgreSQL + Redis if not present
+        if ! command -v psql &>/dev/null; then
+            log "Installing PostgreSQL..."
+            apt-get update -qq
+            apt-get install -y -qq postgresql postgresql-contrib >/dev/null 2>&1
+            systemctl enable --now postgresql
+        fi
+        if ! command -v redis-server &>/dev/null; then
+            log "Installing Redis..."
+            apt-get install -y -qq redis-server >/dev/null 2>&1
+            systemctl enable --now redis-server
+        fi
+
+        # Create vortex database and user if not exists
+        if ! sudo -u postgres psql -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw vortex; then
+            log "Creating PostgreSQL database..."
+            sudo -u postgres psql -c "CREATE USER vortex WITH PASSWORD 'vortex';" 2>/dev/null || true
+            sudo -u postgres psql -c "CREATE DATABASE vortex OWNER vortex;" 2>/dev/null || true
+            sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE vortex TO vortex;" 2>/dev/null || true
+        fi
+        sleep 2
     fi
 
     # Unmask service if masked, then restart
@@ -641,8 +664,13 @@ ENVEOF
         log "Service $SERVICE is masked — unmasking..."
         systemctl unmask "$SERVICE"
     fi
+    systemctl daemon-reload
     systemctl enable "$SERVICE" 2>/dev/null || true
     systemctl restart "$SERVICE"
+
+    # Wait for panel to start
+    echo "==> waiting for panel to start..."
+    sleep 5
 
     # Caddy
     if systemctl is-active --quiet caddy 2>/dev/null; then
