@@ -474,11 +474,14 @@ print_docker_success() {
 # --- Systemd Mode ---
 
 deploy_systemd() {
+    # Clone repo if fresh install, or pull if exists
+    clone_or_pull
+    generate_secrets
+    generate_certs
+
     cd "$INSTALL_DIR"
 
     echo "==> VortexUI v${VERSION} deploy (systemd)"
-    echo "==> git pull"
-    git pull origin "$BRANCH"
 
     # Database Migrations
     if [[ "$SKIP_MIGRATE" -eq 0 ]]; then
