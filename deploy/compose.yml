@@ -61,7 +61,7 @@ services:
       VORTEX_LOCAL_NODE_NAME: local
       VORTEX_LOCAL_NODE_HOST: ${LOCAL_NODE_HOST:-127.0.0.1}
       VORTEX_CORE: ${CORE:-xray}
-      VORTEX_ENABLED_CORES: ${ENABLED_CORES:-xray,singbox}
+      VORTEX_ENABLED_CORES: ${ENABLED_CORES:-xray}
       # sing-box: set CORE=singbox and SINGBOX_V2RAY_API=false (stock binary).
       # Omit VORTEX_CORE_BIN — panel resolves singbox → /usr/local/bin/sing-box via DefaultCoreBin().
       VORTEX_CORE_CONFIG: /etc/vortex/local-core.json
