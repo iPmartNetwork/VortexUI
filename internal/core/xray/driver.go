@@ -278,8 +278,17 @@ func (d *Driver) StreamTraffic(ctx context.Context) (<-chan domain.TrafficDelta,
 
 func (d *Driver) Health(ctx context.Context) (domain.NodeHealth, error) {
 	m := hostmetrics.Read()
+	running := d.proc.Running()
+	// Fallback: if proc doesn't think it's running, check if the API is reachable.
+	// In composite/dual-core mode the process may be managed externally.
+	if !running {
+		if api, err := d.currentAPI(); err == nil && api != nil {
+			// API is reachable → core is running regardless of proc state
+			running = true
+		}
+	}
 	h := domain.NodeHealth{
-		CoreRunning: d.proc.Running(),
+		CoreRunning: running,
 		CPUPercent:  m.CPU,
 		MemPercent:  m.Mem,
 		DiskPercent: m.Disk,
