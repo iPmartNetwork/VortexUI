@@ -732,6 +732,12 @@ ENVEOF
         systemctl unmask "$SERVICE"
     fi
     systemctl daemon-reload
+    # Install CLI management tool
+    if [[ -f "$INSTALL_DIR/scripts/vortexui" ]]; then
+        install -m 0755 "$INSTALL_DIR/scripts/vortexui" /usr/local/bin/vortexui
+        log "CLI installed: run 'vortexui' for management menu"
+    fi
+
     systemctl enable "$SERVICE" 2>/dev/null || true
     systemctl restart "$SERVICE"
 
